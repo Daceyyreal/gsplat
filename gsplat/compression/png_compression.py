@@ -13,10 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import functools
 import json
 import os
 from dataclasses import dataclass
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import numpy as np
 import torch
@@ -25,6 +26,15 @@ from torch import Tensor
 
 from gsplat.compression.sort import sort_splats
 from gsplat.utils import inverse_log_transform, log_transform
+
+# Quantization bit depth of the PNG-coded parameters in the original format.
+_DEFAULT_PNG_BITS = {
+    "means": 16,
+    "scales": 8,
+    "quats": 8,
+    "opacities": 8,
+    "sh0": 8,
+}
 
 
 @dataclass
@@ -54,12 +64,52 @@ class PngCompression:
     Args:
         use_sort (bool, optional): Whether to sort splats before compression. Defaults to True.
         verbose (bool, optional): Whether to print verbose information. Default to True.
+        tile_size (int, optional): If set, the PNG-coded parameters ("means", "scales",
+            "quats", "opacities", "sh0") are quantized with a separate min/max per channel
+            for every `tile_size` x `tile_size` block of the sorted grid, instead of one
+            min/max per channel for the whole grid. This keeps a few outliers from
+            stretching the quantization range of the entire scene. The per-tile bounds
+            are stored in "{param}_tiles.npz". Blocks on the last row / column are
+            smaller when the grid side is not divisible by `tile_size`. Default to None
+            (one min/max per channel).
+        bits (Dict[str, int], optional): Quantization bit depth (1 to 16) of the PNG-coded
+            parameters, e.g. `{"means": 12, "sh0": 7}`. Parameters that are not listed
+            use 16 bits for "means" and 8 bits for the others. Bit depths above 8 are
+            stored in two 8-bit PNGs holding the upper 8 bits and the remaining lower
+            bits. Default to None.
+
+    .. note::
+        With the default `tile_size` and `bits`, the compressed files are identical to
+        earlier versions. Decompression reads the settings from "meta.json", so any
+        instance can decompress directories written with any settings.
     """
 
     use_sort: bool = True
     verbose: bool = True
+    tile_size: Optional[int] = None
+    bits: Optional[Dict[str, int]] = None
+
+    def __post_init__(self):
+        if self.tile_size is not None and self.tile_size < 1:
+            raise ValueError(f"tile_size must be positive, got {self.tile_size}")
+        for param_name, bits in (self.bits or {}).items():
+            if param_name not in _DEFAULT_PNG_BITS:
+                raise ValueError(
+                    f"bits can only be set for {list(_DEFAULT_PNG_BITS)}, got '{param_name}'"
+                )
+            if not 1 <= bits <= 16:
+                raise ValueError(
+                    f"bits for '{param_name}' must be in [1, 16], got {bits}"
+                )
 
     def _get_compress_fn(self, param_name: str) -> Callable:
+        if param_name in _DEFAULT_PNG_BITS:
+            bits = (self.bits or {}).get(param_name, _DEFAULT_PNG_BITS[param_name])
+            if self.tile_size is not None or bits != _DEFAULT_PNG_BITS[param_name]:
+                return functools.partial(
+                    _compress_png_quant, bits=bits, tile_size=self.tile_size
+                )
+
         compress_fn_map = {
             "means": _compress_png_16bit,
             "scales": _compress_png,
@@ -73,7 +123,13 @@ class PngCompression:
         else:
             return _compress_npz
 
-    def _get_decompress_fn(self, param_name: str) -> Callable:
+    def _get_decompress_fn(
+        self, param_name: str, param_meta: Optional[Dict[str, Any]] = None
+    ) -> Callable:
+        # Only the configurable quantization format records "bits" in its metadata.
+        if param_meta is not None and "bits" in param_meta:
+            return _decompress_png_quant
+
         decompress_fn_map = {
             "means": _decompress_png_16bit,
             "scales": _decompress_png,
@@ -139,7 +195,7 @@ class PngCompression:
 
         splats = {}
         for param_name, param_meta in meta.items():
-            decompress_fn = self._get_decompress_fn(param_name)
+            decompress_fn = self._get_decompress_fn(param_name, param_meta)
             splats[param_name] = decompress_fn(compress_dir, param_name, param_meta)
 
         # Param-specific postprocessing
@@ -308,6 +364,149 @@ def _decompress_png_16bit(
     params = grid.reshape(meta["shape"])
     params = params.to(dtype=getattr(torch, meta["dtype"]))
     return params
+
+
+def _compress_png_quant(
+    compress_dir: str,
+    param_name: str,
+    params: Tensor,
+    n_sidelen: int,
+    bits: int,
+    tile_size: Optional[int] = None,
+    **kwargs,
+) -> Dict[str, Any]:
+    """Compress parameters with `bits`-bit quantization and lossless PNG compression.
+
+    Args:
+        compress_dir (str): compression directory
+        param_name (str): parameter field name
+        params (Tensor): parameters
+        n_sidelen (int): image side length
+        bits (int): number of quantization bits, from 1 to 16
+        tile_size (int, optional): side length of the blocks that get their own
+            per-channel min/max. If None, one min/max per channel is used.
+
+    Returns:
+        Dict[str, Any]: metadata
+    """
+    import imageio.v2 as imageio
+
+    grid = params.detach().reshape((n_sidelen, n_sidelen, -1)).cpu().double().numpy()
+    meta = {
+        "shape": list(params.shape),
+        "dtype": str(params.dtype).split(".")[1],
+        "bits": bits,
+    }
+    if tile_size is None:
+        mins = grid.min(axis=(0, 1))
+        maxs = grid.max(axis=(0, 1))
+        meta["mins"] = mins.tolist()
+        meta["maxs"] = maxs.tolist()
+    else:
+        tile_mins, tile_maxs = _tile_bounds(grid, tile_size)
+        np.savez_compressed(
+            os.path.join(compress_dir, f"{param_name}_tiles.npz"),
+            mins=tile_mins,
+            maxs=tile_maxs,
+        )
+        meta["tile_size"] = tile_size
+        mins = _expand_tiles(tile_mins, tile_size, n_sidelen)
+        maxs = _expand_tiles(tile_maxs, tile_size, n_sidelen)
+
+    ranges = maxs - mins
+    grid_norm = (grid - mins) / np.where(ranges > 0, ranges, 1.0)
+    img = (np.clip(grid_norm, 0.0, 1.0) * (2**bits - 1)).round().astype(np.uint16)
+    if img.shape[-1] == 1:
+        img = img[..., 0]
+
+    if bits <= 8:
+        imageio.imwrite(
+            os.path.join(compress_dir, f"{param_name}.png"), img.astype(np.uint8)
+        )
+    else:
+        n_lower = bits - 8
+        img_u = img >> n_lower
+        img_l = img & ((1 << n_lower) - 1)
+        imageio.imwrite(
+            os.path.join(compress_dir, f"{param_name}_l.png"), img_l.astype(np.uint8)
+        )
+        imageio.imwrite(
+            os.path.join(compress_dir, f"{param_name}_u.png"), img_u.astype(np.uint8)
+        )
+    return meta
+
+
+def _decompress_png_quant(
+    compress_dir: str, param_name: str, meta: Dict[str, Any]
+) -> Tensor:
+    """Decompress parameters written by :func:`_compress_png_quant`.
+
+    Args:
+        compress_dir (str): compression directory
+        param_name (str): parameter field name
+        meta (Dict[str, Any]): metadata
+
+    Returns:
+        Tensor: parameters
+    """
+    import imageio.v2 as imageio
+
+    bits = meta["bits"]
+    if bits <= 8:
+        img = imageio.imread(os.path.join(compress_dir, f"{param_name}.png"))
+    else:
+        img_l = imageio.imread(os.path.join(compress_dir, f"{param_name}_l.png"))
+        img_u = imageio.imread(os.path.join(compress_dir, f"{param_name}_u.png"))
+        img = (img_u.astype(np.uint16) << (bits - 8)) | img_l.astype(np.uint16)
+    img = img.reshape((img.shape[0], img.shape[1], -1))
+    n_sidelen = img.shape[0]
+
+    if "tile_size" in meta:
+        tiles = np.load(os.path.join(compress_dir, f"{param_name}_tiles.npz"))
+        mins = _expand_tiles(tiles["mins"], meta["tile_size"], n_sidelen)
+        maxs = _expand_tiles(tiles["maxs"], meta["tile_size"], n_sidelen)
+    else:
+        mins = np.array(meta["mins"], dtype=np.float64)
+        maxs = np.array(meta["maxs"], dtype=np.float64)
+
+    grid = img / (2**bits - 1) * (maxs - mins) + mins
+    params = torch.from_numpy(grid).reshape(meta["shape"])
+    params = params.to(dtype=getattr(torch, meta["dtype"]))
+    return params
+
+
+def _tile_bounds(grid: np.ndarray, tile_size: int) -> Tuple[np.ndarray, np.ndarray]:
+    """Per-tile, per-channel min and max of a [H, W, C] grid.
+
+    The bounds are rounded outwards to float16, so that every value stays inside the
+    stored range. Float32 is used instead if a bound does not fit into float16.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: mins and maxs, each [ceil(H / tile_size),
+        ceil(W / tile_size), C]
+    """
+    starts_h = np.arange(0, grid.shape[0], tile_size)
+    starts_w = np.arange(0, grid.shape[1], tile_size)
+    mins = np.minimum.reduceat(grid, starts_h, axis=0)
+    mins = np.minimum.reduceat(mins, starts_w, axis=1)
+    maxs = np.maximum.reduceat(grid, starts_h, axis=0)
+    maxs = np.maximum.reduceat(maxs, starts_w, axis=1)
+
+    for dtype in (np.float16, np.float32):
+        with np.errstate(over="ignore"):
+            mins_c = mins.astype(dtype)
+            maxs_c = maxs.astype(dtype)
+        mins_c = np.where(mins_c > mins, np.nextafter(mins_c, dtype(-np.inf)), mins_c)
+        maxs_c = np.where(maxs_c < maxs, np.nextafter(maxs_c, dtype(np.inf)), maxs_c)
+        if np.isfinite(mins_c).all() and np.isfinite(maxs_c).all():
+            break
+    return mins_c, maxs_c
+
+
+def _expand_tiles(tiles: np.ndarray, tile_size: int, n_sidelen: int) -> np.ndarray:
+    """Expand [T, T, C] per-tile values to a [n_sidelen, n_sidelen, C] float64 grid."""
+    idx = np.arange(n_sidelen) // tile_size
+    return tiles.astype(np.float64)[idx[:, None], idx[None, :]]
 
 
 def _compress_npz(
