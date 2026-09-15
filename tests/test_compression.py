@@ -225,7 +225,8 @@ def test_png_quant_round_trip_error_bound(tmp_path, bits, tile_size):
         assert torch.equal(mins, grid.amin((0, 1)))
     else:
         n_tiles = -(-n_sidelen // tile_size)
-        tiles = np.load(tmp_path / "p_tiles.npz")
+        with np.load(tmp_path / "p_tiles.npz") as f:
+            tiles = {k: f[k] for k in f.files}
         assert tiles["mins"].dtype == np.float16
         assert tiles["mins"].shape == (n_tiles, n_tiles, channels)
         idx = torch.arange(n_sidelen) // tile_size

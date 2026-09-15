@@ -462,9 +462,9 @@ def _decompress_png_quant(
     n_sidelen = img.shape[0]
 
     if "tile_size" in meta:
-        tiles = np.load(os.path.join(compress_dir, f"{param_name}_tiles.npz"))
-        mins = _expand_tiles(tiles["mins"], meta["tile_size"], n_sidelen)
-        maxs = _expand_tiles(tiles["maxs"], meta["tile_size"], n_sidelen)
+        with np.load(os.path.join(compress_dir, f"{param_name}_tiles.npz")) as tiles:
+            mins = _expand_tiles(tiles["mins"], meta["tile_size"], n_sidelen)
+            maxs = _expand_tiles(tiles["maxs"], meta["tile_size"], n_sidelen)
     else:
         mins = np.array(meta["mins"], dtype=np.float64)
         maxs = np.array(meta["maxs"], dtype=np.float64)
