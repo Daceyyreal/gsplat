@@ -24,6 +24,7 @@ pytest <THIS_PY_FILE> -s
 import json
 import math
 import os
+import warnings
 
 import numpy as np
 import pytest
@@ -238,6 +239,48 @@ def test_png_quant_round_trip_error_bound(tmp_path, bits, tile_size):
     err = (decoded.double().reshape(grid.shape) - grid).abs()
     # float32 output adds up to ~1e-6 relative error on values of magnitude ~10
     assert torch.all(err <= step / 2 + 1e-5)
+
+
+@pytest.mark.parametrize("bits", [1, 6, 8, 12, 16])
+@pytest.mark.parametrize("tile_size", [None, 4])
+def test_png_quant_constant_tiles_decode_exactly(tmp_path, bits, tile_size):
+    pytest.importorskip("imageio")
+    from gsplat.compression.png_compression import (
+        _compress_png_quant,
+        _decompress_png_quant,
+    )
+
+    # 10 x 10 grid with 4 x 4 tiles, so the last tile row / column is 2 wide.
+    n_sidelen, channels = 10, 2
+    gen = torch.Generator().manual_seed(bits)
+    grid = torch.randn(n_sidelen, n_sidelen, channels, generator=gen)
+    constant = torch.zeros(grid.shape, dtype=torch.bool)
+    if tile_size is None:
+        regions = {(slice(None), slice(None)): 1.0}
+    else:
+        # Values exactly representable in float16, so min == max after rounding.
+        regions = {
+            (slice(0, 4), slice(0, 4)): 0.0,
+            (slice(0, 4), slice(4, 8)): 1.0,
+            (slice(4, 8), slice(4, 8)): -2.5,
+            (slice(8, 10), slice(8, 10)): 0.0,  # partial border tile
+        }
+    for region, value in regions.items():
+        grid[region] = value
+        constant[region] = True
+
+    params = grid.reshape(-1, channels)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        meta = _compress_png_quant(
+            str(tmp_path), "p", params, n_sidelen, bits=bits, tile_size=tile_size
+        )
+        decoded = _decompress_png_quant(
+            str(tmp_path), "p", json.loads(json.dumps(meta))
+        )
+    decoded = decoded.reshape(grid.shape)
+    assert torch.isfinite(decoded).all()
+    assert torch.equal(decoded[constant], grid[constant])
 
 
 @pytest.mark.parametrize("bits", [6, 12])
