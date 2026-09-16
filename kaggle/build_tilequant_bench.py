@@ -63,7 +63,13 @@ notebook's previous output as an input; step 1 copies `results/`, `tilequant/` a
 | 9 | tile 128 + smooth ranges (tile 16, 32) at the 3 bit settings nearest each scene's RD front |
 | 10 | 2 extra PLAS sort seeds: baseline + top-3 configs per scene |
 | 11 | decision flags (`pr_worthy`, `tile_effect`, `global_only`), tables, RD plot |
-| 12 | output files and disk usage |
+| 12 | run 2 (shN codebook): baseline, decomposition, per-dim / per-band ranges, k-means variants |
+| 13 | run 2: baseline + best 2 configs on 2 extra k-means seeds |
+| 14 | run 2: `shn_decision.json`, decomposition, best per family, `rd_shn.png` |
+| 15 | output files and disk usage |
+
+**Run 2** needs run 1's output attached as input: training, run-1 sweeps and every row already in a
+results CSV are skipped.
 """
 )
 
@@ -616,10 +622,116 @@ display(Image(plot_path))
 """
 )
 
+md(
+    r"""
+## Run 2: shN codebook experiment
+
+`_compress_kmeans` quantizes the 65,536 x 45 k-means codebook to 6 bits with **one scalar min/max** over
+all dimensions. Run 2 keeps means / scales / quats / opacities / sh0 on the default path and varies only
+the shN encoding. It reuses the run-1 checkpoints and the seed-0 PLAS sort; k-means runs once per
+(clusters, kept coefficients, seed) with a fixed seed, and float centroids + labels are cached in
+`tilequant/shn/<scene>/kmeans`.
+
+| Config | shN encoding |
+|---|---|
+| `baseline` | library `_compress_kmeans` (65,536 clusters, one scalar min/max, 6 bits) on the cached centroids |
+| `P_png_raw` | baseline shN, PNG params as raw float32 (U - P ~ shN loss) |
+| `S_shn_raw` | default PNG params, raw float32 shN (U - S ~ PNG-param loss) |
+| `F_float_centroids` | default PNG params, float32 centroids (F - baseline ~ centroid quantization, S - F ~ clustering) |
+| `dim_b5` .. `dim_b8` | 45 per-dimension min/max pairs, 5-8 bits |
+| `band_b5`, `band_b6` | 9 min/max pairs (SH bands 1/2/3 x RGB), 5-6 bits |
+| `k32768_dim_b6` | 32,768 clusters, per-dim 6 bits |
+| `drop3_dim_b6` | SH band 3 dropped before k-means (decoded as 0), per-dim 6 bits |
+
+The decomposition is approximate: PSNR losses are not additive.
+"""
+)
+
+code(
+    r"""
+import tilequant_shn_analysis as sa
+
+SHN_EXTRA_SEEDS = (1, 2)  # k-means seeds besides seed 0
+SHN_RUNS_ROOT = "/tmp/tilequant_shn_runs"
+
+
+def shn_csv(scene):
+    return f"{OUT_DIR}/shn_results_{scene}.csv"
+
+
+def load_shn_results():
+    frames = [pd.read_csv(shn_csv(s)) for s in SCENES if os.path.exists(shn_csv(s))]
+    return pd.concat(frames, ignore_index=True)
+
+
+def run_shn(tag, configs=None, kmeans_seed=0):
+    # One process per scene (in parallel on 2 GPUs), each writing its own CSV.
+    jobs = []
+    for scene in SCENES:
+        args = [
+            PY, f"{SRC_DIR}/kaggle/tilequant_shn.py", "--scene", scene,
+            "--data_dir", SCENE_DIRS[scene], "--ckpt", CKPTS[scene],
+            "--work_dir", f"{OUT_DIR}/shn/{scene}", "--sort_cache_dir", f"{OUT_DIR}/sweep/{scene}/cache",
+            "--runs_dir", f"{SHN_RUNS_ROOT}/{scene}", "--csv", shn_csv(scene),
+            "--kmeans_seed", str(kmeans_seed), "--data_factor", str(data_factor(scene)),
+            "--cap_max", str(CAP_MAX), "--examples_dir", f"{SRC_DIR}/examples", "--commit", COMMIT[:12],
+        ]
+        if configs is not None:
+            args += ["--configs", ",".join(configs)]
+        jobs.append((f"shn_{tag}_{scene}", " ".join(args), f"{SRC_DIR}/examples", f"{OUT_DIR}/shn_{tag}_{scene}.log"))
+    run_on_gpus(jobs, N_PARALLEL, progress=r"^\[(" + "|".join(SCENES) + r")\]|k-means|Traceback|Error")
+
+
+run_shn("main")
+"""
+)
+
+code(
+    r"""
+# Robustness: baseline + best 2 configs (one list for both scenes) on 2 extra k-means seeds.
+shn_selection_path = f"{OUT_DIR}/shn_seed_selection.json"
+if os.path.exists(shn_selection_path):
+    SHN_SELECTION = json.load(open(shn_selection_path))
+else:
+    SHN_SELECTION = sa.shn_seed_candidates(load_shn_results(), SCENES, k=2)
+    json.dump(SHN_SELECTION, open(shn_selection_path, "w"), indent=2)
+print(json.dumps(SHN_SELECTION, indent=2))
+for seed in SHN_EXTRA_SEEDS:
+    run_shn(f"kseed{seed}", ["baseline"] + SHN_SELECTION["configs"], kmeans_seed=seed)
+display(sa.shn_seed_table(load_shn_results(), SCENES).round(4))
+"""
+)
+
+code(
+    r"""
+shn_df = load_shn_results()
+shn_df.to_csv(f"{OUT_DIR}/shn_results.csv", index=False)
+SHN_DECISION = sa.decide_shn(shn_df, load_results(), SCENES, seeds=(0, *SHN_EXTRA_SEEDS))
+with open(f"{OUT_DIR}/shn_decision.json", "w") as f:
+    json.dump(SHN_DECISION, f, indent=2)
+
+print(f"pr_worthy: {SHN_DECISION['pr_worthy']}  {SHN_DECISION['pr_worthy_configs']}")
+print("Decomposition at k-means seed 0 (approximate: PSNR losses are not additive):")
+display(pd.DataFrame({
+    s: {k: v for k, v in d.items() if k not in ("psnr", "note")} for s, d in SHN_DECISION["decomposition"].items()
+}).round(4))
+for scene in SCENES:
+    print(f"{scene}: best config per family (k-means seed 0)")
+    display(pd.DataFrame(SHN_DECISION["best_per_family_seed0"][scene]).T)
+    cols = ["Submethod", "variant", "PSNR", "SSIM", "LPIPS", "zip_bytes", "size_bytes", "shN_bytes", "kmeans_time_s", "eval_time_s"]
+    display(shn_df[(shn_df["scene"] == scene) & (shn_df["kmeans_seed"] == 0)][cols].round(4))
+
+shn_plot_path = f"{OUT_DIR}/rd_shn.png"
+sa.plot_shn(shn_df, load_results(), SCENES, shn_plot_path)
+display(Image(shn_plot_path))
+"""
+)
+
 code(
     r"""
 print(json.dumps(json.load(open(f"{OUT_DIR}/timings.json")), indent=2))
 shutil.rmtree(RUNS_ROOT, ignore_errors=True)
+shutil.rmtree(SHN_RUNS_ROOT, ignore_errors=True)
 sh(f"du -sh {WORK}/* || true")
 total = int(subprocess.check_output(["du", "-sb", WORK], text=True).split()[0])
 print(f"/kaggle/working total: {total / 1e9:.2f} GB")
@@ -628,6 +740,8 @@ if total > 15e9:
 print("Bring back:", [p for p in (
     CSV_PATH, f"{OUT_DIR}/decision.json", f"{OUT_DIR}/sanity_gate.json", f"{OUT_DIR}/extra_selection.json",
     f"{OUT_DIR}/seed_selection.json", f"{OUT_DIR}/timings.json", f"{OUT_DIR}/rd_size_vs_psnr.png",
+    f"{OUT_DIR}/shn_results.csv", f"{OUT_DIR}/shn_decision.json", f"{OUT_DIR}/shn_seed_selection.json",
+    f"{OUT_DIR}/rd_shn.png",
 ) if os.path.exists(p)])
 """
 )
