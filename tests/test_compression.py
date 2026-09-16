@@ -284,6 +284,39 @@ def test_png_quant_constant_tiles_decode_exactly(tmp_path, bits, tile_size):
 
 
 @pytest.mark.parametrize("bits", [6, 12])
+@pytest.mark.parametrize("tile_size", [None, 16])
+def test_png_quant_empty_splats(tmp_path, bits, tile_size):
+    pytest.importorskip("imageio")
+    from gsplat.compression import PngCompression
+
+    shapes = {
+        "means": (0, 3),
+        "scales": (0, 3),
+        "quats": (0, 4),
+        "opacities": (0,),
+        "sh0": (0, 1, 3),
+    }
+    method = PngCompression(
+        use_sort=False,
+        verbose=False,
+        tile_size=tile_size,
+        bits={k: bits for k in PNG_PARAMS},
+    )
+    method.compress(str(tmp_path), {k: torch.zeros(s) for k, s in shapes.items()})
+    # Only metadata is written for empty tensors.
+    assert os.listdir(tmp_path) == ["meta.json"]
+    with open(tmp_path / "meta.json") as f:
+        meta = json.load(f)
+    splats_c = method.decompress(str(tmp_path))
+
+    for k, shape in shapes.items():
+        assert meta[k]["shape"] == list(shape) and meta[k]["bits"] == bits, k
+        assert isinstance(splats_c[k], torch.Tensor), k
+        assert splats_c[k].shape == shape, k
+        assert splats_c[k].dtype == torch.float32, k
+
+
+@pytest.mark.parametrize("bits", [6, 12])
 def test_png_quant_file_layout(tmp_path, bits):
     imageio = pytest.importorskip("imageio.v2")
     from gsplat.compression import PngCompression

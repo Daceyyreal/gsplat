@@ -391,12 +391,17 @@ def _compress_png_quant(
     """
     import imageio.v2 as imageio
 
-    grid = params.detach().reshape((n_sidelen, n_sidelen, -1)).cpu().double().numpy()
     meta = {
         "shape": list(params.shape),
         "dtype": str(params.dtype).split(".")[1],
         "bits": bits,
     }
+    if params.numel() == 0:
+        if tile_size is not None:
+            meta["tile_size"] = tile_size
+        return meta
+
+    grid = params.detach().reshape((n_sidelen, n_sidelen, -1)).cpu().double().numpy()
     if tile_size is None:
         mins = grid.min(axis=(0, 1))
         maxs = grid.max(axis=(0, 1))
@@ -450,6 +455,9 @@ def _decompress_png_quant(
         Tensor: parameters
     """
     import imageio.v2 as imageio
+
+    if not np.all(meta["shape"]):
+        return torch.zeros(meta["shape"], dtype=getattr(torch, meta["dtype"]))
 
     bits = meta["bits"]
     if bits <= 8:
