@@ -48,10 +48,10 @@ works, sequentially), Internet *on*. Run with *Save Version -> Save & Run All (C
 
 **Resuming:** step 2 searches `/kaggle/input` recursively for the outputs of earlier sessions
 (checkpoints, `tilequant/` CSVs and caches, the gsplat wheel), prints what it found and copies it into
-`/kaggle/working`. With `RUN_MODE = "run4"` (default) it stops before any install if the run-3 output
-(or a partial run-4 output) is missing; run 4 never re-runs run-1 / run-2 / run-3 rows, never retrains
-garden or bicycle and never builds the wheel because of missing inputs. `RUN_MODE = "run3"` needs the
-run-2 output; `RUN_MODE = "full"` runs everything that has no output yet.
+`/kaggle/working`. With `RUN_MODE = "run5"` (default) it stops before any install if the run-4 output
+(or a partial run-5 output) is missing, and re-runs nothing from runs 1-4. `RUN_MODE = "run4"` needs the
+run-3 output, `RUN_MODE = "run3"` the run-2 output, and `RUN_MODE = "full"` runs everything that has no
+output yet. Run 5 is the only mode that builds the gsplat wheel: it measures new library code.
 
 | Step | What |
 |---|---|
@@ -75,8 +75,12 @@ run-2 output; `RUN_MODE = "full"` runs everything that has no output yet.
 | 17 | run 3: `run3_decision.json`, `rd_run3.png` |
 | 18 | run 4 (MipNeRF360 validation): runtime estimate, session plan, one queued job per new scene |
 | 19 | run 4: `run4_decision.json`, `run4_table.csv`, `rd_run4.png` |
-| 20 | output files and disk usage |
-| 21 | `results_bundle.zip` (top-level csv / json / png of `tilequant/`) |
+| 20 | run 5 (library implementation): parity gate against the run-3 rows |
+| 21 | run 5: MipNeRF360 with `PngCompression(kmeans_backend="builtin")` |
+| 22 | run 5: Tanks & Temples (`mcmc_tt.sh`), trained here |
+| 23 | run 5: decision, upstream tables, CPU-only smoke test, `rd_run5.png` |
+| 24 | output files and disk usage |
+| 25 | `results_bundle.zip` (top-level csv / json / png of `tilequant/`) |
 
 In run3 mode steps 5-14 only use restored results (training, current-main compression and the run-1 /
 run-2 sweeps and decisions are skipped). In run4 mode steps 5-17 only use restored results.
@@ -111,9 +115,9 @@ CSV_PATH = f"{OUT_DIR}/tilequant_results.csv"  # merged; per-scene files are res
 WHEEL_ROOT = f"{WORK}/wheels"
 MIPNERF360_ZIP = "https://storage.googleapis.com/gresearch/refraw360/360_v2.zip"
 
-RUN_MODE = "run4"  # "run4": needs the run-3 (or a partial run-4) output as input; "run3": needs the
-# run-2 output; "full": run everything missing
-ALLOW_WHEEL_BUILD = False  # run3 / run4 mode: build gsplat only if explicitly allowed (73 min in run 2)
+RUN_MODE = "run5"  # "run5": needs the run-4 (or a partial run-5) output as input; "run4": needs the
+# run-3 output; "run3": the run-2 output; "full": run everything missing
+ALLOW_WHEEL_BUILD = False  # run3 / run4 never build; run 5 always does (it measures new library code)
 INPUT_ROOT = "/kaggle/input"
 NOTEBOOK_T0 = time.time()  # run 4 does not start a scene job that would end past its session budget
 
@@ -305,7 +309,12 @@ def discover_inputs(root, scenes, result_name, max_depth=6):
             if n_ckpts:
                 results.append((n_ckpts, dirpath))
         if name == "tilequant" and {"tilequant_results.csv", "shn_results.csv"} <= set(filenames):
-            tilequants.append(((sum(f.startswith("run4_results_") for f in filenames), "run3_results.csv" in filenames), dirpath))
+            tilequants.append((
+                (sum(f.startswith("run5_results_") for f in filenames),
+                 sum(f.startswith("run4_results_") for f in filenames),
+                 "run3_results.csv" in filenames),
+                dirpath,
+            ))
         if name == "wheels" and found["wheels"] is None:
             found["wheels"] = dirpath
     found["results_dirs"] = [p for _, p in sorted(results, key=lambda x: x[0])]
@@ -332,6 +341,11 @@ RUN4_REQUIRED_ROWS = [  # (file, Submethod, k-means seed) per reused scene
     ("shn_results.csv", "baseline", 0),
     ("run3_results.csv", "lloyd_wopa", 0),
     ("run3_results.csv", "lloyd_wopa_area", 0),
+]
+RUN5_REQUIRED_ROWS = [  # run 5 pairs against these; the parity gate needs the run-3 rows
+    ("run3_results.csv", "lloyd_wopa_area", 0),
+    ("run4_results.csv", "baseline", 0),
+    ("run4_results.csv", "lloyd_wopa_area", 0),
 ]
 
 
@@ -361,11 +375,28 @@ def split_by_scene(merged_path, pattern):
                 writer.writerows(r for r in rows if r["scene"] == scene)
 
 
-FOUND = discover_inputs(INPUT_ROOT, SCENES, RESULT_NAME)
+MIPNERF360_SCENES = [  # mcmc.sh, checked against the parsed script in the run-4 cell
+    "garden", "bicycle", "stump", "bonsai", "counter", "kitchen", "room", "treehill", "flowers",
+]
+FOUND = discover_inputs(INPUT_ROOT, sorted(set(SCENES) | set(MIPNERF360_SCENES)), RESULT_NAME)
 print(f"Found under {INPUT_ROOT}:\n{json.dumps(FOUND, indent=2)}")
 print(f"\n{INPUT_ROOT} tree (depth 3):\n{input_tree(INPUT_ROOT)}")
 missing = [f"checkpoint results/{RESULT_NAME}/{s}/ckpts/*.pt" for s in SCENES if s not in FOUND["ckpts"]]
-if RUN_MODE == "run4":
+if RUN_MODE == "run5":
+    missing = [f"checkpoint results/{RESULT_NAME}/{s}/ckpts/*.pt" for s in MIPNERF360_SCENES
+               if s not in FOUND["ckpts"]]
+    if FOUND["tilequant"] is None or not os.path.exists(os.path.join(FOUND["tilequant"], "run4_results.csv")):
+        missing.append("tilequant/ with run4_results.csv (and the run-1 / run-2 / run-3 CSVs)")
+    else:
+        missing += missing_rows(FOUND["tilequant"], MIPNERF360_SCENES, RUN5_REQUIRED_ROWS[1:])
+        missing += missing_rows(FOUND["tilequant"], SCENES, RUN5_REQUIRED_ROWS[:1])
+    if missing:
+        raise RuntimeError(
+            "RUN_MODE = 'run5' needs the run-4 output (or a partial run-5 output). Missing:\n  - " + "\n  - ".join(missing)
+            + f"\n\n{INPUT_ROOT} tree (depth 3):\n{input_tree(INPUT_ROOT)}"
+            + "\n\nAttach the run-4 notebook output (or a partial run-5 output) as input."
+        )
+elif RUN_MODE == "run4":
     if FOUND["tilequant"] is None or not os.path.exists(os.path.join(FOUND["tilequant"], "run3_results.csv")):
         missing.append("tilequant/ with tilequant_results.csv, shn_results.csv and run3_results.csv")
     else:
@@ -398,7 +429,7 @@ os.makedirs(OUT_DIR, exist_ok=True)
 if restore:
     record_timing("restore_s", time.time() - t_restore)
 for merged, pattern in (("tilequant_results.csv", "results_{}.csv"), ("shn_results.csv", "shn_results_{}.csv"),
-                        ("run3_results.csv", "run3_results_{}.csv")):
+                        ("run3_results.csv", "run3_results_{}.csv")):  # per-scene files for SCENES
     if os.path.exists(f"{OUT_DIR}/{merged}"):
         split_by_scene(f"{OUT_DIR}/{merged}", f"{OUT_DIR}/{pattern}")
 """
@@ -463,7 +494,8 @@ def restored_wheel(wheel_root, wheel_key):
         raise RuntimeError(
             f"RUN_MODE = {RUN_MODE!r}: no gsplat wheel for cache key {wheel_key} (restored keys: {available}). "
             "Runs 3 and 4 do not change gsplat/, so the restored wheel matches unless this Kaggle image has a "
-            "different torch version or GPU. Set ALLOW_WHEEL_BUILD = True to build it (73 min in run 2)."
+            "different torch version or GPU (run 5 builds its own wheel). Set ALLOW_WHEEL_BUILD = True to "
+            "build it (73 min in run 2)."
         )
     return None
 
@@ -496,6 +528,7 @@ import tilequant_sweep as ts
 t_start = time.time()
 assert torch.cuda.is_available(), "no CUDA device"
 assert "tile_size" in inspect.signature(PngCompression).parameters, "gsplat is not the tile-quantization branch"
+assert "kmeans_backend" in inspect.signature(PngCompression).parameters, "gsplat is missing the weighted k-means backend"
 N, dev = 300**2, "cuda"  # >= 65,536 points for the default k-means (65,536 clusters)
 gen = torch.Generator(device=dev).manual_seed(0)
 base = dict(
@@ -637,8 +670,8 @@ def download_scene(scene, dst):
 
 
 SCENE_DIRS = {}
-if RUN_MODE == "run4":
-    print("run4 mode: garden / bicycle rows are restored (no data needed); each new run-4 scene job gets its own data")
+if RUN_MODE in ("run4", "run5"):
+    print(f"{RUN_MODE} mode: each scene job downloads (and deletes) its own data")
 else:
     t0 = time.time()
     for scene in SCENES:
@@ -664,7 +697,7 @@ def ckpt_path(scene):
 
 N_PARALLEL = max(1, min(N_GPUS, len(SCENES)))
 CKPTS = {}
-if RUN_MODE in ("run3", "run4"):
+if RUN_MODE in ("run3", "run4", "run5"):
     for scene in SCENES:
         restored = f"{RESULT_DIR}/{scene}/ckpts/{os.path.basename(FOUND['ckpts'][scene])}"
         if not os.path.exists(restored):
@@ -712,7 +745,7 @@ def scene_csv(scene):
     return f"{OUT_DIR}/results_{scene}.csv"
 
 
-if RUN_MODE in ("run3", "run4"):
+if RUN_MODE in ("run3", "run4", "run5"):
     print(f"{RUN_MODE} mode: current-main compression and sanity gate come from the restored run-2 output")
     if os.path.exists(f"{OUT_DIR}/sanity_gate.json"):
         print(open(f"{OUT_DIR}/sanity_gate.json").read())
@@ -800,7 +833,7 @@ def run_sweep(tag, configs_by_scene=None, sort_seed=0):
     run_on_gpus(jobs, N_PARALLEL, progress=r"^\[(" + "|".join(SCENES) + r")\]|Built cache|Traceback|Error")
 
 
-if RUN_MODE in ("run3", "run4"):
+if RUN_MODE in ("run3", "run4", "run5"):
     print(f"{RUN_MODE} mode: run-1 main sweep restored, not re-run")
 else:
     run_sweep("main")
@@ -810,7 +843,7 @@ else:
 code(
     r"""
 # Tile 128 and smooth ranges (tile 16, 32) at the 3 bit settings nearest each scene's RD front.
-if RUN_MODE in ("run3", "run4"):
+if RUN_MODE in ("run3", "run4", "run5"):
     print(f"{RUN_MODE} mode: run-1 extra configs restored, not re-run")
 else:
     selection_path = f"{OUT_DIR}/extra_selection.json"
@@ -834,7 +867,7 @@ code(
     r"""
 # Seed robustness: fresh PLAS sort per seed (k-means centroids reused, labels permuted),
 # baseline + top-3 configs per scene, compared per seed.
-if RUN_MODE in ("run3", "run4"):
+if RUN_MODE in ("run3", "run4", "run5"):
     print(f"{RUN_MODE} mode: run-1 sort-seed rows restored, not re-run")
 else:
     seed_selection_path = f"{OUT_DIR}/seed_selection.json"
@@ -852,7 +885,7 @@ else:
 
 code(
     r"""
-if RUN_MODE in ("run3", "run4"):
+if RUN_MODE in ("run3", "run4", "run5"):
     print(f"{RUN_MODE} mode: run-1 decision.json and plot restored, not recomputed")
 else:
     df = load_results()
@@ -941,7 +974,7 @@ def run_shn(tag, configs=None, kmeans_seed=0):
     run_on_gpus(jobs, N_PARALLEL, progress=r"^\[(" + "|".join(SCENES) + r")\]|k-means|Traceback|Error")
 
 
-if RUN_MODE in ("run3", "run4"):
+if RUN_MODE in ("run3", "run4", "run5"):
     print(f"{RUN_MODE} mode: run-2 main rows restored, not re-run")
 else:
     run_shn("main")
@@ -951,7 +984,7 @@ else:
 code(
     r"""
 # Robustness: baseline + best 2 configs (one list for both scenes) on 2 extra k-means seeds.
-if RUN_MODE in ("run3", "run4"):
+if RUN_MODE in ("run3", "run4", "run5"):
     print(f"{RUN_MODE} mode: run-2 k-means seed rows restored, not re-run")
 else:
     shn_selection_path = f"{OUT_DIR}/shn_seed_selection.json"
@@ -969,7 +1002,7 @@ else:
 
 code(
     r"""
-if RUN_MODE in ("run3", "run4"):
+if RUN_MODE in ("run3", "run4", "run5"):
     print(f"{RUN_MODE} mode: run-2 shn_decision.json and plot restored, not recomputed")
 else:
     shn_df = load_shn_results()
@@ -1060,8 +1093,8 @@ def run_run3(tag, configs, kmeans_seed=0):
     run_on_gpus(jobs, N_PARALLEL, progress=r"^\[(" + "|".join(SCENES) + r")\]|clustering |Traceback|Error")
 
 
-if RUN_MODE == "run4":
-    print("run4 mode: run-3 rows restored, not re-run")
+if RUN_MODE in ("run4", "run5"):
+    print(f"{RUN_MODE} mode: run-3 rows restored, not re-run")
 else:
     run_run3("main", r3a.RUN3_MAIN)
 """
@@ -1070,8 +1103,8 @@ else:
 code(
     r"""
 # iters_x: only if the seed-0 torchpq manhattan run stopped at max_iter before torchpq's own tol.
-if RUN_MODE == "run4":
-    print("run4 mode: run-3 iters_x rows restored, not re-run")
+if RUN_MODE in ("run4", "run5"):
+    print(f"{RUN_MODE} mode: run-3 iters_x rows restored, not re-run")
 else:
     CONVERGENCE = r3a.manhattan_convergence(load_run3_results(), SCENES)
     print(json.dumps(CONVERGENCE, indent=2))
@@ -1088,8 +1121,8 @@ code(
     r"""
 # Robustness: best 2 candidates (one list for both scenes) on k-means seeds 1 and 2; the run-2 baseline
 # rows of those seeds are the reference.
-if RUN_MODE == "run4":
-    print("run4 mode: run-3 k-means seed rows restored, not re-run")
+if RUN_MODE in ("run4", "run5"):
+    print(f"{RUN_MODE} mode: run-3 k-means seed rows restored, not re-run")
 else:
     run3_selection_path = f"{OUT_DIR}/run3_seed_selection.json"
     if os.path.exists(run3_selection_path):
@@ -1105,8 +1138,8 @@ else:
 
 code(
     r"""
-if RUN_MODE == "run4":
-    print("run4 mode: run3_decision.json and rd_run3.png restored, not recomputed")
+if RUN_MODE in ("run4", "run5"):
+    print(f"{RUN_MODE} mode: run3_decision.json and rd_run3.png restored, not recomputed")
 else:
     df3 = load_run3_results()
     df3.to_csv(f"{OUT_DIR}/run3_results.csv", index=False)
@@ -1240,7 +1273,7 @@ def run4_job(scene):
 
 
 if RUN_MODE not in ("run4", "full"):
-    print(f"{RUN_MODE} mode: run 4 not run")
+    print(f"{RUN_MODE} mode: run-4 rows restored, not re-run")
 else:
     # Runtime estimate and session split: computed once from the restored runs 1-3 files, then fixed.
     run4_plan_path = f"{OUT_DIR}/run4_plan.json"
@@ -1300,7 +1333,7 @@ else:
 code(
     r"""
 if RUN_MODE not in ("run4", "full"):
-    print(f"{RUN_MODE} mode: run-4 decision not computed")
+    print(f"{RUN_MODE} mode: run4_decision.json restored, not recomputed")
 else:
     df4 = load_run4_results()
     df4.to_csv(f"{OUT_DIR}/run4_results.csv", index=False)
@@ -1332,6 +1365,250 @@ else:
 """
 )
 
+md(
+    r"""
+## Run 5: the same change inside gsplat (pre-registered rule, unchanged)
+
+Run 4 picked `lloyd_wopa_area`. Branch `feat/png-weighted-kmeans` puts that clustering into the library
+(`gsplat/compression/kmeans.py`, `PngCompression(kmeans_backend="builtin", kmeans_weighting=...)`), with
+the default path and the file format untouched. Run 5 measures **the library code**, not the benchmark
+harness:
+
+1. **Parity gate (first).** `kmeans_backend="builtin", kmeans_weighting="opacity_area"` on garden and
+   bicycle, k-means seed 0, PLAS sort seed 0, must reproduce the run-3 rows: PSNR within 1e-6 dB and
+   equal zip and raw bytes. The rows are written into the run-3 run directory path, so the zip sizes are
+   directly comparable. If the gate fails, the run stops and prints the difference before anything else.
+2. **MipNeRF360**, all 9 `mcmc.sh` scenes: `baseline_lib` (library default path, re-run here to check it
+   still reproduces the run-4 baseline rows and to measure its cost) and both candidates. The decision
+   pairs the candidates against the **run-4 baseline rows** on the same checkpoints.
+3. **Tanks & Temples**, the `mcmc_tt.sh` scenes (train, truck; data factor 1), trained in this session:
+   uncompressed, `baseline`, both candidates, with the same sanity gate as run 4.
+4. **Cost and portability:** k-means time and peak GPU memory per scene and config, and a CPU-only smoke
+   test of the builtin backend with TorchPQ blocked.
+
+The decision is `tilequant_run4_analysis.decide_run4` (the run-4 rule, unchanged), applied to each
+dataset separately: mean dPSNR > 0, dPSNR > 0 on all scenes but at most one, no scene below -0.02 dB,
+mean dLPIPS <= 0, mean dSSIM >= -0.0002, and zip and raw bytes within 1.003x on every scene.
+
+**Outputs:** `run5_parity.json`, `run5_results.csv`, `run5_table.csv`, `run5_tt_table.csv`,
+`run5_costs.csv`, `run5_decision.json`, `run5_cpu_smoke.json`, `run5_plan.json`, `rd_run5.png`.
+"""
+)
+
+code(
+    r"""
+import tilequant_run5_analysis as r5a
+
+RUN5_RUNS_ROOT = "/tmp/tilequant_run5_runs"
+TT_SH_PATH = f"{SRC_DIR}/examples/benchmarks/compression/mcmc_tt.sh"
+TT = r5a.parse_benchmark_sh(open(TT_SH_PATH).read())
+TT_SCENES = TT["scenes"]
+TT_RESULT_DIR = f"{WORK}/results/{os.path.basename(TT['result_dir'])}"
+RUN5_M360_CONFIGS = [r5a.BASELINE_CHECK, *r5a.CANDIDATES]
+RUN5_TT_CONFIGS = [r5a.BASELINE, *r5a.CANDIDATES]
+RUN5_DATASET_SCENES = {"mipnerf360": RUN4_SCENES, "tandt": TT_SCENES}
+assert TT["cap_max"] == CAP_MAX and set(TT_SCENES) <= set(r5a.TANDT_META), TT
+
+
+def run5_csv(dataset, scene):
+    return f"{OUT_DIR}/run5_results_{dataset}_{scene}.csv"
+
+
+def run5_gate_path(scene):
+    return f"{OUT_DIR}/run5_gate_{scene}.json"
+
+
+def run5_gates():
+    return {s: json.load(open(run5_gate_path(s))) for s in TT_SCENES if os.path.exists(run5_gate_path(s))}
+
+
+def load_run5_results():
+    frames = [pd.read_csv(p) for p in sorted(glob.glob(f"{OUT_DIR}/run5_results_*_*.csv"))]
+    if not frames:
+        return pd.DataFrame(columns=r5a.RUN5_COLUMNS)
+    return pd.concat(frames, ignore_index=True).reindex(columns=r5a.RUN5_COLUMNS)
+
+
+def run5_rows_done(dataset, scene):
+    path = run5_csv(dataset, scene)
+    return set(pd.read_csv(path)["Submethod"]) if os.path.exists(path) else set()
+
+
+def run5_job(dataset, scene, configs, runs_dir=None, keep_data=False, tag=None):
+    spec = r5a.DATASETS[dataset]
+    is_tt = dataset == "tandt"
+    args = [
+        PY, f"{SRC_DIR}/kaggle/tilequant_run5.py", "--dataset", dataset, "--scene", scene,
+        "--benchmark_sh", TT_SH_PATH if is_tt else MCMC_SH_PATH, "--data_root", spec["data_root"],
+        "--result_dir", f"{TT_RESULT_DIR if is_tt else RESULT_DIR}/{scene}",
+        "--work_dir", f"{OUT_DIR}/run5/{dataset}/{scene}", "--sort_cache_dir", f"{OUT_DIR}/sweep/{scene}/cache",
+        "--runs_dir", runs_dir or f"{RUN5_RUNS_ROOT}/{scene}", "--csv", run5_csv(dataset, scene),
+        "--gate_json", run5_gate_path(scene),
+        "--repo_csv", f"{SRC_DIR}/examples/benchmarks/compression/results/{spec['repo_csv']}",
+        "--configs", ",".join(configs), "--python", PY, "--examples_dir", f"{SRC_DIR}/examples",
+        "--commit", COMMIT[:12],
+    ] + (["--keep_data"] if keep_data else [])
+    name = f"run5_{tag or dataset}_{scene}"
+    return (name, " ".join(args), f"{SRC_DIR}/examples", f"{OUT_DIR}/{name}.log")
+
+
+def run5_queue(jobs, label):
+    # Queue the jobs, keep partial results in the bundle, and start nothing past the session budget.
+    def can_start(name):
+        scene = name.rsplit("_", 1)[-1]
+        key = f"tandt/{scene}" if scene in TT_SCENES else f"mipnerf360/{scene}"
+        remaining = RUN5_PLAN["per_scene_estimate"][key]["total_s"]
+        if scene in TT_SCENES and os.path.exists(f"{TT_RESULT_DIR}/{scene}/ckpts/train_complete.json"):
+            remaining -= RUN5_PLAN["per_scene_estimate"][key]["train_s"]
+        elapsed = time.time() - NOTEBOOK_T0
+        if elapsed + remaining > r4a.SESSION_BUDGET_H * 3600:
+            print(f"{scene}: not started ({elapsed / 3600:.1f} h elapsed + {remaining / 3600:.1f} h estimated > "
+                  f"{r4a.SESSION_BUDGET_H} h); attach this output to the next session")
+            return False
+        return True
+
+    print(f"run 5 {label}: {[j[0] for j in jobs]}")
+    try:
+        if jobs:
+            run_gpu_queue(jobs, N_GPUS, can_start=can_start,
+                          progress=r"^\[(" + "|".join(RUN4_SCENES + TT_SCENES) + r")\]|Traceback|SANITY GATE|PARITY")
+    finally:
+        try:
+            load_run5_results().to_csv(f"{OUT_DIR}/run5_results.csv", index=False)
+        except Exception as e:
+            print(f"run5_results.csv not written: {type(e).__name__}: {e}")
+        write_bundle(OUT_DIR, f"{WORK}/results_bundle.zip")
+
+
+if RUN_MODE not in ("run5", "full"):
+    print(f"{RUN_MODE} mode: run 5 not run")
+else:
+    run5_plan_path = f"{OUT_DIR}/run5_plan.json"
+    if os.path.exists(run5_plan_path):
+        RUN5_PLAN = json.load(open(run5_plan_path))
+    else:
+        measured = r5a.measured_components(json.load(open(f"{OUT_DIR}/timings.json")), load_results(),
+                                           load_shn_results(), load_run3_results(), load_run4_results(),
+                                           MCMC_SH["data_factors"])
+        per_scene = r5a.estimate_run5(measured, MCMC_SH, TT, len(RUN5_M360_CONFIGS), len(RUN5_TT_CONFIGS))
+        setup_s = measured["session_setup_s"] + json.load(open(f"{OUT_DIR}/timings.json")).get("gsplat_wheel_build_s", 0.0)
+        RUN5_PLAN = {
+            "measured": measured, "per_scene_estimate": per_scene,
+            **r4a.plan_sessions({k: v["total_s"] for k, v in per_scene.items()}, list(per_scene), N_GPUS, setup_s),
+            "assumptions": [
+                "training time proportional to training-image megapixels (measured at data factor 2 and 4)",
+                "Tanks & Temples at data factor 1, about 2.14 megapixels per image",
+                "Lloyd k-means at max_iter (100) with the slowest measured seconds per iteration",
+                "the gsplat wheel build of the run-2 session (73 min) counted as session setup",
+            ],
+        }
+        json.dump(RUN5_PLAN, open(run5_plan_path, "w"), indent=2)
+    display(pd.DataFrame(RUN5_PLAN["per_scene_estimate"]).T.round(1))
+    for i, (group, est) in enumerate(zip(RUN5_PLAN["sessions"], RUN5_PLAN["session_estimate_s"]), 1):
+        print(f"session {i}: {group} (estimate {est / 3600:.1f} h on {RUN5_PLAN['n_gpus']} GPU(s))")
+
+    # 1. Parity gate: the library must reproduce the run-3 rows before anything else runs.
+    parity_jobs = [run5_job("mipnerf360", scene, [r5a.PARITY_CONFIG], runs_dir=f"{RUN3_RUNS_ROOT}/{scene}",
+                            keep_data=True, tag="parity")
+                   for scene in r5a.PARITY_SCENES if r5a.PARITY_CONFIG not in run5_rows_done("mipnerf360", scene)]
+    run5_queue(parity_jobs, "parity gate")
+    RUN5_PARITY = r5a.parity_check(load_run5_results(), load_run3_results())
+    json.dump(RUN5_PARITY, open(f"{OUT_DIR}/run5_parity.json", "w"), indent=2)
+    display(pd.DataFrame(RUN5_PARITY["per_scene"]).T)
+    write_bundle(OUT_DIR, f"{WORK}/results_bundle.zip")
+    if not RUN5_PARITY["pass"]:
+        raise RuntimeError(r5a.parity_failure_report(RUN5_PARITY))
+    print("parity gate passed: the library reproduces the run-3 rows")
+"""
+)
+
+code(
+    r"""
+# 2. MipNeRF360 with library code: baseline_lib (check + cost) and both candidates, on the run-4 checkpoints.
+if RUN_MODE not in ("run5", "full"):
+    print(f"{RUN_MODE} mode: run-5 MipNeRF360 rows not run")
+else:
+    jobs = [run5_job("mipnerf360", scene, RUN5_M360_CONFIGS)
+            for scene in RUN4_SCENES if not set(RUN5_M360_CONFIGS) <= run5_rows_done("mipnerf360", scene)]
+    run5_queue(jobs, "MipNeRF360")
+"""
+)
+
+code(
+    r"""
+# 3. Tanks & Temples (mcmc_tt.sh): train here, then uncompressed, baseline, both candidates + sanity gate.
+if RUN_MODE not in ("run5", "full"):
+    print(f"{RUN_MODE} mode: run-5 Tanks & Temples rows not run")
+else:
+    jobs = [run5_job("tandt", scene, RUN5_TT_CONFIGS)
+            for scene in TT_SCENES if not set(RUN5_TT_CONFIGS) <= run5_rows_done("tandt", scene)]
+    run5_queue(jobs, "Tanks & Temples")
+"""
+)
+
+code(
+    r"""
+if RUN_MODE not in ("run5", "full"):
+    print(f"{RUN_MODE} mode: run-5 decision not computed")
+else:
+    df5 = load_run5_results()
+    df5.to_csv(f"{OUT_DIR}/run5_results.csv", index=False)
+    run4_df = load_run4_results()
+    base_360 = run4_df[run4_df["Submethod"] == "baseline"]
+    base_tt = df5[(df5["dataset"] == "tandt") & (df5["Submethod"] == r5a.BASELINE)]
+    RUN5_DECISION = {
+        "parity": RUN5_PARITY,
+        "baseline_reproduced_mipnerf360": r5a.baseline_reproduced(df5, run4_df, RUN4_SCENES),
+        "datasets": {
+            "mipnerf360": r5a.decide_run5(df5[df5["dataset"] == "mipnerf360"], base_360, RUN4_SCENES,
+                                          run4_gates(), RUN4_NEW),
+            "tandt": r5a.decide_run5(df5[df5["dataset"] == "tandt"], base_tt, TT_SCENES, run5_gates(), TT_SCENES),
+        },
+    }
+    # CPU-only smoke test of the builtin backend, with TorchPQ blocked.
+    sh(f"{PY} {SRC_DIR}/kaggle/tilequant_run5.py --cpu_smoke_json {OUT_DIR}/run5_cpu_smoke.json",
+       env={"CUDA_VISIBLE_DEVICES": ""})
+    RUN5_DECISION["cpu_smoke"] = json.load(open(f"{OUT_DIR}/run5_cpu_smoke.json"))
+    RUN5_DECISION["pr_candidate_per_dataset"] = {k: v["pr_candidate"] for k, v in RUN5_DECISION["datasets"].items()}
+    with open(f"{OUT_DIR}/run5_decision.json", "w") as f:
+        json.dump(RUN5_DECISION, f, indent=2)
+
+    RUN5_TABLE = r5a.run5_table(df5[df5["dataset"] == "mipnerf360"], base_360, RUN4_SCENES,
+                                ta.read_repo_row(REPO_CSV, CAP_MAX))
+    RUN5_TABLE.to_csv(f"{OUT_DIR}/run5_table.csv", index=False)
+    tt_repo_csv = f"{SRC_DIR}/examples/benchmarks/compression/results/TanksAndTemples.csv"
+    RUN5_TT_TABLE = r5a.run5_table(df5[df5["dataset"] == "tandt"], base_tt, TT_SCENES,
+                                   ta.read_repo_row(tt_repo_csv, CAP_MAX))
+    RUN5_TT_TABLE.to_csv(f"{OUT_DIR}/run5_tt_table.csv", index=False)
+    RUN5_COSTS = r5a.cost_table(df5, RUN4_SCENES + TT_SCENES, [r5a.BASELINE, r5a.BASELINE_CHECK, *r5a.CANDIDATES])
+    RUN5_COSTS.to_csv(f"{OUT_DIR}/run5_costs.csv", index=False)
+    for dataset, scenes in RUN5_DATASET_SCENES.items():
+        for scene in scenes:
+            stage_path = f"{OUT_DIR}/run5/{dataset}/{scene}/stage_timings.json"
+            if os.path.exists(stage_path):
+                for k, v in json.load(open(stage_path)).items():
+                    if k.endswith("_s"):
+                        record_timing(f"run5_{k[:-2]}_{scene}_s", v)
+
+    for dataset, decision in RUN5_DECISION["datasets"].items():
+        print(f"{dataset}: pr_candidate {decision['pr_candidate']} (passing: {decision['passing']})")
+        for name, c in decision["candidates"].items():
+            print(f"  {name}: pass {c['pass']}, mean dPSNR {c.get('mean_dPSNR')}, mean dSSIM {c.get('mean_dSSIM')}, "
+                  f"mean dLPIPS {c.get('mean_dLPIPS')}, worst scene {c.get('min_scene_dPSNR')}, "
+                  f"worst zip {c.get('max_zip_pct')}%")
+    print("baseline_lib vs the run-4 baseline rows:",
+          json.dumps(RUN5_DECISION["baseline_reproduced_mipnerf360"], indent=2)[:2000])
+    print("CPU smoke test:", json.dumps(RUN5_DECISION["cpu_smoke"], indent=2))
+    display(RUN5_TABLE)
+    display(RUN5_TT_TABLE)
+    display(RUN5_COSTS.round(2))
+    run5_plot_path = f"{OUT_DIR}/rd_run5.png"
+    r5a.plot_run5(RUN5_DECISION["datasets"], {"mipnerf360": RUN5_TABLE, "tandt": RUN5_TT_TABLE},
+                  RUN5_COSTS, RUN5_PARITY, run5_plot_path)
+    display(Image(run5_plot_path))
+"""
+)
+
 code(
     r"""
 print(json.dumps(json.load(open(f"{OUT_DIR}/timings.json")), indent=2))
@@ -1339,6 +1616,7 @@ shutil.rmtree(RUNS_ROOT, ignore_errors=True)
 shutil.rmtree(SHN_RUNS_ROOT, ignore_errors=True)
 shutil.rmtree(RUN3_RUNS_ROOT, ignore_errors=True)
 shutil.rmtree(RUN4_RUNS_ROOT, ignore_errors=True)
+shutil.rmtree(RUN5_RUNS_ROOT, ignore_errors=True)
 sh(f"du -sh {WORK}/* || true")
 total = int(subprocess.check_output(["du", "-sb", WORK], text=True).split()[0])
 print(f"/kaggle/working total: {total / 1e9:.2f} GB")
@@ -1352,6 +1630,9 @@ print("Bring back:", [p for p in (
     f"{OUT_DIR}/run3_seed_selection.json", f"{OUT_DIR}/run3_kmeans_logs_seed0.json", f"{OUT_DIR}/rd_run3.png",
     f"{OUT_DIR}/run4_results.csv", f"{OUT_DIR}/run4_decision.json", f"{OUT_DIR}/run4_table.csv",
     f"{OUT_DIR}/run4_scene_deltas.csv", f"{OUT_DIR}/run4_plan.json", f"{OUT_DIR}/rd_run4.png",
+    f"{OUT_DIR}/run5_parity.json", f"{OUT_DIR}/run5_results.csv", f"{OUT_DIR}/run5_table.csv",
+    f"{OUT_DIR}/run5_tt_table.csv", f"{OUT_DIR}/run5_costs.csv", f"{OUT_DIR}/run5_decision.json",
+    f"{OUT_DIR}/run5_cpu_smoke.json", f"{OUT_DIR}/run5_plan.json", f"{OUT_DIR}/rd_run5.png",
 ) if os.path.exists(p)])
 """
 )
