@@ -29,7 +29,8 @@ Upstream main at the time of this work: `28e794c`.
 |---|---|---|
 | `fix/png-empty-tensor` (`d1632e8`) | empty-tensor / `sh_degree=0` fix in `png_compression.py` + tests | upstream PR #1061; leave alone unless asked |
 | `feat/png-tile-quantization` (`3ff67e8`) | `PngCompression(tile_size=, bits=)` | benchmark said no PR; leave alone |
-| `bench/tilequant` | feat merged + benchmark code and results; never goes upstream | active; head = `git log -1 fork/bench/tilequant` |
+| `feat/png-weighted-kmeans` (`9348e32`) | `gsplat/compression/kmeans.py` + `kmeans_backend` / `kmeans_weighting`, off upstream main; `tests/test_kmeans.py` | **PR candidate**, draft in `PR_DRAFT_weighted_kmeans.md`, not opened. Keep this branch clean: library only. |
+| `bench/tilequant` | both feat branches merged + benchmark code and results; never goes upstream | active; head = `git log -1 fork/bench/tilequant` |
 
 Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): `PR_DRAFT_empty_tensor.md`,
 `ISSUE_566_COMMENT.md`, `ISSUE_787_COMMENT.md`.
@@ -44,17 +45,22 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `tilequant_shn.py` / `tilequant_shn_analysis.py` | run 2: shN codebook (`ShnBenchCompression`, `precomputed_kmeans`, decomposition P/S/F) |
 | `tilequant_run3.py` / `tilequant_run3_analysis.py` | run 3: clustering levers (`lloyd`, `torchpq_kmeans`, `cluster_weights`, `decide_run3`) |
 | `tilequant_run4.py` | run 4: one job per new MipNeRF360 scene (download, `mcmc.sh` training, uncompressed / baseline / gate / candidates), resumable per step |
+| `tilequant_run5.py` | run 5: the same rows produced by **library** code (`PngCompression(kmeans_backend=...)`), Tanks & Temples download / training, clustering timing, peak GPU memory, `--cpu_smoke_json` |
+| `tilequant_run5_analysis.py` | run 5: `parse_benchmark_sh` (also `mcmc_tt.sh`), `TANDT_META`, parity gate, `decide_run5` (the run-4 rule), tables, cost table, estimate, plot |
 | `tilequant_run4_analysis.py` | run 4: `parse_mcmc_sh`, `SCENE_META` (zip sizes, image sizes), `scene_plan`, `sanity_gate`, **pre-registered** `decide_run4`, `run4_table`, runtime estimate / session split, `plot_run4` |
 | `FINDINGS.md` | results write-up, every number from the committed bundles |
 | `HANDOFF.md` | this file |
-| `run2/tilequant/`, `run3/tilequant/` | results bundles (`results_bundle.zip` contents) of the run-2 and run-3 sessions (14 run-3 files are byte-identical to run 2's, restored) |
+| `run2/tilequant/`, `run3/tilequant/`, `run4/tilequant/` | results bundles (`results_bundle.zip` contents); each session restores the previous one, so files repeat (git stores them once) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
 `C:\Users\Dace\AppData\Local\Temp\claude\F--\51b5c32d-122a-4650-8d8a-533b96ba5785\scratchpad\ref\dryrun_*.py`
 (run with `F:\gsplat\.venv\Scripts\python.exe`, `PYTHONIOENCODING=utf-8`): `dryrun_sweep`, `dryrun_analysis`,
 `dryrun_notebook`, `dryrun_shn`, `dryrun_shn_analysis`, `dryrun_notebook_shn`, `dryrun_run3`, `dryrun_notebook_run3`,
-`dryrun_run4_analysis`, `dryrun_run4`, `dryrun_notebook_run4` (helpers: `dryrun_run3_rows.py`; `dryrun_run4_analysis`
-reads `..\r4\zip_listing.json`, written by `..\r4\zip_listing.py`). Library tests:
+`dryrun_run4_analysis`, `dryrun_run4`, `dryrun_notebook_run4`, `dryrun_run5_analysis`, `dryrun_run5`,
+`dryrun_notebook_run5` (helpers: `dryrun_run3_rows.py`; the analysis dry runs read `..\r4\zip_listing.json`
+and `..\r5\tandt_listing.json`, written by the `zip_listing.py` / `tandt_listing.py` next to them).
+One-off checks in `..\r5\`: `check_identical.py` (defaults byte-identical to upstream main) and
+`check_parity.py` (library `weighted_kmeans` == the bench `lloyd`). Library tests:
 `.venv\Scripts\python.exe -m pytest tests/test_compression.py` (bench: 52 passed, 1 skipped on CPU).
 
 ## Notebook
@@ -76,10 +82,14 @@ reads `..\r4\zip_listing.json`, written by `..\r4\zip_listing.py`). Library test
 - **Run modes:**
   - `full`: runs everything missing.
   - `run3`: needs the run-2 output.
-  - `run4` (default): needs the run-3 output or a partial run-4 output, with the garden / bicycle rows
-    it reuses. It reruns nothing from runs 1–3 and downloads no garden / bicycle data. It runs one
-    queued `tilequant_run4.py` job per unfinished new scene of the current session in
-    `run4_plan.json`. The plan is computed once and then fixed.
+  - `run4`: needs the run-3 output or a partial run-4 output, with the garden / bicycle rows it reuses.
+    It reruns nothing from runs 1–3 and downloads no garden / bicycle data. It runs one queued
+    `tilequant_run4.py` job per unfinished new scene of the current session in `run4_plan.json`. The plan
+    is computed once and then fixed.
+  - `run5` (default): needs the run-4 output or a partial run-5 output. Parity gate first (it raises and
+    stops the run if the library does not reproduce the run-3 rows), then MipNeRF360 and Tanks & Temples
+    jobs. **It builds the gsplat wheel** (about 73 min): run 5 changes `gsplat/`, so the restored wheel's
+    cache key no longer matches. `ALLOW_WHEEL_BUILD` only gates run3 / run4.
 - **Kaggle steps:**
   1. Import the notebook from
      `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/tilequant/kaggle/tilequant_bench.ipynb`.
@@ -121,6 +131,16 @@ reads `..\r4\zip_listing.json`, written by `..\r4\zip_listing.py`). Library test
     `ckpts/train_complete.json`).
   - Rows carry the checkpoint sha1. A retrained scene moves its old CSV and gate aside as `.stale-*`.
   - The gate exits with code 3 and stops the queue.
+- **Library k-means layout:** the builtin backend returns `[K, D]` centroids; `_compress_kmeans` stores
+  the quantized codebook with `np.asfortranarray`, which is a no-op for the TorchPQ path (already
+  column-major) and makes both backends write the same bytes for the same values.
+- **`zip -r` stores the run directory path**, so zip sizes are only comparable between runs whose run
+  directory paths are equally long. The run-5 parity rows are therefore written into the run-3 path
+  (`/tmp/tilequant_run3_runs/<scene>/kseed0/lloyd_wopa_area`). Elsewhere a longer config name costs
+  2 x n_files x extra characters (126 B for run-5 candidates vs run-4 baselines, 0.0008%); the decision
+  also compares raw bytes, which are path-independent.
+- **`PngCompression` always asks for 65,536 centroids**, so a CPU dry run has to shrink
+  `_compress_kmeans`'s `n_clusters` to make the clustering non-trivial.
 - **Decision rule rounding:** run-4 deltas and means are rounded to 9 decimals before comparing, and
   byte limits are integer compares (`cand * 1000 <= base * 1003`). Float round-off otherwise flips the
   exact-threshold cases: every constructed "exactly -0.02 dB" case had it.
@@ -143,13 +163,24 @@ reads `..\r4\zip_listing.json`, written by `..\r4\zip_listing.py`). Library test
 | 1 | tile-wise / smooth min/max for PNG params | no win; `pr_worthy` false |
 | 2 | shN codebook quantization ranges; loss decomposition | no win; clustering is most of the shN loss (0.374 / 0.163 dB garden / bicycle) |
 | 3 | k-means clustering levers (library format unchanged) | `pr_worthy` false under the strict rule. `lloyd_wopa_area` gains +0.096 / +0.030 dB mean PSNR over 3 seeds and fails only on garden SSIM, by amounts within seed noise. |
-| 4 | full MipNeRF360 validation of `lloyd_wopa` / `lloyd_wopa_area` (pre-registered rule) | code and dry runs done; not run yet. Estimate 5.70 h on 2x T4 (one session). |
+| 4 | full MipNeRF360 validation of `lloyd_wopa` / `lloyd_wopa_area` (pre-registered rule) | **passed.** Both candidates pass; `pr_candidate` = `lloyd_wopa_area`, +0.111 dB mean PSNR at -0.10% mean size over 9 scenes, better on every scene. All 7 sanity gates passed. |
+| 5 | the same change as library code (`feat/png-weighted-kmeans`): parity gate, MipNeRF360, Tanks & Temples, cost, CPU-only smoke test | code and dry runs done; not run yet. Estimate 6.31 h on 2x T4 including the wheel build (one session). |
+
+## PR plan (`feat/png-weighted-kmeans`)
+
+1. Run 5 on Kaggle (see below).
+2. Fill `PR_DRAFT_weighted_kmeans.md`: Tanks & Temples table, peak GPU memory, the library-code
+   MipNeRF360 rows, and the parity result. It already has the MipNeRF360 run-4 table and the cost table.
+3. Only then, and only with Dace's go-ahead, open the PR from `feat/png-weighted-kmeans`. The branch
+   stays library-only; the benchmark lives on `bench/tilequant`.
+4. The default flip (`kmeans_backend="builtin"`, `kmeans_weighting="opacity_area"` as defaults, plus
+   updated `benchmarks/compression/results/*.csv`) is planned as a **second commit** so maintainers can
+   drop it. It is not written yet.
 
 ## Open items
 
-- Run 4 on Kaggle: `RUN_MODE = "run4"` with the run-3 notebook output attached.
-- Once run 4's `results_bundle.zip` is back: add a run-4 section to `FINDINGS.md` and report
-  `run4_decision.json` as-is. Commit the bundle under `kaggle/run4/`, and don't change the rule.
-- If run 4 names a `pr_candidate`: any library PR needs Dace's go-ahead, a clean branch off upstream
-  main (not `bench/tilequant`) and a CPU-testable implementation.
+- Run 5 on Kaggle: `RUN_MODE = "run5"` with the run-4 notebook output attached. It rebuilds the wheel
+  (about 73 min) because the library changed.
+- Once run 5's `results_bundle.zip` is back: check `run5_parity.json` first, then add a run-5 section to
+  `FINDINGS.md`, commit the bundle under `kaggle/run5/`, and update the PR draft.
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
