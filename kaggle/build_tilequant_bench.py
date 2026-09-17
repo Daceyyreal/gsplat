@@ -46,11 +46,12 @@ the `bench/tilequant` branch of the fork.
 **Kaggle settings:** Accelerator *GPU T4 x2* (scenes run in parallel, one GPU each; *GPU T4 x1* also
 works, sequentially), Internet *on*. Run with *Save Version -> Save & Run All (Commit)*.
 
-**Resuming:** step 2 searches `/kaggle/input` recursively for the outputs of an earlier session
+**Resuming:** step 2 searches `/kaggle/input` recursively for the outputs of earlier sessions
 (checkpoints, `tilequant/` CSVs and caches, the gsplat wheel), prints what it found and copies it into
-`/kaggle/working`. With `RUN_MODE = "run3"` (default) it stops right away if the run-2 outputs are
-missing; run 3 never trains, never re-runs run-1 / run-2 rows and never builds the wheel because of
-missing inputs. `RUN_MODE = "full"` runs everything that has no output yet.
+`/kaggle/working`. With `RUN_MODE = "run4"` (default) it stops before any install if the run-3 output
+(or a partial run-4 output) is missing; run 4 never re-runs run-1 / run-2 / run-3 rows, never retrains
+garden or bicycle and never builds the wheel because of missing inputs. `RUN_MODE = "run3"` needs the
+run-2 output; `RUN_MODE = "full"` runs everything that has no output yet.
 
 | Step | What |
 |---|---|
@@ -72,11 +73,13 @@ missing inputs. `RUN_MODE = "full"` runs everything that has no output yet.
 | 15 | run 3 (k-means clustering levers): manhattan check, euclidean, weighted Lloyd, `sh2_render` |
 | 16 | run 3: `iters_x` if torchpq manhattan stopped at `max_iter`; best 2 on 2 extra k-means seeds |
 | 17 | run 3: `run3_decision.json`, `rd_run3.png` |
-| 18 | output files and disk usage |
-| 19 | `results_bundle.zip` (top-level csv / json / png of `tilequant/`) |
+| 18 | run 4 (MipNeRF360 validation): runtime estimate, session plan, one queued job per new scene |
+| 19 | run 4: `run4_decision.json`, `run4_table.csv`, `rd_run4.png` |
+| 20 | output files and disk usage |
+| 21 | `results_bundle.zip` (top-level csv / json / png of `tilequant/`) |
 
 In run3 mode steps 5-14 only use restored results (training, current-main compression and the run-1 /
-run-2 sweeps and decisions are skipped).
+run-2 sweeps and decisions are skipped). In run4 mode steps 5-17 only use restored results.
 """
 )
 
@@ -108,9 +111,11 @@ CSV_PATH = f"{OUT_DIR}/tilequant_results.csv"  # merged; per-scene files are res
 WHEEL_ROOT = f"{WORK}/wheels"
 MIPNERF360_ZIP = "https://storage.googleapis.com/gresearch/refraw360/360_v2.zip"
 
-RUN_MODE = "run3"  # "run3": needs the run-2 outputs as input; "full": run everything missing
-ALLOW_WHEEL_BUILD = False  # run3 mode: build gsplat only if explicitly allowed (73 min in run 2)
+RUN_MODE = "run4"  # "run4": needs the run-3 (or a partial run-4) output as input; "run3": needs the
+# run-2 output; "full": run everything missing
+ALLOW_WHEEL_BUILD = False  # run3 / run4 mode: build gsplat only if explicitly allowed (73 min in run 2)
 INPUT_ROOT = "/kaggle/input"
+NOTEBOOK_T0 = time.time()  # run 4 does not start a scene job that would end past its session budget
 
 MAX_JOBS = "2"  # higher values OOM when building gsplat on Kaggle
 SWEEP_TIME_BUDGET_MIN = None  # per scene, main grid only; baseline and tile 16 always run
@@ -186,6 +191,77 @@ def run_on_gpus(jobs, n_parallel, progress=None, poll_s=15):
                 with open(job["log"], errors="replace") as g:
                     print(f"--- tail of {job['log']}\n{g.read()[-6000:]}")
             raise RuntimeError(f"failed jobs: {[job['name'] for job in failed]}")
+
+
+def run_gpu_queue(jobs, n_gpus, progress=None, poll_s=15, can_start=None):
+    """Run jobs [(name, cmd, cwd, log)] in order, each on the first free GPU (CUDA_VISIBLE_DEVICES).
+    can_start(name) is asked right before a job would start; refused jobs are skipped. After a failure
+    no further job starts. Lines of the logs matching `progress` (regex) are echoed. Returns
+    {"done": [...], "skipped": [...]}; raises after the running jobs finished if any failed."""
+    pending, free = list(jobs), list(range(max(1, n_gpus)))
+    running, done, skipped, failed = [], [], [], []
+    while pending or running:
+        while pending and free and not failed:
+            name, cmd, cwd, log = pending.pop(0)
+            if can_start is not None and not can_start(name):
+                skipped.append(name)
+                continue
+            gpu = free.pop(0)
+            print(f"[gpu {gpu}] {name}: $ {cmd}\n  log: {log}", flush=True)
+            f = open(log, "a")
+            proc = subprocess.Popen(
+                cmd, shell=True, cwd=cwd, stdout=f, stderr=subprocess.STDOUT,
+                env={**os.environ, "CUDA_VISIBLE_DEVICES": str(gpu)},
+            )
+            running.append({"name": name, "proc": proc, "file": f, "log": log, "gpu": gpu, "t0": time.time(), "offset": os.path.getsize(log)})
+        if failed and pending:
+            skipped += [job[0] for job in pending]
+            pending = []
+        if not running:
+            break
+        time.sleep(poll_s)
+        for job in list(running):
+            if progress is not None:
+                with open(job["log"], errors="replace") as g:
+                    g.seek(job["offset"])
+                    chunk = g.read()
+                    job["offset"] = g.tell()
+                for line in re.split(r"[\r\n]+", chunk):
+                    if re.search(progress, line):
+                        print(line, flush=True)
+            code = job["proc"].poll()
+            if code is None:
+                continue
+            job["file"].close()
+            elapsed = time.time() - job["t0"]
+            record_timing(f"{job['name']}_s", elapsed)
+            print(f"{job['name']}: exit {code} after {elapsed / 60:.1f} min (gpu {job['gpu']})", flush=True)
+            (done.append(job["name"]) if code == 0 else failed.append(job))
+            free.append(job["gpu"])
+            running.remove(job)
+    if skipped:
+        print(f"not started: {skipped}")
+    if failed:
+        for job in failed:
+            with open(job["log"], errors="replace") as g:
+                print(f"--- tail of {job['log']}\n{g.read()[-6000:]}")
+        raise RuntimeError(f"failed jobs: {[job['name'] for job in failed]}")
+    return {"done": done, "skipped": skipped}
+
+
+def write_bundle(out_dir, bundle_path):
+    """Zip the top-level csv / json / png files of out_dir under tilequant/; returns their names."""
+    import zipfile
+
+    names = sorted(
+        n for n in os.listdir(out_dir)
+        if os.path.isfile(os.path.join(out_dir, n)) and n.rsplit(".", 1)[-1].lower() in ("csv", "json", "png")
+    )
+    with zipfile.ZipFile(bundle_path + ".tmp", "w", zipfile.ZIP_DEFLATED) as z:
+        for n in names:
+            z.write(os.path.join(out_dir, n), arcname=f"tilequant/{n}")
+    os.replace(bundle_path + ".tmp", bundle_path)
+    return names
 '''
 )
 
@@ -216,31 +292,59 @@ def input_tree(root, max_depth=3):
 def discover_inputs(root, scenes, result_name, max_depth=6):
     # Walk to depth <= max_depth for the anchor folders results/, tilequant/ and wheels/, then check
     # their fixed layout below (results/<RESULT_NAME>/<scene>/ckpts/*.pt, tilequant/sweep/<scene>/cache).
-    found = {"ckpts": {}, "results_dir": None, "tilequant": None, "sort_cache": {}, "wheels": None}
+    # Several attached outputs (e.g. run 3 and a partial run 4) are all restored, least complete first.
+    found = {"ckpts": {}, "results_dir": None, "results_dirs": [], "tilequant": None, "tilequant_dirs": [],
+             "sort_cache": {}, "wheels": None}
+    results, tilequants = [], []
     for dirpath, dirnames, filenames in os.walk(root, followlinks=True):
         depth = _depth(root, dirpath)
         dirnames[:] = [] if depth >= max_depth else sorted(d for d in dirnames if not d.startswith("images"))
         name = os.path.basename(os.path.normpath(dirpath))
-        if name == "results" and found["results_dir"] is None:
-            ckpts = {}
-            for scene in scenes:
-                pts = sorted(glob.glob(os.path.join(dirpath, result_name, scene, "ckpts", "*.pt")))
-                if pts:
-                    preferred = [p for p in pts if os.path.basename(p) == "ckpt_29999_rank0.pt"]
-                    ckpts[scene] = (preferred or pts)[-1]
-            if ckpts:
-                found["results_dir"], found["ckpts"] = dirpath, ckpts
-        if name == "tilequant" and found["tilequant"] is None and {"tilequant_results.csv", "shn_results.csv"} <= set(filenames):
-            found["tilequant"] = dirpath
+        if name == "results":
+            n_ckpts = len(glob.glob(os.path.join(dirpath, result_name, "*", "ckpts", "*.pt")))
+            if n_ckpts:
+                results.append((n_ckpts, dirpath))
+        if name == "tilequant" and {"tilequant_results.csv", "shn_results.csv"} <= set(filenames):
+            tilequants.append(((sum(f.startswith("run4_results_") for f in filenames), "run3_results.csv" in filenames), dirpath))
         if name == "wheels" and found["wheels"] is None:
             found["wheels"] = dirpath
-    if found["tilequant"]:
+    found["results_dirs"] = [p for _, p in sorted(results, key=lambda x: x[0])]
+    found["tilequant_dirs"] = [p for _, p in sorted(tilequants, key=lambda x: x[0])]
+    found["results_dir"] = found["results_dirs"][-1] if results else None
+    found["tilequant"] = found["tilequant_dirs"][-1] if tilequants else None
+    for results_dir in found["results_dirs"]:  # the most complete output wins
         for scene in scenes:
-            cache = os.path.join(found["tilequant"], "sweep", scene, "cache")
+            pts = sorted(glob.glob(os.path.join(results_dir, result_name, scene, "ckpts", "*.pt")))
+            if pts:
+                preferred = [p for p in pts if os.path.basename(p) == "ckpt_29999_rank0.pt"]
+                found["ckpts"][scene] = (preferred or pts)[-1]
+    for tq in found["tilequant_dirs"]:
+        for scene in scenes:
+            cache = os.path.join(tq, "sweep", scene, "cache")
             if (os.path.isfile(os.path.join(cache, "cache_info.json"))
                     and os.path.isfile(os.path.join(cache, "seed0", "order.pt"))):
                 found["sort_cache"][scene] = cache
     return found
+
+
+RUN4_REQUIRED_ROWS = [  # (file, Submethod, k-means seed) per reused scene
+    ("tilequant_results.csv", "uncompressed", None),
+    ("shn_results.csv", "baseline", 0),
+    ("run3_results.csv", "lloyd_wopa", 0),
+    ("run3_results.csv", "lloyd_wopa_area", 0),
+]
+
+
+def missing_rows(tq_dir, scenes, required):
+    missing = []
+    for fname, submethod, seed in required:
+        path = os.path.join(tq_dir, fname)
+        rows = list(csv.DictReader(open(path, newline=""))) if os.path.exists(path) else []
+        for scene in scenes:
+            if not any(r.get("scene") == scene and r.get("Submethod") == submethod
+                       and (seed is None or r.get("kmeans_seed") in (str(seed), f"{seed}.0")) for r in rows):
+                missing.append(f"{fname}: {submethod} row for {scene}" + ("" if seed is None else f", k-means seed {seed}"))
+    return missing
 
 
 def split_by_scene(merged_path, pattern):
@@ -261,10 +365,22 @@ FOUND = discover_inputs(INPUT_ROOT, SCENES, RESULT_NAME)
 print(f"Found under {INPUT_ROOT}:\n{json.dumps(FOUND, indent=2)}")
 print(f"\n{INPUT_ROOT} tree (depth 3):\n{input_tree(INPUT_ROOT)}")
 missing = [f"checkpoint results/{RESULT_NAME}/{s}/ckpts/*.pt" for s in SCENES if s not in FOUND["ckpts"]]
-if FOUND["tilequant"] is None:
-    missing.append("tilequant/ with tilequant_results.csv and shn_results.csv")
-missing += [f"seed-0 PLAS sort cache tilequant/sweep/{s}/cache (cache_info.json, seed0/order.pt)"
-            for s in SCENES if s not in FOUND["sort_cache"]]
+if RUN_MODE == "run4":
+    if FOUND["tilequant"] is None or not os.path.exists(os.path.join(FOUND["tilequant"], "run3_results.csv")):
+        missing.append("tilequant/ with tilequant_results.csv, shn_results.csv and run3_results.csv")
+    else:
+        missing += missing_rows(FOUND["tilequant"], SCENES, RUN4_REQUIRED_ROWS)
+    if missing:
+        raise RuntimeError(
+            "RUN_MODE = 'run4' needs the run-3 output (or a partial run-4 output). Missing:\n  - " + "\n  - ".join(missing)
+            + f"\n\n{INPUT_ROOT} tree (depth 3):\n{input_tree(INPUT_ROOT)}"
+            + "\n\nAttach the run-3 notebook output (or a partial run-4 output) as input."
+        )
+else:
+    if FOUND["tilequant"] is None:
+        missing.append("tilequant/ with tilequant_results.csv and shn_results.csv")
+    missing += [f"seed-0 PLAS sort cache tilequant/sweep/{s}/cache (cache_info.json, seed0/order.pt)"
+                for s in SCENES if s not in FOUND["sort_cache"]]
 if RUN_MODE == "run3" and missing:
     raise RuntimeError(
         "RUN_MODE = 'run3' needs the run-2 outputs. Missing:\n  - " + "\n  - ".join(missing)
@@ -272,12 +388,17 @@ if RUN_MODE == "run3" and missing:
         + "\n\nAttach the run-2 notebook output as input."
     )
 
-for src, dst in ((FOUND["results_dir"], f"{WORK}/results"), (FOUND["tilequant"], OUT_DIR), (FOUND["wheels"], WHEEL_ROOT)):
-    if src:
-        print(f"restoring {src} -> {dst}", flush=True)
-        shutil.copytree(src, dst, dirs_exist_ok=True)
+t_restore = time.time()
+restore = ([(d, f"{WORK}/results") for d in FOUND["results_dirs"]] + [(d, OUT_DIR) for d in FOUND["tilequant_dirs"]]
+           + ([(FOUND["wheels"], WHEEL_ROOT)] if FOUND["wheels"] else []))
+for src, dst in restore:
+    print(f"restoring {src} -> {dst}", flush=True)
+    shutil.copytree(src, dst, dirs_exist_ok=True)
 os.makedirs(OUT_DIR, exist_ok=True)
-for merged, pattern in (("tilequant_results.csv", "results_{}.csv"), ("shn_results.csv", "shn_results_{}.csv")):
+if restore:
+    record_timing("restore_s", time.time() - t_restore)
+for merged, pattern in (("tilequant_results.csv", "results_{}.csv"), ("shn_results.csv", "shn_results_{}.csv"),
+                        ("run3_results.csv", "run3_results_{}.csv")):
     if os.path.exists(f"{OUT_DIR}/{merged}"):
         split_by_scene(f"{OUT_DIR}/{merged}", f"{OUT_DIR}/{pattern}")
 """
@@ -332,16 +453,16 @@ tree = subprocess.check_output(["git", "-C", SRC_DIR, "rev-parse", "HEAD:gsplat"
 setup_rev = subprocess.check_output(["git", "-C", SRC_DIR, "rev-parse", "HEAD:setup.py"], text=True).strip()
 wheel_key = f"{tree[:12]}-{setup_rev[:8]}-torch{TORCH['version'].replace('+', '_')}-sm{TORCH['cap']}"
 def restored_wheel(wheel_root, wheel_key):
-    # A wheel restored from the input whose key matches; in run3 mode never build instead.
+    # A wheel restored from the input whose key matches; in run3 / run4 mode never build instead.
     wheels = sorted(glob.glob(f"{wheel_root}/{wheel_key}/gsplat-*.whl"))
     if wheels:
         print(f"Using restored gsplat wheel {wheels[0]} (cache key {wheel_key}); not building")
         return wheels[0]
     available = sorted(os.listdir(wheel_root)) if os.path.isdir(wheel_root) else []
-    if RUN_MODE == "run3" and not ALLOW_WHEEL_BUILD:
+    if RUN_MODE in ("run3", "run4") and not ALLOW_WHEEL_BUILD:
         raise RuntimeError(
-            f"RUN_MODE = 'run3': no gsplat wheel for cache key {wheel_key} (restored keys: {available}). "
-            "Run 3 does not change gsplat/, so the run-2 wheel matches unless this Kaggle image has a "
+            f"RUN_MODE = {RUN_MODE!r}: no gsplat wheel for cache key {wheel_key} (restored keys: {available}). "
+            "Runs 3 and 4 do not change gsplat/, so the restored wheel matches unless this Kaggle image has a "
             "different torch version or GPU. Set ALLOW_WHEEL_BUILD = True to build it (73 min in run 2)."
         )
     return None
@@ -516,18 +637,21 @@ def download_scene(scene, dst):
 
 
 SCENE_DIRS = {}
-t0 = time.time()
-for scene in SCENES:
-    dst = f"{DATA_ROOT}/{scene}"
-    src = find_input_scene(scene)
-    if src is not None:
-        print(f"{scene}: using Kaggle input {src}")
-        link_scene(src, dst)
-    else:
-        download_scene(scene, dst)
-    print(f"{scene}: {dst} ({len(os.listdir(f'{dst}/images'))} images, {sorted(os.listdir(dst))})")
-    SCENE_DIRS[scene] = dst
-record_timing("data_s", time.time() - t0)
+if RUN_MODE == "run4":
+    print("run4 mode: garden / bicycle rows are restored (no data needed); each new run-4 scene job gets its own data")
+else:
+    t0 = time.time()
+    for scene in SCENES:
+        dst = f"{DATA_ROOT}/{scene}"
+        src = find_input_scene(scene)
+        if src is not None:
+            print(f"{scene}: using Kaggle input {src}")
+            link_scene(src, dst)
+        else:
+            download_scene(scene, dst)
+        print(f"{scene}: {dst} ({len(os.listdir(f'{dst}/images'))} images, {sorted(os.listdir(dst))})")
+        SCENE_DIRS[scene] = dst
+    record_timing("data_s", time.time() - t0)
 sh("df -h /tmp /kaggle/working")
 '''
 )
@@ -540,13 +664,13 @@ def ckpt_path(scene):
 
 N_PARALLEL = max(1, min(N_GPUS, len(SCENES)))
 CKPTS = {}
-if RUN_MODE == "run3":
+if RUN_MODE in ("run3", "run4"):
     for scene in SCENES:
         restored = f"{RESULT_DIR}/{scene}/ckpts/{os.path.basename(FOUND['ckpts'][scene])}"
         if not os.path.exists(restored):
-            raise RuntimeError(f"run3 mode: restored checkpoint missing: {restored}")
+            raise RuntimeError(f"{RUN_MODE} mode: restored checkpoint missing: {restored}")
         CKPTS[scene] = restored
-        print(f"{scene}: run3 mode, restored checkpoint {restored} (no training)")
+        print(f"{scene}: {RUN_MODE} mode, restored checkpoint {restored} (no training)")
 else:
     jobs = []
     for scene in SCENES:
@@ -588,8 +712,8 @@ def scene_csv(scene):
     return f"{OUT_DIR}/results_{scene}.csv"
 
 
-if RUN_MODE == "run3":
-    print("run3 mode: current-main compression and sanity gate come from the restored run-2 output")
+if RUN_MODE in ("run3", "run4"):
+    print(f"{RUN_MODE} mode: current-main compression and sanity gate come from the restored run-2 output")
     if os.path.exists(f"{OUT_DIR}/sanity_gate.json"):
         print(open(f"{OUT_DIR}/sanity_gate.json").read())
 else:
@@ -676,8 +800,8 @@ def run_sweep(tag, configs_by_scene=None, sort_seed=0):
     run_on_gpus(jobs, N_PARALLEL, progress=r"^\[(" + "|".join(SCENES) + r")\]|Built cache|Traceback|Error")
 
 
-if RUN_MODE == "run3":
-    print("run3 mode: run-1 main sweep restored, not re-run")
+if RUN_MODE in ("run3", "run4"):
+    print(f"{RUN_MODE} mode: run-1 main sweep restored, not re-run")
 else:
     run_sweep("main")
 '''
@@ -686,8 +810,8 @@ else:
 code(
     r"""
 # Tile 128 and smooth ranges (tile 16, 32) at the 3 bit settings nearest each scene's RD front.
-if RUN_MODE == "run3":
-    print("run3 mode: run-1 extra configs restored, not re-run")
+if RUN_MODE in ("run3", "run4"):
+    print(f"{RUN_MODE} mode: run-1 extra configs restored, not re-run")
 else:
     selection_path = f"{OUT_DIR}/extra_selection.json"
     if os.path.exists(selection_path):
@@ -710,8 +834,8 @@ code(
     r"""
 # Seed robustness: fresh PLAS sort per seed (k-means centroids reused, labels permuted),
 # baseline + top-3 configs per scene, compared per seed.
-if RUN_MODE == "run3":
-    print("run3 mode: run-1 sort-seed rows restored, not re-run")
+if RUN_MODE in ("run3", "run4"):
+    print(f"{RUN_MODE} mode: run-1 sort-seed rows restored, not re-run")
 else:
     seed_selection_path = f"{OUT_DIR}/seed_selection.json"
     if os.path.exists(seed_selection_path):
@@ -728,8 +852,8 @@ else:
 
 code(
     r"""
-if RUN_MODE == "run3":
-    print("run3 mode: run-1 decision.json and plot restored, not recomputed")
+if RUN_MODE in ("run3", "run4"):
+    print(f"{RUN_MODE} mode: run-1 decision.json and plot restored, not recomputed")
 else:
     df = load_results()
     df.to_csv(CSV_PATH, index=False)
@@ -817,8 +941,8 @@ def run_shn(tag, configs=None, kmeans_seed=0):
     run_on_gpus(jobs, N_PARALLEL, progress=r"^\[(" + "|".join(SCENES) + r")\]|k-means|Traceback|Error")
 
 
-if RUN_MODE == "run3":
-    print("run3 mode: run-2 main rows restored, not re-run")
+if RUN_MODE in ("run3", "run4"):
+    print(f"{RUN_MODE} mode: run-2 main rows restored, not re-run")
 else:
     run_shn("main")
 """
@@ -827,8 +951,8 @@ else:
 code(
     r"""
 # Robustness: baseline + best 2 configs (one list for both scenes) on 2 extra k-means seeds.
-if RUN_MODE == "run3":
-    print("run3 mode: run-2 k-means seed rows restored, not re-run")
+if RUN_MODE in ("run3", "run4"):
+    print(f"{RUN_MODE} mode: run-2 k-means seed rows restored, not re-run")
 else:
     shn_selection_path = f"{OUT_DIR}/shn_seed_selection.json"
     if os.path.exists(shn_selection_path):
@@ -845,8 +969,8 @@ else:
 
 code(
     r"""
-if RUN_MODE == "run3":
-    print("run3 mode: run-2 shn_decision.json and plot restored, not recomputed")
+if RUN_MODE in ("run3", "run4"):
+    print(f"{RUN_MODE} mode: run-2 shn_decision.json and plot restored, not recomputed")
 else:
     shn_df = load_shn_results()
     shn_df.to_csv(f"{OUT_DIR}/shn_results.csv", index=False)
@@ -936,21 +1060,27 @@ def run_run3(tag, configs, kmeans_seed=0):
     run_on_gpus(jobs, N_PARALLEL, progress=r"^\[(" + "|".join(SCENES) + r")\]|clustering |Traceback|Error")
 
 
-run_run3("main", r3a.RUN3_MAIN)
+if RUN_MODE == "run4":
+    print("run4 mode: run-3 rows restored, not re-run")
+else:
+    run_run3("main", r3a.RUN3_MAIN)
 """
 )
 
 code(
     r"""
 # iters_x: only if the seed-0 torchpq manhattan run stopped at max_iter before torchpq's own tol.
-CONVERGENCE = r3a.manhattan_convergence(load_run3_results(), SCENES)
-print(json.dumps(CONVERGENCE, indent=2))
-if r3a.needs_iters_x(CONVERGENCE):
-    print(f"manhattan stopped at max_iter before tol on at least one scene: running iters_x "
-          f"(max_iter {r3a.ITERS_X_MAX_ITER}) on both scenes")
-    run_run3("iters_x", ["iters_x"])
+if RUN_MODE == "run4":
+    print("run4 mode: run-3 iters_x rows restored, not re-run")
 else:
-    print("manhattan met tol within max_iter on both scenes: iters_x not needed")
+    CONVERGENCE = r3a.manhattan_convergence(load_run3_results(), SCENES)
+    print(json.dumps(CONVERGENCE, indent=2))
+    if r3a.needs_iters_x(CONVERGENCE):
+        print(f"manhattan stopped at max_iter before tol on at least one scene: running iters_x "
+              f"(max_iter {r3a.ITERS_X_MAX_ITER}) on both scenes")
+        run_run3("iters_x", ["iters_x"])
+    else:
+        print("manhattan met tol within max_iter on both scenes: iters_x not needed")
 """
 )
 
@@ -958,49 +1088,247 @@ code(
     r"""
 # Robustness: best 2 candidates (one list for both scenes) on k-means seeds 1 and 2; the run-2 baseline
 # rows of those seeds are the reference.
-run3_selection_path = f"{OUT_DIR}/run3_seed_selection.json"
-if os.path.exists(run3_selection_path):
-    RUN3_SELECTION = json.load(open(run3_selection_path))
+if RUN_MODE == "run4":
+    print("run4 mode: run-3 k-means seed rows restored, not re-run")
 else:
-    RUN3_SELECTION = r3a.run3_seed_candidates(load_run3_results(), load_shn_results(), SCENES, k=2)
-    json.dump(RUN3_SELECTION, open(run3_selection_path, "w"), indent=2)
-print(json.dumps(RUN3_SELECTION, indent=2))
-for seed in RUN3_EXTRA_SEEDS:
-    run_run3(f"kseed{seed}", RUN3_SELECTION["configs"], kmeans_seed=seed)
+    run3_selection_path = f"{OUT_DIR}/run3_seed_selection.json"
+    if os.path.exists(run3_selection_path):
+        RUN3_SELECTION = json.load(open(run3_selection_path))
+    else:
+        RUN3_SELECTION = r3a.run3_seed_candidates(load_run3_results(), load_shn_results(), SCENES, k=2)
+        json.dump(RUN3_SELECTION, open(run3_selection_path, "w"), indent=2)
+    print(json.dumps(RUN3_SELECTION, indent=2))
+    for seed in RUN3_EXTRA_SEEDS:
+        run_run3(f"kseed{seed}", RUN3_SELECTION["configs"], kmeans_seed=seed)
 """
 )
 
 code(
     r"""
-df3 = load_run3_results()
-df3.to_csv(f"{OUT_DIR}/run3_results.csv", index=False)
-RUN3_DECISION = r3a.decide_run3(df3, load_shn_results(), load_results(), SCENES, seeds=(0, *RUN3_EXTRA_SEEDS))
-with open(f"{OUT_DIR}/run3_decision.json", "w") as f:
-    json.dump(RUN3_DECISION, f, indent=2)
-RUN3_LOGS = {}
-for scene in SCENES:
-    RUN3_LOGS[scene] = {}
-    for path in sorted(glob.glob(f"{OUT_DIR}/run3/{scene}/kmeans/*_s0.log.json")):
-        entry = json.load(open(path))
-        RUN3_LOGS[scene][entry["config"]] = entry["log"]
-with open(f"{OUT_DIR}/run3_kmeans_logs_seed0.json", "w") as f:
-    json.dump(RUN3_LOGS, f)
+if RUN_MODE == "run4":
+    print("run4 mode: run3_decision.json and rd_run3.png restored, not recomputed")
+else:
+    df3 = load_run3_results()
+    df3.to_csv(f"{OUT_DIR}/run3_results.csv", index=False)
+    RUN3_DECISION = r3a.decide_run3(df3, load_shn_results(), load_results(), SCENES, seeds=(0, *RUN3_EXTRA_SEEDS))
+    with open(f"{OUT_DIR}/run3_decision.json", "w") as f:
+        json.dump(RUN3_DECISION, f, indent=2)
+    RUN3_LOGS = {}
+    for scene in SCENES:
+        RUN3_LOGS[scene] = {}
+        for path in sorted(glob.glob(f"{OUT_DIR}/run3/{scene}/kmeans/*_s0.log.json")):
+            entry = json.load(open(path))
+            RUN3_LOGS[scene][entry["config"]] = entry["log"]
+    with open(f"{OUT_DIR}/run3_kmeans_logs_seed0.json", "w") as f:
+        json.dump(RUN3_LOGS, f)
 
-print(f"pr_worthy: {RUN3_DECISION['pr_worthy']}  {RUN3_DECISION['pr_worthy_configs']}")
-print("manhattan convergence (seed 0):", json.dumps(RUN3_DECISION["manhattan_convergence_seed0"], indent=2))
-print("sh2_render:", json.dumps(RUN3_DECISION["sh2_render"], indent=2))
-rows = []
-for name, v in RUN3_DECISION["paired"].items():
-    for key, d in v.items():
-        if isinstance(d, dict):
-            rows.append({"config": name, "scene/seed": key, **d})
-display(pd.DataFrame(rows).round(4))
-cols = ["Submethod", "kmeans_seed", "PSNR", "SSIM", "LPIPS", "zip_bytes", "size_bytes", "n_iters", "converged",
-        "kmeans_time_s", "encode_time_s", "compress_time_s", "eval_time_s"]
-display(df3[cols].round(4))
-run3_plot_path = f"{OUT_DIR}/rd_run3.png"
-r3a.plot_run3(df3, load_shn_results(), load_results(), RUN3_LOGS, SCENES, run3_plot_path)
-display(Image(run3_plot_path))
+    print(f"pr_worthy: {RUN3_DECISION['pr_worthy']}  {RUN3_DECISION['pr_worthy_configs']}")
+    print("manhattan convergence (seed 0):", json.dumps(RUN3_DECISION["manhattan_convergence_seed0"], indent=2))
+    print("sh2_render:", json.dumps(RUN3_DECISION["sh2_render"], indent=2))
+    rows = []
+    for name, v in RUN3_DECISION["paired"].items():
+        for key, d in v.items():
+            if isinstance(d, dict):
+                rows.append({"config": name, "scene/seed": key, **d})
+    display(pd.DataFrame(rows).round(4))
+    cols = ["Submethod", "kmeans_seed", "PSNR", "SSIM", "LPIPS", "zip_bytes", "size_bytes", "n_iters", "converged",
+            "kmeans_time_s", "encode_time_s", "compress_time_s", "eval_time_s"]
+    display(df3[cols].round(4))
+    run3_plot_path = f"{OUT_DIR}/rd_run3.png"
+    r3a.plot_run3(df3, load_shn_results(), load_results(), RUN3_LOGS, SCENES, run3_plot_path)
+    display(Image(run3_plot_path))
+"""
+)
+
+md(
+    r"""
+## Run 4: MipNeRF360 validation (pre-registered)
+
+Run 3 left two clustering candidates that raised PSNR on garden and bicycle: `lloyd_wopa` and
+`lloyd_wopa_area`. Run 4 tests both on every MipNeRF360 scene of
+`examples/benchmarks/compression/mcmc.sh` (scene list, data factors and the train command are parsed
+from the script) with a decision rule fixed before any run-4 result existed
+(`kaggle/tilequant_run4_analysis.py`). The library is untouched.
+
+- **garden, bicycle:** training #2 checkpoints. The uncompressed (run 1), baseline (run 2) and
+  candidate (run 3) rows at k-means seed 0 are reused.
+- **Every other scene:** one job per scene, each started on the next free GPU:
+  1. Download only the files the trainer needs (flowers and treehill are in `360_extra_scenes.zip`).
+  2. Train with the `mcmc.sh` command.
+  3. On k-means seed 0 and PLAS sort seed 0, measure in order:
+     - uncompressed eval
+     - baseline: library `_compress_kmeans` with torchpq manhattan, exactly as run 2
+     - sanity gate
+     - `lloyd_wopa` and `lloyd_wopa_area` (run-3 code)
+  4. Delete the scene data.
+
+  Every step resumes after a timeout. The checkpoint stays in `/kaggle/working`.
+- **Sanity gate per new scene:** #Gaussians = 1M and U - baseline PSNR within [-0.1, 1.0] dB are hard
+  checks; failing one stops the run. Zip size vs the repo 1M row is a warning only.
+
+**Decision per candidate over all scenes** (`run4_decision.json`). A candidate passes when all of these
+hold:
+- mean dPSNR > 0
+- dPSNR > 0 on all scenes but at most one
+- no scene dPSNR < -0.02 dB
+- mean dLPIPS <= 0
+- mean dSSIM >= -0.0002
+- zip AND raw bytes <= baseline x 1.003 on every scene
+
+Deltas and means are rounded to 9 decimals before comparing. `pr_candidate` is the passing candidate
+with the higher mean dPSNR (null if none).
+
+**Outputs:** `run4_results.csv`, `run4_decision.json`, `run4_table.csv` (upstream format: means over
+scenes, with the repo 1M row), `run4_scene_deltas.csv`, `rd_run4.png`, `run4_plan.json` (runtime
+estimate and session split) and `run4_gate_<scene>.json`.
+"""
+)
+
+code(
+    r"""
+import tilequant_run4_analysis as r4a
+
+RUN4_RUNS_ROOT = "/tmp/tilequant_run4_runs"
+MCMC_SH_PATH = f"{SRC_DIR}/examples/benchmarks/compression/mcmc.sh"
+REPO_CSV = f"{SRC_DIR}/examples/benchmarks/compression/results/MipNeRF360.csv"
+MCMC_SH = r4a.parse_mcmc_sh(open(MCMC_SH_PATH).read())
+RUN4_SCENES = MCMC_SH["scenes"]
+RUN4_NEW = [s for s in RUN4_SCENES if s not in r4a.REUSED_SCENES]
+assert MCMC_SH["cap_max"] == CAP_MAX and MCMC_SH["result_dir"].endswith(RESULT_NAME), MCMC_SH
+assert all(MCMC_SH["data_factors"][s] == data_factor(s) for s in RUN4_SCENES), MCMC_SH["data_factors"]
+assert set(r4a.REUSED_SCENES) <= set(RUN4_SCENES) <= set(r4a.SCENE_META), RUN4_SCENES
+
+
+def run4_csv(scene):
+    return f"{OUT_DIR}/run4_results_{scene}.csv"
+
+
+def run4_gate_path(scene):
+    return f"{OUT_DIR}/run4_gate_{scene}.json"
+
+
+def run4_gates():
+    return {s: json.load(open(run4_gate_path(s))) for s in RUN4_NEW if os.path.exists(run4_gate_path(s))}
+
+
+def run4_scene_complete(scene):
+    done = pd.read_csv(run4_csv(scene))["Submethod"].tolist() if os.path.exists(run4_csv(scene)) else []
+    return r4a.scene_complete(done, run4_gates().get(scene))
+
+
+def load_run4_results():
+    reused = r4a.previous_rows(load_results(), load_shn_results(), load_run3_results(), r4a.REUSED_SCENES)
+    frames = [reused] + [pd.read_csv(run4_csv(s)) for s in RUN4_NEW if os.path.exists(run4_csv(s))]
+    return pd.concat(frames, ignore_index=True).reindex(columns=r4a.RUN4_COLUMNS)
+
+
+def run4_job(scene):
+    data_dir = f"{DATA_ROOT}/{scene}"
+    src = find_input_scene(scene)
+    if src is not None and not os.path.exists(f"{data_dir}/.download_complete.json"):
+        print(f"{scene}: using Kaggle input {src}")
+        link_scene(src, data_dir)
+        json.dump({"kaggle_input": src}, open(f"{data_dir}/.download_complete.json", "w"))
+    args = [
+        PY, f"{SRC_DIR}/kaggle/tilequant_run4.py", "--scene", scene, "--mcmc_sh", MCMC_SH_PATH,
+        "--data_root", DATA_ROOT, "--result_dir", f"{RESULT_DIR}/{scene}", "--work_dir", f"{OUT_DIR}/run4/{scene}",
+        "--sort_cache_dir", f"{OUT_DIR}/sweep/{scene}/cache", "--runs_dir", f"{RUN4_RUNS_ROOT}/{scene}",
+        "--csv", run4_csv(scene), "--gate_json", run4_gate_path(scene), "--repo_csv", REPO_CSV,
+        "--python", PY, "--examples_dir", f"{SRC_DIR}/examples", "--commit", COMMIT[:12],
+    ]
+    return (f"run4_{scene}", " ".join(args), f"{SRC_DIR}/examples", f"{OUT_DIR}/run4_{scene}.log")
+
+
+if RUN_MODE not in ("run4", "full"):
+    print(f"{RUN_MODE} mode: run 4 not run")
+else:
+    # Runtime estimate and session split: computed once from the restored runs 1-3 files, then fixed.
+    run4_plan_path = f"{OUT_DIR}/run4_plan.json"
+    if os.path.exists(run4_plan_path):
+        RUN4_PLAN = json.load(open(run4_plan_path))
+    else:
+        measured = r4a.measured_components(json.load(open(f"{OUT_DIR}/timings.json")), load_results(),
+                                           load_shn_results(), load_run3_results())
+        per_scene = {s: r4a.estimate_scene_s(measured, s, MCMC_SH["data_factors"][s]) for s in RUN4_NEW}
+        RUN4_PLAN = {
+            "measured": measured, "per_scene_estimate": per_scene,
+            **r4a.plan_sessions({s: v["total_s"] for s, v in per_scene.items()}, RUN4_NEW, N_GPUS, measured["session_setup_s"]),
+            "assumptions": [
+                "training time proportional to training-image megapixels (measured only at data factor 4: garden, bicycle)",
+                "download throughput of the run-3 session's garden + bicycle download",
+                "Lloyd k-means at max_iter (100) with the slowest measured seconds per iteration",
+                "per-config overhead beyond row timings as in the slowest run-3 job",
+                "restoring inputs and the decision cell are not included",
+            ],
+        }
+        json.dump(RUN4_PLAN, open(run4_plan_path, "w"), indent=2)
+    display(pd.DataFrame(RUN4_PLAN["per_scene_estimate"]).T.round(1))
+    for i, (group, est) in enumerate(zip(RUN4_PLAN["sessions"], RUN4_PLAN["session_estimate_s"]), 1):
+        print(f"session {i}: {group} (estimate {est / 3600:.1f} h on {RUN4_PLAN['n_gpus']} GPU(s))")
+
+    status = {s: run4_scene_complete(s) for s in RUN4_NEW}
+    session = next((i for i, group in enumerate(RUN4_PLAN["sessions"]) if not all(status[s] for s in group)), None)
+    RUN4_TODO = [] if session is None else [s for s in RUN4_PLAN["sessions"][session] if not status[s]]
+    print("run 4: all scenes complete" if session is None else f"this is session {session + 1}: {RUN4_TODO}")
+
+    def run4_can_start(name):
+        scene = name[len("run4_"):]
+        est = RUN4_PLAN["per_scene_estimate"][scene]
+        trained = os.path.exists(f"{RESULT_DIR}/{scene}/ckpts/train_complete.json")
+        remaining = est["total_s"] - (est["train_s"] + est["download_s"] if trained else 0)
+        elapsed = time.time() - NOTEBOOK_T0
+        if elapsed + remaining > r4a.SESSION_BUDGET_H * 3600:
+            print(f"{scene}: not started ({elapsed / 3600:.1f} h elapsed + {remaining / 3600:.1f} h estimated > "
+                  f"{r4a.SESSION_BUDGET_H} h); attach this output to the next session")
+            return False
+        return True
+
+    try:
+        if RUN4_TODO:
+            run_gpu_queue([run4_job(s) for s in RUN4_TODO], N_GPUS, can_start=run4_can_start,
+                          progress=r"^\[(" + "|".join(RUN4_NEW) + r")\]|Traceback|SANITY GATE")
+    finally:
+        # Partial results reach the bundle even if a job failed or a sanity gate stopped the run.
+        try:
+            load_run4_results().to_csv(f"{OUT_DIR}/run4_results.csv", index=False)
+        except Exception as e:
+            print(f"run4_results.csv not written: {type(e).__name__}: {e}")
+        write_bundle(OUT_DIR, f"{WORK}/results_bundle.zip")
+"""
+)
+
+code(
+    r"""
+if RUN_MODE not in ("run4", "full"):
+    print(f"{RUN_MODE} mode: run-4 decision not computed")
+else:
+    df4 = load_run4_results()
+    df4.to_csv(f"{OUT_DIR}/run4_results.csv", index=False)
+    RUN4_DECISION = r4a.decide_run4(df4, RUN4_SCENES, run4_gates(), RUN4_NEW)
+    with open(f"{OUT_DIR}/run4_decision.json", "w") as f:
+        json.dump(RUN4_DECISION, f, indent=2)
+    RUN4_TABLE = r4a.run4_table(df4, RUN4_SCENES, ta.read_repo_row(REPO_CSV, CAP_MAX))
+    RUN4_TABLE.to_csv(f"{OUT_DIR}/run4_table.csv", index=False)
+    RUN4_DELTAS = r4a.scene_deltas(df4, RUN4_SCENES, MCMC_SH["data_factors"])
+    RUN4_DELTAS.to_csv(f"{OUT_DIR}/run4_scene_deltas.csv", index=False)
+    for scene in RUN4_NEW:
+        stage_path = f"{OUT_DIR}/run4/{scene}/stage_timings.json"
+        if os.path.exists(stage_path):
+            for k, v in json.load(open(stage_path)).items():
+                if k.endswith("_s"):
+                    record_timing(f"run4_{k[:-2]}_{scene}_s", v)
+
+    print(f"pr_candidate: {RUN4_DECISION['pr_candidate']}  (passing: {RUN4_DECISION['passing']})")
+    for name, c in RUN4_DECISION["candidates"].items():
+        print(f"{name}: pass {c['pass']}, complete {c['complete']} (missing {c['missing_scenes']}), "
+              f"gates passed {c['gates_passed']}")
+        print(json.dumps({k: c.get(k) for k in ("mean_dPSNR", "mean_dSSIM", "mean_dLPIPS", "n_scenes_dPSNR_not_positive",
+                                                "min_scene_dPSNR", "max_zip_pct", "max_size_pct", "criteria")}, indent=2))
+    display(RUN4_TABLE)
+    display(RUN4_DELTAS.round(4))
+    run4_plot_path = f"{OUT_DIR}/rd_run4.png"
+    r4a.plot_run4(df4, RUN4_SCENES, RUN4_DECISION, RUN4_TABLE, run4_plot_path)
+    display(Image(run4_plot_path))
 """
 )
 
@@ -1010,6 +1338,7 @@ print(json.dumps(json.load(open(f"{OUT_DIR}/timings.json")), indent=2))
 shutil.rmtree(RUNS_ROOT, ignore_errors=True)
 shutil.rmtree(SHN_RUNS_ROOT, ignore_errors=True)
 shutil.rmtree(RUN3_RUNS_ROOT, ignore_errors=True)
+shutil.rmtree(RUN4_RUNS_ROOT, ignore_errors=True)
 sh(f"du -sh {WORK}/* || true")
 total = int(subprocess.check_output(["du", "-sb", WORK], text=True).split()[0])
 print(f"/kaggle/working total: {total / 1e9:.2f} GB")
@@ -1021,23 +1350,18 @@ print("Bring back:", [p for p in (
     f"{OUT_DIR}/shn_results.csv", f"{OUT_DIR}/shn_decision.json", f"{OUT_DIR}/shn_seed_selection.json",
     f"{OUT_DIR}/rd_shn.png", f"{OUT_DIR}/run3_results.csv", f"{OUT_DIR}/run3_decision.json",
     f"{OUT_DIR}/run3_seed_selection.json", f"{OUT_DIR}/run3_kmeans_logs_seed0.json", f"{OUT_DIR}/rd_run3.png",
+    f"{OUT_DIR}/run4_results.csv", f"{OUT_DIR}/run4_decision.json", f"{OUT_DIR}/run4_table.csv",
+    f"{OUT_DIR}/run4_scene_deltas.csv", f"{OUT_DIR}/run4_plan.json", f"{OUT_DIR}/rd_run4.png",
 ) if os.path.exists(p)])
 """
 )
 
 code(
     r"""
-# Results bundle: the top-level csv / json / png files of /kaggle/working/tilequant/.
-import zipfile
-
+# Results bundle: the top-level csv / json / png files of /kaggle/working/tilequant/ (write_bundle in the
+# config cell writes the zipfile).
 BUNDLE = f"{WORK}/results_bundle.zip"
-bundle_names = sorted(
-    n for n in os.listdir(OUT_DIR)
-    if os.path.isfile(os.path.join(OUT_DIR, n)) and n.rsplit(".", 1)[-1].lower() in ("csv", "json", "png")
-)
-with zipfile.ZipFile(BUNDLE, "w", zipfile.ZIP_DEFLATED) as z:
-    for n in bundle_names:
-        z.write(os.path.join(OUT_DIR, n), arcname=f"tilequant/{n}")
+bundle_names = write_bundle(OUT_DIR, BUNDLE)
 print(f"{BUNDLE}: {len(bundle_names)} files, {os.path.getsize(BUNDLE)} bytes")
 for n in bundle_names:
     print(n)

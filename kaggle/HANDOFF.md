@@ -43,21 +43,29 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `tilequant_sweep.py` / `tilequant_analysis.py` | run 1: tile / global / smooth-range PNG params; PLAS sort cache; `build_runner`, `evaluate`, `dir_sizes`, sanity gate, repo-row reader, plot style |
 | `tilequant_shn.py` / `tilequant_shn_analysis.py` | run 2: shN codebook (`ShnBenchCompression`, `precomputed_kmeans`, decomposition P/S/F) |
 | `tilequant_run3.py` / `tilequant_run3_analysis.py` | run 3: clustering levers (`lloyd`, `torchpq_kmeans`, `cluster_weights`, `decide_run3`) |
+| `tilequant_run4.py` | run 4: one job per new MipNeRF360 scene (download, `mcmc.sh` training, uncompressed / baseline / gate / candidates), resumable per step |
+| `tilequant_run4_analysis.py` | run 4: `parse_mcmc_sh`, `SCENE_META` (zip sizes, image sizes), `scene_plan`, `sanity_gate`, **pre-registered** `decide_run4`, `run4_table`, runtime estimate / session split, `plot_run4` |
 | `FINDINGS.md` | results write-up, every number from the committed bundles |
-| `run2/tilequant/` | results bundle (`results_bundle.zip` contents) of each Kaggle session |
+| `HANDOFF.md` | this file |
+| `run2/tilequant/`, `run3/tilequant/` | results bundles (`results_bundle.zip` contents) of the run-2 and run-3 sessions (14 run-3 files are byte-identical to run 2's, restored) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
 `C:\Users\Dace\AppData\Local\Temp\claude\F--\51b5c32d-122a-4650-8d8a-533b96ba5785\scratchpad\ref\dryrun_*.py`
-(run with `F:\gsplat\.venv\Scripts\python.exe`, `PYTHONIOENCODING=utf-8`). Library tests:
+(run with `F:\gsplat\.venv\Scripts\python.exe`, `PYTHONIOENCODING=utf-8`): `dryrun_sweep`, `dryrun_analysis`,
+`dryrun_notebook`, `dryrun_shn`, `dryrun_shn_analysis`, `dryrun_notebook_shn`, `dryrun_run3`, `dryrun_notebook_run3`,
+`dryrun_run4_analysis`, `dryrun_run4`, `dryrun_notebook_run4` (helpers: `dryrun_run3_rows.py`; `dryrun_run4_analysis`
+reads `..\r4\zip_listing.json`, written by `..\r4\zip_listing.py`). Library tests:
 `.venv\Scripts\python.exe -m pytest tests/test_compression.py` (bench: 52 passed, 1 skipped on CPU).
 
 ## Notebook
 
-- **Config cell:** `RUN_MODE`, `ALLOW_WHEEL_BUILD`, `INPUT_ROOT`, scenes, and the helpers `sh`,
-  `record_timing` and `run_on_gpus` (job i of a batch on GPU i, one CSV per scene).
+- **Config cell:** `RUN_MODE`, `ALLOW_WHEEL_BUILD`, `INPUT_ROOT`, `NOTEBOOK_T0`, scenes, and the helpers
+  `sh`, `record_timing`, `run_on_gpus` (job i of a batch on GPU i, one CSV per scene), `run_gpu_queue`
+  (next job on the first free GPU, `can_start` guard, no new job after a failure) and `write_bundle`.
 - **Discovery cell (before any install):** walks `/kaggle/input` recursively for the anchors
-  `results/`, `tilequant/` and `wheels/`, and restores them into `/kaggle/working`. In a resume mode it
-  raises before any install if required inputs are missing, and prints the input tree.
+  `results/`, `tilequant/` and `wheels/`, and restores all of them into `/kaggle/working`, least
+  complete first, so the most complete output wins. In a resume mode it raises before any install if
+  required inputs (or required rows) are missing, and prints the input tree.
 - **Install cell:** uses a restored gsplat wheel whose key matches (gsplat/ tree + setup.py + torch +
   GPU arch). In a resume mode it never builds without `ALLOW_WHEEL_BUILD` (the build takes about
   73 min). Any change under `gsplat/` changes the key.
@@ -68,7 +76,10 @@ CPU dry runs are **not in the repo**. They live in the scratchpad of session `51
 - **Run modes:**
   - `full`: runs everything missing.
   - `run3`: needs the run-2 output.
-  - `run4` (in preparation): will need the run-3 output or a partial run-4 output.
+  - `run4` (default): needs the run-3 output or a partial run-4 output, with the garden / bicycle rows
+    it reuses. It reruns nothing from runs 1–3 and downloads no garden / bicycle data. It runs one
+    queued `tilequant_run4.py` job per unfinished new scene of the current session in
+    `run4_plan.json`. The plan is computed once and then fixed.
 - **Kaggle steps:**
   1. Import the notebook from
      `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/tilequant/kaggle/tilequant_bench.ipynb`.
@@ -99,10 +110,24 @@ CPU dry runs are **not in the repo**. They live in the scratchpad of session `51
   - Deterministic per seed across sessions: the run-3 re-run reproduced run-2 seed 0 exactly (same raw
     bytes and metrics).
 - **PLAS sort:** the seed-0 order is cached per checkpoint (`tilequant/sweep/<scene>/cache/seed0/order.pt`,
-  keyed by the checkpoint sha1). Run 3 loads it and never rebuilds.
+  keyed by the checkpoint sha1). Run 3 loads it and never rebuilds. Run 4 builds it for new scenes the way
+  runs 1–2 did (`torch.manual_seed(0)`, `compute_sort_order`), without the cache's k-means.
+- **MipNeRF360 data:**
+  - flowers and treehill are in `360_extra_scenes.zip`, the other 7 scenes in `360_v2.zip`.
+  - The colmap parser needs `images/` (it resizes full-res JPGs into `images_<f>_png`), `images_<f>/`
+    (names), `sparse/` and `poses_bounds.npy`.
+- **Run-4 resume rules:**
+  - A checkpoint counts only once `torch.load` reads it back with step 29999 (marker
+    `ckpts/train_complete.json`).
+  - Rows carry the checkpoint sha1. A retrained scene moves its old CSV and gate aside as `.stale-*`.
+  - The gate exits with code 3 and stops the queue.
+- **Decision rule rounding:** run-4 deltas and means are rounded to 9 decimals before comparing, and
+  byte limits are integer compares (`cand * 1000 <= base * 1003`). Float round-off otherwise flips the
+  exact-threshold cases: every constructed "exactly -0.02 dB" case had it.
 - **Timings** (`timings.json`; job timings are rounded up to the 15 s poll):
-  - training: garden 2280 s, bicycle 2145 s (data factor 4, T4)
+  - training: garden 2280 s, bicycle 2145 s (data factor 4, T4). Data factor 2 is not measured yet.
   - torchpq manhattan k-means: 398–440 s
+  - Lloyd (run 3): up to 7.26 s per iteration, 100 iterations maximum
   - per config (compress + decompress + eval): about 13–15 s
   - per job: about 40 s of process overhead
 - **Local environment:**
@@ -118,13 +143,13 @@ CPU dry runs are **not in the repo**. They live in the scratchpad of session `51
 | 1 | tile-wise / smooth min/max for PNG params | no win; `pr_worthy` false |
 | 2 | shN codebook quantization ranges; loss decomposition | no win; clustering is most of the shN loss (0.374 / 0.163 dB garden / bicycle) |
 | 3 | k-means clustering levers (library format unchanged) | `pr_worthy` false under the strict rule. `lloyd_wopa_area` gains +0.096 / +0.030 dB mean PSNR over 3 seeds and fails only on garden SSIM, by amounts within seed noise. |
-| 4 | full MipNeRF360 validation of `lloyd_wopa` / `lloyd_wopa_area` | in preparation |
+| 4 | full MipNeRF360 validation of `lloyd_wopa` / `lloyd_wopa_area` (pre-registered rule) | code and dry runs done; not run yet. Estimate 5.70 h on 2x T4 (one session). |
 
 ## Open items
 
-- Run 3 write-up: add a run-3 section to `FINDINGS.md` and commit the run-3 bundle under `kaggle/run3/`
-  (bundle currently in `~/Downloads/results_bundle (1)/tilequant/`).
-- Run 4 (MipNeRF360, 9 scenes): benchmark code, CPU dry runs, then a Kaggle session.
+- Run 4 on Kaggle: `RUN_MODE = "run4"` with the run-3 notebook output attached.
+- Once run 4's `results_bundle.zip` is back: add a run-4 section to `FINDINGS.md` and report
+  `run4_decision.json` as-is. Commit the bundle under `kaggle/run4/`, and don't change the rule.
 - If run 4 names a `pr_candidate`: any library PR needs Dace's go-ahead, a clean branch off upstream
   main (not `bench/tilequant`) and a CPU-testable implementation.
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
