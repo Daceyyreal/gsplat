@@ -1,0 +1,15 @@
+{
+  "configs": {
+    "garden": [
+      "global_m16_o7",
+      "smooth_t16_m16_o6",
+      "t64_m16_o6"
+    ],
+    "bicycle": [
+      "global_m16_o7",
+      "smooth_t16_m16_o6",
+      "t64_m16_o6"
+    ]
+  },
+  "beats_on_all_scenes_seed0": []
+}

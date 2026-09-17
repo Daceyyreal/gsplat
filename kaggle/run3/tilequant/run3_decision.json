@@ -1,0 +1,317 @@
+{
+  "scenes": [
+    "garden",
+    "bicycle"
+  ],
+  "kmeans_seeds_required": [
+    0,
+    1,
+    2
+  ],
+  "size_tolerance": 0.003,
+  "criteria": "PSNR >= and SSIM >= and LPIPS <= and zip_bytes <= (1+tol) x and size_bytes <= (1+tol) x the run-2 baseline of the same scene and k-means seed, on all scenes and seeds",
+  "pr_worthy": false,
+  "pr_worthy_configs": [],
+  "paired": {
+    "euclid": {
+      "complete": false,
+      "beats_all": false,
+      "garden/seed0": {
+        "dPSNR": -0.03791236877441406,
+        "dSSIM": -0.0004487037658691406,
+        "dLPIPS": 0.0002512633800507147,
+        "zip_pct": 0.18104083434042906,
+        "size_pct": 0.18079902662579972,
+        "compress_time_s": 423.6593837209998,
+        "baseline_compress_time_s": 435.3795034400009,
+        "compress_time_ratio": 0.9730806810463087,
+        "beats": false
+      },
+      "bicycle/seed0": {
+        "dPSNR": -0.021562576293945312,
+        "dSSIM": -0.00026744604110717773,
+        "dLPIPS": 0.00022739171981811523,
+        "zip_pct": 0.053644768933147624,
+        "size_pct": 0.053718693988491495,
+        "compress_time_s": 234.58575834599992,
+        "baseline_compress_time_s": 406.089474340999,
+        "compress_time_ratio": 0.5776701273203033,
+        "beats": false
+      }
+    },
+    "iters_x": {
+      "complete": false,
+      "beats_all": false,
+      "garden/seed0": {
+        "dPSNR": -0.0003261566162109375,
+        "dSSIM": -4.231929779052734e-06,
+        "dLPIPS": -7.256865501403809e-06,
+        "zip_pct": -0.00035258615868061227,
+        "size_pct": -0.0003709134534291003,
+        "compress_time_s": 870.166835811,
+        "baseline_compress_time_s": 435.3795034400009,
+        "compress_time_ratio": 1.9986398738013091,
+        "beats": false
+      },
+      "bicycle/seed0": {
+        "dPSNR": 0.002185821533203125,
+        "dSSIM": 2.3245811462402344e-05,
+        "dLPIPS": -9.402632713290116e-06,
+        "zip_pct": 0.006347728310585055,
+        "size_pct": 0.006269131087965896,
+        "compress_time_s": 1156.5280715400004,
+        "baseline_compress_time_s": 406.089474340999,
+        "compress_time_ratio": 2.8479636745493373,
+        "beats": true
+      }
+    },
+    "lloyd_w1": {
+      "complete": false,
+      "beats_all": false,
+      "garden/seed0": {
+        "dPSNR": -0.036252975463863635,
+        "dSSIM": -0.00043272972106933594,
+        "dLPIPS": 0.00023631751537331325,
+        "zip_pct": 0.1820317230277757,
+        "size_pct": 0.18157125627473736,
+        "compress_time_s": 629.987401764,
+        "baseline_compress_time_s": 435.3795034400009,
+        "compress_time_ratio": 1.4469845199104963,
+        "beats": false
+      },
+      "bicycle/seed0": {
+        "dPSNR": -0.022542953491207385,
+        "dSSIM": -0.00028395652770996094,
+        "dLPIPS": 0.00021095573902130127,
+        "zip_pct": 0.05366939639506185,
+        "size_pct": 0.05351547068210838,
+        "compress_time_s": 283.24855733100026,
+        "baseline_compress_time_s": 406.089474340999,
+        "compress_time_ratio": 0.6975028293719144,
+        "beats": false
+      }
+    },
+    "lloyd_wopa": {
+      "complete": true,
+      "beats_all": false,
+      "garden/seed0": {
+        "dPSNR": 0.032442092895511365,
+        "dSSIM": 0.00025093555450439453,
+        "dLPIPS": -0.0003252029418945035,
+        "zip_pct": -0.19433576415147646,
+        "size_pct": -0.19507615430850445,
+        "compress_time_s": 635.118433143,
+        "baseline_compress_time_s": 435.3795034400009,
+        "compress_time_ratio": 1.4587697126870485,
+        "beats": true
+      },
+      "garden/seed1": {
+        "dPSNR": 0.05109405517578125,
+        "dSSIM": 0.000298917293548584,
+        "dLPIPS": -0.0003553628921508789,
+        "zip_pct": -0.07528389418798298,
+        "size_pct": -0.07593612297215335,
+        "compress_time_s": 587.0420893119999,
+        "baseline_compress_time_s": 442.1620964289995,
+        "compress_time_ratio": 1.3276626243024534,
+        "beats": true
+      },
+      "garden/seed2": {
+        "dPSNR": 0.038770675659176135,
+        "dSSIM": 0.0002721548080444336,
+        "dLPIPS": 5.2973628044211685e-05,
+        "zip_pct": -0.25053978181975856,
+        "size_pct": -0.2512578864490078,
+        "compress_time_s": 639.5483156459995,
+        "baseline_compress_time_s": 440.948431179002,
+        "compress_time_ratio": 1.4503925412229812,
+        "beats": false
+      },
+      "bicycle/seed0": {
+        "dPSNR": 0.015796661376953125,
+        "dSSIM": 0.0005415678024291992,
+        "dLPIPS": -0.0003525018692016879,
+        "zip_pct": -0.07838305443450544,
+        "size_pct": -0.07845035454768778,
+        "compress_time_s": 319.34435406500006,
+        "baseline_compress_time_s": 406.089474340999,
+        "compress_time_ratio": 0.7863891438782827,
+        "beats": true
+      },
+      "bicycle/seed1": {
+        "dPSNR": 0.016962051391601562,
+        "dSSIM": 0.0005384087562561035,
+        "dLPIPS": -6.565451622009277e-05,
+        "zip_pct": 0.22418289417180937,
+        "size_pct": 0.22408060709431243,
+        "compress_time_s": 319.767571852999,
+        "baseline_compress_time_s": 400.6865922859979,
+        "compress_time_ratio": 0.7980490937534507,
+        "beats": true
+      },
+      "bicycle/seed2": {
+        "dPSNR": 0.02093505859375,
+        "dSSIM": 0.0005723237991333008,
+        "dLPIPS": -0.0006185173988342008,
+        "zip_pct": -0.22598686689531133,
+        "size_pct": -0.22562102038299336,
+        "compress_time_s": 253.44368000600025,
+        "baseline_compress_time_s": 402.9240991619991,
+        "compress_time_ratio": 0.6290109738611118,
+        "beats": true
+      }
+    },
+    "lloyd_wopa_area": {
+      "complete": true,
+      "beats_all": false,
+      "garden/seed0": {
+        "dPSNR": 0.0818557739257848,
+        "dSSIM": -0.00015658140182495117,
+        "dLPIPS": -0.0008327364921568992,
+        "zip_pct": -0.2464759621346735,
+        "size_pct": -0.24780058963077556,
+        "compress_time_s": 643.4094496580001,
+        "baseline_compress_time_s": 435.3795034400009,
+        "compress_time_ratio": 1.4778129070714683,
+        "beats": false
+      },
+      "garden/seed1": {
+        "dPSNR": 0.10420989990234375,
+        "dSSIM": 2.3245811462402344e-05,
+        "dLPIPS": -0.0007177889347075861,
+        "zip_pct": -0.015664850433583233,
+        "size_pct": -0.016723011351171824,
+        "compress_time_s": 636.9994372090005,
+        "baseline_compress_time_s": 442.1620964289995,
+        "compress_time_ratio": 1.4406468631154754,
+        "beats": true
+      },
+      "garden/seed2": {
+        "dPSNR": 0.10312461853026988,
+        "dSSIM": -8.571147918701172e-05,
+        "dLPIPS": -0.0004479438066481989,
+        "zip_pct": -0.1897888570833839,
+        "size_pct": -0.19099712068524344,
+        "compress_time_s": 641.2006024190005,
+        "baseline_compress_time_s": 440.948431179002,
+        "compress_time_ratio": 1.4541396614215565,
+        "beats": false
+      },
+      "bicycle/seed0": {
+        "dPSNR": 0.026586532592773438,
+        "dSSIM": 5.0008296966552734e-05,
+        "dLPIPS": -0.0009389072656632025,
+        "zip_pct": -0.13575888384894652,
+        "size_pct": -0.13687397599316808,
+        "compress_time_s": 406.795012605,
+        "baseline_compress_time_s": 406.089474340999,
+        "compress_time_ratio": 1.0017373960877611,
+        "beats": true
+      },
+      "bicycle/seed1": {
+        "dPSNR": 0.0305328369140625,
+        "dSSIM": 0.00010985136032104492,
+        "dLPIPS": -0.0007916986942290982,
+        "zip_pct": 0.2509879068510079,
+        "size_pct": 0.2502010378846675,
+        "compress_time_s": 459.3629916180007,
+        "baseline_compress_time_s": 400.6865922859979,
+        "compress_time_ratio": 1.1464396375162995,
+        "beats": true
+      },
+      "bicycle/seed2": {
+        "dPSNR": 0.033243179321292615,
+        "dSSIM": 0.00014925003051757812,
+        "dLPIPS": -0.0010021477937698087,
+        "zip_pct": -0.13509175752797198,
+        "size_pct": -0.13534432967328147,
+        "compress_time_s": 462.1699612079992,
+        "baseline_compress_time_s": 402.9240991619991,
+        "compress_time_ratio": 1.1470397580318963,
+        "beats": true
+      }
+    }
+  },
+  "manhattan_convergence_seed0": {
+    "garden": {
+      "n_iters": 100,
+      "max_iter": 100,
+      "final_error": 0.0106927696615457,
+      "tol": 0.0001,
+      "converged": false
+    },
+    "bicycle": {
+      "n_iters": 100,
+      "max_iter": 100,
+      "final_error": 0.0238263569772243,
+      "tol": 0.0001,
+      "converged": false
+    }
+  },
+  "manhattan_rerun_vs_run2_baseline": {
+    "garden": {
+      "note": "torchpq manhattan re-run (seed 0) vs the run-2 baseline row",
+      "dPSNR": 0.0,
+      "dSSIM": 0.0,
+      "dLPIPS": 0.0,
+      "zip_pct": 0.0006626188154612578,
+      "size_pct": 0.0,
+      "compress_time_s": 421.02845455500005,
+      "baseline_compress_time_s": 435.3795034400009,
+      "compress_time_ratio": 0.9670378399267513,
+      "beats": true
+    },
+    "bicycle": {
+      "note": "torchpq manhattan re-run (seed 0) vs the run-2 baseline row",
+      "dPSNR": 0.0,
+      "dSSIM": 0.0,
+      "dLPIPS": 0.0,
+      "zip_pct": 0.0006649414719062108,
+      "size_pct": 0.0,
+      "compress_time_s": 434.20409491700025,
+      "baseline_compress_time_s": 406.089474340999,
+      "compress_time_ratio": 1.0692325764454387,
+      "beats": true
+    }
+  },
+  "sh2_render": {
+    "garden": {
+      "uncompressed": {
+        "PSNR": 27.31504440307617,
+        "SSIM": 0.8546767234802246,
+        "LPIPS": 0.1337528824806213
+      },
+      "sh2_render": {
+        "PSNR": 25.946563720703125,
+        "SSIM": 0.8383262157440186,
+        "LPIPS": 0.1478427946567535
+      },
+      "drop3_dim_b6_run2": {
+        "PSNR": 25.824451446533203,
+        "SSIM": 0.8331260681152344,
+        "LPIPS": 0.1555220484733581
+      },
+      "U_minus_sh2_render_psnr": 1.3684806823730433,
+      "run2_baseline_minus_drop3_psnr": 1.0568256378173793
+    },
+    "bicycle": {
+      "uncompressed": {
+        "PSNR": 25.5682373046875,
+        "SSIM": 0.7730290293693542,
+        "LPIPS": 0.2167481184005737
+      },
+      "sh2_render": {
+        "PSNR": 24.580535888671875,
+        "SSIM": 0.7582411170005798,
+        "LPIPS": 0.2266155034303665
+      },
+      "drop3_dim_b6_run2": {
+        "PSNR": 24.4580078125,
+        "SSIM": 0.7532556056976318,
+        "LPIPS": 0.2335885912179947
+      },
+      "U_minus_sh2_render_psnr": 0.987701416015625,
+      "run2_baseline_minus_drop3_psnr": 0.8731193542480469
+    }
+  }
+}
