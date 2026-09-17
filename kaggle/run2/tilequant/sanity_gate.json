@@ -1,0 +1,60 @@
+{
+  "table": [
+    {
+      "scene": "garden",
+      "val PSNR": 27.315044403076172,
+      "compress PSNR": 26.861568450927734,
+      "PSNR drop": 0.4534759521484375,
+      "SSIM": 0.8424674272537231,
+      "LPIPS": 0.15113738179206848,
+      "zip bytes": 16449239.0,
+      "zip / repo size": 1.0256401319314814,
+      "#Gaussians": 1000000.0
+    },
+    {
+      "scene": "bicycle",
+      "val PSNR": 25.5682373046875,
+      "compress PSNR": 25.316913604736328,
+      "PSNR drop": 0.2513236999511719,
+      "SSIM": 0.7638412117958069,
+      "LPIPS": 0.22910411655902863,
+      "zip bytes": 16233444.0,
+      "zip / repo size": 1.0121849190629617,
+      "#Gaussians": 1000000.0
+    },
+    {
+      "scene": "mean (2 scenes)",
+      "val PSNR": 26.441640853881836,
+      "compress PSNR": 26.08924102783203,
+      "PSNR drop": 0.3523998260498047,
+      "SSIM": 0.803154319524765,
+      "LPIPS": 0.19012074917554855,
+      "zip bytes": 16341341.5,
+      "zip / repo size": 1.0189125254972216,
+      "#Gaussians": 1000000.0
+    },
+    {
+      "scene": "repo CSV (mean of 9 scenes)",
+      "val PSNR": NaN,
+      "compress PSNR": 27.29,
+      "PSNR drop": NaN,
+      "SSIM": 0.811,
+      "LPIPS": 0.229,
+      "zip bytes": 16038022.0,
+      "zip / repo size": NaN,
+      "#Gaussians": 1000000.0
+    }
+  ],
+  "failures": [],
+  "warnings": [],
+  "repo_row": {
+    "Submethod": "-1.00M",
+    "PSNR": 27.29,
+    "SSIM": 0.811,
+    "LPIPS": 0.229,
+    "Size [Bytes]": 16038022,
+    "#Gaussians": 1000000
+  },
+  "size_tolerance": 0.15,
+  "max_psnr_drop_db": 1.0
+}

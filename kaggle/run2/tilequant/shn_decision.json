@@ -1,0 +1,332 @@
+{
+  "scenes": [
+    "garden",
+    "bicycle"
+  ],
+  "kmeans_seeds_required": [
+    0,
+    1,
+    2
+  ],
+  "criteria": "zip_bytes <= and size_bytes <= and PSNR >= and SSIM >= and LPIPS <= the baseline of the same scene and k-means seed, on all scenes and seeds",
+  "pr_worthy": false,
+  "pr_worthy_configs": [],
+  "decomposition": {
+    "garden": {
+      "note": "approximate: PSNR losses are not additive",
+      "U_uncompressed_psnr_run1": 27.31504440307617,
+      "psnr": {
+        "baseline": 26.881277084350582,
+        "P_png_raw": 26.911598205566406,
+        "S_shn_raw": 27.281417846679688,
+        "F_float_centroids": 26.907611846923828
+      },
+      "total_loss_U_minus_baseline": 0.43376731872558594,
+      "shN_loss_U_minus_P": 0.4034461975097621,
+      "png_param_loss_U_minus_S": 0.03362655639648082,
+      "centroid_quantization_share_F_minus_baseline": 0.02633476257324574,
+      "clustering_share_S_minus_F": 0.3738059997558594
+    },
+    "bicycle": {
+      "note": "approximate: PSNR losses are not additive",
+      "U_uncompressed_psnr_run1": 25.5682373046875,
+      "psnr": {
+        "baseline": 25.331127166748047,
+        "P_png_raw": 25.391742706298828,
+        "S_shn_raw": 25.505075454711918,
+        "F_float_centroids": 25.342199325561523
+      },
+      "total_loss_U_minus_baseline": 0.23711013793945312,
+      "shN_loss_U_minus_P": 0.17649459838867188,
+      "png_param_loss_U_minus_S": 0.06316184997558238,
+      "centroid_quantization_share_F_minus_baseline": 0.011072158813476562,
+      "clustering_share_S_minus_F": 0.16287612915039418
+    }
+  },
+  "best_per_family_seed0": {
+    "garden": {
+      "dim": {
+        "Submethod": "dim_b8",
+        "dPSNR": 0.02575492858887074,
+        "dSSIM": 0.0008054971694946289,
+        "dLPIPS": -0.0012679994106291892,
+        "zip_pct": 5.18106515062724,
+        "size_pct": 5.182828409659934,
+        "beats": false
+      },
+      "band": {
+        "Submethod": "band_b6",
+        "dPSNR": 0.012672424316409803,
+        "dSSIM": 0.0002919435501098633,
+        "dLPIPS": -0.0005205273628234031,
+        "zip_pct": 0.9491376228884407,
+        "size_pct": 0.9503897175494158,
+        "beats": false
+      },
+      "kmeans": {
+        "Submethod": "k32768_dim_b6",
+        "dPSNR": -0.05401039123534801,
+        "dSSIM": -0.000886082649230957,
+        "dLPIPS": 0.0012112706899642944,
+        "zip_pct": -3.679412858938791,
+        "size_pct": -3.6796438744403193,
+        "beats": false
+      }
+    },
+    "bicycle": {
+      "dim": {
+        "Submethod": "dim_b8",
+        "dPSNR": 0.011056900024414062,
+        "dSSIM": 0.0003529787063598633,
+        "dLPIPS": -0.00020089745521548186,
+        "zip_pct": 4.225493720582119,
+        "size_pct": 4.227124830531781,
+        "beats": false
+      },
+      "band": {
+        "Submethod": "band_b6",
+        "dPSNR": 0.00310516357421875,
+        "dSSIM": 7.802248001098633e-05,
+        "dLPIPS": -0.00014035403728487883,
+        "zip_pct": 0.3293061070995362,
+        "size_pct": 0.3304842041605971,
+        "beats": false
+      },
+      "kmeans": {
+        "Submethod": "k32768_dim_b6",
+        "dPSNR": -0.04104423522949219,
+        "dSSIM": -0.0010359883308410645,
+        "dLPIPS": 0.0015425384044647217,
+        "zip_pct": -4.762310821842419,
+        "size_pct": -4.762593609735511,
+        "beats": false
+      }
+    }
+  },
+  "paired": {
+    "band_b5": {
+      "complete": true,
+      "beats_all": false,
+      "garden/seed0": {
+        "dPSNR": -0.03295326232909801,
+        "dSSIM": -0.0011707544326782227,
+        "dLPIPS": 0.0019138008356094915,
+        "zip_pct": -1.3673048070867333,
+        "size_pct": -1.3662505848727524,
+        "beats": false
+      },
+      "garden/seed1": {
+        "dPSNR": -0.04569244384765625,
+        "dSSIM": -0.0013495087623596191,
+        "dLPIPS": 0.002280294895172119,
+        "zip_pct": -1.296734003589084,
+        "size_pct": -1.2958017928238252,
+        "beats": false
+      },
+      "garden/seed2": {
+        "dPSNR": -0.03348731994628906,
+        "dSSIM": -0.0011715888977050781,
+        "dLPIPS": 0.0022640675306321023,
+        "zip_pct": -1.307878363364734,
+        "size_pct": -1.3066760715237158,
+        "beats": false
+      },
+      "bicycle/seed0": {
+        "dPSNR": -0.0221099853515625,
+        "dSSIM": -0.000796198844909668,
+        "dLPIPS": 0.0005383193492889127,
+        "zip_pct": -2.01197128610332,
+        "size_pct": -2.010833033886872,
+        "beats": false
+      },
+      "bicycle/seed1": {
+        "dPSNR": -0.030065536499019885,
+        "dSSIM": -0.0009048581123352051,
+        "dLPIPS": 0.0009209513664246161,
+        "zip_pct": -1.874057014823105,
+        "size_pct": -1.8728996490672278,
+        "beats": false
+      },
+      "bicycle/seed2": {
+        "dPSNR": -0.015727996826175428,
+        "dSSIM": -0.0007086396217346191,
+        "dLPIPS": 0.0005700290203095038,
+        "zip_pct": -2.0231737963420926,
+        "size_pct": -2.022092119729657,
+        "beats": false
+      }
+    },
+    "band_b6": {
+      "complete": false,
+      "beats_all": false,
+      "garden/seed0": {
+        "dPSNR": 0.012672424316409803,
+        "dSSIM": 0.0002919435501098633,
+        "dLPIPS": -0.0005205273628234031,
+        "zip_pct": 0.9491376228884407,
+        "size_pct": 0.9503897175494158,
+        "beats": false
+      },
+      "bicycle/seed0": {
+        "dPSNR": 0.00310516357421875,
+        "dSSIM": 7.802248001098633e-05,
+        "dLPIPS": -0.00014035403728487883,
+        "zip_pct": 0.3293061070995362,
+        "size_pct": 0.3304842041605971,
+        "beats": false
+      }
+    },
+    "dim_b5": {
+      "complete": true,
+      "beats_all": false,
+      "garden/seed0": {
+        "dPSNR": -0.009523391723625707,
+        "dSSIM": -0.0003745555877685547,
+        "dLPIPS": 0.0007911324501038153,
+        "zip_pct": -0.628120083550765,
+        "size_pct": -0.6269045417744312,
+        "beats": false
+      },
+      "garden/seed1": {
+        "dPSNR": -0.008607864379882812,
+        "dSSIM": -0.00034117698669433594,
+        "dLPIPS": 0.0009974688291550238,
+        "zip_pct": -0.49989212517428383,
+        "size_pct": -0.49879550438649556,
+        "beats": false
+      },
+      "garden/seed2": {
+        "dPSNR": -0.010416030883789062,
+        "dSSIM": -0.0003813505172729492,
+        "dLPIPS": 0.0008693635463715155,
+        "zip_pct": -0.5405846954139149,
+        "size_pct": -0.5391346067326497,
+        "beats": false
+      },
+      "bicycle/seed0": {
+        "dPSNR": -0.022085189819335938,
+        "dSSIM": -0.0006262063980102539,
+        "dLPIPS": 0.0007054358720779141,
+        "zip_pct": -1.668134976469382,
+        "size_pct": -1.666923774940654,
+        "beats": false
+      },
+      "bicycle/seed1": {
+        "dPSNR": -0.016119003295898438,
+        "dSSIM": -0.0005317926406860352,
+        "dLPIPS": 0.0004300177097321112,
+        "zip_pct": -1.3990958688338884,
+        "size_pct": -1.3978038607908694,
+        "beats": false
+      },
+      "bicycle/seed2": {
+        "dPSNR": -0.01230621337890625,
+        "dSSIM": -0.0005282759666442871,
+        "dLPIPS": 0.0006831139326096136,
+        "zip_pct": -1.7201962454117536,
+        "size_pct": -1.7189215590673212,
+        "beats": false
+      }
+    },
+    "dim_b6": {
+      "complete": false,
+      "beats_all": false,
+      "garden/seed0": {
+        "dPSNR": 0.018251419067386365,
+        "dSSIM": 0.000529170036315918,
+        "dLPIPS": -0.0008414089679718018,
+        "zip_pct": 1.6816840001264488,
+        "size_pct": 1.6830228351955467,
+        "beats": false
+      },
+      "bicycle/seed0": {
+        "dPSNR": 0.004806518554683947,
+        "dSSIM": 0.000133514404296875,
+        "dLPIPS": -5.336105823519621e-05,
+        "zip_pct": 0.6686848461254558,
+        "size_pct": 0.6700826656985903,
+        "beats": false
+      }
+    },
+    "dim_b7": {
+      "complete": false,
+      "beats_all": false,
+      "garden/seed0": {
+        "dPSNR": 0.024194717407226562,
+        "dSSIM": 0.0007476806640625,
+        "dLPIPS": -0.0012034773826598844,
+        "zip_pct": 3.4415023088314234,
+        "size_pct": 3.443055816090168,
+        "beats": false
+      },
+      "bicycle/seed0": {
+        "dPSNR": 0.009616851806640625,
+        "dSSIM": 0.0003037452697753906,
+        "dLPIPS": -0.00018520653247830476,
+        "zip_pct": 2.506158250775403,
+        "size_pct": 2.5077817591071083,
+        "beats": false
+      }
+    },
+    "dim_b8": {
+      "complete": false,
+      "beats_all": false,
+      "garden/seed0": {
+        "dPSNR": 0.02575492858887074,
+        "dSSIM": 0.0008054971694946289,
+        "dLPIPS": -0.0012679994106291892,
+        "zip_pct": 5.18106515062724,
+        "size_pct": 5.182828409659934,
+        "beats": false
+      },
+      "bicycle/seed0": {
+        "dPSNR": 0.011056900024414062,
+        "dSSIM": 0.0003529787063598633,
+        "dLPIPS": -0.00020089745521548186,
+        "zip_pct": 4.225493720582119,
+        "size_pct": 4.227124830531781,
+        "beats": false
+      }
+    },
+    "drop3_dim_b6": {
+      "complete": false,
+      "beats_all": false,
+      "garden/seed0": {
+        "dPSNR": -1.0568256378173793,
+        "dSSIM": -0.00936281681060791,
+        "dLPIPS": 0.003929316997528104,
+        "zip_pct": -3.298097007394585,
+        "size_pct": -3.298059058542613,
+        "beats": false
+      },
+      "bicycle/seed0": {
+        "dPSNR": -0.8731193542480469,
+        "dSSIM": -0.01065593957901001,
+        "dLPIPS": 0.004525393247604398,
+        "zip_pct": -4.3093440715634586,
+        "size_pct": -4.308894499083804,
+        "beats": false
+      }
+    },
+    "k32768_dim_b6": {
+      "complete": false,
+      "beats_all": false,
+      "garden/seed0": {
+        "dPSNR": -0.05401039123534801,
+        "dSSIM": -0.000886082649230957,
+        "dLPIPS": 0.0012112706899642944,
+        "zip_pct": -3.679412858938791,
+        "size_pct": -3.6796438744403193,
+        "beats": false
+      },
+      "bicycle/seed0": {
+        "dPSNR": -0.04104423522949219,
+        "dSSIM": -0.0010359883308410645,
+        "dLPIPS": 0.0015425384044647217,
+        "zip_pct": -4.762310821842419,
+        "size_pct": -4.762593609735511,
+        "beats": false
+      }
+    }
+  }
+}
