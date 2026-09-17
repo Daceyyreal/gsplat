@@ -7,7 +7,12 @@ compression loss is in the shN k-means clustering, not in quantization.
 **Run 3 (section 4):** no clustering config passes the pre-set rule either (`pr_worthy` = false).
 Weighted Lloyd k-means with opacity x footprint-area weights (`lloyd_wopa_area`) raises PSNR on both
 scenes and all 3 k-means seeds and fails the rule only on two garden SSIM cells, by less than the
-baseline's own SSIM spread over k-means seeds. Run 4 tests it on all 9 MipNeRF360 scenes.
+baseline's own SSIM spread over k-means seeds.
+
+**Run 4 (section 5):** on all 9 MipNeRF360 scenes of `mcmc.sh`, both candidates pass the rule that was
+fixed before the run. `lloyd_wopa_area` gains **+0.111 dB** mean PSNR at **-0.10%** mean size, is better
+on every scene, and is the `pr_candidate`. That is the result the library change (branch
+`feat/png-weighted-kmeans`) is built on.
 
 ## Sources
 
@@ -17,6 +22,9 @@ baseline's own SSIM spread over k-means seeds. Run 4 tests it on all 9 MipNeRF36
   configs on those checkpoints, so the numbers are self-consistent.
 - Section 3: training #1 (earlier Kaggle session); numbers from its `decision.json` and CSV,
   as reported by Dace. Its files are not in this repository.
+- Section 5: every number comes from `kaggle/run4/tilequant/` (one Kaggle session, gsplat commit
+  `f7ce5262`). It restored the run-3 output, reused the garden / bicycle checkpoints and their rows
+  (training #2, commits `b0998765` and `f9b61526`) and trained the other 7 scenes itself.
 - Section 4: every number comes from `kaggle/run3/tilequant/` (one Kaggle session, gsplat commit
   `f9b61526`). That session restored the run-2 output (training #2 checkpoints, seed-0 PLAS sort,
   run-1 / run-2 rows, gsplat wheel) and ran only the run-3 configs, so run-3 rows pair with the
@@ -351,7 +359,104 @@ Zeroing band 3 of the uncompressed checkpoint costs 1.37 / 0.99 dB, more than `d
 against the compressed baseline (1.06 / 0.87 dB). The run-2 drop3 loss was therefore not a bug: band 3
 carries that much in these MCMC 1M models (trained with the default `sh_degree` 3).
 
-## 5. Open items
+## 5. Run 4: MipNeRF360 validation (pre-registered)
 
-- **Run 4, MipNeRF360 validation:** baseline, `lloyd_wopa` and `lloyd_wopa_area` on all 9 scenes of
-  `mcmc.sh`, with the decision rule fixed before the run (`kaggle/tilequant_run4_analysis.py`).
+All 9 MipNeRF360 scenes of `examples/benchmarks/compression/mcmc.sh` (scene list, data factors and the
+train command parsed from the script), k-means seed 0 and PLAS sort seed 0, library shN format
+unchanged. garden and bicycle reuse the training-#2 checkpoints and their run-1 / run-2 / run-3 rows;
+the other 7 scenes were trained in this session with the `mcmc.sh` command.
+
+### The rule, fixed before the run
+
+From `run4/tilequant/run4_decision.json`, as recorded: a candidate passes when, over all scenes,
+mean dPSNR > 0 AND dPSNR > 0 on all scenes but at most one AND no scene dPSNR < -0.02 dB AND
+mean dLPIPS <= 0 AND mean dSSIM >= -0.0002 AND on every scene zip AND raw bytes <= baseline x 1.003;
+with every scene measured, every new scene's sanity gate passed and one checkpoint per scene.
+`pr_candidate` = the passing candidate with the higher mean dPSNR. Deltas and means are rounded to
+9 decimals before comparing, and the byte limits are integer comparisons. The reference is always the
+library baseline on the same checkpoint (`_compress_kmeans`, torchpq manhattan, 65,536 clusters).
+
+### Verdict: both candidates pass, `pr_candidate` = `lloyd_wopa_area`
+
+| Candidate | mean dPSNR | mean dSSIM | mean dLPIPS | Scenes with dPSNR <= 0 | Worst scene dPSNR | Worst zip | Worst raw |
+|---|---|---|---|---|---|---|---|
+| `lloyd_wopa` | +0.0494 dB | +0.00091 | -0.00048 | 1 (treehill) | -0.0099 dB | +0.009% | +0.008% |
+| `lloyd_wopa_area` | +0.1109 dB | +0.00072 | -0.00093 | 0 | +0.0049 dB | +0.267% | +0.266% |
+
+All 7 new scenes passed the sanity gate with no warnings: 1,000,000 Gaussians each, U - baseline
+between 0.101 dB (treehill) and 0.859 dB (bonsai), baseline zip 0.98x to 1.02x the repo 1M row.
+
+### 9-scene means, upstream format (`run4/tilequant/run4_table.csv`)
+
+| Submethod | PSNR | SSIM | LPIPS | Size [Bytes] | #Gaussians |
+|---|---|---|---|---|---|
+| `baseline` (library) | 27.4929 | 0.8192 | 0.2147 | 16,005,532 | 1,000,000 |
+| `lloyd_wopa` | 27.5423 | 0.8201 | 0.2143 | 15,983,770 | 1,000,000 |
+| `lloyd_wopa_area` | 27.6038 | 0.8199 | 0.2138 | 15,988,981 | 1,000,000 |
+| repo `results/MipNeRF360.csv`, 1M row | 27.29 | 0.811 | 0.229 | 16,038,022 | 1,000,000 |
+| uncompressed checkpoints (U) | 27.9258 | 0.8289 | 0.2033 | - | 1,000,000 |
+
+**The repo row is context, not a control.** Our baseline is 0.20 dB above it at 0.2% smaller size,
+because it comes from a different environment: different training run, torch and gsplat build, and
+evaluation setup. Nothing here is compared against it. Every delta in this section is paired: candidate
+minus the baseline measured in the same session, on the same checkpoint, with the same sort.
+
+### Per-scene (deltas vs the paired baseline)
+
+| Scene | Data factor | U - baseline | `lloyd_wopa` dPSNR | zip | `lloyd_wopa_area` dPSNR | zip |
+|---|---|---|---|---|---|---|
+| garden | 4 | 0.434 dB | +0.0324 | -0.19% | +0.0819 | -0.25% |
+| bicycle | 4 | 0.237 dB | +0.0158 | -0.08% | +0.0266 | -0.14% |
+| stump | 4 | 0.290 dB | +0.0252 | -0.13% | +0.0481 | +0.06% |
+| bonsai | 2 | 0.859 dB | +0.1326 | -0.33% | +0.2721 | -0.30% |
+| counter | 2 | 0.546 dB | +0.0838 | +0.01% | +0.1885 | +0.25% |
+| kitchen | 2 | 0.824 dB | +0.1123 | -0.21% | +0.2474 | -0.47% |
+| room | 2 | 0.386 dB | +0.0263 | -0.17% | +0.0846 | -0.21% |
+| treehill | 4 | 0.101 dB | -0.0099 | -0.09% | +0.0049 | -0.15% |
+| flowers | 4 | 0.219 dB | +0.0262 | -0.04% | +0.0442 | +0.27% |
+
+SSIM and LPIPS per scene are in `run4/tilequant/run4_scene_deltas.csv`. `lloyd_wopa_area` has lower
+(better) LPIPS on all 9 scenes and higher SSIM on 8 of 9 (garden -0.00016).
+
+`lloyd_wopa_area` recovers 4.9% (treehill) to 34.6% (counter) of that scene's compression loss
+(U - baseline), 21.1% on average. The four indoor scenes at data factor 2, where the loss is largest,
+gain the most.
+
+### k-means time (seconds, one T4)
+
+| Scene | `baseline` (torchpq manhattan) | `lloyd_wopa` | `lloyd_wopa_area` | Iterations (wopa / wopa_area) |
+|---|---|---|---|---|
+| garden | 433 | 633 | 642 | 100 / 100 |
+| bicycle | 404 | 317 | 405 | 44 / 56 |
+| stump | 408 | 290 | 461 | 51 / 81 |
+| bonsai | 435 | 281 | 374 | 41 / 55 |
+| counter | 409 | 535 | 490 | 94 / 86 |
+| kitchen | 434 | 622 | 587 | 92 / 87 |
+| room | 408 | 234 | 263 | 41 / 46 |
+| treehill | 437 | 326 | 594 | 48 / 87 |
+| flowers | 409 | 355 | 567 | 63 / 100 |
+| **mean** | **420** | **399** | **487** | |
+
+torchpq manhattan always runs its full 100 iterations (it never meets `tol`); the Lloyd runs stop at
+`tol` on 7 of 9 scenes. `lloyd_wopa_area` costs 0.64x to 1.48x the baseline clustering time, 1.16x on
+average, and this is the benchmark implementation (float64 weighted update, chunked `addmm`), not a
+tuned one.
+
+![Run 4: per-scene PSNR change, means and k-means time](run4/tilequant/rd_run4.png)
+
+### Session
+
+One Kaggle session on 2x T4, 7 new scenes queued over 2 GPUs. Training took 1,932-3,398 s per scene
+(data factor 4: 1,932-2,243 s; data factor 2: 2,983-3,398 s), the PLAS sort 69-83 s, and the whole
+per-scene job 3,302-5,357 s. The pre-run estimate was 5.70 h for the session
+(`run4/tilequant/run4_plan.json`); the jobs summed to 8.3 GPU-hours over 2 GPUs.
+
+## 6. Open items
+
+- **Library change:** branch `feat/png-weighted-kmeans` (off upstream main) adds
+  `gsplat/compression/kmeans.py` with `weighted_kmeans` and the `kmeans_backend` /
+  `kmeans_weighting` options of `PngCompression`. Defaults are unchanged and byte-identical.
+- **Run 5:** parity gate (library builtin backend must reproduce the run-3 rows), MipNeRF360 with the
+  library code, Tanks & Temples with the same rule, k-means time and peak GPU memory, and a CPU-only
+  smoke test of the builtin backend.
+- **PR:** `PR_DRAFT_weighted_kmeans.md` (untracked) is the draft. Not opened.

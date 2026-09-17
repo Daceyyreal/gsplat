@@ -1,0 +1,117 @@
+{
+  "measured": {
+    "train_s_per_megapixel": 2111.2841170461484,
+    "download_bytes_per_s": 31995933.48646536,
+    "startup_and_sort_s": 119.96186412970019,
+    "eval_s_per_test_image_megapixel": 0.46644087072117235,
+    "baseline_kmeans_s": 440.0423214940001,
+    "lloyd_s_per_iteration": 7.260557134634924,
+    "lloyd_max_iter": 100,
+    "encode_decompress_s": 3.3087458059981145,
+    "unaccounted_s_per_clustering_config": 43.35876685122507,
+    "session_setup_s": 274.16346979141235
+  },
+  "per_scene_estimate": {
+    "stump": {
+      "download_s": 36.60932744767375,
+      "train_s": 2166.810889324462,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 30.637328999752906,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 4386.175696294244,
+      "train_megapixels": 1.0263
+    },
+    "bonsai": {
+      "download_s": 41.480638549315195,
+      "train_s": 3419.8601240754683,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 111.8201255475838,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 5725.279038694722,
+      "train_megapixels": 1.619801
+    },
+    "counter": {
+      "download_s": 35.78141920704669,
+      "train_s": 3414.3771192234994,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 90.51960502725154,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 5692.796293980153,
+      "train_megapixels": 1.617204
+    },
+    "kitchen": {
+      "download_s": 45.974930896210736,
+      "train_s": 3417.6664998778574,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 105.70794594784849,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 5721.467527244271,
+      "train_megapixels": 1.618762
+    },
+    "room": {
+      "download_s": 40.87595280047826,
+      "train_s": 3412.1856063100054,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 117.59995669811286,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 5722.779666330951,
+      "train_megapixels": 1.616166
+    },
+    "treehill": {
+      "download_s": 45.508919144864045,
+      "train_s": 2225.597484279495,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 35.40210085623596,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 4458.62665480295,
+      "train_megapixels": 1.054144
+    },
+    "flowers": {
+      "download_s": 61.74967327756696,
+      "train_s": 2195.6679206362487,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 42.68735499090974,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 4452.22309942708,
+      "train_megapixels": 1.039968
+    }
+  },
+  "budget_s": 39600.0,
+  "setup_s": 274.16346979141235,
+  "n_gpus": 2,
+  "sessions": [
+    [
+      "stump",
+      "bonsai",
+      "counter",
+      "kitchen",
+      "room",
+      "treehill",
+      "flowers"
+    ]
+  ],
+  "session_estimate_s": [
+    20528.13822582384
+  ],
+  "assumptions": [
+    "training time proportional to training-image megapixels (measured only at data factor 4: garden, bicycle)",
+    "download throughput of the run-3 session's garden + bicycle download",
+    "Lloyd k-means at max_iter (100) with the slowest measured seconds per iteration",
+    "per-config overhead beyond row timings as in the slowest run-3 job",
+    "restoring inputs and the decision cell are not included"
+  ]
+}

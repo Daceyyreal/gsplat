@@ -1,0 +1,38 @@
+{
+  "configs": [
+    "lloyd_wopa",
+    "lloyd_wopa_area"
+  ],
+  "scores": {
+    "lloyd_wopa": [
+      1.0,
+      2.0,
+      0.015796661376953125
+    ],
+    "lloyd_wopa_area": [
+      0.0,
+      1.0,
+      0.026586532592773438
+    ],
+    "iters_x": [
+      0.0,
+      1.0,
+      -0.0003261566162109375
+    ],
+    "lloyd_w1": [
+      0.0,
+      0.0,
+      -0.036252975463863635
+    ],
+    "euclid": [
+      0.0,
+      0.0,
+      -0.03791236877441406
+    ]
+  },
+  "score_fields": [
+    "beats_all_scenes",
+    "n_scenes_beaten",
+    "min_dPSNR"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "uncompressed_psnr": 32.62820053100586,
+  "baseline_psnr": 31.768815994262695,
+  "psnr_drop_db": 0.8593845367431641,
+  "num_gaussians": 1000000,
+  "baseline_zip_bytes": 15907878,
+  "zip_vs_repo_row": 0.9918852836091633,
+  "drop_range_db": [
+    -0.1,
+    1.0
+  ],
+  "size_tolerance_warn": 0.15,
+  "failures": [],
+  "warnings": [],
+  "pass": true,
+  "scene": "bonsai",
+  "ckpt_sha1": "60868efab7cfd97dada0ea6badcb8a2700c7d7c8"
+}

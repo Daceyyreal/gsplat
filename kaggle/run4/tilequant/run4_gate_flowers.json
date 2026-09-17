@@ -1,0 +1,18 @@
+{
+  "uncompressed_psnr": 22.010679244995117,
+  "baseline_psnr": 21.79166030883789,
+  "psnr_drop_db": 0.21901893615722656,
+  "num_gaussians": 1000000,
+  "baseline_zip_bytes": 16404698,
+  "zip_vs_repo_row": 1.0228629191305512,
+  "drop_range_db": [
+    -0.1,
+    1.0
+  ],
+  "size_tolerance_warn": 0.15,
+  "failures": [],
+  "warnings": [],
+  "pass": true,
+  "scene": "flowers",
+  "ckpt_sha1": "d0ea4a76881fb22b0c2848903cb0cce0001b06d5"
+}

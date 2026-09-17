@@ -1,0 +1,18 @@
+{
+  "uncompressed_psnr": 31.696407318115234,
+  "baseline_psnr": 30.87204933166504,
+  "psnr_drop_db": 0.8243579864501953,
+  "num_gaussians": 1000000,
+  "baseline_zip_bytes": 15712306,
+  "zip_vs_repo_row": 0.9796910117719005,
+  "drop_range_db": [
+    -0.1,
+    1.0
+  ],
+  "size_tolerance_warn": 0.15,
+  "failures": [],
+  "warnings": [],
+  "pass": true,
+  "scene": "kitchen",
+  "ckpt_sha1": "8e5e31d4a8d25f458ac55f95a72f442bde2c0f83"
+}
