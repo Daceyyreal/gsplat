@@ -640,9 +640,10 @@ The jobs summed to 6.05 GPU-hours over the 2 GPUs. The notebook's pre-run estima
 
 ## 7. Open items
 
-- **PR:** `PR_DRAFT_weighted_kmeans.md` (untracked) has the run-5 numbers. It has not been opened.
-- **Default flip:** the planned second commit (`kmeans_backend="builtin"`,
-  `kmeans_weighting="opacity_area"` as defaults, plus updated `benchmarks/compression/results/*.csv`)
-  has not been written.
+- **PR:** open as [nerfstudio-project/gsplat#1063](https://github.com/nerfstudio-project/gsplat/pull/1063)
+  (opened 2026-09-18, branch `feat/png-weighted-kmeans` at `61cd1baf`), with the run-5 numbers.
+- **Default flip:** written as the PR's last commit (`61cd1baf`: `kmeans_backend="builtin"`,
+  `kmeans_weighting="opacity_area"` as defaults), droppable on its own. `benchmarks/compression/results/*.csv`
+  still hold the TorchPQ numbers; regenerating them is left to a follow-up.
 - **CUDA checks:** `lint/format-code.sh` and the test suite on a CUDA machine. Locally only CPU tests
   run (`tests/test_compression.py` skips its CUDA test).
