@@ -1,0 +1,56 @@
+{
+  "criteria": "library builtin backend vs the run-3 rows of the same scene and config: |dPSNR| <= 1e-06 dB, equal zip bytes and equal raw bytes",
+  "config": "lloyd_wopa_area",
+  "scenes": [
+    "garden",
+    "bicycle"
+  ],
+  "complete": true,
+  "pass": true,
+  "per_scene": {
+    "garden": {
+      "measured": true,
+      "run5_PSNR": 26.963132858276367,
+      "run3_PSNR": 26.963132858276367,
+      "dPSNR": 0.0,
+      "dSSIM": 0.0,
+      "dLPIPS": 0.0,
+      "run5_zip_bytes": 16409335,
+      "run3_zip_bytes": 16409335,
+      "run5_size_bytes": 16405132,
+      "run3_size_bytes": 16405132,
+      "run5_shn_sha1": "d166cdfa04cc805b5ac7caca171e21b4f3031b93",
+      "run5_n_iters": null,
+      "run3_n_iters": 100,
+      "kmeans_time_s": 645.6325985449994,
+      "run3_kmeans_time_s": 641.514312751,
+      "psnr_within_tol": true,
+      "zip_equal": true,
+      "size_equal": true,
+      "iters_equal": false,
+      "pass": true
+    },
+    "bicycle": {
+      "measured": true,
+      "run5_PSNR": 25.35771369934082,
+      "run3_PSNR": 25.35771369934082,
+      "dPSNR": 0.0,
+      "dSSIM": 0.0,
+      "dLPIPS": 0.0,
+      "run5_zip_bytes": 16219981,
+      "run3_zip_bytes": 16219981,
+      "run5_size_bytes": 16216069,
+      "run3_size_bytes": 16216069,
+      "run5_shn_sha1": "f5445c1d91dd16194304c48d7c23a0ff8333572c",
+      "run5_n_iters": null,
+      "run3_n_iters": 56,
+      "kmeans_time_s": 338.9526177959997,
+      "run3_kmeans_time_s": 404.81844179300015,
+      "psnr_within_tol": true,
+      "zip_equal": true,
+      "size_equal": true,
+      "iters_equal": false,
+      "pass": true
+    }
+  }
+}

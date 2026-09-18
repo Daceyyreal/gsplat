@@ -1,0 +1,165 @@
+{
+  "measured": {
+    "train_s_per_megapixel": 2127.6368812892715,
+    "download_bytes_per_s": 31995933.48646536,
+    "startup_and_sort_s": 119.96186412970019,
+    "eval_s_per_test_image_megapixel": 0.46644087072117235,
+    "baseline_kmeans_s": 440.0423214940001,
+    "lloyd_s_per_iteration": 7.260557134634924,
+    "lloyd_max_iter": 100,
+    "encode_decompress_s": 3.3087458059981145,
+    "unaccounted_s_per_clustering_config": 43.35876685122507,
+    "session_setup_s": 4712.987067461014,
+    "sources": "runs 1-3 timings and rows, widened with the run-4 training and clustering times"
+  },
+  "per_scene_estimate": {
+    "mipnerf360/garden": {
+      "download_s": 71.4858101254503,
+      "train_s": 0.0,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 36.588815987997805,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 2260.192776635803,
+      "megapixels": 1.08948
+    },
+    "mipnerf360/bicycle": {
+      "download_s": 59.34250394048291,
+      "train_s": 0.0,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 35.5425144844309,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 2247.0031689472685,
+      "megapixels": 1.015992
+    },
+    "mipnerf360/stump": {
+      "download_s": 36.60932744767375,
+      "train_s": 0.0,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 22.97799674981468,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 2211.705474719843,
+      "megapixels": 1.0263
+    },
+    "mipnerf360/bonsai": {
+      "download_s": 41.480638549315195,
+      "train_s": 0.0,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 83.86509416068785,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 2277.4638832323576,
+      "megapixels": 1.619801
+    },
+    "mipnerf360/counter": {
+      "download_s": 35.78141920704669,
+      "train_s": 0.0,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 67.88970377043866,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 2255.78927349984,
+      "megapixels": 1.617204
+    },
+    "mipnerf360/kitchen": {
+      "download_s": 45.974930896210736,
+      "train_s": 0.0,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 79.28095946088636,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 2277.374040879452,
+      "megapixels": 1.618762
+    },
+    "mipnerf360/room": {
+      "download_s": 40.87595280047826,
+      "train_s": 0.0,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 88.19996752358465,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 2281.1940708464176,
+      "megapixels": 1.616166
+    },
+    "mipnerf360/treehill": {
+      "download_s": 45.508919144864045,
+      "train_s": 0.0,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 26.55157564217697,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 2224.178645309396,
+      "megapixels": 1.054144
+    },
+    "mipnerf360/flowers": {
+      "download_s": 61.74967327756696,
+      "train_s": 0.0,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 32.015516243182304,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 2245.883340043104,
+      "megapixels": 1.039968
+    },
+    "tandt/train": {
+      "download_s": 6.862934663021703,
+      "train_s": 4543.164308985794,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 151.39137006026326,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 6853.536764231434,
+      "megapixels": 2.13531
+    },
+    "tandt/truck": {
+      "download_s": 5.853311986638004,
+      "train_s": 4542.689845961267,
+      "startup_and_sort_s": 119.96186412970019,
+      "eval_s": 127.47415543621833,
+      "kmeans_s": 1892.153748420985,
+      "encode_decompress_s": 9.926237417994344,
+      "unaccounted_s": 130.0763005536752,
+      "total_s": 6828.1354639064775,
+      "megapixels": 2.135087
+    }
+  },
+  "budget_s": 39600.0,
+  "setup_s": 9116.675369739532,
+  "n_gpus": 2,
+  "sessions": [
+    [
+      "mipnerf360/garden",
+      "mipnerf360/bicycle",
+      "mipnerf360/stump",
+      "mipnerf360/bonsai",
+      "mipnerf360/counter",
+      "mipnerf360/kitchen",
+      "mipnerf360/room",
+      "mipnerf360/treehill",
+      "mipnerf360/flowers",
+      "tandt/train",
+      "tandt/truck"
+    ]
+  ],
+  "session_estimate_s": [
+    27186.38616170248
+  ],
+  "assumptions": [
+    "training time proportional to training-image megapixels (measured at data factor 2 and 4)",
+    "Tanks & Temples at data factor 1, about 2.14 megapixels per image",
+    "Lloyd k-means at max_iter (100) with the slowest measured seconds per iteration",
+    "the gsplat wheel build of the run-2 session (73 min) counted as session setup"
+  ]
+}

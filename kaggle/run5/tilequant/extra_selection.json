@@ -1,0 +1,132 @@
+{
+  "garden": {
+    "size_col": "zip_bytes",
+    "bits": [
+      [
+        16,
+        8
+      ],
+      [
+        16,
+        7
+      ],
+      [
+        16,
+        6
+      ]
+    ],
+    "rows": [
+      {
+        "bits_means": 16,
+        "bits_other": 8,
+        "closest_submethod": "baseline",
+        "gap_db": 0.0,
+        "zip_bytes": 16450113
+      },
+      {
+        "bits_means": 16,
+        "bits_other": 7,
+        "closest_submethod": "global_m16_o7",
+        "gap_db": 0.0,
+        "zip_bytes": 15161065
+      },
+      {
+        "bits_means": 16,
+        "bits_other": 6,
+        "closest_submethod": "global_m16_o6",
+        "gap_db": 0.0,
+        "zip_bytes": 13985732
+      }
+    ],
+    "front": [
+      "global_m8_o6",
+      "global_m10_o6",
+      "global_m12_o6",
+      "global_m12_o7",
+      "global_m16_o6",
+      "global_m16_o7",
+      "baseline",
+      "t16_m16_o7",
+      "t64_m16_o8",
+      "t32_m16_o8",
+      "t8_m16_o8"
+    ],
+    "configs": [
+      "t128_m16_o8",
+      "smooth_t16_m16_o8",
+      "smooth_t32_m16_o8",
+      "t128_m16_o7",
+      "smooth_t16_m16_o7",
+      "smooth_t32_m16_o7",
+      "t128_m16_o6",
+      "smooth_t16_m16_o6",
+      "smooth_t32_m16_o6"
+    ]
+  },
+  "bicycle": {
+    "size_col": "zip_bytes",
+    "bits": [
+      [
+        16,
+        8
+      ],
+      [
+        16,
+        7
+      ],
+      [
+        16,
+        6
+      ]
+    ],
+    "rows": [
+      {
+        "bits_means": 16,
+        "bits_other": 8,
+        "closest_submethod": "baseline",
+        "gap_db": 0.0,
+        "zip_bytes": 16235216
+      },
+      {
+        "bits_means": 16,
+        "bits_other": 7,
+        "closest_submethod": "t64_m16_o7",
+        "gap_db": 0.0,
+        "zip_bytes": 17193638
+      },
+      {
+        "bits_means": 16,
+        "bits_other": 6,
+        "closest_submethod": "global_m16_o6",
+        "gap_db": 0.0,
+        "zip_bytes": 13791205
+      }
+    ],
+    "front": [
+      "global_m8_o6",
+      "global_m10_o6",
+      "global_m12_o6",
+      "global_m12_o7",
+      "global_m16_o6",
+      "global_m16_o7",
+      "baseline",
+      "t64_m16_o7",
+      "t32_m16_o7",
+      "t64_m16_o8",
+      "t32_m16_o8",
+      "t16_m16_o8",
+      "t8_m16_o8"
+    ],
+    "configs": [
+      "t128_m16_o8",
+      "smooth_t16_m16_o8",
+      "smooth_t32_m16_o8",
+      "t128_m16_o7",
+      "smooth_t16_m16_o7",
+      "smooth_t32_m16_o7",
+      "t128_m16_o6",
+      "smooth_t16_m16_o6",
+      "smooth_t32_m16_o6"
+    ]
+  }
+}

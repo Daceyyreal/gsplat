@@ -1,0 +1,19 @@
+{
+  "uncompressed_psnr": 22.502086639404297,
+  "baseline_psnr": 22.330970764160156,
+  "psnr_drop_db": 0.17111587524414062,
+  "num_gaussians": 1000000,
+  "baseline_zip_bytes": 15918371,
+  "zip_vs_repo_row": 0.9886801309861951,
+  "drop_range_db": [
+    -0.1,
+    1.0
+  ],
+  "size_tolerance_warn": 0.15,
+  "failures": [],
+  "warnings": [],
+  "pass": true,
+  "scene": "train",
+  "dataset": "tandt",
+  "ckpt_sha1": "15394ef18333d9edd61facf46874238b45e84de7"
+}

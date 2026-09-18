@@ -1,0 +1,22 @@
+{
+  "device": "cpu",
+  "torchpq_blocked": "ModuleNotFoundError: import of torchpq halted; None in sys.modules",
+  "n_gaussians": 4096,
+  "compress_s": 0.21154470300098183,
+  "decompress_s": 0.012940374999743653,
+  "files": [
+    "means_l.png",
+    "means_u.png",
+    "meta.json",
+    "opacities.png",
+    "quats.png",
+    "scales.png",
+    "sh0.png",
+    "shN.npz"
+  ],
+  "size_bytes": 199335,
+  "shapes_match": true,
+  "finite": true,
+  "n_centroids": 4096,
+  "pass": true
+}

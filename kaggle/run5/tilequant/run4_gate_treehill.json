@@ -1,0 +1,18 @@
+{
+  "uncompressed_psnr": 23.33470344543457,
+  "baseline_psnr": 23.23360252380371,
+  "psnr_drop_db": 0.10110092163085938,
+  "num_gaussians": 1000000,
+  "baseline_zip_bytes": 15875616,
+  "zip_vs_repo_row": 0.9898736889125105,
+  "drop_range_db": [
+    -0.1,
+    1.0
+  ],
+  "size_tolerance_warn": 0.15,
+  "failures": [],
+  "warnings": [],
+  "pass": true,
+  "scene": "treehill",
+  "ckpt_sha1": "66fcadcf3298034c06227e69e6381e5a539f6980"
+}

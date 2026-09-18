@@ -1,18 +1,23 @@
 # Findings: tile-wise PNG quantization and the shN codebook in gsplat `PngCompression`
 
-**Result:** no tile-wise or smooth-range config beats the current global per-channel min/max
-scheme, and no shN codebook quantization change beats the library default. Most of the remaining
-compression loss is in the shN k-means clustering, not in quantization.
+**Runs 1-2 (sections 1-2):** no tile-wise or smooth-range config beats the current global per-channel
+min/max scheme, and no shN codebook quantization change beats the library default. Most of the
+remaining compression loss is in the shN k-means clustering, not in quantization.
 
-**Run 3 (section 4):** no clustering config passes the pre-set rule either (`pr_worthy` = false).
-Weighted Lloyd k-means with opacity x footprint-area weights (`lloyd_wopa_area`) raises PSNR on both
-scenes and all 3 k-means seeds and fails the rule only on two garden SSIM cells, by less than the
-baseline's own SSIM spread over k-means seeds.
+**Run 3 (section 4) found the lever:** weighted Lloyd k-means with opacity x footprint-area weights
+(`lloyd_wopa_area`) raises PSNR and lowers LPIPS on garden and bicycle at all 3 k-means seeds
+(+0.096 / +0.030 dB mean PSNR). The strict pre-set rule (`pr_worthy`) failed only on two garden SSIM
+cells, both inside the baseline's own SSIM spread over k-means seeds.
 
-**Run 4 (section 5):** on all 9 MipNeRF360 scenes of `mcmc.sh`, both candidates pass the rule that was
-fixed before the run. `lloyd_wopa_area` gains **+0.111 dB** mean PSNR at **-0.10%** mean size, is better
-on every scene, and is the `pr_candidate`. That is the result the library change (branch
-`feat/png-weighted-kmeans`) is built on.
+**Run 4 (section 5) validated it** on all 9 MipNeRF360 scenes of `mcmc.sh`, under a rule fixed before
+the run: `lloyd_wopa_area` gains **+0.111 dB** mean PSNR at **-0.10%** mean size and is better on
+every scene.
+
+**Run 5 (section 6) measured the library code** (branch `feat/png-weighted-kmeans`). It reproduces
+the benchmark rows exactly (parity gate passed, and identical rows on all 9 MipNeRF360 scenes) and
+passes the same rule on Tanks & Temples: **+0.052 dB** mean PSNR on train / truck at +0.08% mean size.
+Cost: k-means 510 s vs 405 s mean on MipNeRF360 and 328 s vs 416 s on Tanks & Temples; peak GPU
+memory 3.37-3.62 GB vs 1.03-1.26 GB.
 
 ## Sources
 
@@ -25,6 +30,12 @@ on every scene, and is the `pr_candidate`. That is the result the library change
 - Section 5: every number comes from `kaggle/run4/tilequant/` (one Kaggle session, gsplat commit
   `f7ce5262`). It restored the run-3 output, reused the garden / bicycle checkpoints and their rows
   (training #2, commits `b0998765` and `f9b61526`) and trained the other 7 scenes itself.
+- Section 6: every number comes from `kaggle/run5/tilequant/` (one Kaggle session, gsplat commit
+  `3bc8eb6c`). It restored the run-4 output, rebuilt the gsplat wheel, reused the 9 run-4 MipNeRF360
+  checkpoints and trained the 2 Tanks & Temples scenes itself. Two bundle files were regenerated
+  locally from the bundle's own result files after a label fix (commit `1b4d40f8`):
+  `run5_tt_table.csv` (only its reference-row label changes) and `rd_run5.png` (memory in decimal GB,
+  titles no longer overlap). Every other file is as downloaded.
 - Section 4: every number comes from `kaggle/run3/tilequant/` (one Kaggle session, gsplat commit
   `f9b61526`). That session restored the run-2 output (training #2 checkpoints, seed-0 PLAS sort,
   run-1 / run-2 rows, gsplat wheel) and ran only the run-3 configs, so run-3 rows pair with the
@@ -276,7 +287,8 @@ and so are raw bytes, PNG bytes and `shN.npz` bytes, on both scenes. Only the zi
 +109 / +108 B; `zip -r` also stores the run directory path, which differs between the two scripts
 (`/tmp/tilequant_shn_runs/.../baseline` vs `/tmp/tilequant_run3_runs/.../manhattan_log`). torchpq
 k-means is deterministic per seed across sessions, so pairing run-3 rows with run-2 baselines is valid.
-This was checked at seed 0; seeds 1 and 2 rely on the same determinism.
+This was checked at seed 0; seeds 1 and 2 rely on the same determinism. (Correction from run 5,
+section 6: across 9 scenes, torchpq reproduces to about 0.002 dB, not always bit-exactly.)
 
 torchpq manhattan did not meet its own stopping rule: after 100 iterations the centroid change was
 0.0107 / 0.0238 (tol 1e-4) on garden / bicycle.
@@ -451,12 +463,186 @@ One Kaggle session on 2x T4, 7 new scenes queued over 2 GPUs. Training took 1,93
 per-scene job 3,302-5,357 s. The pre-run estimate was 5.70 h for the session
 (`run4/tilequant/run4_plan.json`); the jobs summed to 8.3 GPU-hours over 2 GPUs.
 
-## 6. Open items
+## 6. Run 5: the library code on MipNeRF360 and Tanks & Temples
 
-- **Library change:** branch `feat/png-weighted-kmeans` (off upstream main) adds
-  `gsplat/compression/kmeans.py` with `weighted_kmeans` and the `kmeans_backend` /
-  `kmeans_weighting` options of `PngCompression`. Defaults are unchanged and byte-identical.
-- **Run 5:** parity gate (library builtin backend must reproduce the run-3 rows), MipNeRF360 with the
-  library code, Tanks & Temples with the same rule, k-means time and peak GPU memory, and a CPU-only
-  smoke test of the builtin backend.
-- **PR:** `PR_DRAFT_weighted_kmeans.md` (untracked) is the draft. Not opened.
+Run 5 measures gsplat's own `PngCompression(kmeans_backend="builtin", kmeans_weighting=...)` from
+`feat/png-weighted-kmeans`, with `"opacity"` (row `lloyd_wopa`) and `"opacity_area"`
+(`lloyd_wopa_area`), against the library default (TorchPQ manhattan). The rule is the run-4 rule,
+unchanged, applied to each dataset separately.
+
+- **MipNeRF360:** the 9 run-4 checkpoints. Candidates are paired against the run-4 baseline rows (same
+  checkpoint, same sort). The default path was also re-run (`baseline_lib`) to check it and to measure
+  its cost.
+- **Tanks & Temples:** `mcmc_tt.sh` (train, truck; data factor 1, 1M Gaussians), trained in this
+  session. Candidates are paired against the baseline measured in the same session.
+
+### Parity gate (`run5_parity.json`): passed
+
+The library must reproduce the run-3 benchmark rows (`lloyd_wopa_area`, k-means seed 0). The run-5
+rows were written into the run-3 run-directory path, so zip sizes compare directly.
+
+| Scene | PSNR (run 3 = run 5) | zip bytes (both) | raw bytes (both) | k-means time run 3 / run 5 |
+|---|---|---|---|---|
+| garden | 26.963133 dB | 16,409,335 | 16,405,132 | 641.5 / 645.6 s |
+| bicycle | 25.357714 dB | 16,219,981 | 16,216,069 | 404.8 / 339.0 s |
+
+dPSNR, dSSIM and dLPIPS are 0 on both scenes. `iters_equal` is false only because the library does not
+report an iteration count: `n_iters` is empty in every run-5 row.
+
+The match goes beyond the gate. On all 9 MipNeRF360 scenes, both library candidates give exactly the
+run-4 benchmark rows: PSNR, SSIM, LPIPS, zip bytes and raw bytes. `run5_table.csv` is byte-identical
+to `run4_table.csv`.
+
+### Verdict (`run5_decision.json`): both candidates pass on both datasets; `pr_candidate` = `lloyd_wopa_area`
+
+| Dataset | Candidate | mean dPSNR | mean dSSIM | mean dLPIPS | Scenes with dPSNR <= 0 | Worst scene dPSNR | Worst zip | Worst raw |
+|---|---|---|---|---|---|---|---|---|
+| MipNeRF360 | `lloyd_wopa` | +0.0494 dB | +0.00091 | -0.00048 | 1 (treehill) | -0.0099 dB | +0.009% | +0.008% |
+| MipNeRF360 | `lloyd_wopa_area` | +0.1109 dB | +0.00072 | -0.00093 | 0 | +0.0049 dB | +0.267% | +0.266% |
+| Tanks & Temples | `lloyd_wopa` | +0.0047 dB | +0.00034 | -0.00013 | 1 (train) | -0.0007 dB | +0.076% | +0.076% |
+| Tanks & Temples | `lloyd_wopa_area` | +0.0525 dB | +0.00026 | -0.00028 | 0 | +0.0441 dB | +0.153% | +0.153% |
+
+Both Tanks & Temples sanity gates passed with no warnings: 1,000,000 Gaussians, U - baseline
+0.171 / 0.188 dB (train / truck), baseline zip 0.989x / 1.012x the repo `TanksAndTemples.csv` 1M row.
+
+### Means, upstream format, each next to its own repo row
+
+MipNeRF360, 9 scenes (`run5_table.csv`, identical to section 5):
+
+| Submethod | PSNR | SSIM | LPIPS | Size [Bytes] | #Gaussians |
+|---|---|---|---|---|---|
+| `baseline` (library, run-4 rows) | 27.4929 | 0.8192 | 0.2147 | 16,005,532 | 1,000,000 |
+| `lloyd_wopa` | 27.5423 | 0.8201 | 0.2143 | 15,983,770 | 1,000,000 |
+| `lloyd_wopa_area` | 27.6038 | 0.8199 | 0.2138 | 15,988,981 | 1,000,000 |
+| repo `MipNeRF360.csv` 1M row | 27.29 | 0.811 | 0.229 | 16,038,022 | 1,000,000 |
+| uncompressed checkpoints (U) | 27.9258 | 0.8289 | 0.2033 | - | 1,000,000 |
+
+Tanks & Temples, 2 scenes (`run5_tt_table.csv`):
+
+| Submethod | PSNR | SSIM | LPIPS | Size [Bytes] | #Gaussians |
+|---|---|---|---|---|---|
+| `baseline` (library, this session) | 24.0759 | 0.8549 | 0.1633 | 16,105,621 | 1,000,000 |
+| `lloyd_wopa` | 24.0806 | 0.8552 | 0.1632 | 16,107,724 | 1,000,000 |
+| `lloyd_wopa_area` | 24.1284 | 0.8551 | 0.1630 | 16,118,242 | 1,000,000 |
+| repo `TanksAndTemples.csv` 1M row | 24.03 | 0.857 | 0.163 | 16,100,628 | 1,000,000 |
+| uncompressed checkpoints (U) | 24.2557 | 0.8612 | 0.1553 | - | 1,000,000 |
+
+**The repo rows are context, not controls.** They come from a different environment (training run,
+torch / gsplat build, evaluation setup). Our baseline is +0.20 dB and -0.20% size against the
+MipNeRF360 row, and +0.046 dB, -0.0021 SSIM and +0.03% size against the Tanks & Temples row. Every
+delta in this section is paired against our own baseline on the same checkpoints.
+
+### Per-scene deltas (candidate minus the paired baseline)
+
+| Dataset | Scene | U - baseline | `lloyd_wopa` dPSNR | zip | `lloyd_wopa_area` dPSNR | dSSIM | dLPIPS | zip | raw |
+|---|---|---|---|---|---|---|---|---|---|
+| MipNeRF360 | garden | 0.434 dB | +0.0324 | -0.19% | +0.0819 | -0.00016 | -0.00083 | -0.25% | -0.25% |
+| MipNeRF360 | bicycle | 0.237 dB | +0.0158 | -0.08% | +0.0266 | +0.00005 | -0.00094 | -0.14% | -0.14% |
+| MipNeRF360 | stump | 0.290 dB | +0.0252 | -0.13% | +0.0481 | +0.00052 | -0.00105 | +0.06% | +0.06% |
+| MipNeRF360 | bonsai | 0.859 dB | +0.1326 | -0.33% | +0.2721 | +0.00136 | -0.00020 | -0.30% | -0.30% |
+| MipNeRF360 | counter | 0.546 dB | +0.0838 | +0.01% | +0.1885 | +0.00166 | -0.00136 | +0.25% | +0.25% |
+| MipNeRF360 | kitchen | 0.824 dB | +0.1123 | -0.21% | +0.2474 | +0.00109 | -0.00127 | -0.47% | -0.47% |
+| MipNeRF360 | room | 0.386 dB | +0.0263 | -0.17% | +0.0846 | +0.00066 | -0.00024 | -0.21% | -0.21% |
+| MipNeRF360 | treehill | 0.101 dB | -0.0099 | -0.09% | +0.0049 | +0.00040 | -0.00102 | -0.15% | -0.15% |
+| MipNeRF360 | flowers | 0.219 dB | +0.0262 | -0.04% | +0.0442 | +0.00090 | -0.00147 | +0.27% | +0.27% |
+| T&T | train | 0.171 dB | -0.0007 | +0.076% | +0.0609 | +0.00019 | -0.00038 | +0.001% | +0.001% |
+| T&T | truck | 0.188 dB | +0.0101 | -0.048% | +0.0441 | +0.00033 | -0.00017 | +0.153% | +0.153% |
+
+- `lloyd_wopa_area` has lower LPIPS on all 11 scenes and higher SSIM on 10 of 11 (garden -0.00016).
+- On Tanks & Temples it recovers 35.6% (train) and 23.4% (truck) of the compression loss
+  (U - baseline). The loss there is small (0.17-0.19 dB), so the absolute gain is smaller than on the
+  indoor MipNeRF360 scenes.
+- `lloyd_wopa` passes the rule on Tanks & Temples too, but only just: +0.0047 dB mean, train
+  -0.0007 dB, and truck LPIPS +0.00010.
+
+### Cost (`run5_costs.csv`, one T4 per job)
+
+| Dataset | Config | k-means mean | k-means range | Peak GPU memory |
+|---|---|---|---|---|
+| MipNeRF360 | `baseline_lib` (TorchPQ) | 405 s | 398-427 s | 1.26 GB |
+| MipNeRF360 | `lloyd_wopa` | 411 s | 261-673 s | 3.37-3.38 GB |
+| MipNeRF360 | `lloyd_wopa_area` | 510 s | 297-646 s | 3.37-3.62 GB |
+| Tanks & Temples | `baseline` (TorchPQ) | 416 s | 415-418 s | 1.03 GB |
+| Tanks & Temples | `lloyd_wopa` | 247 s | 241-252 s | 3.37 GB |
+| Tanks & Temples | `lloyd_wopa_area` | 328 s | 298-357 s | 3.37 GB |
+
+k-means time per scene (TorchPQ / `lloyd_wopa` / `lloyd_wopa_area`, seconds):
+
+| garden | bicycle | stump | bonsai | counter | kitchen | room | treehill | flowers | train | truck |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 427 / 673 / 646 | 403 / 283 / 339 | 405 / 326 / 522 | 398 / 261 / 388 | 405 / 608 / 556 | 398 / 583 / 599 | 404 / 264 / 297 | 401 / 303 / 597 | 405 / 402 / 644 | 415 / 241 / 357 | 418 / 252 / 298 |
+
+- `lloyd_wopa_area` takes 0.74x-1.59x the TorchPQ time per MipNeRF360 scene (1.26x on average) and
+  0.86x / 0.71x on train / truck. TorchPQ always runs its full 100 iterations; the builtin backend
+  stops at `tol` or at 100 iterations.
+- **Peak GPU memory** is `torch.cuda.max_memory_allocated()` over `compress()` in the benchmark
+  process. It includes everything that process holds on the GPU (the loaded scene, among others), not
+  only the clustering. `lloyd_wopa_area` shows 3.61-3.62 GB only on garden and bicycle, whose rows come
+  from the parity-gate jobs (that config was the only one in those processes). It shows 3.37-3.38 GB
+  everywhere else, with the same inputs and identical output. So that extra 0.24 GB comes from process
+  state, not from the clustering.
+- The builtin backend's largest buffer is the per-chunk distance matrix, `chunk_size` x `n_clusters`
+  float32: 4096 x 65,536 x 4 B = 1.07 GB at the default. That is arithmetic from the code, not a
+  measurement. A smaller `chunk_size` shrinks it; the speed cost of doing so was not measured.
+  `chunk_size` is an argument of `weighted_kmeans` only: `PngCompression` uses the default and does
+  not expose it.
+- **Builtin backend reproducibility:** all 18 library candidate rows (9 scenes x 2 weightings) equal
+  the run-4 benchmark rows from another session and another implementation of the same algorithm.
+  That is measured, not guaranteed: the float64 `index_add_` in the centroid update uses CUDA atomics,
+  whose order is not fixed.
+- Decompression is unchanged: 0.82-1.30 s for every config.
+
+### Baseline reproduction (`baseline_reproduced_mipnerf360`): to about 0.002 dB, not bit-exact
+
+`baseline_lib` re-ran the unchanged TorchPQ path on the 9 run-4 checkpoints:
+
+| Scene | dPSNR | dSSIM | dLPIPS | raw bytes | zip bytes |
+|---|---|---|---|---|---|
+| bonsai, counter, kitchen, room, treehill, flowers | 0 | 0 | 0 | 0 | +72 |
+| garden | 0 | 0 | 0 | 0 | +90 |
+| bicycle | +0.0024 dB | +0.00002 | -0.000005 | +41 (`shN.npz`) | +145 |
+| stump | +0.00006 dB | -0.0000002 | +0.000009 | +3 (`shN.npz`) | +78 |
+
+- 7 of 9 scenes are identical. On bicycle and stump the shN codebook itself differs (PNG files and
+  `meta.json` are identical), so the difference is in the clustering, not in rendering or evaluation.
+- The zip differences come from run-directory path lengths. `zip -r` stores the path in 9 entries
+  (the directory and its 8 files), twice each (local header and central directory). `baseline_lib`
+  is 4 characters longer than `baseline`: 4 x 9 x 2 = 72 B, exactly the difference on the 6 identical
+  run-4-trained scenes. garden's reference is the run-2 row (`tilequant_shn_runs`, 1 character
+  shorter than `tilequant_run5_runs`): 5 x 18 = 90 B. bicycle (145 B, also a run-2 reference) and
+  stump (78 B) add the changed `shN.npz` on top of 90 / 72 B.
+- **Conclusion:** TorchPQ k-means reproduces to about 0.002 dB across sessions, not bit-exactly. This
+  corrects "deterministic per seed across sessions" (section 4), which held for the one seed-0
+  re-run of garden and bicycle in run 3.
+- Side check, not part of the rule: paired against `baseline_lib` instead of the run-4 rows, both
+  candidates still pass and `lloyd_wopa_area` gains +0.1106 dB (bicycle +0.0242, stump +0.0481).
+
+### CPU smoke test (`run5_cpu_smoke.json`): passed
+
+On CPU, with TorchPQ blocked (its import raises `ModuleNotFoundError`), the builtin backend compressed
+and decompressed 4,096 Gaussians in 0.21 s / 0.013 s. It wrote the 8 usual files (199,335 B), the
+decoded shapes match and every value is finite. The codebook has 4,096 centroids:
+`PngCompression` asks for 65,536, and the builtin path clamps that to the number of splats.
+
+![Run 5: per-scene PSNR change and clustering cost, both datasets](run5/tilequant/rd_run5.png)
+
+### Session
+
+One Kaggle session on 2x T4. The gsplat wheel was rebuilt (4,404 s), because run 5 changes
+`gsplat/`. Jobs:
+
+- parity gate: 990 / 660 s (garden / bicycle)
+- MipNeRF360: 750-2,055 s per scene
+- Tanks & Temples: 3,286 / 3,106 s (train / truck), including training (1,599 / 1,736 s)
+
+The jobs summed to 6.05 GPU-hours over the 2 GPUs. The notebook's pre-run estimate was 7.55 h
+(`run5_plan.json`).
+
+## 7. Open items
+
+- **PR:** `PR_DRAFT_weighted_kmeans.md` (untracked) has the run-5 numbers. It has not been opened.
+- **Default flip:** the planned second commit (`kmeans_backend="builtin"`,
+  `kmeans_weighting="opacity_area"` as defaults, plus updated `benchmarks/compression/results/*.csv`)
+  has not been written.
+- **CUDA checks:** `lint/format-code.sh` and the test suite on a CUDA machine. Locally only CPU tests
+  run (`tests/test_compression.py` skips its CUDA test).

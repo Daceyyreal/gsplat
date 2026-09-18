@@ -1,0 +1,19 @@
+{
+  "uncompressed_psnr": 26.009292602539062,
+  "baseline_psnr": 25.8209285736084,
+  "psnr_drop_db": 0.18836402893066406,
+  "num_gaussians": 1000000,
+  "baseline_zip_bytes": 16292871,
+  "zip_vs_repo_row": 1.0119400932684117,
+  "drop_range_db": [
+    -0.1,
+    1.0
+  ],
+  "size_tolerance_warn": 0.15,
+  "failures": [],
+  "warnings": [],
+  "pass": true,
+  "scene": "truck",
+  "dataset": "tandt",
+  "ckpt_sha1": "4b9c9babe37cf16db99d286be8e6af805a776d6c"
+}

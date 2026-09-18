@@ -1,0 +1,18 @@
+{
+  "uncompressed_psnr": 32.37018585205078,
+  "baseline_psnr": 31.98463249206543,
+  "psnr_drop_db": 0.38555335998535156,
+  "num_gaussians": 1000000,
+  "baseline_zip_bytes": 15731092,
+  "zip_vs_repo_row": 0.9808623532253541,
+  "drop_range_db": [
+    -0.1,
+    1.0
+  ],
+  "size_tolerance_warn": 0.15,
+  "failures": [],
+  "warnings": [],
+  "pass": true,
+  "scene": "room",
+  "ckpt_sha1": "843339232b480503676f8cd4e7dd1cea9ad78749"
+}

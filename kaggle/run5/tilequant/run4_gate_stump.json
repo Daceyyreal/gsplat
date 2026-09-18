@@ -1,0 +1,18 @@
+{
+  "uncompressed_psnr": 26.93492889404297,
+  "baseline_psnr": 26.644691467285156,
+  "psnr_drop_db": 0.2902374267578125,
+  "num_gaussians": 1000000,
+  "baseline_zip_bytes": 15731194,
+  "zip_vs_repo_row": 0.9808687131118787,
+  "drop_range_db": [
+    -0.1,
+    1.0
+  ],
+  "size_tolerance_warn": 0.15,
+  "failures": [],
+  "warnings": [],
+  "pass": true,
+  "scene": "stump",
+  "ckpt_sha1": "52715bdb81d53bf3793b4052e6ed656458d74fb3"
+}

@@ -1,0 +1,882 @@
+{
+  "parity": {
+    "criteria": "library builtin backend vs the run-3 rows of the same scene and config: |dPSNR| <= 1e-06 dB, equal zip bytes and equal raw bytes",
+    "config": "lloyd_wopa_area",
+    "scenes": [
+      "garden",
+      "bicycle"
+    ],
+    "complete": true,
+    "pass": true,
+    "per_scene": {
+      "garden": {
+        "measured": true,
+        "run5_PSNR": 26.963132858276367,
+        "run3_PSNR": 26.963132858276367,
+        "dPSNR": 0.0,
+        "dSSIM": 0.0,
+        "dLPIPS": 0.0,
+        "run5_zip_bytes": 16409335,
+        "run3_zip_bytes": 16409335,
+        "run5_size_bytes": 16405132,
+        "run3_size_bytes": 16405132,
+        "run5_shn_sha1": "d166cdfa04cc805b5ac7caca171e21b4f3031b93",
+        "run5_n_iters": null,
+        "run3_n_iters": 100,
+        "kmeans_time_s": 645.6325985449994,
+        "run3_kmeans_time_s": 641.514312751,
+        "psnr_within_tol": true,
+        "zip_equal": true,
+        "size_equal": true,
+        "iters_equal": false,
+        "pass": true
+      },
+      "bicycle": {
+        "measured": true,
+        "run5_PSNR": 25.35771369934082,
+        "run3_PSNR": 25.35771369934082,
+        "dPSNR": 0.0,
+        "dSSIM": 0.0,
+        "dLPIPS": 0.0,
+        "run5_zip_bytes": 16219981,
+        "run3_zip_bytes": 16219981,
+        "run5_size_bytes": 16216069,
+        "run3_size_bytes": 16216069,
+        "run5_shn_sha1": "f5445c1d91dd16194304c48d7c23a0ff8333572c",
+        "run5_n_iters": null,
+        "run3_n_iters": 56,
+        "kmeans_time_s": 338.9526177959997,
+        "run3_kmeans_time_s": 404.81844179300015,
+        "psnr_within_tol": true,
+        "zip_equal": true,
+        "size_equal": true,
+        "iters_equal": false,
+        "pass": true
+      }
+    }
+  },
+  "baseline_reproduced_mipnerf360": {
+    "garden": {
+      "measured": true,
+      "dPSNR": 0.0,
+      "dSSIM": 0.0,
+      "dLPIPS": 0.0,
+      "zip_diff_bytes": 90,
+      "size_diff_bytes": 0,
+      "kmeans_time_s": 426.9677122830008,
+      "run4_kmeans_time_s": 433.2370865330013,
+      "peak_mem_bytes": 1260637184,
+      "same_rows": false
+    },
+    "bicycle": {
+      "measured": true,
+      "dPSNR": 0.00240325927734375,
+      "dSSIM": 2.0325183868408203e-05,
+      "dLPIPS": -5.364418029785156e-06,
+      "zip_diff_bytes": 145,
+      "size_diff_bytes": 41,
+      "kmeans_time_s": 402.9429139779995,
+      "run4_kmeans_time_s": 403.80257976199937,
+      "peak_mem_bytes": 1262059520,
+      "same_rows": false
+    },
+    "stump": {
+      "measured": true,
+      "dPSNR": 6.294250487925979e-05,
+      "dSSIM": -2.384185791015625e-07,
+      "dLPIPS": 8.866190910422622e-06,
+      "zip_diff_bytes": 78,
+      "size_diff_bytes": 3,
+      "kmeans_time_s": 404.847229725,
+      "run4_kmeans_time_s": 408.267191637,
+      "peak_mem_bytes": 1262448640,
+      "same_rows": false
+    },
+    "bonsai": {
+      "measured": true,
+      "dPSNR": 0.0,
+      "dSSIM": 0.0,
+      "dLPIPS": 0.0,
+      "zip_diff_bytes": 72,
+      "size_diff_bytes": 0,
+      "kmeans_time_s": 398.2907244979997,
+      "run4_kmeans_time_s": 435.253497103,
+      "peak_mem_bytes": 1260124160,
+      "same_rows": false
+    },
+    "counter": {
+      "measured": true,
+      "dPSNR": 0.0,
+      "dSSIM": 0.0,
+      "dLPIPS": 0.0,
+      "zip_diff_bytes": 72,
+      "size_diff_bytes": 0,
+      "kmeans_time_s": 405.3269362459996,
+      "run4_kmeans_time_s": 409.0485143400001,
+      "peak_mem_bytes": 1260409344,
+      "same_rows": false
+    },
+    "kitchen": {
+      "measured": true,
+      "dPSNR": 0.0,
+      "dSSIM": 0.0,
+      "dLPIPS": 0.0,
+      "zip_diff_bytes": 72,
+      "size_diff_bytes": 0,
+      "kmeans_time_s": 397.5597128999998,
+      "run4_kmeans_time_s": 433.5874179129987,
+      "peak_mem_bytes": 1260355072,
+      "same_rows": false
+    },
+    "room": {
+      "measured": true,
+      "dPSNR": 0.0,
+      "dSSIM": 0.0,
+      "dLPIPS": 0.0,
+      "zip_diff_bytes": 72,
+      "size_diff_bytes": 0,
+      "kmeans_time_s": 404.4149540109993,
+      "run4_kmeans_time_s": 408.14285009299965,
+      "peak_mem_bytes": 1262360576,
+      "same_rows": false
+    },
+    "treehill": {
+      "measured": true,
+      "dPSNR": 0.0,
+      "dSSIM": 0.0,
+      "dLPIPS": 0.0,
+      "zip_diff_bytes": 72,
+      "size_diff_bytes": 0,
+      "kmeans_time_s": 400.5233082529994,
+      "run4_kmeans_time_s": 436.5499004760004,
+      "peak_mem_bytes": 1262404096,
+      "same_rows": false
+    },
+    "flowers": {
+      "measured": true,
+      "dPSNR": 0.0,
+      "dSSIM": 0.0,
+      "dLPIPS": 0.0,
+      "zip_diff_bytes": 72,
+      "size_diff_bytes": 0,
+      "kmeans_time_s": 404.5002140100005,
+      "run4_kmeans_time_s": 408.6462105610008,
+      "peak_mem_bytes": 1261862912,
+      "same_rows": false
+    }
+  },
+  "datasets": {
+    "mipnerf360": {
+      "rule": "per candidate over all scenes: mean dPSNR > 0 AND dPSNR > 0 on all scenes but at most one AND no scene dPSNR < -0.02 dB AND mean dLPIPS <= 0 AND mean dSSIM >= -0.0002 AND every scene zip AND raw bytes <= baseline x 1.003; all scenes measured, all new-scene sanity gates passed. pr_candidate = passing candidate with the higher mean dPSNR",
+      "thresholds": {
+        "min_scene_dPSNR": -0.02,
+        "max_nonpositive_scenes": 1,
+        "min_mean_dSSIM": -0.0002,
+        "size_tolerance": "1003/1000",
+        "round_decimals": 9
+      },
+      "reference": "baseline = library _compress_kmeans (torchpq manhattan, 65,536 clusters) on the same checkpoint, k-means seed 0, PLAS sort seed 0",
+      "scenes": [
+        "garden",
+        "bicycle",
+        "stump",
+        "bonsai",
+        "counter",
+        "kitchen",
+        "room",
+        "treehill",
+        "flowers"
+      ],
+      "new_scenes": [
+        "stump",
+        "bonsai",
+        "counter",
+        "kitchen",
+        "room",
+        "treehill",
+        "flowers"
+      ],
+      "reused_scenes": [
+        "garden",
+        "bicycle"
+      ],
+      "gates": {
+        "stump": {
+          "uncompressed_psnr": 26.93492889404297,
+          "baseline_psnr": 26.644691467285156,
+          "psnr_drop_db": 0.2902374267578125,
+          "num_gaussians": 1000000,
+          "baseline_zip_bytes": 15731194,
+          "zip_vs_repo_row": 0.9808687131118787,
+          "drop_range_db": [
+            -0.1,
+            1.0
+          ],
+          "size_tolerance_warn": 0.15,
+          "failures": [],
+          "warnings": [],
+          "pass": true,
+          "scene": "stump",
+          "ckpt_sha1": "52715bdb81d53bf3793b4052e6ed656458d74fb3"
+        },
+        "bonsai": {
+          "uncompressed_psnr": 32.62820053100586,
+          "baseline_psnr": 31.768815994262695,
+          "psnr_drop_db": 0.8593845367431641,
+          "num_gaussians": 1000000,
+          "baseline_zip_bytes": 15907878,
+          "zip_vs_repo_row": 0.9918852836091633,
+          "drop_range_db": [
+            -0.1,
+            1.0
+          ],
+          "size_tolerance_warn": 0.15,
+          "failures": [],
+          "warnings": [],
+          "pass": true,
+          "scene": "bonsai",
+          "ckpt_sha1": "60868efab7cfd97dada0ea6badcb8a2700c7d7c8"
+        },
+        "counter": {
+          "uncompressed_psnr": 29.4740047454834,
+          "baseline_psnr": 28.928382873535156,
+          "psnr_drop_db": 0.5456218719482422,
+          "num_gaussians": 1000000,
+          "baseline_zip_bytes": 15995094,
+          "zip_vs_repo_row": 0.9973233606987196,
+          "drop_range_db": [
+            -0.1,
+            1.0
+          ],
+          "size_tolerance_warn": 0.15,
+          "failures": [],
+          "warnings": [],
+          "pass": true,
+          "scene": "counter",
+          "ckpt_sha1": "50464c36ef6e1b0c2da3012bc7c8b3feb1a410c2"
+        },
+        "kitchen": {
+          "uncompressed_psnr": 31.696407318115234,
+          "baseline_psnr": 30.87204933166504,
+          "psnr_drop_db": 0.8243579864501953,
+          "num_gaussians": 1000000,
+          "baseline_zip_bytes": 15712306,
+          "zip_vs_repo_row": 0.9796910117719005,
+          "drop_range_db": [
+            -0.1,
+            1.0
+          ],
+          "size_tolerance_warn": 0.15,
+          "failures": [],
+          "warnings": [],
+          "pass": true,
+          "scene": "kitchen",
+          "ckpt_sha1": "8e5e31d4a8d25f458ac55f95a72f442bde2c0f83"
+        },
+        "room": {
+          "uncompressed_psnr": 32.37018585205078,
+          "baseline_psnr": 31.98463249206543,
+          "psnr_drop_db": 0.38555335998535156,
+          "num_gaussians": 1000000,
+          "baseline_zip_bytes": 15731092,
+          "zip_vs_repo_row": 0.9808623532253541,
+          "drop_range_db": [
+            -0.1,
+            1.0
+          ],
+          "size_tolerance_warn": 0.15,
+          "failures": [],
+          "warnings": [],
+          "pass": true,
+          "scene": "room",
+          "ckpt_sha1": "843339232b480503676f8cd4e7dd1cea9ad78749"
+        },
+        "treehill": {
+          "uncompressed_psnr": 23.33470344543457,
+          "baseline_psnr": 23.23360252380371,
+          "psnr_drop_db": 0.10110092163085938,
+          "num_gaussians": 1000000,
+          "baseline_zip_bytes": 15875616,
+          "zip_vs_repo_row": 0.9898736889125105,
+          "drop_range_db": [
+            -0.1,
+            1.0
+          ],
+          "size_tolerance_warn": 0.15,
+          "failures": [],
+          "warnings": [],
+          "pass": true,
+          "scene": "treehill",
+          "ckpt_sha1": "66fcadcf3298034c06227e69e6381e5a539f6980"
+        },
+        "flowers": {
+          "uncompressed_psnr": 22.010679244995117,
+          "baseline_psnr": 21.79166030883789,
+          "psnr_drop_db": 0.21901893615722656,
+          "num_gaussians": 1000000,
+          "baseline_zip_bytes": 16404698,
+          "zip_vs_repo_row": 1.0228629191305512,
+          "drop_range_db": [
+            -0.1,
+            1.0
+          ],
+          "size_tolerance_warn": 0.15,
+          "failures": [],
+          "warnings": [],
+          "pass": true,
+          "scene": "flowers",
+          "ckpt_sha1": "d0ea4a76881fb22b0c2848903cb0cce0001b06d5"
+        }
+      },
+      "one_checkpoint_per_scene": {
+        "garden": true,
+        "bicycle": true,
+        "stump": true,
+        "bonsai": true,
+        "counter": true,
+        "kitchen": true,
+        "room": true,
+        "treehill": true,
+        "flowers": true
+      },
+      "candidates": {
+        "lloyd_wopa": {
+          "complete": true,
+          "missing_scenes": [],
+          "n_scenes": 9,
+          "per_scene": {
+            "garden": {
+              "dPSNR": 0.032442093,
+              "dSSIM": 0.000250936,
+              "dLPIPS": -0.000325203,
+              "zip_bytes": 16417912,
+              "baseline_zip_bytes": 16449880,
+              "zip_pct": -0.19433576415147646,
+              "size_bytes": 16413803,
+              "baseline_size_bytes": 16445885,
+              "size_pct": -0.19507615430850445,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 673.356424951,
+              "baseline_kmeans_time_s": 433.2370865330013
+            },
+            "bicycle": {
+              "dPSNR": 0.015796661,
+              "dSSIM": 0.000541568,
+              "dLPIPS": -0.000352502,
+              "zip_bytes": 16229300,
+              "baseline_zip_bytes": 16242031,
+              "zip_pct": -0.07838305443450544,
+              "size_bytes": 16225556,
+              "baseline_size_bytes": 16238295,
+              "size_pct": -0.07845035454768778,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 282.73083705799945,
+              "baseline_kmeans_time_s": 403.80257976199937
+            },
+            "stump": {
+              "dPSNR": 0.025169373,
+              "dSSIM": 0.000603497,
+              "dLPIPS": -0.000524923,
+              "zip_bytes": 15710705,
+              "baseline_zip_bytes": 15731194,
+              "zip_pct": -0.13024440484301625,
+              "size_bytes": 15706996,
+              "baseline_size_bytes": 15727518,
+              "size_pct": -0.130484670244857,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 326.04302473400094,
+              "baseline_kmeans_time_s": 408.267191637
+            },
+            "bonsai": {
+              "dPSNR": 0.132627487,
+              "dSSIM": 0.002575636,
+              "dLPIPS": -0.000288099,
+              "zip_bytes": 15856031,
+              "baseline_zip_bytes": 15907878,
+              "zip_pct": -0.3259202767333269,
+              "size_bytes": 15852190,
+              "baseline_size_bytes": 15903973,
+              "size_pct": -0.32559788676703727,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 260.95245508800144,
+              "baseline_kmeans_time_s": 435.253497103
+            },
+            "counter": {
+              "dPSNR": 0.08379364,
+              "dSSIM": 0.001977503,
+              "dLPIPS": -0.001062304,
+              "zip_bytes": 15996525,
+              "baseline_zip_bytes": 15995094,
+              "zip_pct": 0.008946493218475737,
+              "size_bytes": 15992537,
+              "baseline_size_bytes": 15991192,
+              "size_pct": 0.00841088018954661,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 607.5539373970005,
+              "baseline_kmeans_time_s": 409.0485143400001
+            },
+            "kitchen": {
+              "dPSNR": 0.112270355,
+              "dSSIM": 0.00071615,
+              "dLPIPS": -0.000734769,
+              "zip_bytes": 15679855,
+              "baseline_zip_bytes": 15712306,
+              "zip_pct": -0.20653238296147736,
+              "size_bytes": 15675887,
+              "baseline_size_bytes": 15708313,
+              "size_pct": -0.2064257313945772,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 582.9441971300002,
+              "baseline_kmeans_time_s": 433.5874179129987
+            },
+            "room": {
+              "dPSNR": 0.026254654,
+              "dSSIM": 0.000160754,
+              "dLPIPS": -0.000196904,
+              "zip_bytes": 15704181,
+              "baseline_zip_bytes": 15731092,
+              "zip_pct": -0.1710688615895184,
+              "size_bytes": 15700831,
+              "baseline_size_bytes": 15727712,
+              "size_pct": -0.17091487941793826,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 264.266731406,
+              "baseline_kmeans_time_s": 408.14285009299965
+            },
+            "treehill": {
+              "dPSNR": -0.009868622,
+              "dSSIM": 0.000294447,
+              "dLPIPS": -0.000263363,
+              "zip_bytes": 15861687,
+              "baseline_zip_bytes": 15875616,
+              "zip_pct": -0.08773832776000079,
+              "size_bytes": 15859915,
+              "baseline_size_bytes": 15873857,
+              "size_pct": -0.08782994580334158,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 303.3778876150009,
+              "baseline_kmeans_time_s": 436.5499004760004
+            },
+            "flowers": {
+              "dPSNR": 0.026231766,
+              "dSSIM": 0.001056015,
+              "dLPIPS": -0.000607848,
+              "zip_bytes": 16397737,
+              "baseline_zip_bytes": 16404698,
+              "zip_pct": -0.04243296645874972,
+              "size_bytes": 16393615,
+              "baseline_size_bytes": 16400657,
+              "size_pct": -0.04293730427994413,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 401.8490451260004,
+              "baseline_kmeans_time_s": 408.6462105610008
+            }
+          },
+          "mean_dPSNR": 0.049413045,
+          "mean_dSSIM": 0.000908501,
+          "mean_dLPIPS": -0.000483991,
+          "n_scenes_dPSNR_not_positive": 1,
+          "min_scene_dPSNR": -0.009868622,
+          "max_zip_pct": 0.008946493218475737,
+          "max_size_pct": 0.00841088018954661,
+          "criteria": {
+            "mean_dPSNR_gt_0": true,
+            "dPSNR_gt_0_on_all_but_at_most_one_scene": true,
+            "no_scene_dPSNR_below_-0.02": true,
+            "mean_dLPIPS_le_0": true,
+            "mean_dSSIM_ge_-0.0002": true,
+            "zip_bytes_le_1.003x_on_every_scene": true,
+            "raw_bytes_le_1.003x_on_every_scene": true
+          },
+          "gates_passed": true,
+          "one_checkpoint_per_scene": true,
+          "pass": true
+        },
+        "lloyd_wopa_area": {
+          "complete": true,
+          "missing_scenes": [],
+          "n_scenes": 9,
+          "per_scene": {
+            "garden": {
+              "dPSNR": 0.081855774,
+              "dSSIM": -0.000156581,
+              "dLPIPS": -0.000832736,
+              "zip_bytes": 16409335,
+              "baseline_zip_bytes": 16449880,
+              "zip_pct": -0.2464759621346735,
+              "size_bytes": 16405132,
+              "baseline_size_bytes": 16445885,
+              "size_pct": -0.24780058963077556,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 645.6325985449994,
+              "baseline_kmeans_time_s": 433.2370865330013
+            },
+            "bicycle": {
+              "dPSNR": 0.026586533,
+              "dSSIM": 5.0008e-05,
+              "dLPIPS": -0.000938907,
+              "zip_bytes": 16219981,
+              "baseline_zip_bytes": 16242031,
+              "zip_pct": -0.13575888384894652,
+              "size_bytes": 16216069,
+              "baseline_size_bytes": 16238295,
+              "size_pct": -0.13687397599316808,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 338.9526177959997,
+              "baseline_kmeans_time_s": 403.80257976199937
+            },
+            "stump": {
+              "dPSNR": 0.048139572,
+              "dSSIM": 0.000520229,
+              "dLPIPS": -0.001047701,
+              "zip_bytes": 15740146,
+              "baseline_zip_bytes": 15731194,
+              "zip_pct": 0.05690604285981671,
+              "size_bytes": 15736366,
+              "baseline_size_bytes": 15727518,
+              "size_pct": 0.056258082171645185,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 521.7121707949991,
+              "baseline_kmeans_time_s": 408.267191637
+            },
+            "bonsai": {
+              "dPSNR": 0.272062302,
+              "dSSIM": 0.001360834,
+              "dLPIPS": -0.000196055,
+              "zip_bytes": 15859816,
+              "baseline_zip_bytes": 15907878,
+              "zip_pct": -0.30212703416508946,
+              "size_bytes": 15855879,
+              "baseline_size_bytes": 15903973,
+              "size_pct": -0.3024024248532098,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 388.037819526,
+              "baseline_kmeans_time_s": 435.253497103
+            },
+            "counter": {
+              "dPSNR": 0.188537598,
+              "dSSIM": 0.001661003,
+              "dLPIPS": -0.001361236,
+              "zip_bytes": 16034581,
+              "baseline_zip_bytes": 15995094,
+              "zip_pct": 0.246869446343978,
+              "size_bytes": 16030470,
+              "baseline_size_bytes": 15991192,
+              "size_pct": 0.24562271530477187,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 555.7807003569997,
+              "baseline_kmeans_time_s": 409.0485143400001
+            },
+            "kitchen": {
+              "dPSNR": 0.247426987,
+              "dSSIM": 0.001085997,
+              "dLPIPS": -0.001269169,
+              "zip_bytes": 15638347,
+              "baseline_zip_bytes": 15712306,
+              "zip_pct": -0.4707074824026436,
+              "size_bytes": 15634260,
+              "baseline_size_bytes": 15708313,
+              "size_pct": -0.47142554391422786,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 599.4767509949997,
+              "baseline_kmeans_time_s": 433.5874179129987
+            },
+            "room": {
+              "dPSNR": 0.084600449,
+              "dSSIM": 0.000658572,
+              "dLPIPS": -0.000240356,
+              "zip_bytes": 15697613,
+              "baseline_zip_bytes": 15731092,
+              "zip_pct": -0.2128205721509957,
+              "size_bytes": 15694196,
+              "baseline_size_bytes": 15727712,
+              "size_pct": -0.2131015623887289,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 297.3090565750008,
+              "baseline_kmeans_time_s": 408.14285009299965
+            },
+            "treehill": {
+              "dPSNR": 0.004905701,
+              "dSSIM": 0.000404716,
+              "dLPIPS": -0.001024127,
+              "zip_bytes": 15852475,
+              "baseline_zip_bytes": 15875616,
+              "zip_pct": -0.14576442262146383,
+              "size_bytes": 15850599,
+              "baseline_size_bytes": 15873857,
+              "size_pct": -0.14651763588395816,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 596.9209823269994,
+              "baseline_kmeans_time_s": 436.5499004760004
+            },
+            "flowers": {
+              "dPSNR": 0.044164658,
+              "dSSIM": 0.0008955,
+              "dLPIPS": -0.001471519,
+              "zip_bytes": 16448533,
+              "baseline_zip_bytes": 16404698,
+              "zip_pct": 0.26721003946552635,
+              "size_bytes": 16444351,
+              "baseline_size_bytes": 16400657,
+              "size_pct": 0.2664161563771472,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 644.1332598839999,
+              "baseline_kmeans_time_s": 408.6462105610008
+            }
+          },
+          "mean_dPSNR": 0.110919952,
+          "mean_dSSIM": 0.000720031,
+          "mean_dLPIPS": -0.000931312,
+          "n_scenes_dPSNR_not_positive": 0,
+          "min_scene_dPSNR": 0.004905701,
+          "max_zip_pct": 0.26721003946552635,
+          "max_size_pct": 0.2664161563771472,
+          "criteria": {
+            "mean_dPSNR_gt_0": true,
+            "dPSNR_gt_0_on_all_but_at_most_one_scene": true,
+            "no_scene_dPSNR_below_-0.02": true,
+            "mean_dLPIPS_le_0": true,
+            "mean_dSSIM_ge_-0.0002": true,
+            "zip_bytes_le_1.003x_on_every_scene": true,
+            "raw_bytes_le_1.003x_on_every_scene": true
+          },
+          "gates_passed": true,
+          "one_checkpoint_per_scene": true,
+          "pass": true
+        }
+      },
+      "passing": [
+        "lloyd_wopa",
+        "lloyd_wopa_area"
+      ],
+      "pr_candidate": "lloyd_wopa_area"
+    },
+    "tandt": {
+      "rule": "per candidate over all scenes: mean dPSNR > 0 AND dPSNR > 0 on all scenes but at most one AND no scene dPSNR < -0.02 dB AND mean dLPIPS <= 0 AND mean dSSIM >= -0.0002 AND every scene zip AND raw bytes <= baseline x 1.003; all scenes measured, all new-scene sanity gates passed. pr_candidate = passing candidate with the higher mean dPSNR",
+      "thresholds": {
+        "min_scene_dPSNR": -0.02,
+        "max_nonpositive_scenes": 1,
+        "min_mean_dSSIM": -0.0002,
+        "size_tolerance": "1003/1000",
+        "round_decimals": 9
+      },
+      "reference": "baseline = library _compress_kmeans (torchpq manhattan, 65,536 clusters) on the same checkpoint, k-means seed 0, PLAS sort seed 0",
+      "scenes": [
+        "train",
+        "truck"
+      ],
+      "new_scenes": [
+        "train",
+        "truck"
+      ],
+      "reused_scenes": [],
+      "gates": {
+        "train": {
+          "uncompressed_psnr": 22.502086639404297,
+          "baseline_psnr": 22.330970764160156,
+          "psnr_drop_db": 0.17111587524414062,
+          "num_gaussians": 1000000,
+          "baseline_zip_bytes": 15918371,
+          "zip_vs_repo_row": 0.9886801309861951,
+          "drop_range_db": [
+            -0.1,
+            1.0
+          ],
+          "size_tolerance_warn": 0.15,
+          "failures": [],
+          "warnings": [],
+          "pass": true,
+          "scene": "train",
+          "dataset": "tandt",
+          "ckpt_sha1": "15394ef18333d9edd61facf46874238b45e84de7"
+        },
+        "truck": {
+          "uncompressed_psnr": 26.009292602539062,
+          "baseline_psnr": 25.8209285736084,
+          "psnr_drop_db": 0.18836402893066406,
+          "num_gaussians": 1000000,
+          "baseline_zip_bytes": 16292871,
+          "zip_vs_repo_row": 1.0119400932684117,
+          "drop_range_db": [
+            -0.1,
+            1.0
+          ],
+          "size_tolerance_warn": 0.15,
+          "failures": [],
+          "warnings": [],
+          "pass": true,
+          "scene": "truck",
+          "dataset": "tandt",
+          "ckpt_sha1": "4b9c9babe37cf16db99d286be8e6af805a776d6c"
+        }
+      },
+      "one_checkpoint_per_scene": {
+        "train": true,
+        "truck": true
+      },
+      "candidates": {
+        "lloyd_wopa": {
+          "complete": true,
+          "missing_scenes": [],
+          "n_scenes": 2,
+          "per_scene": {
+            "train": {
+              "dPSNR": -0.000724792,
+              "dSSIM": 0.000390887,
+              "dLPIPS": -0.000353813,
+              "zip_bytes": 15930428,
+              "baseline_zip_bytes": 15918371,
+              "zip_pct": 0.07574267492571618,
+              "size_bytes": 15926505,
+              "baseline_size_bytes": 15914416,
+              "size_pct": 0.07596257380728666,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 241.15141848499843,
+              "baseline_kmeans_time_s": 414.9944350730002
+            },
+            "truck": {
+              "dPSNR": 0.010053635,
+              "dSSIM": 0.000298977,
+              "dLPIPS": 9.9778e-05,
+              "zip_bytes": 16285019,
+              "baseline_zip_bytes": 16292871,
+              "zip_pct": -0.04819285686359365,
+              "size_bytes": 16281069,
+              "baseline_size_bytes": 16288902,
+              "size_pct": -0.048087955836428886,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 252.092244337,
+              "baseline_kmeans_time_s": 417.83939806299895
+            }
+          },
+          "mean_dPSNR": 0.004664421,
+          "mean_dSSIM": 0.000344932,
+          "mean_dLPIPS": -0.000127017,
+          "n_scenes_dPSNR_not_positive": 1,
+          "min_scene_dPSNR": -0.000724792,
+          "max_zip_pct": 0.07574267492571618,
+          "max_size_pct": 0.07596257380728666,
+          "criteria": {
+            "mean_dPSNR_gt_0": true,
+            "dPSNR_gt_0_on_all_but_at_most_one_scene": true,
+            "no_scene_dPSNR_below_-0.02": true,
+            "mean_dLPIPS_le_0": true,
+            "mean_dSSIM_ge_-0.0002": true,
+            "zip_bytes_le_1.003x_on_every_scene": true,
+            "raw_bytes_le_1.003x_on_every_scene": true
+          },
+          "gates_passed": true,
+          "one_checkpoint_per_scene": true,
+          "pass": true
+        },
+        "lloyd_wopa_area": {
+          "complete": true,
+          "missing_scenes": [],
+          "n_scenes": 2,
+          "per_scene": {
+            "train": {
+              "dPSNR": 0.060878754,
+              "dSSIM": 0.000194848,
+              "dLPIPS": -0.000380471,
+              "zip_bytes": 15918606,
+              "baseline_zip_bytes": 15918371,
+              "zip_pct": 0.0014762817124980288,
+              "size_bytes": 15914568,
+              "baseline_size_bytes": 15914416,
+              "size_pct": 0.0009551088773873673,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 357.3249006549995,
+              "baseline_kmeans_time_s": 414.9944350730002
+            },
+            "truck": {
+              "dPSNR": 0.044080734,
+              "dSSIM": 0.000325799,
+              "dLPIPS": -0.000169769,
+              "zip_bytes": 16317878,
+              "baseline_zip_bytes": 16292871,
+              "zip_pct": 0.15348430611155095,
+              "size_bytes": 16313832,
+              "baseline_size_bytes": 16288902,
+              "size_pct": 0.1530489900424259,
+              "zip_within_tol": true,
+              "size_within_tol": true,
+              "kmeans_time_s": 297.989968924001,
+              "baseline_kmeans_time_s": 417.83939806299895
+            }
+          },
+          "mean_dPSNR": 0.052479744,
+          "mean_dSSIM": 0.000260323,
+          "mean_dLPIPS": -0.00027512,
+          "n_scenes_dPSNR_not_positive": 0,
+          "min_scene_dPSNR": 0.044080734,
+          "max_zip_pct": 0.15348430611155095,
+          "max_size_pct": 0.1530489900424259,
+          "criteria": {
+            "mean_dPSNR_gt_0": true,
+            "dPSNR_gt_0_on_all_but_at_most_one_scene": true,
+            "no_scene_dPSNR_below_-0.02": true,
+            "mean_dLPIPS_le_0": true,
+            "mean_dSSIM_ge_-0.0002": true,
+            "zip_bytes_le_1.003x_on_every_scene": true,
+            "raw_bytes_le_1.003x_on_every_scene": true
+          },
+          "gates_passed": true,
+          "one_checkpoint_per_scene": true,
+          "pass": true
+        }
+      },
+      "passing": [
+        "lloyd_wopa",
+        "lloyd_wopa_area"
+      ],
+      "pr_candidate": "lloyd_wopa_area"
+    }
+  },
+  "cpu_smoke": {
+    "device": "cpu",
+    "torchpq_blocked": "ModuleNotFoundError: import of torchpq halted; None in sys.modules",
+    "n_gaussians": 4096,
+    "compress_s": 0.21154470300098183,
+    "decompress_s": 0.012940374999743653,
+    "files": [
+      "means_l.png",
+      "means_u.png",
+      "meta.json",
+      "opacities.png",
+      "quats.png",
+      "scales.png",
+      "sh0.png",
+      "shN.npz"
+    ],
+    "size_bytes": 199335,
+    "shapes_match": true,
+    "finite": true,
+    "n_centroids": 4096,
+    "pass": true
+  },
+  "pr_candidate_per_dataset": {
+    "mipnerf360": "lloyd_wopa_area",
+    "tandt": "lloyd_wopa_area"
+  }
+}
