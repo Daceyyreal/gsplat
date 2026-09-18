@@ -384,9 +384,17 @@ def run5_table(
     baseline_rows: pd.DataFrame,
     scenes: Sequence[str],
     repo_row: Dict,
+    *,
+    repo_csv: str,
 ) -> pd.DataFrame:
-    """Upstream results-CSV format: means over the scenes that have every row."""
-    return r4a.run4_table(decision_frame(df5, baseline_rows, scenes), scenes, repo_row)
+    """Upstream results-CSV format: means over the scenes that have every row, plus the reference
+    row of repo_csv (the dataset's own results CSV), labeled with that CSV's name."""
+    return r4a.run4_table(
+        decision_frame(df5, baseline_rows, scenes),
+        scenes,
+        repo_row,
+        repo_label=r4a.repo_row_label(repo_csv, int(repo_row["#Gaussians"])),
+    )
 
 
 # ------------------------------------------------------------------------ runtime
@@ -583,11 +591,17 @@ def plot_run5(
             ha="right" if len(scenes) > 3 else "center",
         )
         ax2.set_ylabel("k-means time [s]", color=ta.INK_SECONDARY)
+        all_ys = pd.to_numeric(
+            sub[sub["scene"].isin(scenes)]["kmeans_time_s"], errors="coerce"
+        )
+        if all_ys.notna().any():
+            ax2.set_ylim(0, float(all_ys.max()) * 1.18)  # room for the legend
         mem = sub.dropna(subset=["peak_mem_bytes"])
         note = ""
         if not mem.empty:
-            note = "; peak GPU memory " + ", ".join(
-                f"{n} {mem[mem['config'] == n]['peak_mem_bytes'].max() / 2**30:.1f} GB"
+            # decimal GB (1e9 bytes), as the other sizes in these scripts
+            note = "; peak GPU memory in GB (max over scenes):\n" + ", ".join(
+                f"{n} {mem[mem['config'] == n]['peak_mem_bytes'].max() / 1e9:.2f}"
                 for n in names
                 if not mem[mem["config"] == n].empty
             )

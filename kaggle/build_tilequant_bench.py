@@ -1573,12 +1573,14 @@ else:
     with open(f"{OUT_DIR}/run5_decision.json", "w") as f:
         json.dump(RUN5_DECISION, f, indent=2)
 
+    # Each table's reference row comes from, and is labeled with, that dataset's own results CSV.
+    m360_repo_csv = f"{SRC_DIR}/examples/benchmarks/compression/results/{r5a.DATASETS['mipnerf360']['repo_csv']}"
     RUN5_TABLE = r5a.run5_table(df5[df5["dataset"] == "mipnerf360"], base_360, RUN4_SCENES,
-                                ta.read_repo_row(REPO_CSV, CAP_MAX))
+                                ta.read_repo_row(m360_repo_csv, CAP_MAX), repo_csv=m360_repo_csv)
     RUN5_TABLE.to_csv(f"{OUT_DIR}/run5_table.csv", index=False)
-    tt_repo_csv = f"{SRC_DIR}/examples/benchmarks/compression/results/TanksAndTemples.csv"
+    tt_repo_csv = f"{SRC_DIR}/examples/benchmarks/compression/results/{r5a.DATASETS['tandt']['repo_csv']}"
     RUN5_TT_TABLE = r5a.run5_table(df5[df5["dataset"] == "tandt"], base_tt, TT_SCENES,
-                                   ta.read_repo_row(tt_repo_csv, CAP_MAX))
+                                   ta.read_repo_row(tt_repo_csv, CAP_MAX), repo_csv=tt_repo_csv)
     RUN5_TT_TABLE.to_csv(f"{OUT_DIR}/run5_tt_table.csv", index=False)
     RUN5_COSTS = r5a.cost_table(df5, RUN4_SCENES + TT_SCENES, [r5a.BASELINE, r5a.BASELINE_CHECK, *r5a.CANDIDATES])
     RUN5_COSTS.to_csv(f"{OUT_DIR}/run5_costs.csv", index=False)

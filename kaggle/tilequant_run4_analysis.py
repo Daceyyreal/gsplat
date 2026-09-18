@@ -7,6 +7,7 @@ results.
 """
 
 import math
+import os
 import re
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -37,7 +38,7 @@ ROUND_DECIMALS = (
 # ---- sanity gate per new scene (in-harness baseline vs uncompressed)
 GATE_DROP_RANGE_DB = (-0.1, 1.0)  # hard: U PSNR - baseline PSNR
 GATE_SIZE_TOLERANCE = (
-    0.15  # warning only: baseline zip vs the repo 1M row (a 9-scene mean)
+    0.15  # warning only: baseline zip vs the repo 1M row (a mean over the benchmark's scenes)
 )
 
 SESSION_BUDGET_H = 11.0  # split the run into Kaggle sessions above this estimate
@@ -443,7 +444,8 @@ def sanity_gate(u_row: Dict, base_row: Dict, repo_row: Dict, cap_max: int) -> Di
     if abs(ratio - 1) > GATE_SIZE_TOLERANCE:
         warnings.append(
             f"baseline zip {int(base_row['zip_bytes'])} B is {ratio:.3f}x the repo 1M row "
-            f"{int(repo_row['Size [Bytes]'])} B (tolerance +-{GATE_SIZE_TOLERANCE:.0%}, the repo row is a 9-scene mean)"
+            f"{int(repo_row['Size [Bytes]'])} B (tolerance +-{GATE_SIZE_TOLERANCE:.0%}, the repo row is a mean over "
+            f"the benchmark's scenes)"
         )
     return {
         "uncompressed_psnr": float(u_row["PSNR"]),
@@ -616,11 +618,20 @@ def _mean_int(values: pd.Series):
     return np.nan if pd.isna(m) else int(round(m))
 
 
+def repo_row_label(repo_csv: str, n_gaussians: int) -> str:
+    """Submethod label of the reference row read from an upstream results CSV, naming that CSV."""
+    return f"repo {os.path.basename(repo_csv)} {n_gaussians / 1e6:g}M row"
+
+
 def run4_table(
-    df4: pd.DataFrame, scenes: Sequence[str], repo_row: Dict
+    df4: pd.DataFrame,
+    scenes: Sequence[str],
+    repo_row: Dict,
+    repo_label: str = "repo MipNeRF360.csv 1M row",
 ) -> pd.DataFrame:
     """Upstream results-CSV format (examples/benchmarks/compression/results/MipNeRF360.csv): means
-    over the scenes that have all three configs, plus the repo 1M row."""
+    over the scenes that have all three configs, plus the repo 1M row labeled repo_label (the
+    default is run 4's MipNeRF360.csv; other datasets must pass their own, see repo_row_label)."""
     names = ("baseline",) + tuple(CANDIDATES)
     common = [s for s in scenes if all(_row(df4, s, n) is not None for n in names)]
     suffix = (
@@ -645,7 +656,7 @@ def run4_table(
         )
     rows.append(
         {
-            "Submethod": "repo MipNeRF360.csv 1M row",
+            "Submethod": repo_label,
             **{
                 k: repo_row[k]
                 for k in ("PSNR", "SSIM", "LPIPS", "Size [Bytes]", "#Gaussians")
