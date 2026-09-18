@@ -29,7 +29,7 @@ Upstream main at the time of this work: `28e794c`.
 |---|---|---|
 | `fix/png-empty-tensor` (`d1632e8`) | empty-tensor / `sh_degree=0` fix in `png_compression.py` + tests | upstream PR #1061; leave alone unless asked |
 | `feat/png-tile-quantization` (`3ff67e8`) | `PngCompression(tile_size=, bits=)` | benchmark said no PR; leave alone |
-| `feat/png-weighted-kmeans` (`9348e32`) | `gsplat/compression/kmeans.py` + `kmeans_backend` / `kmeans_weighting`, off upstream main `28e794c`; `tests/test_kmeans.py` | **PR candidate**, measured by run 5; draft in `PR_DRAFT_weighted_kmeans.md` (complete), not opened. Keep this branch clean: library only (3 files). Upstream main had not moved on 2026-09-18. |
+| `feat/png-weighted-kmeans` (`61cd1baf`) | `gsplat/compression/kmeans.py` + `kmeans_backend` / `kmeans_weighting` / `kmeans_chunk_size`, off upstream main `28e794c`; `tests/test_kmeans.py`. Commits `9348e32` (backend + options), `a4c31082` (`kmeans_chunk_size`), `61cd1baf` (default flip, droppable) | **upstream PR [#1063](https://github.com/nerfstudio-project/gsplat/pull/1063), open** (opened 2026-09-18), measured by run 5. Keep this branch clean: library only (3 files). Upstream main had not moved on 2026-09-18. |
 | `bench/tilequant` | both feat branches merged + benchmark code and results; never goes upstream | active; head = `git log -1 fork/bench/tilequant` |
 
 Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): `PR_DRAFT_weighted_kmeans.md`,
@@ -203,18 +203,17 @@ reference-row labels. Logs: `..\r5\after_fix_*.log`, all OK.
 1. ~~Run 5 on Kaggle.~~ Done (2026-09-18), results in FINDINGS section 6.
 2. ~~Fill `PR_DRAFT_weighted_kmeans.md`.~~ Done: both datasets, per-scene deltas, cost, memory,
    reproducibility, extras.
-3. Only with Dace's go-ahead: open the PR from `feat/png-weighted-kmeans`. The branch stays
-   library-only; the benchmark lives on `bench/tilequant`. Compare URL:
-   https://github.com/nerfstudio-project/gsplat/compare/main...Daceyyreal:gsplat:feat/png-weighted-kmeans
-4. The default flip (`kmeans_backend="builtin"`, `kmeans_weighting="opacity_area"` as defaults, plus
-   updated `benchmarks/compression/results/*.csv`) is planned as a **second commit** so maintainers can
-   drop it. It is not written yet.
+3. ~~Open the PR from `feat/png-weighted-kmeans`.~~ Done (2026-09-18):
+   [nerfstudio-project/gsplat#1063](https://github.com/nerfstudio-project/gsplat/pull/1063), open. The
+   branch stays library-only; the benchmark lives on `bench/tilequant`.
+4. ~~The default flip.~~ Written as the PR's last commit, `61cd1baf` (`kmeans_backend="builtin"`,
+   `kmeans_weighting="opacity_area"` as defaults), so maintainers can drop it on its own.
+   `benchmarks/compression/results/*.csv` were not regenerated and still hold the TorchPQ numbers.
 
 ## Open items
 
-- Open the PR (Dace's call); the draft is complete.
-- Default-flip second commit: not written.
-- `chunk_size` (the builtin backend's memory knob) is a `weighted_kmeans` argument only;
-  `PngCompression` does not expose it. Expose it only if reviewers ask.
+- PR #1063 is open: respond to review only when Dace asks (standing rule: no comments unless asked).
+- `benchmarks/compression/results/*.csv` still hold the TorchPQ numbers; regenerating them is a
+  follow-up, only if maintainers want the default flip.
 - `lint/format-code.sh` and the tests on a CUDA machine (locally only CPU).
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
