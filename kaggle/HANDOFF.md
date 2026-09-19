@@ -57,7 +57,7 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `PREREG_GN.md` | E0 pre-registration (`bench/gn-vq`): G0 rule, validity checks, exploratory scope, G1 for E1. Amendment 1: the toy check. Amendment 2: G0 over 9 codebooks per scene with tie-exempt pairs, and exact-assignment refines instead of the shortlist one. **Never edit a rule after results exist**; add a dated amendment instead. |
 | `gn_e0_scene.py` | E0, one scene per process: render parity, GN pass (`gn_cache/<scene>.pt`), spectrum, Spearman, the 9 G0 codebooks (predicted vs measured, test and train GT metrics, reproduction fields at K = 65,536), the lifted-assignment check, the ridge / proximal refines. Resumable per (scene, config, K, seed). |
 | `build_gn_bench.py` / `gn_bench.ipynb` | E0 notebook (build output; edit the builder, never the JSON) |
-| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment, refines), `g0.py` (the G0 rule as code), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (19 CPU tests) |
+| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment, refines), `g0.py` (the G0 rule as code), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (19 CPU tests), `dryrun/` (the E0 dry run and the writer-parity check; not collected by pytest) |
 | `.gitignore` | ignores only the 64 run-5 bundle files that were unpacked flat into `kaggle/` by hand (anchored names; nothing deleted; the committed copy is `run5/tilequant/`) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
@@ -217,14 +217,17 @@ Not bundled but kept in the output for resuming: `gn_cache/<scene>.pt` (M is 1,0
 - `.venv\Scripts\python.exe -m pytest bench/gn/test_gn.py`: 19 CPU tests, among them the lifted
   argmin on N = 2,000, K = 256 with rank-deficient and zero M_i against brute force, and every G0
   verdict path.
-- In `C:\Users\Dace\AppData\Local\Temp\claude\F--\51b5c32d-122a-4650-8d8a-533b96ba5785\scratchpad\gn\`:
-  - `dryrun_gn_e0.py`: the whole job on a 4,096-splat toy with a fake runner and the CPU renderer
-    (K = 16 / 32 / 64, TorchPQ stand-in). It checks resume, a parity failure, and the notebook's G0 and
-    bundle cells;
-  - `check_writer_parity.py`: E0's writer produces byte-identical files to the run-3 writer for the
-    same codebook.
+- In the repo, `bench/gn/dryrun/`. Run them with the venv python from any directory; they find the
+  repo from their own location.
+  - `python bench/gn/dryrun/dryrun_gn_e0.py`: the whole job on a 4,096-splat toy with a fake runner
+    and the CPU renderer (K = 16 / 32 / 64, TorchPQ stand-in). It checks resume, a parity failure,
+    and the notebook's G0 and bundle cells. It reads `kaggle/gn_bench.ipynb`, so rebuild the notebook
+    first after builder changes.
+  - `python bench/gn/dryrun/check_writer_parity.py`: E0's writer produces byte-identical files to the
+    run-3 writer for the same codebook.
 
-  Logs are next to them; both pass.
+  Both pass. Scratch files go to a fresh system temp directory that is deleted on exit;
+  `GN_DRYRUN_KEEP=1` keeps the dry run's directory for debugging.
 
 **After the run:**
 
@@ -353,8 +356,9 @@ give. Where PREREG or the code already records *what* was decided, the entry say
 - **After the run:** commit the bundle under `kaggle/gn_e0/`, read `gn_g0.json` first, then fill
   FINDINGS section 8.
 - **E1:** write down the GN-VQ variant and its size matching before any E1 run (G1).
-- **The dry-run scripts are outside the repo,** in the temp folder `...\51b5c32d-...\scratchpad\gn\`.
-  If that folder is cleared they are lost; `bench/gn/test_gn.py` stays in the repo.
+- ~~**The dry-run scripts are outside the repo.**~~ **Resolved (2026-09-19):** they moved to
+  `bench/gn/dryrun/`, with no temp-folder paths. The toy dry run and the writer-parity check pass from
+  there; the temp copies were removed.
 - **The 64 flat bundle files in `kaggle/`** are ignored, not deleted. Delete them by hand whenever
   convenient; the committed copy is `kaggle/run5/tilequant/`.
 
@@ -418,7 +422,7 @@ give. Where PREREG or the code already records *what* was decided, the entry say
     ignores; `clamp_fraction` in `gn_meta_<scene>.json` says how often it bites.
   - E0 writes every codebook through the library's builtin writer with a precomputed codebook
     (`precomputed_codebook` patches `png_compression.weighted_kmeans`). The files are byte-identical
-    to run 3's writer (`check_writer_parity.py`).
+    to run 3's writer (`bench/gn/dryrun/check_writer_parity.py`).
   - Measured errors use `Runner.rasterize_splats(splats=...)` with the eval's keyword arguments;
     `Stage.render` only forwards to it.
   - `gm.gsplat_render` is looked up at call time, so a dry run can swap in `toy_render.render_bruteforce`.
