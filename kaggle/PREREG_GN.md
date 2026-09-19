@@ -331,3 +331,81 @@ G0 asks about ranking.
     remaining rows and the bundle follow.
 - **Clusters with `tr(sum M) = 0`** (empty, or all members unseen) keep `q_old` in both variants.
 - **Still stopping the run early:** the SH, toy and render-parity checks, and now the end-to-end check.
+
+## Amendment 4 (2026-09-20, before any E0 result and before the code change it describes)
+
+A correction of the toy check's input (Amendment 1), the same fix for the end-to-end check's input
+(Amendment 3), end-to-end preconditions read from gsplat's own render, and one report-only
+diagnostic. No pre-registered test, threshold or verdict changes. Amendments 1-3 stay as written above.
+Nothing has run on a GPU.
+
+**Why:**
+
+- `gn_metric.toy_scene` drew its random numbers with `torch.Generator(device=device)`. On CUDA that is
+  a different generator from the CPU one, so the CUDA toy check would have rendered a different draw of
+  the layout than the scene `bench/gn/toy_noise.py` simulated on the CPU. Amendment 1 says the
+  simulated scene is the scene the CUDA check uses; the code did not match it.
+- Drawing on the CPU and moving to the GPU is not enough. A fresh draw cannot be reproduced bitwise
+  across machines: torch's CPU `randn` (float32, 16 or more values) takes a different code path per
+  dispatched CPU capability (an AVX2 SIMD approximation of log/sin/cos under AVX2 dispatch, scalar
+  libm calls under DEFAULT or AVX512 dispatch, and libm differs between platforms). On the machine
+  that ran the simulation, the same torch and seed with DEFAULT instead of AVX2 dispatch change 5,037
+  of the toy scene's 15,104 values in their last bits (max abs difference 1.76e-6), and its hash with
+  them. The end-to-end scene (Amendment 3, "drawn with a CPU random generator") has the same problem.
+  Kaggle's CPU and torch build are not known in advance.
+
+**Fix: committed scene fixtures.**
+
+- `gn_metric.toy_scene` now draws with the CPU generator and the same seed, then moves the tensors to
+  the device, as `e2e_scene` does.
+- The scenes the checks use are committed as tensors (float32, little-endian `.npz`), each with a
+  metadata file recording the hash, the CPU capability (`torch.backends.cpu.get_cpu_capability()`),
+  the torch version and the platform it was drawn under:
+  - `bench/gn/fixtures/toy_scene_seed0.npz`: `toy_scene(256, seed=0)`, drawn on the CPU of the machine
+    that ran the simulation (AVX2 dispatch, its default; torch 2.11.0+cpu, Windows).
+  - `bench/gn/fixtures/e2e_scene_seed0.npz`: the 48 splats of `e2e_scene(seed=0)` and the uniform
+    +-0.1 shN perturbation of the end-to-end check, drawn the same way. The overlapping variants are
+    derived from it as before (scales x5; the shared perturbation is the first splat's).
+- **Scene hash:** SHA-256 over the tensors in sorted key order; for each tensor, the bytes of
+  `"<key>:<shape>:float32-le;"` (shape as a Python tuple) followed by its values as float32
+  little-endian.
+  - toy scene: `1bb442ee09b6d8417384f5aad10e019a3ebab15458141ef685c873d45f06e441`
+  - end-to-end scene and perturbation:
+    `103c99e07bf582e8def6068efa103994041da1fdda4d9ca91523b178177ac757`
+- **Provenance of the toy fixture.** Re-derived with `gn_metric.py` from commit `c69ba388`, the commit of
+  `toy_noise.py` and `toy_noise.json` (the probe simulation was not re-run): it gives the same hash as
+  the fixture. The two scene-only fields of `toy_noise.json` (blending fraction and visible splats)
+  reproduce exactly from it. They reproduce from the DEFAULT-dispatch draw as well, so they cannot
+  pin the dispatch; the simulation ran with the machine's default dispatch (AVX2), and no override was
+  recorded.
+- **The CUDA checks load the fixtures and assert the hashes before rendering,** then move the tensors to
+  the GPU. A mismatch stops the whole run.
+- **CPU provenance test:** re-draws both scenes. It requires a bitwise match when the fixture's CPU
+  capability and torch version both match the machine, and otherwise a max abs difference of at most
+  1e-5, reporting the difference in capability.
+- **Unchanged:** the toy layout, the probe count (64), the 5% rule and the per-splat plumbing and
+  all-ones channel checks (1e-4); the end-to-end tolerance (1e-4 relative) and its perturbation.
+
+**End-to-end preconditions, read from gsplat's own render.** Before the exactness is judged, the check
+verifies on the renders it compares:
+
+- no pixel gets nonzero weight from two splats in the identity render;
+- `SH + 0.5 > 0`: each splat's rendered colour, recovered as its SH-render pixel value divided by its
+  identity-render weight at its strongest pixel, which only it covers, is `max(SH + 0.5, 0)` as gsplat
+  computed it. It must lie in (0, 1), the range Amendment 3 states;
+- every rendered value at a covered pixel is in (0, 1), and every uncovered pixel is exactly 0 (the
+  background), so clamping to [0, 1] changes nothing.
+
+If a precondition fails, the run stops with a message that the exactness claim does not apply to the
+scene. That is not reported as a mismatch between prediction and measurement.
+
+**Report-only diagnostic, outside every verdict.** In the toy check, from the exact identity-render
+weights `W` (splats x pixels, per view) and before the check is judged: the exact relative standard
+deviation of the probe estimate of `S = sum w^2`,
+
+`sigma_rel = sqrt( sum_views 2 (||W W^T||_F^2 - sum_p (sum_i w_ip^2)^2) / n_probes ) / S`
+
+(the variance of a Rademacher quadratic form), and the implied false-fail probability of the 5% rule
+under a normal approximation, `erfc(0.05 / (sqrt(2) sigma_rel))`. Both are logged and stored. They do
+not enter the toy check, G0 or any other verdict. A CPU test checks the formula against Monte Carlo on
+a small `W`.
