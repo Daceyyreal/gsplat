@@ -654,17 +654,33 @@ The jobs summed to 6.05 GPU-hours over the 2 GPUs. The notebook's pre-run estima
 ## 8. E0 — pending: a Gauss-Newton metric for the shN codebook (`bench/gn-vq`)
 
 **Status: not run.** This section has no results yet. The questions, definitions and decision rules
-were fixed before any E0 code or result, in `kaggle/PREREG_GN.md`: the original text (commit
-`464c46a5`) and Amendment 1 (toy exactness check only, commit `223faf91`).
+were fixed before any E0 code or result, in `kaggle/PREREG_GN.md`:
 
-- **Question (G0):** on garden and bicycle, does the per-splat GN metric `M_i = sum_v s_iv y y^T`,
-  accumulated over the train views, rank the three run-3 clusterings the same way as the measured
-  shN-only render error does, on train and on test views? Is the predicted/measured ratio within the
-  pre-registered range on train views? The three clusterings are `upstream_l1` (TorchPQ manhattan),
-  `plain_l2` (unweighted Lloyd) and `lloyd_wopa_area`.
-- **Exploratory:** the spectrum of `M_i`; rank correlations between `tr(M_i)`, the `opacity_area`
-  weight, the footprint `F_i` and a C3DGS-style weight; and a GN refine of the `lloyd_wopa_area`
-  codebook (bytes per file, test metrics, shortlist recall).
+- the original text (commit `464c46a5`);
+- Amendment 1: the toy exactness check (commit `223faf91`);
+- Amendment 2: G0 over more codebooks with tie-exempt pairs, and the exact-assignment refines (commit
+  `48fa5823`).
+
+The sections:
+
+- **Question (G0, Amendment 2):** on garden and bicycle, is the per-splat GN metric
+  `M_i = sum_v s_iv y y^T`, accumulated over the train views, a usable predictor of the measured
+  shN-only render error? This is tested on 9 codebooks per scene: `upstream_l1` (TorchPQ manhattan),
+  `plain_l2` (unweighted Lloyd) and `lloyd_wopa_area`, each at three codebook sizes K.
+  - **Ratio:** predicted/measured on train views must stay in the pre-registered range for every
+    codebook.
+  - **Ranking:** within each K, every config pair whose measured errors are not tied must be ordered
+    the same way by the prediction, on train and on test views. A minimum number of non-tied pairs
+    is required, otherwise the verdict is inconclusive.
+- **Exploratory:**
+  - the spectrum of `M_i`;
+  - rank correlations between `tr(M_i)`, the `opacity_area` weight, the footprint `F_i` and a
+    C3DGS-style weight;
+  - exact Mahalanobis assignment (checked against brute force on real splats) and how often its
+    argmin falls inside the plain-L2 top-64 shortlist;
+  - two refines of the `lloyd_wopa_area` codebook, ridge and proximal, excluded from G0: objective
+    per step, bytes per `shN.npz` member, and train and test metrics;
+  - per-channel out-of-range pixels of the original render.
 - **G1** (GN-VQ vs `lloyd_wopa_area` at equal size) is judged in E1, not in E0.
 - **Where results will come from:** the E0 notebook (`kaggle/gn_bench.ipynb`, built by
   `kaggle/build_gn_bench.py`) writes `gn_bundle.zip`; its files will be committed under

@@ -54,10 +54,11 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `FINDINGS.md` | results write-up, every number from the committed bundles |
 | `HANDOFF.md` | this file |
 | `run2/tilequant/` ... `run5/tilequant/` | results bundles (`results_bundle.zip` contents); each session restores the previous one, so files repeat (git stores them once). In `run5/`, `run5_tt_table.csv` and `rd_run5.png` were regenerated locally after the label fix `1b4d40f8` (see FINDINGS sources); the downloaded original is `~/Downloads/results_bundle (3).zip` |
-| `PREREG_GN.md` | E0 pre-registration (`bench/gn-vq`): G0 rule, validity checks, exploratory scope, G1 for E1. Amendment 1 (toy check) is the only change. **Never edit a rule after results exist**; add a dated amendment instead. |
-| `gn_e0_scene.py` | E0, one scene per process: render parity, GN pass (`gn_cache/<scene>.pt`), spectrum, Spearman, the three run-3 configs (predicted vs measured, GT metrics, reproduction fields), GN refine. Resumable per (scene, config, seed). |
+| `PREREG_GN.md` | E0 pre-registration (`bench/gn-vq`): G0 rule, validity checks, exploratory scope, G1 for E1. Amendment 1: the toy check. Amendment 2: G0 over 9 codebooks per scene with tie-exempt pairs, and exact-assignment refines instead of the shortlist one. **Never edit a rule after results exist**; add a dated amendment instead. |
+| `gn_e0_scene.py` | E0, one scene per process: render parity, GN pass (`gn_cache/<scene>.pt`), spectrum, Spearman, the 9 G0 codebooks (predicted vs measured, test and train GT metrics, reproduction fields at K = 65,536), the lifted-assignment check, the ridge / proximal refines. Resumable per (scene, config, K, seed). |
 | `build_gn_bench.py` / `gn_bench.ipynb` | E0 notebook (build output; edit the builder, never the JSON) |
-| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `diagnostics.py`, `g0.py` (the G0 rule as code), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (16 CPU tests) |
+| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment, refines), `g0.py` (the G0 rule as code), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (19 CPU tests) |
+| `.gitignore` | ignores only the 64 run-5 bundle files that were unpacked flat into `kaggle/` by hand (anchored names; nothing deleted; the committed copy is `run5/tilequant/`) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
 `C:\Users\Dace\AppData\Local\Temp\claude\F--\51b5c32d-122a-4650-8d8a-533b96ba5785\scratchpad\ref\dryrun_*.py`
@@ -146,32 +147,66 @@ reference-row labels. Logs: `..\r5\after_fix_*.log`, all OK.
   `setup.py` are unchanged since run 5), and builds with `MAX_JOBS=2` otherwise
   (`ALLOW_WHEEL_BUILD = True`). It installs torchpq + cupy only in case a TorchPQ clustering must be
   recomputed. PLAS is not needed: E0 uses the cached order with `use_sort=False`.
-- **CUDA smoke tests** (validity checks) go to `gn/gn_selftest.json`: `sh_basis.cuda_check` (max abs
-  error < 1e-5 against gsplat's `spherical_harmonics`) and `gn_metric.toy_exactness(device="cuda")`
-  (Amendment 1). The run stops if either fails.
+- **CUDA smoke tests** go to `gn/gn_selftest.json`. The G0 validity checks are
+  `sh_basis.cuda_check` (max abs error < 1e-5 against gsplat's `spherical_harmonics`) and
+  `gn_metric.toy_exactness(device="cuda")` (Amendment 1); the run stops if either fails. Also recorded,
+  informational only: `lifted_random_cuda`, the lifted fp32 vs direct float64 assignment on random
+  data.
 - **Jobs:** garden on GPU 0 and bicycle on GPU 1 in parallel (`run_on_gpus`), each running
   `kaggle/gn_e0_scene.py`. Each job:
   - checks **render parity** first: the direct `rasterization` call against `Runner.rasterize_splats`
     with the eval's keyword arguments; it raises if the max abs difference is above 1e-6;
   - runs the GN pass and caches it;
   - writes the spectrum and Spearman files;
-  - runs `upstream_l1`, `plain_l2`, `lloyd_wopa_area`, then `gn_refine`, then an `uncompressed`
-    reference row.
-- **G0 cell:** `bench/gn/g0.py` on the rows, with the validity dict (selftest, parity per scene,
-  reproduction of the run-3 `lloyd_wopa_area` seed-0 row when that row exists), written to
-  `gn/gn_g0.json` and plotted in `gn/gn_g0.png`.
+  - runs the **9 G0 codebooks** (Amendment 2): `upstream_l1`, `plain_l2` and `lloyd_wopa_area` at
+    K = 4,096, 16,384 and 65,536. The run-3 caches cover K = 65,536; the other K are clustered here
+    and cached in `gn_work/<scene>/clusters/<config>_k<K>_s<seed>.pt`;
+  - checks the **lifted assignment** on 10,000 real splats (lifted fp32 vs exhaustive direct float64,
+    within 1e-4 relative) and raises before the refines if it fails. The G0 rows are already written
+    by then;
+  - runs the two **exact-assignment refines** of `lloyd_wopa_area` K = 65,536 (`gn_refine_ridge`,
+    `gn_refine_prox`; excluded from G0). The proximal one raises if its GN objective increases;
+  - adds an `uncompressed` reference row.
+- **G0 cell:** `bench/gn/g0.py` (Amendment 2) on the rows, with the validity dict (selftest, parity
+  per scene, reproduction of the run-3 `lloyd_wopa_area` K = 65,536 seed-0 row when that row exists).
+  It writes `gn/gn_g0.json` and plots `gn/gn_g0.png`.
+
+**G0 rule (Amendment 2):**
+
+- 0.5 <= P / D_train <= 2 (clamped) for all 9 codebooks of each scene.
+- Within each K, the 3 config pairs on train and test views of both scenes (36 pair checks). A pair
+  whose measured errors differ by less than 5% relative is a tie and exempt; every other pair must be
+  ordered by P as by D.
+- At least 6 non-tied pairs are needed.
+- Verdicts: `incomplete` > `invalid` > `fail` > `inconclusive` (fewer than 6 non-tied pairs) >
+  `pass`.
 
 **Outputs** (`gn_bundle.zip`, arcname `gn/`):
 
-- `gn_results_<scene>.csv`: one row per (config, seed), with P, D train / test (clamped and raw),
-  the ratios, full-pipeline and shN-only GT metrics, bytes per file (`file_bytes` JSON), the
-  `shN.npz` members (`shN_centroids_bytes`, `shN_labels_bytes`), the clustering source, timings and the
-  run-3 reproduction fields;
-- `gn_meta_<scene>.json`: settings, render parity, GN pass (views, pixels, clamp fraction, visible
-  splats, zero-trace splats), timings;
+- `gn_results_<scene>.csv`: one row per (config, K, seed): the 9 G0 codebooks, `gn_refine_ridge`,
+  `gn_refine_prox` and `uncompressed`. Columns:
+  - P and, for the refines, `objective_unquantized`;
+  - D train / test (clamped and raw) and the ratios;
+  - full-pipeline test metrics and train metrics (`train_PSNR` / `SSIM` / `LPIPS`), and shN-only GT
+    metrics;
+  - bytes per file (`file_bytes` JSON) and the `shN.npz` members (`shN_centroids_bytes`,
+    `shN_labels_bytes`);
+  - the clustering source, timings, and the run-3 reproduction fields (K = 65,536 only);
+- `gn_meta_<scene>.json`:
+  - settings, render parity, and the GN pass (views, pixels, clamp fraction, visible splats,
+    zero-trace splats);
+  - `render_range`: per view set and channel, the fraction of pixels of the original eval render
+    below 0 / above 1 before clamping;
+  - `lifted_check`;
+  - `metric_parity`: the train-metric code run on the test views vs `Runner.eval`;
+  - timings;
 - `gn_spectrum_<scene>.csv`, `gn_spectrum_hist_<scene>.csv`, `gn_spectrum_<scene>.png`;
 - `gn_spearman_<scene>.csv`;
-- `gn_refine_<scene>.json`: per iteration, the objective, recall, changed labels and times;
+- `gn_refine_ridge_<scene>.json`, `gn_refine_prox_<scene>.json`:
+  - the objective after every assignment and update step;
+  - per assignment: labels changed, splats kept by the guard, and the top-64 L2 share (all splats and
+    `tr(M) > 0`);
+  - the final unquantized and quantized objective, and times;
 - `gn_selftest.json`, `gn_g0.json`, `gn_g0.png`, `timings.json`.
 
 Not bundled but kept in the output for resuming: `gn_cache/<scene>.pt` (M is 1,000,000 x 120 fp32 =
@@ -179,10 +214,13 @@ Not bundled but kept in the output for resuming: `gn_cache/<scene>.pt` (M is 1,0
 
 **Local checks** (no GPU):
 
-- `.venv\Scripts\python.exe -m pytest bench/gn/test_gn.py`: 16 CPU tests.
+- `.venv\Scripts\python.exe -m pytest bench/gn/test_gn.py`: 19 CPU tests, among them the lifted
+  argmin on N = 2,000, K = 256 with rank-deficient and zero M_i against brute force, and every G0
+  verdict path.
 - In `C:\Users\Dace\AppData\Local\Temp\claude\F--\51b5c32d-122a-4650-8d8a-533b96ba5785\scratchpad\gn\`:
-  - `dryrun_gn_e0.py`: the whole job on a 4,096-splat toy with a fake runner and the CPU renderer,
-    checking resume, a parity failure, and the notebook's G0 and bundle cells;
+  - `dryrun_gn_e0.py`: the whole job on a 4,096-splat toy with a fake runner and the CPU renderer
+    (K = 16 / 32 / 64, TorchPQ stand-in). It checks resume, a parity failure, and the notebook's G0 and
+    bundle cells;
   - `check_writer_parity.py`: E0's writer produces byte-identical files to the run-3 writer for the
     same codebook.
 
@@ -191,7 +229,8 @@ Not bundled but kept in the output for resuming: `gn_cache/<scene>.pt` (M is 1,0
 **After the run:**
 
 1. Unpack `gn_bundle.zip` into `kaggle/gn_e0/` and check the files against the zip, CR-insensitively.
-2. Read `gn_g0.json` first. Its verdict is `pass` / `fail` / `invalid` / `incomplete`.
+2. Read `gn_g0.json` first. Its verdict is `pass` / `fail` / `inconclusive` / `invalid` /
+   `incomplete`.
 3. Then fill FINDINGS section 8 from the files.
 
 G1 is not judged in E0. Before E1, write down the exact GN-VQ variant and its size matching, as
@@ -262,6 +301,14 @@ PREREG_GN.md requires.
     `Stage.render` only forwards to it.
   - `gm.gsplat_render` is looked up at call time, so a dry run can swap in `toy_render.render_bruteforce`.
   - The run-3 clustering cache key is `sha1(ckpt_sha1 + seed-0 order bytes)`, the same as E0's.
+    The run-3 caches only hold K = 65,536.
+  - Exact assignment (`diagnostics.lifted_argmin`) uses `d(i,k) = const_i + u_i . v_k` with 165-dim
+    vectors, one fp32 GEMM per chunk. TF32 is off, and coordinates are shifted by the codebook mean.
+    `assign_exact` keeps the current centroid unless the new one is strictly closer by the direct
+    formula, so assignment never raises the objective. Splats with tr(M) = 0 take their L2-nearest
+    centroid.
+  - The refines' `mu = 1e-4 * tr(sum M) / 15` is per cluster. Ridge pulls weakly constrained
+    directions toward 0; proximal keeps them at the old centroid.
 - **Decision rule rounding:** run-4 deltas and means are rounded to 9 decimals before comparing, and
   byte limits are integer compares (`cand * 1000 <= base * 1003`). Float round-off otherwise flips the
   exact-threshold cases: every constructed "exactly -0.02 dB" case had it.
