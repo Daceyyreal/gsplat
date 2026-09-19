@@ -166,3 +166,74 @@ catch implementation errors, not probe noise.
   same probe images, to 1e-4 relative. This tests the gradient plumbing exactly, independent of probe
   noise. (Splats covering less than 1e-3 of the largest footprint are excluded from the per-splat
   relative errors.)
+
+## Amendment 2 (2026-09-19, before any E0 result and before the code change it describes)
+
+This replaces the G0 rule and exploratory item d above. The G0 validity checks, Amendment 1 and G1 are
+unchanged.
+
+**Why:** a strict ranking of 3 configs at one K can flip on near-ties. The quantities differ little:
+run 3's bicycle `lloyd_wopa_area` gain over the baseline was +0.030 dB mean over 3 k-means seeds and
++0.027 dB at seed 0, and `lloyd_w1` was -0.023 dB at seed 0 (FINDINGS section 4). One flipped near-tie
+would decide G0 on noise. So G0 now uses more codebooks and exempts measured ties.
+
+### Codebooks (per scene, k-means seed 0)
+
+The three configs (`upstream_l1` = TorchPQ manhattan, `plain_l2` = `lloyd_w1`, `lloyd_wopa_area`),
+each at K in {4096, 16384, 65536}, give 9 codebooks per scene. K = 65,536 is the run-3 default and
+reuses the run-3 caches as before. K = 4,096 and 16,384 are clustered with the same code and seed.
+Writing, measuring and the definitions of `P`, `D^train` and `D^test` are unchanged.
+
+### G0 rule (replaces the rule above)
+
+- **Ratio:** `0.5 <= P / D^train <= 2`, with the clamped measurement, for all 9 codebooks of each scene.
+- **Ranking, checked only within each K:** there are 3 config pairs per K, each checked on train
+  views and on test views, for both scenes: 2 x 3 x 3 x 2 = 36 pair checks.
+  - A pair (a, b) is a **tie** on a view set if `|D_a - D_b| / min(D_a, D_b) < 0.05` (measured,
+    clamped). Ties are exempt.
+  - A non-tied pair **agrees** if `P_a < P_b` exactly when `D_a < D_b`. Equal `P` does not agree.
+- **Verdict**, in this order:
+  - `incomplete` if a row is missing;
+  - `invalid` if a validity check failed;
+  - `fail` if the ratio rule fails or any non-tied pair disagrees;
+  - `inconclusive` if every non-tied pair agrees but there are fewer than 6 non-tied pairs in total;
+  - otherwise `pass`.
+- **Reported, not part of the rule:** the same computation on unclamped renders, and `P / D^test`.
+- **Reproduction check:** unchanged; it uses the `lloyd_wopa_area` row at K = 65,536.
+
+### Exploratory item d (replaces the shortlist GN refine)
+
+- **Exact Mahalanobis assignment.** `M_i` is shared by the three channels, so
+  `d(i, k) = sum_ch (c_i^ch - q_k^ch)^T M_i (c_i^ch - q_k^ch) = const_i + u_i . v_k`, with 165-dim
+  vectors:
+  - `u_i = [-2 M_i c_i^R, -2 M_i c_i^G, -2 M_i c_i^B, triu(M_i) with off-diagonals x2]`;
+  - `v_k = [q_k^R, q_k^G, q_k^B, triu(sum_ch q_k^ch q_k^ch^T)]`.
+
+  The argmin over k is one chunked fp32 matrix product over splats (no fp16, no TF32), in gsplat's shN
+  `[N, 15, 3]` layout. Coordinates are shifted by the codebook mean, which leaves the distances
+  unchanged. A splat keeps its current centroid unless the new one is strictly closer by the direct
+  formula, and splats with `tr(M_i) = 0` take their L2-nearest centroid.
+- **Implementation checks:** a CPU test (N = 2,000, K = 256, random data including rank-deficient
+  `M_i`) compares the achieved minimum distances against brute force, allowing ties. On the GPU, the
+  job compares lifted against direct (float64) minimum distances on 10,000 real splats with
+  `tr(M_i) > 0`: within 1e-4 relative, or the job stops before the refine. The G0 rows are written
+  before this step.
+- **Diagnostic:** at every assignment step, the share of exact argmins inside the plain-L2 top-64
+  shortlist, over all splats and over splats with `tr(M_i) > 0`.
+- **Two refine variants.** Both warm-start from the `lloyd_wopa_area` K = 65,536 seed-0 codebook and
+  labels, run 3 iterations of assignment then update, and use `mu = 1e-4 * tr(sum M) / 15` per cluster:
+  - (a) **ridge to zero:** `q = (sum M + mu I)^-1 sum M c`;
+  - (b) **proximal:** `q = (sum M + mu I)^-1 (sum M c + mu q_old)`.
+
+  Both are solved in float64 per channel. A cluster with `tr(sum M) = 0` keeps its centroid.
+- **Logged for each variant:** the GN objective on unquantized centroids after every assignment and
+  every update step, asserted non-increasing for (b) to 1e-6 relative; the objective after
+  `PngCompression`'s centroid quantization (= `P` of its row); bytes, total and per `shN.npz` member;
+  and train and test PSNR / SSIM / LPIPS. Both variants are extra rows of the predictivity table
+  (`gn_refine_ridge`, `gn_refine_prox`) and are **excluded from G0**.
+
+### Also logged (exploratory)
+
+- Per scene and view set, the per-channel fraction of pixels where the original eval render is below
+  0 or above 1 before clamping.
+- Train-view PSNR / SSIM / LPIPS for every row, computed the way `Runner.eval` does on the test views.
