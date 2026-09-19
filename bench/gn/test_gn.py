@@ -3,6 +3,7 @@
     python -m pytest bench/gn/test_gn.py -q
 """
 
+import json
 import math
 import os
 import sys
@@ -158,6 +159,54 @@ def test_toy_exactness_on_cpu_renderer():
     assert (
         r["overlap_fraction"] > 0.5
     )  # the toy blends splats, it is not a set of isolated blobs
+
+
+def test_e2e_exactness_on_cpu_renderer():
+    r = gd.e2e_exactness(render=tr.render_bruteforce, device="cpu")
+    ex = r["non_overlapping"]
+    assert r["pass"] and ex["preconditions_ok"] and ex["rel_err"] <= 1e-4, ex
+    assert ex["max_splats_per_pixel"] == 1 and ex["overlap_fraction"] == 0.0
+    assert ex["n_splats"] == 48 and ex["n_visible_per_view"] == [48, 48]
+    assert 0 < ex["sh_plus_half_min"] and ex["sh_plus_half_max"] < 1
+    assert 0 < ex["render_min_covered"] and ex["render_max"] < 1
+    assert ex["measured_clamped"] == ex["measured_raw"]  # nothing to clamp
+    assert r["amplitude"] == 0.1 and r["n_views"] == 2
+    # the overlapping variants are reported, not asserted on; they do blend splats
+    for key in ("overlapping", "overlapping_shared_delta"):
+        ov = r[key]
+        assert ov["max_splats_per_pixel"] >= 2 and not ov["preconditions_ok"]
+        assert math.isfinite(ov["ratio_raw"]) and math.isfinite(ov["cross_diagonal"])
+
+
+def test_e2e_exactness_detects_a_render_mismatch():
+    """An SH render 0.1% brighter than the GN pass's render fails the 1e-4 check."""
+
+    def skewed(act, colors, *args, sh_degree=None):
+        img, info = tr.render_bruteforce(act, colors, *args, sh_degree=sh_degree)
+        return (img * 1.001 if sh_degree is not None else img), info
+
+    r = gd.e2e_exactness(render=skewed, device="cpu")
+    assert not r["pass"] and r["non_overlapping"]["preconditions_ok"]
+    assert r["non_overlapping"]["rel_err"] > 1e-4
+
+
+def test_selftest_cpu_writes_json_and_stops_on_a_failed_check(tmp_path, monkeypatch):
+    import selftest
+
+    path = tmp_path / "gn_selftest.json"
+    selftest.main(["--device", "cpu", "--out", str(path)])
+    out = json.load(open(path))
+    assert out["pass"] and out["device"] == "cpu"
+    assert all(out[k]["pass"] for k in selftest.VALIDITY)
+    assert selftest.VALIDITY == ("sh_basis", "toy_exactness", "e2e_exactness")
+    assert out["lifted_random"]["criterion_version"] == gd.LIFTED_CHECK_VERSION
+    # a failed end-to-end check exits non-zero (the notebook's sh() then stops the run)
+    monkeypatch.setattr(gm, "toy_exactness", lambda **k: {"pass": True})
+    monkeypatch.setattr(selftest, "lifted_random", lambda device: {})
+    monkeypatch.setattr(gd, "e2e_exactness", lambda **k: {"pass": False})
+    with pytest.raises(SystemExit, match="e2e_exactness"):
+        selftest.main(["--device", "cpu", "--out", str(path)])
+    assert json.load(open(path))["pass"] is False
 
 
 def test_compute_gn_f_is_exact_footprint_and_cache_roundtrip(tmp_path):
@@ -318,11 +367,101 @@ def test_lifted_identity_and_argmin_achieve_brute_force_minimum():
     assert torch.all(achieved <= best * (1 + 1e-5) + 1e-12)
     dmin, arg = gd.brute_force_min(x, M, C, chunk=64)
     assert torch.allclose(dmin, best, rtol=1e-12, atol=1e-15)
+    # the sample is drawn from all splats; tr(M) = 0 splats are counted and not evaluated
     chk = gd.lifted_check(x, M, C, n_sample=500, seed=1)
-    assert chk["pass"] and chk["n"] == 500 and chk["n_over_tol"] == 0, chk
+    assert chk["pass"] and chk["n_sample"] == 500, chk
+    assert chk["n_zero_trace_in_sample"] > 0
+    assert chk["n"] + chk["n_zero_trace_in_sample"] == 500
+    assert chk["n_excess_over_tol_scale"] == 0
+    assert chk["criterion_version"] == gd.LIFTED_CHECK_VERSION
     assert torch.allclose(
         gd.direct_distance(x, M, C, lab), achieved, rtol=1e-12, atol=1e-15
     )
+
+
+def _near_tie_problem(n_tie=200, n_normal=1000, n_near=16, rank=3, seed=0):
+    """fp32 near-ties on rank-deficient M_i. Tie splats have ``M_i = diag(l_1..l_rank, 0, ...)`` and
+    share the range coordinates of one of ``n_near`` centroids exactly (d_min = 0); those centroids
+    agree with each other to 1e-4 in the range coordinates and differ by O(1) in the null ones. A far
+    group puts the codebook mean far away, so the fp32 product cancels large terms and cannot tell the
+    near group apart. Normal splats: random full-rank M_i, O(1) away from every centroid."""
+    g = torch.Generator().manual_seed(seed)
+    base = torch.zeros(15, 3)
+    base[:rank] = 20.0
+    near = base + torch.zeros(n_near, 15, 3)
+    near[:, :rank] += torch.randn(n_near, rank, 3, generator=g) * 1e-4
+    near[:, rank:] += torch.randn(n_near, 15 - rank, 3, generator=g)
+    far = -base + torch.randn(n_near, 15, 3, generator=g) * 3.0
+    mid = torch.randn(32, 15, 3, generator=g) * 3.0
+    C3 = torch.cat([near, far, mid])
+    x_tie = near[torch.randint(0, n_near, (n_tie,), generator=g)].clone()
+    x_tie[:, rank:] = torch.randn(n_tie, 15 - rank, 3, generator=g) * 2
+    M_tie = torch.zeros(n_tie, 15, 15)
+    idx = torch.arange(rank)
+    M_tie[:, idx, idx] = torch.rand(n_tie, rank, generator=g) + 0.5
+    x_norm = torch.randn(n_normal, 15, 3, generator=g) * 3.0
+    a = torch.randn(n_normal, 15, 15, generator=g) / 4
+    x = torch.cat([x_tie, x_norm]).reshape(-1, 45)
+    M = gm.pack(torch.cat([M_tie, a @ a.transpose(1, 2)]))
+    return x, M, C3.reshape(-1, 45), n_tie
+
+
+def test_lifted_check_passes_fp32_near_ties_on_rank_deficient_M():
+    x, M, C, n_tie = _near_tie_problem()
+    lab = gd.lifted_argmin(x, M, C)
+    d_min, _ = gd.brute_force_min(x, M, C)
+    excess = gd.direct_distance(x, M, C, lab) - d_min
+    # fp32 rounding really picks farther centroids at the near-ties, where d_min is exactly 0 ...
+    assert bool((d_min[:n_tie] == 0).all())
+    assert int((excess[:n_tie] > 0).sum()) > n_tie // 4
+    # ... so the Amendment-2 criterion (excess relative to d_min) fails there
+    assert float((excess / d_min.clamp_min(1e-300)).max()) > 1e-4
+    chk = gd.lifted_check(x, M, C, n_sample=10**6, seed=0)
+    assert chk["pass"] and chk["aggregate_pass"] and chk["per_splat_pass"], chk
+    assert chk["n"] == x.shape[0] and chk["n_zero_trace_in_sample"] == 0
+    assert chk["n_dmin_zero"] >= n_tie and chk["n_dmin_below_1e-3_scale"] >= n_tie
+    assert chk["max_excess_over_scale"] <= 1e-4
+    assert chk["sum_excess_over_sum_dmin"] <= 1e-4
+
+
+def test_lifted_check_fails_a_wrong_assignment(monkeypatch):
+    x, M, C = _problem(n=600, k=64, seed=7)
+    real = gd.lifted_argmin
+    monkeypatch.setattr(
+        gd,
+        "lifted_argmin",
+        lambda x_, M_, C_, chunk=2048: (real(x_, M_, C_, chunk) + 1) % C_.shape[0],
+    )
+    chk = gd.lifted_check(x, M, C, n_sample=600, seed=0)
+    assert not chk["pass"], chk
+    assert not chk["aggregate_pass"] and not chk["per_splat_pass"]
+    assert chk["n_excess_over_tol_scale"] > 0 and chk["max_excess_over_scale"] > 1e-4
+
+
+def test_lifted_criterion_branches():
+    f64 = lambda *v: torch.tensor(v, dtype=torch.float64)  # noqa: E731
+    both = gd.lifted_criterion(f64(1e-5, 0.0, 0.0), f64(1.0, 1.0, 0.0), f64(1e4, 1e4, 1e4))
+    assert both["pass"] and both["aggregate_pass"] and both["per_splat_pass"]
+    # aggregate fails, every splat within its scale bound
+    agg = gd.lifted_criterion(f64(0.5, 0.0, 0.0), f64(1.0, 1.0, 0.0), f64(1e4, 1e4, 1e4))
+    assert not agg["pass"] and not agg["aggregate_pass"] and agg["per_splat_pass"]
+    # one splat over its scale bound, the aggregate within 1e-4
+    per = gd.lifted_criterion(f64(0.0, 0.0, 0.5), f64(1e6, 1.0, 0.0), f64(1e4, 1.0, 1.0))
+    assert not per["pass"] and per["aggregate_pass"] and not per["per_splat_pass"]
+    assert per["n_excess_over_tol_scale"] == 1 and per["max_excess_over_scale"] == 0.5
+    # every minimum exactly 0: no excess passes, any excess fails
+    assert gd.lifted_criterion(f64(0.0, 0.0), f64(0.0, 0.0), f64(1.0, 1.0))["pass"]
+    zero = gd.lifted_criterion(f64(1e-9, 0.0), f64(0.0, 0.0), f64(1.0, 1.0))
+    assert not zero["aggregate_pass"] and zero["sum_excess_over_sum_dmin"] == math.inf
+
+
+def test_lifted_check_version_mismatch_reruns():
+    v = gd.LIFTED_CHECK_VERSION
+    assert gd.lifted_check_needed(None)
+    assert gd.lifted_check_needed({"pass": True})  # an Amendment-2 record has no version
+    assert gd.lifted_check_needed({"pass": True, "criterion_version": v - 1})
+    assert gd.lifted_check_needed({"pass": False, "criterion_version": v})
+    assert not gd.lifted_check_needed({"pass": True, "criterion_version": v})
 
 
 def test_assign_exact_guard_and_zero_trace():
@@ -380,11 +519,32 @@ def test_update_variants_match_closed_form():
         gd.update_centroids(x, labels, M, C, "shortlist")
 
 
+def test_update_keeps_q_old_when_trace_of_cluster_M_is_zero():
+    x, M, C = _problem(n=500, k=20, seed=8)
+    labels = torch.cdist(x, C).argmin(dim=1)
+    labels[labels == 3] = 4  # cluster 3: empty
+    M = M.clone()
+    unseen = labels == 5
+    assert bool(unseen.any())
+    M[unseen] = 0.0  # cluster 5: every member unseen, tr(M_i) = 0
+    zero = [
+        k
+        for k in range(C.shape[0])
+        if float(gm.trace_packed(M[labels == k].double()).sum()) == 0.0
+    ]
+    assert {3, 5} <= set(zero)
+    for variant in gd.REFINE_VARIANTS:
+        new, kept = gd.update_centroids(x, labels, M, C, variant, eps=1e-4)
+        assert kept == len(zero)
+        for k in range(C.shape[0]):
+            assert torch.equal(new[k], C[k]) == (k in zero), (variant, k)
+
+
 def test_gn_refine_variants_log_every_step_and_prox_is_monotone(monkeypatch):
     x, M, C = _problem(n=800, k=32, seed=6)
     labels = torch.cdist(x, C).argmin(dim=1)
     for variant in gd.REFINE_VARIANTS:
-        _, _, hist = gd.gn_refine(
+        _, _, hist, rises = gd.gn_refine(
             x,
             C,
             labels,
@@ -396,37 +556,38 @@ def test_gn_refine_variants_log_every_step_and_prox_is_monotone(monkeypatch):
             log=None,
         )
         assert [h["step"] for h in hist] == ["start"] + ["assign", "update"] * 3
+        assert rises == []
         objs = [h["objective"] for h in hist]
         if variant == "prox":
             assert all(b <= a * (1 + 1e-6) for a, b in zip(objs, objs[1:])), objs
         for h in hist[1::2]:
             assert 0.0 <= h["top64_share_all"] <= 1.0
+    # an injected rise in the proximal update is recorded, not raised, and the iterations go on
     real = gd.update_centroids
     monkeypatch.setattr(
         gd, "update_centroids", lambda *a, **k: (real(*a, **k)[0] + 1.0, 0)
     )
-    with pytest.raises(RuntimeError, match="increased"):
-        gd.gn_refine(
-            x,
-            C,
-            labels,
-            M,
-            total_pixels=1000,
-            variant="prox",
-            iters=1,
-            topk=8,
-            log=None,
-        )
-    gd.gn_refine(
+    logged = []
+    _, _, hist, rises = gd.gn_refine(
+        x, C, labels, M, total_pixels=1000, variant="prox", iters=2, topk=8, log=logged.append
+    )
+    assert [h["step"] for h in hist] == ["start"] + ["assign", "update"] * 2
+    assert rises and all(r["after"] > r["before"] * (1 + 1e-6) for r in rises)
+    assert {(r["iter"], r["step"]) for r in rises} >= {(1, "update"), (2, "update")}
+    assert any("invalid" in m for m in logged)
+    _, _, _, rises = gd.gn_refine(
         x, C, labels, M, total_pixels=1000, variant="ridge", iters=1, topk=8, log=None
-    )  # no assertion
+    )
+    assert rises == []  # only the proximal variant is held to monotonicity
 
 
 # ----------------------------------------------------------------------------- G0 rule
 
 
-def _g0_rows(values):
-    """values[(scene, K, config)] = (P, D_train, D_test) -> result rows (clamped = raw)."""
+def _g0_rows(values, raw_train=None):
+    """values[(scene, K, config)] = (P, D_train, D_test) -> result rows. Unclamped = clamped, except
+    ``raw_train[(scene, K, config)]`` overrides the unclamped train measurement."""
+    raw_train = raw_train or {}
     return [
         {
             "scene": s,
@@ -436,43 +597,49 @@ def _g0_rows(values):
             "predicted": p,
             "measured_train_clamped": a,
             "measured_test_clamped": b,
-            "measured_train_raw": a,
+            "measured_train_raw": raw_train.get((s, k, c), a),
             "measured_test_raw": b,
         }
         for (s, k, c), (p, a, b) in values.items()
     ]
 
 
-def _separated():
-    """Every pair separated by far more than 5%, P = 1.1 x D_train."""
+def _separated(p_factor=1.1):
+    """Every pair separated by far more than 5%, P = p_factor x D_train."""
     base = {"upstream_l1": 1.0, "plain_l2": 1.3, "lloyd_wopa_area": 0.7}
     out = {}
     for s_i, s in enumerate(g0.SCENES):
         for k_i, k in enumerate(g0.K_VALUES):
             f = 1.0 + 0.5 * k_i + 0.2 * s_i
             for c, v in base.items():
-                out[(s, k, c)] = (1.1 * v * f, v * f, 1.05 * v * f)
+                out[(s, k, c)] = (p_factor * v * f, v * f, 1.05 * v * f)
     return out
 
 
-OK = {"sh_basis": True, "toy_exactness": True}
+OK = {"sh_basis": True, "toy_exactness": True, "e2e_exactness": True}
 
 
-def test_g0_pass_fail_and_ties():
+def _book(res, scene, k, config):
+    return next(
+        b
+        for b in res["calibration"]["codebooks"]
+        if (b["scene"], b["K"], b["config"]) == (scene, k, config)
+    )
+
+
+def test_g0_pass_and_misordered_pairs_fail():
     v = _separated()
     res = g0.judge_g0(_g0_rows(v), OK)
-    assert (
-        res["verdict"] == "pass"
-        and res["clamped"]["n_non_tied"] == 36
-        and res["clamped"]["n_pairs"] == 36
-    )
+    assert res["verdict"] == "pass" and "if_inconclusive" not in res
+    assert res["clamped"]["n_non_tied"] == 36 and res["clamped"]["n_pairs"] == 36
+    assert res["raw"]["outcome"] == "pass"
     # one non-tied pair misordered by P -> fail
     bad = dict(v)
     p, a, b = bad[("bicycle", 16384, "plain_l2")]
     bad[("bicycle", 16384, "plain_l2")] = (0.1, a, b)
     res = g0.judge_g0(_g0_rows(bad), OK)
     assert res["verdict"] == "fail" and res["clamped"]["n_disagree"] >= 1
-    # equal P on a non-tied pair does not agree
+    # equal P on a non-tied pair counts as misordered -> fail
     eq = dict(v)
     p0 = eq[("garden", 4096, "upstream_l1")][0]
     _, a, b = eq[("garden", 4096, "plain_l2")]
@@ -484,12 +651,42 @@ def test_g0_pass_fail_and_ties():
     tie[("garden", 65536, "plain_l2")] = (p1 * 0.9, a1 * 1.03, b1 * 1.03)
     res = g0.judge_g0(_g0_rows(tie), OK)
     assert res["verdict"] == "pass" and res["clamped"]["n_non_tied"] == 34
-    # ratio outside [0.5, 2] for one codebook -> fail
-    ratio = dict(v)
-    p, a, b = ratio[("garden", 16384, "lloyd_wopa_area")]
-    ratio[("garden", 16384, "lloyd_wopa_area")] = (p * 2.5, a, b)
-    res = g0.judge_g0(_g0_rows(ratio), OK)
-    assert res["verdict"] == "fail" and not res["clamped"]["ratio_ok"]
+
+
+def test_g0_ratio_is_reported_not_judged():
+    v = _separated()
+    raw = {("garden", 4096, "plain_l2"): v[("garden", 4096, "plain_l2")][1] * 1.21}
+    res = g0.judge_g0(_g0_rows(v, raw), OK)
+    cal = res["calibration"]
+    assert cal["range"] == [0.5, 2.0] and cal["summary"]["n_codebooks"] == 18
+    assert cal["summary"]["all_calibrated_train_clamped"]
+    assert cal["summary"]["all_calibrated_train_raw"]
+    book = _book(res, "garden", 4096, "plain_l2")
+    assert abs(book["ratio_train_clamped"] - 1.1) < 1e-12
+    assert abs(book["ratio_train_raw"] - 1.1 / 1.21) < 1e-12
+    assert abs(book["ratio_test_clamped"] - 1.1 / 1.05) < 1e-12
+    assert abs(book["cross_diagonal_train"] - (1.21 / 1.1 - 1)) < 1e-12
+    assert abs(_book(res, "bicycle", 65536, "upstream_l1")["cross_diagonal_train"] - (1 / 1.1 - 1)) < 1e-12
+    # every ratio far outside [0.5, 2] (P = 3 D): no codebook calibrated, the verdict still pass
+    res = g0.judge_g0(_g0_rows(_separated(p_factor=3.0)), OK)
+    assert res["verdict"] == "pass"
+    assert res["calibration"]["summary"]["n_calibrated_train_clamped"] == 0
+    assert not res["calibration"]["summary"]["all_calibrated_train_raw"]
+    # one codebook out of range (its P stays the lowest of its K): flagged, nothing else changes
+    one = dict(v)
+    _, a, b = one[("garden", 16384, "lloyd_wopa_area")]
+    one[("garden", 16384, "lloyd_wopa_area")] = (0.55 * a, a, b)  # calibrated
+    res = g0.judge_g0(_g0_rows(one), OK)
+    assert _book(res, "garden", 16384, "lloyd_wopa_area")["calibrated_train_clamped"]
+    one[("garden", 16384, "lloyd_wopa_area")] = (0.3 * a, a, b)  # not calibrated
+    res = g0.judge_g0(_g0_rows(one), OK)
+    assert res["verdict"] == "pass"
+    assert not _book(res, "garden", 16384, "lloyd_wopa_area")["calibrated_train_clamped"]
+    assert res["calibration"]["summary"]["n_calibrated_train_clamped"] == 17
+    # the range is inclusive
+    assert g0.calibrated(0.5) and g0.calibrated(2.0)
+    assert not g0.calibrated(0.4999) and not g0.calibrated(2.0001)
+    assert not g0.calibrated(math.inf) and not g0.calibrated(math.nan)
 
 
 def test_g0_inconclusive_invalid_incomplete_and_tie_boundary():
@@ -503,15 +700,23 @@ def test_g0_inconclusive_invalid_incomplete_and_tie_boundary():
     near[("garden", 4096, "lloyd_wopa_area")] = (1.5, 1.5, 1.02)
     res = g0.judge_g0(_g0_rows(near), OK)
     assert res["clamped"]["n_non_tied"] == 2 and res["verdict"] == "inconclusive"
-    # a ratio failure outranks inconclusive
+    assert res["if_inconclusive"] == g0.IF_INCONCLUSIVE and "E1" in res["if_inconclusive"]
+    # a ratio outside [0.5, 2] no longer changes it (under Amendment 2 it was a fail)
     near[("bicycle", 65536, "plain_l2")] = (5.0, 1.01, 1.01)
-    assert g0.judge_g0(_g0_rows(near), OK)["verdict"] == "fail"
+    res = g0.judge_g0(_g0_rows(near), OK)
+    assert res["verdict"] == "inconclusive"
+    assert not _book(res, "bicycle", 65536, "plain_l2")["calibrated_train_clamped"]
+    # a misordered non-tied pair outranks inconclusive
+    near[("garden", 4096, "lloyd_wopa_area")] = (0.5, 1.5, 1.02)
+    res = g0.judge_g0(_g0_rows(near), OK)
+    assert res["clamped"]["n_non_tied"] == 2 and res["verdict"] == "fail"
+    # invalid outranks fail and pass; incomplete outranks invalid
     v = _separated()
     assert (
         g0.judge_g0(_g0_rows(v), {**OK, "render_parity_garden": False})["verdict"]
         == "invalid"
     )
-    assert g0.judge_g0(_g0_rows(v), {})["verdict"] == "invalid"
+    assert g0.judge_g0(_g0_rows(near), {**OK, "e2e_exactness": False})["verdict"] == "invalid"
     missing = {
         key: val for key, val in v.items() if key != ("bicycle", 4096, "plain_l2")
     }
@@ -519,5 +724,52 @@ def test_g0_inconclusive_invalid_incomplete_and_tie_boundary():
     assert res["verdict"] == "incomplete" and res["missing"] == [
         "bicycle plain_l2 K=4096 seed=0"
     ]
+    assert g0.judge_g0(_g0_rows(missing), {})["verdict"] == "incomplete"
     assert not g0.is_tie(1.0, 1.05) and g0.is_tie(1.0, 1.0499) and g0.is_tie(0.0, 0.0)
     assert not g0.is_tie(0.0, 1e-9)
+
+
+def test_g0_degenerate_cases():
+    v = _separated()
+    # an empty validity dict: the selftest results were never recorded -> invalid
+    res = g0.judge_g0(_g0_rows(v), {})
+    assert res["verdict"] == "invalid" and not res["valid"]
+    # zero train error for one codebook, the lowest of its K: its pairs are non-tied and ordered
+    # by P as by D -> still pass; its ratio is +inf and not calibrated
+    z = dict(v)
+    p, a, b = z[("garden", 4096, "lloyd_wopa_area")]
+    z[("garden", 4096, "lloyd_wopa_area")] = (p, 0.0, b)
+    res = g0.judge_g0(_g0_rows(z), OK)
+    assert res["verdict"] == "pass" and res["clamped"]["n_non_tied"] == 36
+    book = _book(res, "garden", 4096, "lloyd_wopa_area")
+    assert book["ratio_train_clamped"] == math.inf and not book["calibrated_train_clamped"]
+    assert book["cross_diagonal_train"] == -1.0  # D_raw = 0 < P
+    # ... and with P misordered against that zero it fails like any other pair
+    z[("garden", 4096, "lloyd_wopa_area")] = (10.0, 0.0, b)
+    assert g0.judge_g0(_g0_rows(z), OK)["verdict"] == "fail"
+    # zero measured errors everywhere: every pair is a tie -> inconclusive (never pass)
+    zeros = {key: (p, 0.0, 0.0) for key, (p, _, _) in v.items()}
+    res = g0.judge_g0(_g0_rows(zeros), OK)
+    assert res["clamped"]["n_non_tied"] == 0 and res["verdict"] == "inconclusive"
+    assert res["calibration"]["summary"]["n_calibrated_train_clamped"] == 0
+    # P = 0 and D = 0: ratio and cross/diagonal ratio undefined (NaN), not calibrated
+    both = dict(zeros)
+    both[("bicycle", 16384, "upstream_l1")] = (0.0, 0.0, 0.0)
+    book = _book(g0.judge_g0(_g0_rows(both), OK), "bicycle", 16384, "upstream_l1")
+    assert math.isnan(book["ratio_train_clamped"]) and math.isnan(book["cross_diagonal_train"])
+    assert not book["calibrated_train_raw"]
+    # P = 0 < D: ratio 0 (not calibrated), cross/diagonal ratio +inf
+    assert g0.ratio(0.0, 1.0) == 0.0 and g0.cross_diagonal(0.0, 1.0) == math.inf
+
+
+def test_g0_same_rule_over_other_rungs():
+    """E1 re-judges an inconclusive G0 over four non-GN rungs with the same rule."""
+    rungs = ("upstream_l1", "plain_l2", "lloyd_wopa_area", "c3dgs")
+    base = {"upstream_l1": 1.0, "plain_l2": 1.3, "lloyd_wopa_area": 0.7, "c3dgs": 0.5}
+    vals = {
+        (s, k, c): (1.1 * d, d, d) for s in g0.SCENES for k in g0.K_VALUES for c, d in base.items()
+    }
+    res = g0.judge_g0(_g0_rows(vals), OK, configs=rungs)
+    assert res["verdict"] == "pass" and res["configs"] == list(rungs)
+    assert res["clamped"]["n_pairs"] == 2 * 3 * 6 * 2
+    assert res["calibration"]["summary"]["n_codebooks"] == 24

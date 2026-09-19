@@ -39,7 +39,8 @@ md(
 
 Does a per-splat Gauss-Newton metric `M_i = sum_v s_iv y y^T` on the shN coefficients predict how much
 shN vector quantization changes the rendered images? The questions, definitions and the **G0** rule
-are fixed in `kaggle/PREREG_GN.md` (committed before this notebook existed; G0 as in Amendment 2).
+are fixed in `kaggle/PREREG_GN.md` (committed before this notebook existed; G0 as in Amendment 3:
+the verdict is the ranking alone, and the predicted/measured ratio is reported as calibration).
 Scenes: MipNeRF360 **garden** and **bicycle**, the training-#2 checkpoints of runs 1-5, seed-0 PLAS
 order. Per scene: 9 codebooks for G0 (TorchPQ L1, `lloyd_w1`, `lloyd_wopa_area` at K = 4,096, 16,384
 and 65,536) and two exploratory exact-assignment GN refines of `lloyd_wopa_area` at K = 65,536.
@@ -54,11 +55,11 @@ wheel. To resume, also attach this notebook's own earlier output (`gn/`, `gn_cac
 | 1 | config, helpers |
 | 2 | find and restore inputs (checkpoints, sort caches, run-3 caches, wheel, earlier E0 output) |
 | 3 | install gsplat (`bench/gn-vq`, `MAX_JOBS=2`, restored wheel when its key matches), example dependencies |
-| 4 | **CUDA smoke tests:** SH basis against gsplat's `spherical_harmonics`; toy Hutchinson exactness; lifted vs direct assignment on random data (informational) |
+| 4 | **CUDA smoke tests** (`bench/gn/selftest.py`; the run stops here if one fails): SH basis against gsplat's `spherical_harmonics`; toy Hutchinson exactness; end-to-end exactness (non-overlapping toy: predicted = measured dMSE to 1e-4). Informational: lifted vs direct assignment on random data |
 | 5 | MipNeRF360 data for garden and bicycle |
-| 6 | E0 jobs: garden on `cuda:0`, bicycle on `cuda:1` (`kaggle/gn_e0_scene.py`; the 10k-real-splat lifted check runs there, before the refines) |
-| 7 | G0 verdict (`gn_g0.json`, Amendment 2), tables, plot |
-| 8 | `gn_bundle.zip` (top-level csv / json / png of `gn/`) |
+| 6 | E0 jobs: garden on `cuda:0`, bicycle on `cuda:1` (`kaggle/gn_e0_scene.py`; the 10k-real-splat lifted check runs there and gates only the refines; a proximal-objective rise marks that variant invalid) |
+| 7 | G0 verdict (`gn_g0.json`, Amendment 3), calibration, tables, plot |
+| 8 | `gn_bundle.zip` (top-level csv / json / png of `gn/`; `gn_cache/` and `gn_work/` stay in `/kaggle/working` for a later session) |
 """
 )
 
@@ -357,37 +358,17 @@ sh("nvidia-smi")
 )
 
 code(
-    r'''
-# CUDA smoke tests (validity checks of kaggle/PREREG_GN.md): SH basis against gsplat's
-# spherical_harmonics, and the toy Hutchinson exactness test on gsplat's rasterizer (17 channels).
-selftest = f"""
-import json, sys
-sys.path.insert(0, "{SRC_DIR}/bench/gn")
-import torch
-import diagnostics as gd
-import gn_metric as gm
-import sh_basis as sb
-out = {{"sh_basis": sb.cuda_check(), "toy_exactness": gm.toy_exactness(device="cuda")}}
-out["pass"] = bool(out["sh_basis"]["pass"] and out["toy_exactness"]["pass"])
-# Informational (not a G0 validity check): lifted fp32 vs direct float64 assignment on random data;
-# the job repeats it on 10,000 real splats before the refines and stops them if it fails.
-g = torch.Generator().manual_seed(0)
-x = (torch.randn(4000, 15, 3, generator=g) * 0.3).reshape(4000, 45).cuda()
-a = torch.randn(4000, 15, 15, generator=g, dtype=torch.float64)
-a = a * (torch.arange(15)[None, None, :] < (torch.arange(4000) % 16)[:, None, None])
-M = gm.pack(a @ a.transpose(1, 2)).float().cuda()
-C = x[torch.randperm(4000, generator=g)[:2048].cuda()] + 0.05 * torch.randn(2048, 45, generator=g).cuda()
-out["lifted_random_cuda"] = gd.lifted_check(x, M, C, n_sample=2000, seed=0)
-json.dump(out, open("{GN_OUT}/gn_selftest.json", "w"), indent=2)
-print(json.dumps(out, indent=2))
-if not out["pass"]:
-    raise SystemExit("GN SELFTEST FAILED")
-"""
-open("/tmp/gn_selftest.py", "w").write(selftest)
+    r"""
+# CUDA smoke tests: the G0 validity checks of kaggle/PREREG_GN.md that need no scene. SH basis against
+# gsplat's spherical_harmonics, the toy Hutchinson exactness check (Amendment 1) and the end-to-end
+# exactness check (Amendment 3) on gsplat's rasterizer. selftest.py exits non-zero if one fails, sh()
+# raises, and the notebook stops here, before the data download and the scene jobs.
+# Informational only: lifted fp32 vs direct float64 assignment on random data.
 t0 = time.time()
-sh(f"{PY} /tmp/gn_selftest.py", cwd="/tmp", env={"CUDA_VISIBLE_DEVICES": "0"})
+sh(f"{PY} {SRC_DIR}/bench/gn/selftest.py --device cuda --out {GN_OUT}/gn_selftest.json",
+   cwd="/tmp", env={"CUDA_VISIBLE_DEVICES": "0"})
 record_timing("selftest_s", time.time() - t0)
-'''
+"""
 )
 
 code(
@@ -477,7 +458,7 @@ finally:
 
 code(
     r"""
-# G0, exactly as pre-registered (bench/gn/g0.py), plus the tables and a plot.
+# G0, exactly as pre-registered (bench/gn/g0.py, Amendment 3), plus the tables and a plot.
 import csv
 
 import pandas as pd
@@ -492,10 +473,17 @@ for scene in SCENES:
     if os.path.exists(path):
         rows += list(csv.DictReader(open(path, newline="")))
 selftest = json.load(open(f"{GN_OUT}/gn_selftest.json"))
-validity = {"sh_basis": selftest["sh_basis"]["pass"], "toy_exactness": selftest["toy_exactness"]["pass"]}
+validity = {k: bool(selftest[k]["pass"]) for k in ("sh_basis", "toy_exactness", "e2e_exactness")}
+refines = {}  # exploratory, not part of G0
 for scene in SCENES:
     meta = json.load(open(f"{GN_OUT}/gn_meta_{scene}.json"))
     validity[f"render_parity_{scene}"] = bool(meta["render_parity"]["pass"])
+    refines[scene] = {
+        "lifted_check_pass": meta.get("lifted_check", {}).get("pass"),
+        "refines_skipped": meta.get("refines_skipped"),
+        **{r["config"]: {"valid": r["valid"], "invalid_reason": r["invalid_reason"]}
+           for r in rows if r["scene"] == scene and r["config"].startswith("gn_refine")},
+    }
     ref = [r for r in rows if r["scene"] == scene and r["config"] == "lloyd_wopa_area"
            and r.get("n_clusters") not in (None, "") and int(float(r["n_clusters"])) == 65536
            and int(float(r["seed"])) == 0]
@@ -504,18 +492,21 @@ for scene in SCENES:
         validity[f"reproduction_{scene}"] = bool(abs(float(r["run3_dPSNR"])) <= 1e-6 and r["run3_size_equal"] == "True")
 verdict = g0.judge_g0(rows, validity)
 json.dump(verdict, open(f"{GN_OUT}/gn_g0.json", "w"), indent=2)
-summary = {k: verdict.get(k) for k in ("verdict", "valid", "complete", "missing", "validity")}
+summary = {k: verdict.get(k) for k in ("verdict", "valid", "complete", "missing", "validity", "if_inconclusive")}
 if "clamped" in verdict:
-    summary.update({k: verdict["clamped"][k] for k in ("ratio_ok", "n_pairs", "n_non_tied", "n_disagree")})
+    summary.update({k: verdict["clamped"][k] for k in ("n_pairs", "n_non_tied", "n_disagree")})
+    summary["calibration (reported, not judged)"] = verdict["calibration"]["summary"]
+summary["refines (exploratory)"] = refines
 print(json.dumps(summary, indent=2))
 
 df = pd.DataFrame(rows)
-cols = ["scene", "config", "n_clusters", "seed", "source", "predicted", "objective_unquantized",
+cols = ["scene", "config", "n_clusters", "seed", "source", "valid", "predicted", "objective_unquantized",
         "measured_train_clamped", "measured_test_clamped", "ratio_train_clamped", "PSNR", "SSIM", "LPIPS",
         "train_PSNR", "shn_only_PSNR", "size_bytes", "shN_centroids_bytes", "shN_labels_bytes", "run3_dPSNR"]
 display(df[[c for c in cols if c in df.columns]])
 if "clamped" in verdict:
     display(pd.DataFrame(verdict["clamped"]["pairs"]))
+    display(pd.DataFrame(verdict["calibration"]["codebooks"]))
 
 import matplotlib
 matplotlib.use("Agg")
@@ -530,7 +521,8 @@ for ax, scene in zip(axes if len(SCENES) > 1 else [axes], SCENES):
         for kind, face in (("train", None), ("test", "none")):
             ax.scatter(float(r[f"measured_{kind}_clamped"]), float(r["predicted"]), marker=markers.get(k, "x"),
                        facecolors=face, edgecolors="C0" if r["config"] in g0.CONFIG_ORDER else "C3")
-        ax.annotate(f"{r['config']} K{k}", (float(r["measured_train_clamped"]), float(r["predicted"])), fontsize=6)
+        label = f"{r['config']} K{k}" + ("" if r["valid"] == "True" else " INVALID")
+        ax.annotate(label, (float(r["measured_train_clamped"]), float(r["predicted"])), fontsize=6)
     vals = sub[["predicted", "measured_train_clamped", "measured_test_clamped"]].astype(float)
     lim = [float(vals.min().min()) * 0.8, float(vals.max().max()) * 1.25]
     ax.plot(lim, lim, "k-", lw=0.8)
@@ -538,7 +530,8 @@ for ax, scene in zip(axes if len(SCENES) > 1 else [axes], SCENES):
     ax.plot(lim, [0.5 * lim[0], 0.5 * lim[1]], "k:", lw=0.8)
     ax.set_xscale("log"); ax.set_yscale("log")
     ax.set_xlabel("measured shN-only dMSE (clamped; filled = train, open = test)"); ax.set_ylabel("predicted P")
-    ax.set_title(f"{scene}: G0 verdict (both scenes) {verdict['verdict']}; red = refines (not in G0)", fontsize=9)
+    ax.set_title(f"{scene}: G0 verdict (both scenes, ranking) {verdict['verdict']}; dotted = calibrated band; "
+                 "red = refines (not in G0)", fontsize=9)
 fig.tight_layout()
 fig.savefig(f"{GN_OUT}/gn_g0.png", dpi=120)
 display(Image(f"{GN_OUT}/gn_g0.png"))
@@ -547,6 +540,8 @@ display(Image(f"{GN_OUT}/gn_g0.png"))
 
 code(
     r"""
+# The bundle holds only the top-level csv / json / png files of gn/. gn_cache/ (the GN metric, about
+# 480 MB per scene) and gn_work/ stay in /kaggle/working, so a later notebook can attach this output.
 names = write_bundle(GN_OUT, f"{WORK}/gn_bundle.zip")
 print("gn_bundle.zip:", names)
 shutil.rmtree(RUNS_ROOT, ignore_errors=True)

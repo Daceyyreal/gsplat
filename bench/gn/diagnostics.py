@@ -1,7 +1,8 @@
 """E0 diagnostics on the GN metric (definitions in kaggle/PREREG_GN.md).
 
 a. per-splat spectrum of M_i; b. Spearman rank correlations; c. predicted vs measured shN error;
-d. GN refine of a codebook, with shortlist recall against exhaustive Mahalanobis search.
+d. exact Mahalanobis assignment, its check against brute force, and the GN refines of a codebook;
+e. the end-to-end exactness check of P against the measured error on a toy scene (Amendment 3).
 
 Layout conventions: ``x`` is shN flattened as ``shN.reshape(N, 45)`` (index ``k * 3 + channel``),
 as ``PngCompression`` clusters it; centroids are ``[K, 45]`` in the same layout; ``M`` is the packed
@@ -20,6 +21,7 @@ from torch import Tensor
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gn_metric as gm  # noqa: E402
+import sh_basis as sb  # noqa: E402
 
 D = gm.D  # 15
 
@@ -319,13 +321,18 @@ def lifted_v(C3: Tensor) -> Tensor:
     return torch.cat([q[:, :, 0], q[:, :, 1], q[:, :, 2], p], dim=1)
 
 
+def codebook_shift(C3: Tensor) -> Tensor:
+    """The codebook mean ``[1, 15, 3]`` (float64) that ``lifted_argmin`` subtracts from both sides."""
+    return C3.double().mean(dim=0, keepdim=True)
+
+
 def lifted_argmin(x: Tensor, M_packed: Tensor, C: Tensor, chunk: int = 2048) -> Tensor:
     """``argmin_k sum_ch (c_i^ch - q_k^ch)^T M_i (c_i^ch - q_k^ch)`` for every splat, as
     ``argmin_k u_i . v_k`` (the per-splat constant ``sum_ch c^T M c`` drops out): one fp32 matrix
     product per chunk of splats, TF32 off. Coordinates are shifted by the codebook mean first, which
     leaves every distance unchanged and keeps the fp32 terms small."""
     x3, C3 = _x3(x), _x3(C)
-    shift = C3.double().mean(dim=0, keepdim=True)
+    shift = codebook_shift(C3)
     V = lifted_v(C3.double() - shift).float()
     out = torch.empty(x3.shape[0], dtype=torch.int64, device=x3.device)
     prev = torch.backends.cuda.matmul.allow_tf32
@@ -364,6 +371,46 @@ def brute_force_min(
     return dmin, arg
 
 
+# Version of the lifted-check criterion (PREREG_GN.md Amendment 3). A stored record with another
+# version is re-run on resume. 1 = Amendment 2 (relative to d_min); 2 = Amendment 3 (scale bounds).
+LIFTED_CHECK_VERSION = 2
+
+
+def lifted_criterion(
+    excess: Tensor, d_min: Tensor, scale: Tensor, tol_rel: float = 1e-4
+) -> Dict:
+    """Amendment 3: pass needs ``sum excess / sum d_min <= tol_rel`` and ``excess_i <= tol_rel *
+    scale_i`` for every splat (float64 tensors over the evaluated splats)."""
+    sum_ex, sum_min = float(excess.sum()), float(d_min.sum())
+    if sum_min > 0:
+        agg = sum_ex / sum_min
+    else:  # every minimum is exactly 0
+        agg = 0.0 if sum_ex <= 0 else math.inf
+    per = torch.where(
+        scale > 0,
+        excess / scale.clamp_min(1e-300),
+        torch.where(excess > 0, math.inf, 0.0).to(excess.dtype),
+    )
+    over = excess > tol_rel * scale
+    return {
+        "sum_excess_over_sum_dmin": agg,
+        "max_excess_over_scale": float(per.max()) if len(per) else 0.0,
+        "n_excess_over_tol_scale": int(over.sum()),
+        "aggregate_pass": bool(agg <= tol_rel),
+        "per_splat_pass": not bool(over.any()),
+        "pass": bool(agg <= tol_rel) and not bool(over.any()),
+    }
+
+
+def lifted_check_needed(record: Optional[Dict]) -> bool:
+    """Run the lifted check unless ``record`` is a pass under the current criterion version."""
+    return (
+        record is None
+        or not record.get("pass")
+        or record.get("criterion_version") != LIFTED_CHECK_VERSION
+    )
+
+
 def lifted_check(
     x: Tensor,
     M_packed: Tensor,
@@ -372,28 +419,51 @@ def lifted_check(
     seed: int = 0,
     tol_rel: float = 1e-4,
 ) -> Dict:
-    """Lifted fp32 argmin against the exhaustive float64 direct minimum on ``n_sample`` random splats
-    with ``tr(M) > 0``: the direct distance at the lifted argmin must be within ``tol_rel`` of the
-    minimum (ties allowed)."""
-    eligible = (gm.trace_packed(M_packed) > 0).nonzero(as_tuple=True)[0]
+    """Lifted fp32 argmin against the exhaustive float64 direct minimum (Amendment 3).
+
+    ``n_sample`` random splats (``seed``) are drawn from all splats; the criterion is evaluated over
+    those with ``tr(M_i) > 0``. Per splat, ``excess_i`` = direct distance at the lifted argmin minus
+    the direct minimum ``d_min_i``, and ``scale_i = |c_i - m|^2_{M_i} + tr(M_i) max_k |q_k - m|^2``
+    with ``m`` the codebook mean of the fp32 shift (``codebook_shift``). See ``lifted_criterion``."""
     g = torch.Generator(device="cpu").manual_seed(seed)
-    pick = eligible[
-        torch.randperm(len(eligible), generator=g)[:n_sample].to(eligible.device)
-    ]
+    sample = torch.randperm(x.shape[0], generator=g)[:n_sample].to(x.device)
+    pos = gm.trace_packed(M_packed[sample]) > 0
+    pick = sample[pos]
+    out = {
+        "criterion_version": LIFTED_CHECK_VERSION,
+        "criterion": (
+            "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, "
+            "scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean"
+        ),
+        "tol_rel": tol_rel,
+        "n_sample": int(len(sample)),
+        "n_zero_trace_in_sample": int((~pos).sum()),
+        "n": int(len(pick)),
+    }
     if len(pick) == 0:
-        return {"n": 0, "pass": False}
+        return {**out, "pass": False}
     xs, Ms = x[pick], M_packed[pick]
     lifted = lifted_argmin(xs, Ms, C)
     d_lifted = direct_distance(xs, Ms, C, lifted)
     d_min, arg = brute_force_min(xs, Ms, C)
-    rel = (d_lifted - d_min) / d_min.clamp_min(1e-300)
+    excess = d_lifted - d_min
+    C3 = _x3(C).double()
+    m = codebook_shift(C3)
+    q_far = float(((C3 - m) ** 2).sum(dim=(1, 2)).max())
+    scale = quad_form(Ms, _x3(xs).double() - m) + gm.trace_packed(Ms.double()) * q_far
+    crit = lifted_criterion(excess, d_min, scale, tol_rel)
+    pos_min = d_min > 0
     return {
-        "n": int(len(pick)),
-        "max_rel_err": float(rel.max()),
-        "n_over_tol": int((rel > tol_rel).sum()),
+        **out,
+        **crit,
+        "n_dmin_below_1e-3_scale": int((d_min < 1e-3 * scale).sum()),
+        "n_dmin_zero": int((~pos_min).sum()),
+        # the Amendment-2 measure, for reference: excess relative to d_min where d_min > 0
+        "max_excess_over_dmin": float((excess[pos_min] / d_min[pos_min]).max())
+        if bool(pos_min.any())
+        else float("nan"),
         "same_index_fraction": float((lifted == arg).double().mean()),
-        "tol_rel": tol_rel,
-        "pass": bool(float(rel.max()) <= tol_rel),
+        "max_codebook_sq_dist_from_mean": q_far,
     }
 
 
@@ -446,6 +516,7 @@ def share_in_l2_topk(
 
 
 REFINE_VARIANTS = ("ridge", "prox")
+MONOTONE_RTOL = 1e-6  # the proximal objective may not rise by more (Amendment 3)
 
 
 def update_centroids(
@@ -459,7 +530,8 @@ def update_centroids(
 ) -> Tuple[Tensor, int]:
     """Per cluster, per channel, float64, with ``mu = eps * tr(sum M) / 15``:
     ridge ``q = (sum M + mu I)^-1 sum M c``; prox ``q = (sum M + mu I)^-1 (sum M c + mu q_old)``.
-    Clusters with ``tr(sum M) = 0`` keep their centroid. Returns (centroids like ``C_prev``, n kept)."""
+    Clusters with ``tr(sum M) = 0`` (empty, or all members unseen) keep ``q_old`` in both variants.
+    Returns (centroids like ``C_prev``, n kept)."""
     if variant not in REFINE_VARIANTS:
         raise ValueError(f"unknown refine variant {variant!r}")
     K = C_prev.shape[0]
@@ -494,7 +566,8 @@ def update_centroids(
 def gn_objective(
     x: Tensor, C: Tensor, labels: Tensor, M_packed: Tensor, total_pixels: int
 ) -> float:
-    """The GN objective in the units of ``P``: ``sum_i d(i, label_i) / (3 * total train pixels)``."""
+    """The GN objective in the units of ``P``: ``sum_i d(i, label_i) / (3 * total train pixels)``, the
+    per-splat direct-formula distances summed in float64."""
     return float(direct_distance(x, M_packed, C, labels).sum()) / (3.0 * total_pixels)
 
 
@@ -508,22 +581,29 @@ def gn_refine(
     iters: int = 3,
     eps: float = 1e-4,
     topk: int = 64,
-    monotone_rtol: float = 1e-6,
+    monotone_rtol: float = MONOTONE_RTOL,
     log: Optional[Callable[[str], None]] = print,
-) -> Tuple[Tensor, Tensor, List[Dict]]:
+) -> Tuple[Tensor, Tensor, List[Dict], List[Dict]]:
     """``iters`` rounds of exact assignment then the ``variant`` centroid update, warm-started from
-    ``(C0, labels0)``. The objective is logged after every step; for ``prox`` it must not increase
-    (relative tolerance ``monotone_rtol``), otherwise this raises."""
+    ``(C0, labels0)``. The objective is logged after every step. For ``prox`` it must not rise by more
+    than ``monotone_rtol`` relative; a rise is logged and returned (the variant is then invalid,
+    PREREG_GN.md Amendment 3), and the iterations go on. Returns (centroids, labels, history, rises)."""
     C, labels = C0.clone(), labels0.clone()
     obj = gn_objective(x, C, labels, M_packed, total_pixels)
     history = [{"iter": 0, "step": "start", "objective": obj}]
+    rises: List[Dict] = []
 
     def check(value, step, it):
-        if variant == "prox" and value > history[-1]["objective"] * (1 + monotone_rtol):
-            raise RuntimeError(
-                f"GN objective increased in the proximal refine (iter {it}, {step}): "
-                f"{history[-1]['objective']!r} -> {value!r}"
+        before = history[-1]["objective"]
+        if variant == "prox" and value > before * (1 + monotone_rtol):
+            rises.append(
+                {"iter": it, "step": step, "before": before, "after": value}
             )
+            if log is not None:
+                log(
+                    f"GN refine {variant}: objective rose at iter {it} ({step}), {before!r} -> "
+                    f"{value!r}, more than {monotone_rtol:g} relative; this variant is invalid"
+                )
 
     for it in range(1, iters + 1):
         t = time.perf_counter()
@@ -568,4 +648,211 @@ def gn_refine(
                 f"assign ({changed:.4f} labels changed, top-{topk} share {share['share_all']:.4f}), "
                 f"{obj:.6g} after update"
             )
-    return C, labels, history
+    return C, labels, history, rises
+
+
+# ------------------------------------------- e. end-to-end exactness (validity check)
+
+E2E_GRID = (8, 6)  # splats per row and per column: one per 16 x 16 pixel cell of the toy view
+E2E_OVERLAP_SCALE = 5.0  # the overlapping variants: the same splats with 5x larger scales
+E2E_AMPLITUDE = 0.1  # shN perturbation, uniform in [-0.1, 0.1] per coefficient
+E2E_SHIFT = (0.06, -0.04, 0.15)  # translation of the second view
+
+
+def e2e_scene(
+    overlapping: bool = False, seed: int = 0, device="cpu"
+) -> Dict[str, Tensor]:
+    """48 pre-activation splats, one per cell of an 8 x 6 grid over the toy view (jittered by up to
+    1.5 px), depth 3 +- 0.05, scales small enough that no two footprints share a pixel, colours with
+    SH + 0.5 well inside (0, 1). ``overlapping`` multiplies the scales by 5 and changes nothing else.
+    Drawn with a CPU generator and then moved to ``device``, so the CPU tests and the CUDA check use
+    the same scene. The identity render has 48 channels, rendered as 32 + 16 (both compiled)."""
+    g = torch.Generator().manual_seed(seed)
+    nx, ny = E2E_GRID
+    n = nx * ny
+    iy, ix = torch.meshgrid(torch.arange(ny), torch.arange(nx), indexing="ij")
+    u = (ix.reshape(-1) + 0.5) * (gm.TOY_WIDTH / nx)
+    u = u + (torch.rand(n, generator=g) * 2 - 1) * 1.5
+    v = (iy.reshape(-1) + 0.5) * (gm.TOY_HEIGHT / ny)
+    v = v + (torch.rand(n, generator=g) * 2 - 1) * 1.5
+    z = gm.TOY_DEPTH + (torch.rand(n, generator=g) * 2 - 1) * 0.05
+    means = torch.stack(
+        [
+            (u - gm.TOY_WIDTH / 2) * z / gm.TOY_FOCAL,
+            (v - gm.TOY_HEIGHT / 2) * z / gm.TOY_FOCAL,
+            z,
+        ],
+        dim=-1,
+    )
+    splats = {
+        "means": means,
+        "quats": torch.randn(n, 4, generator=g),
+        "scales": torch.randn(n, 3, generator=g) * 0.05 - 3.6,
+        "opacities": torch.randn(n, generator=g) * 0.3 + 1.0,
+        "sh0": torch.randn(n, 1, 3, generator=g) * 0.2,
+        "shN": (torch.rand(n, D, 3, generator=g) * 2 - 1) * 0.05,
+    }
+    if overlapping:
+        splats["scales"] = splats["scales"] + math.log(E2E_OVERLAP_SCALE)
+    return {k: t.to(device) for k, t in splats.items()}
+
+
+def e2e_views(device="cpu") -> List[Dict]:
+    """The toy camera, and the same camera translated by ``E2E_SHIFT``."""
+    cam = gm.toy_camera(device=device)
+    moved = torch.eye(4, device=device)
+    moved[:3, 3] = torch.tensor(E2E_SHIFT, device=device)
+    return [cam, {**cam, "camtoworld": moved}]
+
+
+def e2e_case(
+    splats: Dict[str, Tensor],
+    delta: Tensor,
+    render: Callable,
+    settings: "gm.RenderSettings",
+    views: List[Dict],
+) -> Dict:
+    """``P`` (``predicted_dmse`` on ``M_i`` accumulated from the exact ``s_iv = sum_p w_ip^2`` of
+    identity-feature renders) against the measured shN-only error (``measure_dmse`` on the SH render)
+    for ``shN + delta``, and the preconditions under which the two are equal: at most one splat per
+    pixel, ``SH + 0.5`` in (0, 1) for the original and perturbed coefficients at every visible splat
+    and view, rendered values in [0, 1) with covered pixels > 0."""
+    n = splats["means"].shape[0]
+    device = splats["means"].device
+    act = gm.activated(splats)
+    shn_q = splats["shN"] + delta
+    coeffs = torch.cat([splats["sh0"], splats["shN"]], dim=1)
+    coeffs_q = torch.cat([splats["sh0"], shn_q], dim=1)
+    acc = gm.GNAccumulator(n, device)
+    per_pixel_max, blend2, covered_px = 0, 0, 0
+    col_lo, col_hi = math.inf, -math.inf
+    img_lo, img_hi, covered_lo = math.inf, -math.inf, math.inf
+    n_visible = []
+    with torch.no_grad():
+        for view in views:
+            c2w, K = view["camtoworld"], view["K"]
+            W, H = int(view["width"]), int(view["height"])
+            ident, info = render(
+                act, torch.eye(n, device=device), c2w, K, W, H, settings
+            )
+            w = ident.double().reshape(-1, n)
+            per_pixel = (w > 0).sum(dim=1)
+            per_pixel_max = max(per_pixel_max, int(per_pixel.max()))
+            blend2 += int((per_pixel >= 2).sum())
+            covered_px += int((per_pixel >= 1).sum())
+            vis = gm.visible_from_info(info, n)
+            n_visible.append(int(vis.sum()))
+            campos = sb.camera_positions(gm.viewmat_of(c2w))[0]
+            acc.add_view(
+                w.pow(2).sum(dim=0).float(),
+                w.sum(dim=0).float(),
+                vis,
+                act["means"],
+                campos,
+                coeffs,
+                W * H,
+            )
+            basis = sb.sh_basis(act["means"][vis] - campos, 3)
+            covered = (per_pixel >= 1).reshape(H, W)
+            for c in (coeffs, coeffs_q):
+                col = (basis[:, :, None] * c[vis]).sum(dim=1) + 0.5
+                col_lo = min(col_lo, float(col.min()))
+                col_hi = max(col_hi, float(col.max()))
+                img, _ = render(
+                    act, c, c2w, K, W, H, settings, sh_degree=settings.sh_degree
+                )
+                img_lo = min(img_lo, float(img.min()))
+                img_hi = max(img_hi, float(img.max()))
+                if bool(covered.any()):
+                    covered_lo = min(covered_lo, float(img[covered].min()))
+    gn = acc.result()
+    predicted = predicted_dmse(gn["M_packed"], delta, gn["total_pixels"])
+
+    def render_rgb(view: Dict, s: Dict[str, Tensor]) -> Tensor:
+        img, _ = render(
+            gm.activated(s),
+            torch.cat([s["sh0"], s["shN"]], dim=1),
+            view["camtoworld"],
+            view["K"],
+            int(view["width"]),
+            int(view["height"]),
+            settings,
+            sh_degree=settings.sh_degree,
+        )
+        return img
+
+    meas = measure_dmse(render_rgb, views, splats, {"q": shn_q})["q"]
+    d_raw = meas["raw"]
+    ok = (
+        per_pixel_max <= 1
+        and 0 < col_lo
+        and col_hi < 1
+        and img_lo >= 0
+        and img_hi < 1
+        and covered_lo > 0
+    )
+    return {
+        "n_splats": n,
+        "n_visible_per_view": n_visible,
+        "max_splats_per_pixel": per_pixel_max,
+        "overlap_fraction": blend2 / max(covered_px, 1),
+        "sh_plus_half_min": col_lo,
+        "sh_plus_half_max": col_hi,
+        "render_min": img_lo,
+        "render_max": img_hi,
+        "render_min_covered": covered_lo,
+        "preconditions_ok": bool(ok),
+        "total_pixels": gn["total_pixels"],
+        "predicted": predicted,
+        "measured_raw": d_raw,
+        "measured_clamped": meas["clamped"],
+        "rel_err": abs(predicted - d_raw) / d_raw if d_raw > 0 else math.inf,
+        "ratio_raw": predicted / d_raw if d_raw > 0 else math.inf,
+        "cross_diagonal": d_raw / predicted - 1.0 if predicted > 0 else math.inf,
+    }
+
+
+def e2e_exactness(
+    render: Optional[Callable] = None,
+    settings: Optional["gm.RenderSettings"] = None,
+    seed: int = 0,
+    device="cuda",
+    amplitude: float = E2E_AMPLITUDE,
+    tol_rel: float = 1e-4,
+) -> Dict:
+    """End-to-end exactness of the GN prediction (PREREG_GN.md Amendment 3, a G0 validity check).
+
+    On the non-overlapping toy scene (``e2e_scene``) with exact ``s_iv`` and a random shN perturbation
+    (uniform, ``amplitude`` per coefficient), ``P`` must equal the measured unclamped shN-only error to
+    ``tol_rel`` relative, and the preconditions of ``e2e_case`` must hold. Reported, not asserted: the
+    same perturbation on the overlapping scene, and one perturbation shared by all splats there (the
+    fully correlated case); their ``preconditions_ok`` is False by construction.
+    ``render`` defaults to ``gm.gsplat_render``, looked up at call time."""
+    render = render or gm.gsplat_render
+    settings = settings or gm.RenderSettings(
+        False, "classic", "pinhole", False, False, 0.01, 1e10, 3
+    )
+    views = e2e_views(device)
+    nx, ny = E2E_GRID
+    g = torch.Generator().manual_seed(seed + 1)
+    delta = (torch.rand(nx * ny, D, 3, generator=g) * 2 - 1) * amplitude
+    delta = delta.to(device)
+    shared = delta[:1].expand_as(delta).contiguous()
+    out = {
+        "n_views": len(views),
+        "amplitude": amplitude,
+        "tol_rel": tol_rel,
+        "seed": seed,
+        "non_overlapping": e2e_case(
+            e2e_scene(False, seed, device), delta, render, settings, views
+        ),
+        "overlapping": e2e_case(
+            e2e_scene(True, seed, device), delta, render, settings, views
+        ),
+        "overlapping_shared_delta": e2e_case(
+            e2e_scene(True, seed, device), shared, render, settings, views
+        ),
+    }
+    ex = out["non_overlapping"]
+    out["pass"] = bool(ex["preconditions_ok"] and ex["rel_err"] <= tol_rel)
+    return out

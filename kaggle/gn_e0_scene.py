@@ -1,4 +1,4 @@
-"""E0 for one scene (kaggle/PREREG_GN.md with Amendments 1-2): the Gauss-Newton metric for shN over
+"""E0 for one scene (kaggle/PREREG_GN.md with Amendments 1-3): the Gauss-Newton metric for shN over
 the train views, its spectrum and rank correlations, predicted vs measured shN error for the three
 run-3 configs at K in {4096, 16384, 65536}, and the exploratory exact-assignment GN refines.
 
@@ -10,7 +10,11 @@ run-3 configs at K in {4096, 16384, 65536}, and the exploratory exact-assignment
 
 Resumable: the GN cache (``--gn_cache``), each clustering (``--work_dir``/clusters) and each
 (scene, config, K, seed) row of ``gn_results_<scene>.csv`` are kept; the spectrum and correlation
-files are skipped when present.
+files are skipped when present; a lifted-check pass is reused only under the current criterion version.
+
+Failures (Amendment 3): a render-parity failure raises before any GN work. A failed lifted check skips
+only the refines. A proximal-objective rise marks that variant's row invalid (``valid`` = False) and
+the job goes on.
 """
 
 import argparse
@@ -70,6 +74,8 @@ COLUMNS = [
     "distance",
     "weights",
     "refine_variant",
+    "valid",
+    "invalid_reason",
     "predicted",
     "objective_unquantized",
     "measured_train_clamped",
@@ -600,6 +606,7 @@ def main(argv=None):
             "n_clusters": int(centroids.shape[0]),
             "seed": seed,
             "source": source,
+            "valid": True,  # a refine variant overrides it (Amendment 3)
             "predicted": predicted,
             "measured_train_clamped": m_train["clamped"],
             "measured_test_clamped": m_test["clamped"],
@@ -694,22 +701,31 @@ def main(argv=None):
         x = sorted_raw["shN"].reshape(len(sorted_raw["shN"]), -1).float().contiguous()
         M_sorted = M[order]
         C0, L0 = warm["centroids"].to(dev), warm["labels"].to(dev)
-        if "lifted_check" not in meta or not meta["lifted_check"].get("pass"):
+        # Amendment 3: re-run unless a pass under the current criterion version is recorded.
+        if gd.lifted_check_needed(meta.get("lifted_check")):
             t = time.perf_counter()
             chk = gd.lifted_check(x, M_sorted, C0, n_sample=args.n_lifted_check, seed=0)
             chk["time_s"] = time.perf_counter() - t
             meta["lifted_check"] = chk
             write_json(meta_path, meta)
             log(scene, f"lifted vs direct check: {chk}")
-            if not chk["pass"]:
-                raise RuntimeError(
-                    f"LIFTED CHECK FAILED: lifted fp32 argmin vs direct float64 minimum ({chk})"
-                )
+        if not meta["lifted_check"]["pass"]:
+            # stops only the refines: the uncompressed row, G0 and the bundle still follow
+            log(
+                scene,
+                f"LIFTED CHECK FAILED (criterion version {gd.LIFTED_CHECK_VERSION}): the refines "
+                f"{todo} are skipped; the G0 rows are unaffected",
+            )
+            meta["refines_skipped"] = {"configs": todo, "reason": "lifted check failed"}
+            write_json(meta_path, meta)
+            todo = []
+        else:
+            meta.pop("refines_skipped", None)
         for name in todo:
             variant = REFINES[name]
             ts._sync()
             tic = time.perf_counter()
-            C, labels, history = gd.gn_refine(
+            C, labels, history, rises = gd.gn_refine(
                 x,
                 C0,
                 L0,
@@ -723,11 +739,23 @@ def main(argv=None):
             )
             ts._sync()
             refine_s = time.perf_counter() - tic
+            # Amendment 3: a proximal rise marks this variant's rows invalid; the job goes on.
+            valid = not rises
+            reason = (
+                ""
+                if valid
+                else f"proximal objective rose by more than {gd.MONOTONE_RTOL:g} relative at "
+                + ", ".join(f"iter {r['iter']} {r['step']}" for r in rises)
+            )
+            if not valid:
+                log(scene, f"{name}: INVALID ({reason}); continuing with the other rows")
             extra = {
                 "clustering": "gn_refine",
                 "distance": "mahalanobis",
                 "weights": "M_i",
                 "refine_variant": variant,
+                "valid": valid,
+                "invalid_reason": reason,
                 "objective_unquantized": history[-1]["objective"],
                 "refine_time_s": refine_s,
                 "n_iters": args.refine_iters,
@@ -757,6 +785,10 @@ def main(argv=None):
                     "mu": "eps * tr(sum M) / 15 per cluster",
                     "topk_diagnostic": args.topk,
                     "history": history,
+                    "valid": valid,
+                    "invalid_reason": reason,
+                    "monotone_rtol": gd.MONOTONE_RTOL,
+                    "objective_rises": rises,
                     "objective_unquantized_final": history[-1]["objective"],
                     "objective_after_quantization": row["predicted"],
                     "refine_time_s": refine_s,
@@ -779,6 +811,7 @@ def main(argv=None):
                 "config": "uncompressed",
                 "seed": 0,
                 "source": "checkpoint",
+                "valid": True,
                 "PSNR": stats["psnr"],
                 "SSIM": stats["ssim"],
                 "LPIPS": stats["lpips"],
