@@ -236,6 +236,128 @@ Not bundled but kept in the output for resuming: `gn_cache/<scene>.pt` (M is 1,0
 G1 is not judged in E0. Before E1, write down the exact GN-VQ variant and its size matching, as
 PREREG_GN.md requires.
 
+## Session decisions (E0, 2026-09-19)
+
+These are the decisions from building E0 whose reasons `PREREG_GN.md` and the code comments don't
+give. Where PREREG or the code already records *what* was decided, the entry says so and adds the
+*why*. E0 has not run, so no decision below was made or changed after a result existed.
+
+### The seven choices flagged at the end of the build
+
+1. **Verdict order: `incomplete` > `invalid` > `fail` > `inconclusive` > `pass`.** The order itself
+   is in PREREG Amendment 2 and `g0.py`. A ratio failure or a misordered non-tied pair means `fail`
+   even when fewer than 6 pairs are non-tied.
+   - `fail` beats `inconclusive` because each failure is evidence against the metric, and a shortage
+     of informative pairs can't cancel it. `inconclusive` means "too little evidence either way", so
+     it applies only when nothing disagrees.
+   - `invalid` outranks `fail` because a failed validity check means the measurement can't be trusted.
+   - `incomplete` outranks everything because a missing row makes every count meaningless.
+2. **Equal predictions on a non-tied pair count as disagreeing.** This is in PREREG and `g0.py`. The
+   rule asks whether P orders the pair the way D does. If P can't separate two codebooks whose
+   measured errors differ by 5% or more, P has not ordered them. Counting that as agreement would
+   reward a degenerate predictor such as a constant P. Exact float equality is not expected with real
+   data; this is a guard.
+3. **Assignment guard: a splat keeps its current centroid unless the new one is strictly closer by the
+   direct formula.** What it does is in PREREG and in `assign_exact`'s docstring.
+   - The lifted argmin is an fp32 matrix product. On near-ties it can pick a centroid that is
+     marginally farther by the exact float64 direct distance.
+   - Without the guard, an assignment step could raise the objective by rounding. That would trip the
+     proximal refine's monotonicity assertion for a numerical reason rather than a real one.
+   - With it, assignment never raises the objective. The number of splats it keeps is logged
+     (`kept_current_by_guard`).
+4. **Codebook-mean shift before the fp32 product.** What it does, and its precision reason, are in
+   PREREG and `lifted_argmin`'s docstring.
+   - `d = const + u . v` cancels a large per-splat constant. The fp32 error in `u . v` grows with the
+     magnitudes of c and q, not with the distance itself.
+   - Shifting both by the same vector leaves every distance unchanged but keeps c and q small, so the
+     cancellation error stays small relative to the distances being compared.
+   - I chose this over a float64 product because T4 float64 throughput is a small fraction of fp32.
+     The 10k-real-splat check shows whether it is enough.
+5. **Splats with `tr(M_i) = 0` take their L2-nearest centroid.** This is in PREREG and the code.
+   - These splats are seen in no train view, so every centroid is at distance 0 and the exact argmin
+     is undefined; an fp32 argmin over all-equal scores would return index 0 by accident.
+   - L2-nearest is what plain k-means gives them, which keeps them reasonable in test views, where
+     some of them may be visible. They add nothing to the GN objective either way.
+   - The top-64 share is reported over all splats and over `tr(M) > 0`, so their effect on it is
+     visible.
+6. **Train-view metrics for every row, not only the refines.** PREREG Amendment 2 ("Also logged")
+   states it.
+   - The refines are fit on train-view `M`, so their train/test gap is the number of interest. That
+     gap needs the same numbers for the G0 codebooks as a reference.
+   - They are computed with the eval's render call and the runner's own PSNR / SSIM / LPIPS modules,
+     averaged per image as `Runner.eval` does.
+   - `metric_parity` in `gn_meta_<scene>.json` records that code on the test views against
+     `Runner.eval`, once per scene. It is recorded, not gated, because a mismatch would affect only the
+     new train columns, not G0.
+   - It costs one extra pass over the train views per row, not timed yet.
+7. **The random-data smoke check is informational.** The builder comment says so; the reasons:
+   - The lifted-vs-direct check on random data in the smoke cell catches a CUDA-specific break of the
+     lifted assignment early.
+   - It doesn't stop the run because only the exploratory refines use the lifted assignment. Stopping
+     there would also lose G0, which doesn't depend on it.
+   - The gating check is the one on 10,000 real splats inside each job, placed after the G0 rows.
+
+### Other decisions not written elsewhere
+
+- **`plain_l2` is run 3's `lloyd_w1` (the library's Lloyd without weights), not run 3's `euclid`
+  (TorchPQ euclidean).** It is the same algorithm and code as `lloyd_wopa_area` without the weights,
+  so the `plain_l2` / `lloyd_wopa_area` pair isolates the weighting. PREREG has the mapping but not
+  this reason.
+- **Failed validity checks stop the run early instead of letting it finish as `invalid`.** The smoke
+  cell raises if the SH or toy check fails, and each job raises on a render-parity failure before any
+  GN work. G0 would be invalid anyway, and stopping saves the GPU session.
+  - The reproduction check is the exception: it can only be judged from the rows, so the G0 cell
+    evaluates it and it never stops anything.
+- **Nothing later from `feat/png-weighted-kmeans` was merged into `bench/gn-vq`.** `bench/tilequant`
+  already contains the weighted k-means backend (`9348e32`). The later commits add
+  `kmeans_chunk_size`, which E0 doesn't need because it calls `weighted_kmeans` directly. They also
+  flip `PngCompression`'s defaults, which would silently change any default-constructed
+  `PngCompression` in the harness. E0 passes the backend explicitly, but some older harness code
+  relies on the defaults.
+- **The lifted check is not repeated on resume once it has passed** (`lifted_check.pass` in
+  `gn_meta_<scene>.json`). It depends only on the GN cache and the warm-start codebook, and a resume
+  reuses both.
+- **The top-64 share at each assignment step uses the codebook of that assignment**, before that
+  step's update. It asks whether an L2 shortlist of the current codebook would have contained the
+  exact argmin.
+- **An `uncompressed` reference row per scene** (test and train metrics of the checkpoint itself) gives
+  the loss of each compressed codebook without depending on earlier bundles.
+- **Degenerate cases in `g0.py`,** none expected with real data:
+  - an empty validity dict counts as invalid, because it means the selftest results were never
+    recorded;
+  - a pair with `min(D) = 0` is a tie only if both are 0, because the relative difference is
+    undefined;
+  - `D_train = 0` gives an infinite ratio, which fails the range.
+
+### Open items (E0)
+
+- **Run E0 on Kaggle** (Dace). Session length is unknown. Since the first build, each scene also
+  clusters 6 codebooks at K = 4,096 / 16,384 and evaluates every row on the train views. If the
+  session runs out, attach its output (`gn/`, `gn_cache/`, `gn_work/`) and run again; every step
+  resumes.
+- **Never executed yet:** the CUDA-only paths.
+  - the 17-channel gsplat feature render and its backward;
+  - the CUDA SH and toy checks;
+  - TorchPQ at K = 4,096 / 16,384;
+  - the fp32 lifted assignment on real data.
+
+  The CPU dry run covers the plumbing, not these kernels.
+- **Assumptions the run will confirm:**
+  - the run-5 output contains the run-3 clustering caches; otherwise the configs are re-clustered, with
+    a warning;
+  - the run-5 wheel key matches the current Kaggle image; otherwise a build of about 73 min, as in run
+    5.
+- **If the 10k lifted check fails,** the refines don't run; G0 is unaffected. The options then are a
+  float64 product for the argmin or a different shift. Either changes the exploratory method, so record
+  it as a dated PREREG amendment before running again.
+- **After the run:** commit the bundle under `kaggle/gn_e0/`, read `gn_g0.json` first, then fill
+  FINDINGS section 8.
+- **E1:** write down the GN-VQ variant and its size matching before any E1 run (G1).
+- **The dry-run scripts are outside the repo,** in the temp folder `...\51b5c32d-...\scratchpad\gn\`.
+  If that folder is cleared they are lost; `bench/gn/test_gn.py` stays in the repo.
+- **The 64 flat bundle files in `kaggle/`** are ignored, not deleted. Delete them by hand whenever
+  convenient; the committed copy is `kaggle/run5/tilequant/`.
+
 ## Conventions and gotchas
 
 - **Setup:** MipNeRF360, `examples/benchmarks/compression/mcmc.sh` settings (MCMC, cap 1M, data factor 4
@@ -359,6 +481,5 @@ PREREG_GN.md requires.
   follow-up, only if maintainers want the default flip.
 - `lint/format-code.sh` and the tests on a CUDA machine (locally only CPU).
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
-- **E0:** Dace runs `kaggle/gn_bench.ipynb` on Kaggle (see "E0 notebook"). When the bundle is back:
-  commit it under `kaggle/gn_e0/`, read `gn_g0.json`, and fill FINDINGS section 8.
-- **E1** (GN-VQ, G1): write down the GN-VQ variant and its size matching before any E1 run.
+- **E0 / E1:** see "Session decisions (E0, 2026-09-19)", Open items (E0). Dace runs
+  `kaggle/gn_bench.ipynb` on Kaggle; E1's variant must be written down before any E1 run.
