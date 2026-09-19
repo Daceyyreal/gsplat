@@ -659,27 +659,38 @@ were fixed before any E0 code or result, in `kaggle/PREREG_GN.md`:
 - the original text (commit `464c46a5`);
 - Amendment 1: the toy exactness check (commit `223faf91`);
 - Amendment 2: G0 over more codebooks with tie-exempt pairs, and the exact-assignment refines (commit
-  `48fa5823`).
+  `48fa5823`);
+- Amendment 3: the G0 verdict is the ranking alone, with the predicted/measured ratio reported as
+  calibration; an end-to-end exactness validity check; a new criterion for the lifted-assignment
+  check; a proximal-objective rise marks that refine invalid instead of stopping the run (commit
+  `86e5f35f`).
 
 The sections:
 
-- **Question (G0, Amendment 2):** on garden and bicycle, is the per-splat GN metric
-  `M_i = sum_v s_iv y y^T`, accumulated over the train views, a usable predictor of the measured
+- **Question (G0, Amendment 3):** on garden and bicycle, does the per-splat GN metric
+  `M_i = sum_v s_iv y y^T`, accumulated over the train views, rank codebooks by their measured
   shN-only render error? This is tested on 9 codebooks per scene: `upstream_l1` (TorchPQ manhattan),
   `plain_l2` (unweighted Lloyd) and `lloyd_wopa_area`, each at three codebook sizes K.
-  - **Ratio:** predicted/measured on train views must stay in the pre-registered range for every
-    codebook.
-  - **Ranking:** within each K, every config pair whose measured errors are not tied must be ordered
-    the same way by the prediction, on train and on test views. A minimum number of non-tied pairs
-    is required, otherwise the verdict is inconclusive.
+  - **Ranking (the verdict):** within each K, every config pair whose measured errors are not tied
+    must be ordered the same way by the prediction, on train and on test views. A minimum number of
+    non-tied pairs is required, otherwise the verdict is inconclusive; an inconclusive G0 is
+    re-judged in E1 over the non-GN rungs.
+  - **Calibration (reported, not judged):** predicted/measured on train views, clamped and unclamped,
+    flagged when it is within the pre-registered range, and the cross/diagonal term ratio. The GN
+    model drops cross-splat terms, and neighbouring splats that share a centroid have correlated
+    residuals, so the ratio measures how well that approximation fits, not the ranking.
+  - **Validity:** the SH basis, the toy Hutchinson check, the end-to-end exactness check (on
+    non-overlapping toy splats the prediction must equal the measured error), render parity and, where
+    the run-3 row exists, reproduction.
 - **Exploratory:**
   - the spectrum of `M_i`;
   - rank correlations between `tr(M_i)`, the `opacity_area` weight, the footprint `F_i` and a
     C3DGS-style weight;
-  - exact Mahalanobis assignment (checked against brute force on real splats) and how often its
-    argmin falls inside the plain-L2 top-64 shortlist;
+  - exact Mahalanobis assignment (checked against brute force on real splats; a failed check skips
+    only the refines) and how often its argmin falls inside the plain-L2 top-64 shortlist;
   - two refines of the `lloyd_wopa_area` codebook, ridge and proximal, excluded from G0: objective
-    per step, bytes per `shN.npz` member, and train and test metrics;
+    per step, bytes per `shN.npz` member, and train and test metrics; a refine row marked invalid is
+    reported as such, not as a result;
   - per-channel out-of-range pixels of the original render.
 - **G1** (GN-VQ vs `lloyd_wopa_area` at equal size) is judged in E1, not in E0.
 - **Where results will come from:** the E0 notebook (`kaggle/gn_bench.ipynb`, built by
