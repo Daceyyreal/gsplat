@@ -237,3 +237,97 @@ Writing, measuring and the definitions of `P`, `D^train` and `D^test` are unchan
 - Per scene and view set, the per-channel fraction of pixels where the original eval render is below
   0 or above 1 before clamping.
 - Train-view PSNR / SSIM / LPIPS for every row, computed the way `Runner.eval` does on the test views.
+
+## Amendment 3 (2026-09-19, before any E0 result and before the code change it describes)
+
+This replaces the G0 verdict of Amendment 2, adds one validity check, and changes three checks of
+exploratory item d. The ranking itself (pairs, ties, agreement), the other validity checks, Amendment 1
+and G1 are unchanged. Amendments 1 and 2 stay as written above.
+
+**Why:** the GN model is block-diagonal: `M_i` holds only splat i's own terms, and the cross-splat terms
+are dropped. Neighbouring splats that share a centroid have correlated residuals, so where they overlap
+the cross terms push the measured error above the predicted one, by up to the effective overlap (the
+number of splats blending at a pixel). This is strongest at K = 4,096, where the most neighbours share
+each centroid. The predicted/measured ratio therefore measures calibration, not ranking ability, and
+G0 asks about ranking.
+
+### G0 verdict (replaces the verdict of Amendment 2)
+
+- **Ranking only.** The pair checks are those of Amendment 2: within each K, the 3 config pairs on train
+  and test views of both scenes (36 pair checks); a pair is a tie if its clamped measured errors differ
+  by less than 5% relative, and ties are exempt; a non-tied pair agrees if `P_a < P_b` exactly when
+  `D_a < D_b`, and equal `P` does not agree (it counts as misordered).
+- **Verdict**, in this order:
+  - `incomplete` if a row is missing;
+  - `invalid` if a validity check failed;
+  - `fail` if any non-tied pair is misordered;
+  - otherwise `inconclusive` if there are fewer than 6 non-tied pairs;
+  - otherwise `pass`.
+- **Reported, not part of the verdict,** for all 9 codebooks of each scene:
+  - `P / D^train`, clamped and unclamped, each flagged **calibrated** when it is within 0.5-2x
+    (inclusive); also `P / D^test`, clamped and unclamped, without a flag, because `P` is a train-view
+    quantity;
+  - `D^train_unclamped / P - 1`, the **cross/diagonal term ratio**;
+  - the ranking on unclamped measurements, as in Amendment 2.
+- **Degenerate cases** (none expected with real data):
+  - an empty validity dict counts as `invalid`: the selftest results were never recorded;
+  - a pair with `min(D) = 0` is a tie only if both are 0, because the relative difference is undefined;
+    a pair with one zero is non-tied and judged like any other;
+  - `D^train = 0` gives a ratio of +inf when `P > 0` (undefined when `P = 0` too), which is not
+    calibrated; the cross/diagonal ratio is +inf when `P = 0 < D`, undefined when both are 0. Neither
+    affects the verdict.
+- **If G0 is inconclusive,** it is re-judged in E1 over the non-GN rungs only: upstream L1
+  (`upstream_l1`), `lloyd_w1` (`plain_l2`), `lloyd_wopa_area` and a rung with C3DGS-style weights, with
+  the same rule applied to all pairs of those rungs. E1's rungs and K values are written down before the
+  E1 run, together with G1's variant.
+
+### Added validity check: end-to-end exactness
+
+- **Toy scene:** 48 splats, one per 16 x 16 pixel cell of an 8 x 6 grid over the 128 x 96 toy view, at
+  depth about 3. They are small enough that no pixel receives weight from two splats (checked on the identity
+  render), and their colours keep `SH + 0.5` in (0, 1) at every splat and view, for the original and the
+  perturbed coefficients. So every rendered value is in [0, 1): covered pixels in (0, 1), uncovered
+  pixels exactly 0 in both renders. Two views (the toy camera and a slightly translated one). The scene is
+  drawn with a CPU random generator and then moved to the device, so the CPU test and the CUDA check use
+  the same scene.
+- **Prediction:** exact `s_iv = sum_p w_ip^2` from the identity-feature render (as in the toy check of
+  Amendment 1), accumulated into `M_i` by the GN pass's accumulator; `P` from `predicted_dmse`.
+- **Measurement:** shN plus a random perturbation, uniform with amplitude 0.1 per coefficient (fixed seed);
+  `D` from `measure_dmse` on the SH render (gsplat's `rasterization` with `sh_degree=3` in the notebook).
+- **Pass:** `|P - D_unclamped| <= 1e-4 * D_unclamped`, and the preconditions above hold.
+- **Reported, not asserted:** an overlapping variant (the same splats with 5x larger scales, so neighbours
+  blend) with the same perturbation: its `P / D_unclamped` and cross/diagonal ratio. Also the same
+  overlapping scene with one perturbation shared by all splats, the fully correlated case of the "Why"
+  above.
+- It runs in the notebook's smoke-test cell with the SH and toy checks, and it is a G0 validity check. If
+  it fails, the notebook stops before the scene jobs. A CPU test runs it on the brute-force CPU renderer.
+
+### Exploratory item d: changed checks
+
+- **Lifted check on real splats (replaces "within 1e-4 relative" of Amendment 2).**
+  - Sample: 10,000 random splats of the scene (seed 0). The criterion is evaluated over the sampled
+    splats with `tr(M_i) > 0`.
+  - Per splat: `d_min_i` = the exhaustive float64 direct minimum; `excess_i` = the direct distance at the
+    lifted fp32 argmin minus `d_min_i`; `m` = the codebook mean that the fp32 shift already uses;
+    `scale_i = |c_i - m|^2_{M_i} + tr(M_i) * max_k |q_k - m|^2` (the first term summed over the three
+    channels, the second over all 45 coordinates).
+  - **Pass** needs both `sum excess / sum d_min <= 1e-4` and `excess_i <= 1e-4 * scale_i` for every
+    evaluated splat.
+  - **Why:** a criterion relative to `d_min_i` fails on fp32 rounding at near-ties where `d_min_i` is
+    close to 0, which rank-deficient `M_i` produce: centroids that differ from `c_i` only in the null space
+    of `M_i` are all at distance 0 or nearly so. `scale_i` bounds the magnitudes that enter the fp32
+    product, so the per-splat test measures rounding on the scale where it arises. The aggregate test
+    bounds the effect on the objective.
+  - Logged: the worst per-splat `excess_i / scale_i`, the number of splats with
+    `d_min_i < 1e-3 * scale_i`, and the number of `tr(M_i) = 0` splats in the sample.
+  - The record carries a criterion version. On resume, a record with another version is re-run.
+  - If the check fails, only the refines are skipped. The job goes on (the G0 rows are already written),
+    and so does the notebook, to G0 and the bundle.
+- **Proximal refine (replaces "asserted non-increasing for (b)").**
+  - The logged objective is the per-splat direct-formula distances, summed in float64 (divided by
+    `3 * total train pixels`, as `P`).
+  - If it rises by more than 1e-6 relative at any step, the rise is logged and the proximal variant's rows
+    are marked invalid. The variant still runs its 3 iterations and its row is written with the flag; the
+    remaining rows and the bundle follow.
+- **Clusters with `tr(sum M) = 0`** (empty, or all members unseen) keep `q_old` in both variants.
+- **Still stopping the run early:** the SH, toy and render-parity checks, and now the end-to-end check.
