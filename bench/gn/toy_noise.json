@@ -1,0 +1,44 @@
+{
+  "first_layout_seed0": {
+    "image": [
+      64,
+      48
+    ],
+    "draws": 1000,
+    "probes": 64,
+    "mean_rel_err": 0.02415300962507785,
+    "p99_rel_err": 0.0763277588307816,
+    "max_rel_err": 0.09895945130557157,
+    "fraction_ge_5pct": 0.099,
+    "covered_pixels_blending_2plus": 0.9485148514851485,
+    "splats_visible": 252
+  },
+  "toy_scene_seed0": {
+    "image": [
+      128,
+      96
+    ],
+    "draws": 1000,
+    "probes": 64,
+    "mean_rel_err": 0.011689058823348277,
+    "p99_rel_err": 0.03670841746960113,
+    "max_rel_err": 0.04946328385941398,
+    "fraction_ge_5pct": 0.0,
+    "covered_pixels_blending_2plus": 0.8680054926192928,
+    "splats_visible": 256
+  },
+  "toy_scene_seed1": {
+    "image": [
+      128,
+      96
+    ],
+    "draws": 1000,
+    "probes": 64,
+    "mean_rel_err": 0.011543838723479664,
+    "p99_rel_err": 0.038195181264829195,
+    "max_rel_err": 0.04831980992047652,
+    "fraction_ge_5pct": 0.0,
+    "covered_pixels_blending_2plus": 0.8892022917584839,
+    "splats_visible": 256
+  }
+}
