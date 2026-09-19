@@ -255,108 +255,183 @@ def test_predicted_dmse_matches_loop():
     assert abs(gd.predicted_dmse(M, delta, 1000, chunk=7) - ref / 3000) < 1e-9
 
 
-def test_measure_dmse_counts_and_clamp():
-    ref_img = torch.tensor([[[0.5, 1.2, -0.1]]])
-    q_img = torch.tensor([[[0.7, 1.5, -0.3]]])
+def test_measure_dmse_counts_clamp_and_out_of_range():
+    ref_img = torch.tensor([[[0.5, 1.2, -0.1], [0.3, 0.4, 0.2]]])  # 1 x 2 pixels
+    q_img = torch.tensor([[[0.7, 1.5, -0.3], [0.3, 0.4, 0.2]]])
 
     def render(view, splats):
         return q_img if splats["shN"].sum() > 0 else ref_img
 
-    out = gd.measure_dmse(render, [{}], {"shN": torch.zeros(1)}, {"q": torch.ones(1)})[
-        "q"
-    ]
-    assert abs(out["raw"] - (0.04 + 0.09 + 0.04) / 3) < 1e-7
-    assert abs(out["clamped"] - (0.04 + 0 + 0) / 3) < 1e-7
-    assert out["n_values"] == 3 and abs(out["ref_out_of_range_fraction"] - 2 / 3) < 1e-9
+    out = gd.measure_dmse(render, [{}], {"shN": torch.zeros(1)}, {"q": torch.ones(1)})
+    q = out["q"]
+    assert q["n_values"] == 6 and q["n_views"] == 1
+    assert abs(q["raw"] - (0.04 + 0.09 + 0.04) / 6) < 1e-7
+    assert abs(q["clamped"] - 0.04 / 6) < 1e-7
+    ref = out["_reference"]
+    assert ref["n_pixels"] == 2
+    assert np.allclose(ref["below_0_fraction_rgb"], [0, 0, 0.5])
+    assert np.allclose(ref["above_1_fraction_rgb"], [0, 0.5, 0])
+    assert np.allclose(ref["outside_fraction_rgb"], [0, 0.5, 0.5])
 
 
-def _refine_problem(n=400, k=12, seed=0):
+def _problem(n=2000, k=256, seed=0):
+    """Random shN-like data in the [N, 45] layout, with M_i of every rank 0..15 (rank-deficient
+    and zero included) and a codebook near the data."""
     g = torch.Generator().manual_seed(seed)
-    x = torch.randn(n, 45, generator=g)
-    a = torch.randn(n, 15, 5, generator=g) * torch.rand(n, 1, 1, generator=g)
-    M = gm.pack(a @ a.transpose(1, 2) / 5)
-    M[:5] = 0  # splats never seen in a train view
-    C = x[torch.randperm(n, generator=g)[:k]].clone()
-    labels = gd.shortlist_l2(x, C, 1)[:, 0]
-    return x, M, C, labels
+    x3 = torch.randn(n, 15, 3, generator=g) * 0.3 + 0.2
+    a = torch.randn(n, 15, 15, generator=g, dtype=torch.float64)
+    rank = torch.arange(n) % 16
+    a = a * (torch.arange(15)[None, None, :] < rank[:, None, None])
+    M = gm.pack(a @ a.transpose(1, 2)).float()
+    C3 = (
+        x3[torch.randperm(n, generator=g)[:k]]
+        + torch.randn(k, 15, 3, generator=g) * 0.05
+    )
+    return x3.reshape(n, 45), M, C3.reshape(k, 45)
 
 
-def _brute_mahalanobis(x, M, C):
-    Mf = gm.unpack(M.double())
-    d = (C.double()[None] - x.double()[:, None]).view(x.shape[0], C.shape[0], 15, 3)
-    return torch.einsum("nkac,nab,nkbc->nk", d, Mf, d)
+def _brute(x, M, C, chunk=100):
+    """Independent float64 direct distances [N, K]."""
+    x3, C3 = x.double().view(-1, 15, 3), C.double().view(-1, 15, 3)
+    out = []
+    for s in range(0, x3.shape[0], chunk):
+        diff = C3[None] - x3[s : s + chunk, None]
+        mf = gm.unpack(M[s : s + chunk].double())
+        out.append(torch.einsum("nkac,nab,nkbc->nk", diff, mf, diff))
+    return torch.cat(out)
 
 
-def test_exhaustive_argmin_matches_brute_force():
-    x, M, C, _ = _refine_problem()
-    keep = gm.trace_packed(M) > 0
-    got = gd.exhaustive_argmin(x[keep], M[keep], C, chunk=37)
-    costs = _brute_mahalanobis(x[keep], M[keep], C)
-    best = costs.min(dim=1).values
+def test_lifted_identity_and_argmin_achieve_brute_force_minimum():
+    x, M, C = _problem()
+    d = _brute(x, M, C)
+    # the lifted form is exact: d(i, k) = const_i + u_i . v_k
+    x3, C3 = x.view(-1, 15, 3), C.view(-1, 15, 3)
+    const = torch.einsum(
+        "nac,nab,nbc->n", x3.double(), gm.unpack(M.double()), x3.double()
+    )
+    lifted = const[:, None] + gd.lifted_u(x3, M) @ gd.lifted_v(C3).t()
+    assert torch.allclose(lifted, d, rtol=1e-9, atol=1e-9)
+    # fp32 argmin: the achieved distance equals the brute-force minimum (ties allowed)
+    lab = gd.lifted_argmin(x, M, C, chunk=333)
+    achieved = d.gather(1, lab[:, None])[:, 0]
+    best = d.min(dim=1).values
+    assert torch.all(achieved <= best * (1 + 1e-5) + 1e-12)
+    dmin, arg = gd.brute_force_min(x, M, C, chunk=64)
+    assert torch.allclose(dmin, best, rtol=1e-12, atol=1e-15)
+    chk = gd.lifted_check(x, M, C, n_sample=500, seed=1)
+    assert chk["pass"] and chk["n"] == 500 and chk["n_over_tol"] == 0, chk
     assert torch.allclose(
-        costs.gather(1, got[:, None])[:, 0], best, rtol=1e-9, atol=1e-9
+        gd.direct_distance(x, M, C, lab), achieved, rtol=1e-12, atol=1e-15
     )
 
 
-def test_shortlist_rerank_update():
-    x, M, C, labels = _refine_problem()
-    cand = gd.shortlist_l2(x, C, 4)
-    d2 = torch.cdist(x.double(), C.double())
-    assert torch.equal(cand[:, 0], d2.argmin(1))
-    new = gd.rerank(x, C, M, cand, labels, chunk=33)
-    costs = _brute_mahalanobis(x, M, C)
-    allowed = torch.cat([cand, labels[:, None]], 1)
-    best_allowed = costs.gather(1, allowed).min(1).values
-    tr_ = gm.trace_packed(M)
-    assert torch.allclose(
-        costs.gather(1, new[:, None])[:, 0][tr_ > 0], best_allowed[tr_ > 0]
-    )
-    assert torch.equal(new[tr_ == 0], cand[tr_ == 0, 0])
-    C2, kept = gd.update_centroids(x, new, M, C, eps=0.0)
-    for k in range(C.shape[0]):
-        members = new == k
-        A = gm.unpack(M[members].double()).sum(0)
-        if float(torch.trace(A)) <= 0:
-            assert torch.equal(C2[k], C[k])
-            continue
-        b = torch.einsum(
-            "nab,nbc->ac",
-            gm.unpack(M[members].double()),
-            x[members].double().view(-1, 15, 3),
+def test_assign_exact_guard_and_zero_trace():
+    x, M, C = _problem(n=600, k=64, seed=2)
+    d = _brute(x, M, C)
+    zero = gm.trace_packed(M) <= 0
+    assert bool(zero.any())
+    best_idx = d.argmin(dim=1)
+    new, info = gd.assign_exact(x, M, C, best_idx.clone())
+    assert torch.equal(new[~zero], best_idx[~zero])  # an optimal current label is kept
+    assert info["zero_trace"] == int(zero.sum())
+    l2 = torch.cdist(x.double(), C.double()).argmin(dim=1)
+    assert torch.equal(new[zero], l2[zero])
+    rand = torch.randint(0, 64, (600,), generator=torch.Generator().manual_seed(3))
+    new2, _ = gd.assign_exact(x, M, C, rand)
+    achieved = d.gather(1, new2[:, None])[:, 0]
+    assert torch.all(achieved[~zero] <= d.min(1).values[~zero] * (1 + 1e-5) + 1e-12)
+
+
+def test_share_in_l2_topk():
+    x, M, C = _problem(n=300, k=40, seed=4)
+    l2 = torch.cdist(x, C).argmin(dim=1)
+    assert gd.share_in_l2_topk(x, C, l2, M, topk=1)["share_all"] == 1.0
+    far = torch.cdist(x, C).argmax(dim=1)
+    s = gd.share_in_l2_topk(x, C, far, M, topk=1)
+    assert s["share_all"] == 0.0 and s["share_trace_gt_0"] == 0.0
+    assert gd.share_in_l2_topk(x, C, far, M, topk=40)["share_all"] == 1.0
+
+
+def test_update_variants_match_closed_form():
+    x, M, C = _problem(n=500, k=20, seed=5)
+    labels = torch.cdist(x, C).argmin(dim=1)
+    labels[labels == 3] = 4  # cluster 3 empty -> keeps its centroid
+    for variant in gd.REFINE_VARIANTS:
+        new, kept = gd.update_centroids(x, labels, M, C, variant, eps=1e-4)
+        assert kept >= 1
+        for k in range(C.shape[0]):
+            members = labels == k
+            A = gm.unpack(M[members].double()).sum(0)
+            tr = float(torch.trace(A))
+            if tr <= 0:
+                assert torch.equal(new[k], C[k])
+                continue
+            mu = 1e-4 * tr / 15
+            b = torch.einsum(
+                "nab,nbc->ac",
+                gm.unpack(M[members].double()),
+                x[members].double().view(-1, 15, 3),
+            )
+            if variant == "prox":
+                b = b + mu * C[k].double().view(15, 3)
+            q = torch.linalg.solve(A + mu * torch.eye(15, dtype=torch.float64), b)
+            assert torch.allclose(new[k].double().view(15, 3), q, rtol=1e-4, atol=1e-5)
+    with pytest.raises(ValueError):
+        gd.update_centroids(x, labels, M, C, "shortlist")
+
+
+def test_gn_refine_variants_log_every_step_and_prox_is_monotone(monkeypatch):
+    x, M, C = _problem(n=800, k=32, seed=6)
+    labels = torch.cdist(x, C).argmin(dim=1)
+    for variant in gd.REFINE_VARIANTS:
+        _, _, hist = gd.gn_refine(
+            x,
+            C,
+            labels,
+            M,
+            total_pixels=1000,
+            variant=variant,
+            iters=3,
+            topk=8,
+            log=None,
         )
-        assert torch.allclose(
-            C2[k].double().view(15, 3), torch.linalg.solve(A, b), rtol=1e-4, atol=1e-5
-        )
-
-
-def test_gn_refine_objective_does_not_increase():
-    x, M, C, labels = _refine_problem(n=600, k=16, seed=3)
-    _, _, hist = gd.gn_refine(
-        x,
-        C,
-        labels,
-        M,
-        total_pixels=1000,
-        iters=3,
-        topk=4,
-        eps=1e-4,
-        n_recall=200,
-        log=None,
+        assert [h["step"] for h in hist] == ["start"] + ["assign", "update"] * 3
+        objs = [h["objective"] for h in hist]
+        if variant == "prox":
+            assert all(b <= a * (1 + 1e-6) for a, b in zip(objs, objs[1:])), objs
+        for h in hist[1::2]:
+            assert 0.0 <= h["top64_share_all"] <= 1.0
+    real = gd.update_centroids
+    monkeypatch.setattr(
+        gd, "update_centroids", lambda *a, **k: (real(*a, **k)[0] + 1.0, 0)
     )
-    for h in hist:
-        assert h["objective_after_assign"] <= h["objective_start"] * (1 + 1e-9)
-        assert h["objective_after_update"] <= h["objective_after_assign"] * (1 + 1e-6)
-        assert 0.0 <= h["recall_recall"] <= 1.0 and h["recall_n"] == 200
+    with pytest.raises(RuntimeError, match="increased"):
+        gd.gn_refine(
+            x,
+            C,
+            labels,
+            M,
+            total_pixels=1000,
+            variant="prox",
+            iters=1,
+            topk=8,
+            log=None,
+        )
+    gd.gn_refine(
+        x, C, labels, M, total_pixels=1000, variant="ridge", iters=1, topk=8, log=None
+    )  # no assertion
 
 
 # ----------------------------------------------------------------------------- G0 rule
 
 
-def _rows(scene, pred, train, test):
+def _g0_rows(values):
+    """values[(scene, K, config)] = (P, D_train, D_test) -> result rows (clamped = raw)."""
     return [
         {
-            "scene": scene,
+            "scene": s,
             "config": c,
+            "n_clusters": str(k),
             "seed": "0",
             "predicted": p,
             "measured_train_clamped": a,
@@ -364,29 +439,85 @@ def _rows(scene, pred, train, test):
             "measured_train_raw": a,
             "measured_test_raw": b,
         }
-        for c, p, a, b in zip(g0.CONFIG_ORDER, pred, train, test)
+        for (s, k, c), (p, a, b) in values.items()
     ]
 
 
-def test_g0_verdicts():
-    ok = {"sh_basis": True, "toy_exactness": True}
-    good = _rows("garden", [2, 3, 1], [2.2, 3.1, 1.3], [2.5, 3.9, 1.4]) + _rows(
-        "bicycle", [1, 1.5, 0.8], [1.1, 1.6, 0.7], [1.2, 1.8, 0.9]
-    )
-    assert g0.judge_g0(good, ok)["verdict"] == "pass"
-    swapped_test = good[:3] + _rows(
-        "bicycle", [1, 1.5, 0.8], [1.1, 1.6, 0.7], [1.2, 1.1, 0.9]
-    )
-    assert g0.judge_g0(swapped_test, ok)["verdict"] == "fail"
-    bad_ratio = _rows("garden", [2, 3, 1], [2.2, 3.1, 0.4], [2.5, 3.9, 0.45]) + good[3:]
-    v = g0.judge_g0(bad_ratio, ok)
+def _separated():
+    """Every pair separated by far more than 5%, P = 1.1 x D_train."""
+    base = {"upstream_l1": 1.0, "plain_l2": 1.3, "lloyd_wopa_area": 0.7}
+    out = {}
+    for s_i, s in enumerate(g0.SCENES):
+        for k_i, k in enumerate(g0.K_VALUES):
+            f = 1.0 + 0.5 * k_i + 0.2 * s_i
+            for c, v in base.items():
+                out[(s, k, c)] = (1.1 * v * f, v * f, 1.05 * v * f)
+    return out
+
+
+OK = {"sh_basis": True, "toy_exactness": True}
+
+
+def test_g0_pass_fail_and_ties():
+    v = _separated()
+    res = g0.judge_g0(_g0_rows(v), OK)
     assert (
-        v["verdict"] == "fail"
-        and not v["per_scene"]["garden"]["clamped"]["ratios_train_in_range"]
+        res["verdict"] == "pass"
+        and res["clamped"]["n_non_tied"] == 36
+        and res["clamped"]["n_pairs"] == 36
     )
+    # one non-tied pair misordered by P -> fail
+    bad = dict(v)
+    p, a, b = bad[("bicycle", 16384, "plain_l2")]
+    bad[("bicycle", 16384, "plain_l2")] = (0.1, a, b)
+    res = g0.judge_g0(_g0_rows(bad), OK)
+    assert res["verdict"] == "fail" and res["clamped"]["n_disagree"] >= 1
+    # equal P on a non-tied pair does not agree
+    eq = dict(v)
+    p0 = eq[("garden", 4096, "upstream_l1")][0]
+    _, a, b = eq[("garden", 4096, "plain_l2")]
+    eq[("garden", 4096, "plain_l2")] = (p0, a, b)
+    assert g0.judge_g0(_g0_rows(eq), OK)["verdict"] == "fail"
+    # a measured tie (< 5%) with P reversed is exempt
+    tie = dict(v)
+    p1, a1, b1 = tie[("garden", 65536, "upstream_l1")]
+    tie[("garden", 65536, "plain_l2")] = (p1 * 0.9, a1 * 1.03, b1 * 1.03)
+    res = g0.judge_g0(_g0_rows(tie), OK)
+    assert res["verdict"] == "pass" and res["clamped"]["n_non_tied"] == 34
+    # ratio outside [0.5, 2] for one codebook -> fail
+    ratio = dict(v)
+    p, a, b = ratio[("garden", 16384, "lloyd_wopa_area")]
+    ratio[("garden", 16384, "lloyd_wopa_area")] = (p * 2.5, a, b)
+    res = g0.judge_g0(_g0_rows(ratio), OK)
+    assert res["verdict"] == "fail" and not res["clamped"]["ratio_ok"]
+
+
+def test_g0_inconclusive_invalid_incomplete_and_tie_boundary():
+    near = {}
+    for s in g0.SCENES:
+        for k in g0.K_VALUES:
+            for i, c in enumerate(g0.CONFIG_ORDER):
+                d = 1.0 + 0.01 * i  # all pairs tie (< 5%)
+                near[(s, k, c)] = (d, d, d)
+    # separate one config on garden K=4096 train views only: 2 non-tied pairs, both agree
+    near[("garden", 4096, "lloyd_wopa_area")] = (1.5, 1.5, 1.02)
+    res = g0.judge_g0(_g0_rows(near), OK)
+    assert res["clamped"]["n_non_tied"] == 2 and res["verdict"] == "inconclusive"
+    # a ratio failure outranks inconclusive
+    near[("bicycle", 65536, "plain_l2")] = (5.0, 1.01, 1.01)
+    assert g0.judge_g0(_g0_rows(near), OK)["verdict"] == "fail"
+    v = _separated()
     assert (
-        g0.judge_g0(good, {**ok, "render_parity_garden": False})["verdict"] == "invalid"
+        g0.judge_g0(_g0_rows(v), {**OK, "render_parity_garden": False})["verdict"]
+        == "invalid"
     )
-    assert g0.judge_g0(good[:5], ok)["verdict"] == "incomplete"
-    tie = _rows("garden", [1, 1, 2], [1, 1, 2], [1, 1, 2]) + good[3:]
-    assert g0.judge_g0(tie, ok)["per_scene"]["garden"]["clamped"]["same_order_train"]
+    assert g0.judge_g0(_g0_rows(v), {})["verdict"] == "invalid"
+    missing = {
+        key: val for key, val in v.items() if key != ("bicycle", 4096, "plain_l2")
+    }
+    res = g0.judge_g0(_g0_rows(missing), OK)
+    assert res["verdict"] == "incomplete" and res["missing"] == [
+        "bicycle plain_l2 K=4096 seed=0"
+    ]
+    assert not g0.is_tie(1.0, 1.05) and g0.is_tie(1.0, 1.0499) and g0.is_tie(0.0, 0.0)
+    assert not g0.is_tie(0.0, 1e-9)

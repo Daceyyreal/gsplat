@@ -39,8 +39,10 @@ md(
 
 Does a per-splat Gauss-Newton metric `M_i = sum_v s_iv y y^T` on the shN coefficients predict how much
 shN vector quantization changes the rendered images? The questions, definitions and the **G0** rule
-are fixed in `kaggle/PREREG_GN.md` (committed before this notebook existed). Scenes: MipNeRF360
-**garden** and **bicycle**, the training-#2 checkpoints of runs 1-5, seed-0 PLAS order, K = 65,536.
+are fixed in `kaggle/PREREG_GN.md` (committed before this notebook existed; G0 as in Amendment 2).
+Scenes: MipNeRF360 **garden** and **bicycle**, the training-#2 checkpoints of runs 1-5, seed-0 PLAS
+order. Per scene: 9 codebooks for G0 (TorchPQ L1, `lloyd_w1`, `lloyd_wopa_area` at K = 4,096, 16,384
+and 65,536) and two exploratory exact-assignment GN refines of `lloyd_wopa_area` at K = 65,536.
 
 **Kaggle settings:** accelerator *GPU T4 x2* (garden on GPU 0 and bicycle on GPU 1 in parallel),
 Internet *on*. Attach the **run-5 notebook output** as input: it holds the garden and bicycle
@@ -52,10 +54,10 @@ wheel. To resume, also attach this notebook's own earlier output (`gn/`, `gn_cac
 | 1 | config, helpers |
 | 2 | find and restore inputs (checkpoints, sort caches, run-3 caches, wheel, earlier E0 output) |
 | 3 | install gsplat (`bench/gn-vq`, `MAX_JOBS=2`, restored wheel when its key matches), example dependencies |
-| 4 | **CUDA smoke tests:** SH basis against gsplat's `spherical_harmonics`; toy Hutchinson exactness |
+| 4 | **CUDA smoke tests:** SH basis against gsplat's `spherical_harmonics`; toy Hutchinson exactness; lifted vs direct assignment on random data (informational) |
 | 5 | MipNeRF360 data for garden and bicycle |
-| 6 | E0 jobs: garden on `cuda:0`, bicycle on `cuda:1` (`kaggle/gn_e0_scene.py`) |
-| 7 | G0 verdict (`gn_g0.json`), tables, plot |
+| 6 | E0 jobs: garden on `cuda:0`, bicycle on `cuda:1` (`kaggle/gn_e0_scene.py`; the 10k-real-splat lifted check runs there, before the refines) |
+| 7 | G0 verdict (`gn_g0.json`, Amendment 2), tables, plot |
 | 8 | `gn_bundle.zip` (top-level csv / json / png of `gn/`) |
 """
 )
@@ -76,7 +78,8 @@ BRANCH = "bench/gn-vq"
 SCENES = ["garden", "bicycle"]  # job i runs on GPU i
 CAP_MAX = 1_000_000
 RESULT_NAME = "benchmark_mcmc_1M_png_compression"
-CONFIGS = "upstream_l1,plain_l2,lloyd_wopa_area,gn_refine"
+CONFIGS = "upstream_l1,plain_l2,lloyd_wopa_area,gn_refine_ridge,gn_refine_prox"
+K_VALUES = "4096,16384,65536"  # PREREG_GN.md Amendment 2; 65,536 is the run-3 default (cached)
 SEEDS = "0"  # G0 is judged at k-means seed 0
 
 WORK = "/kaggle/working"
@@ -360,10 +363,21 @@ code(
 selftest = f"""
 import json, sys
 sys.path.insert(0, "{SRC_DIR}/bench/gn")
+import torch
+import diagnostics as gd
 import gn_metric as gm
 import sh_basis as sb
 out = {{"sh_basis": sb.cuda_check(), "toy_exactness": gm.toy_exactness(device="cuda")}}
 out["pass"] = bool(out["sh_basis"]["pass"] and out["toy_exactness"]["pass"])
+# Informational (not a G0 validity check): lifted fp32 vs direct float64 assignment on random data;
+# the job repeats it on 10,000 real splats before the refines and stops them if it fails.
+g = torch.Generator().manual_seed(0)
+x = (torch.randn(4000, 15, 3, generator=g) * 0.3).reshape(4000, 45).cuda()
+a = torch.randn(4000, 15, 15, generator=g, dtype=torch.float64)
+a = a * (torch.arange(15)[None, None, :] < (torch.arange(4000) % 16)[:, None, None])
+M = gm.pack(a @ a.transpose(1, 2)).float().cuda()
+C = x[torch.randperm(4000, generator=g)[:2048].cuda()] + 0.05 * torch.randn(2048, 45, generator=g).cuda()
+out["lifted_random_cuda"] = gd.lifted_check(x, M, C, n_sample=2000, seed=0)
 json.dump(out, open("{GN_OUT}/gn_selftest.json", "w"), indent=2)
 print(json.dumps(out, indent=2))
 if not out["pass"]:
@@ -448,6 +462,7 @@ for scene in SCENES:
         "--run3_kmeans_dir", RUN3_KMEANS.get(scene, "''"), "--run3_csv", RUN3_CSV or "''",
         "--gn_cache", f"{GN_CACHE}/{scene}.pt", "--work_dir", f"{GN_WORK}/{scene}",
         "--runs_dir", f"{RUNS_ROOT}/{scene}", "--out_dir", GN_OUT, "--configs", CONFIGS, "--seeds", SEEDS,
+        "--k_values", K_VALUES,
         "--data_factor", "4", "--cap_max", str(CAP_MAX), "--examples_dir", f"{SRC_DIR}/examples",
         "--commit", COMMIT[:12],
     ]
@@ -481,39 +496,49 @@ validity = {"sh_basis": selftest["sh_basis"]["pass"], "toy_exactness": selftest[
 for scene in SCENES:
     meta = json.load(open(f"{GN_OUT}/gn_meta_{scene}.json"))
     validity[f"render_parity_{scene}"] = bool(meta["render_parity"]["pass"])
-    ref = [r for r in rows if r["scene"] == scene and r["config"] == "lloyd_wopa_area" and int(float(r["seed"])) == 0]
+    ref = [r for r in rows if r["scene"] == scene and r["config"] == "lloyd_wopa_area"
+           and r.get("n_clusters") not in (None, "") and int(float(r["n_clusters"])) == 65536
+           and int(float(r["seed"])) == 0]
     if ref and ref[-1]["run3_PSNR"] != "":
         r = ref[-1]
         validity[f"reproduction_{scene}"] = bool(abs(float(r["run3_dPSNR"])) <= 1e-6 and r["run3_size_equal"] == "True")
 verdict = g0.judge_g0(rows, validity)
 json.dump(verdict, open(f"{GN_OUT}/gn_g0.json", "w"), indent=2)
-print(json.dumps(verdict, indent=2))
+summary = {k: verdict.get(k) for k in ("verdict", "valid", "complete", "missing", "validity")}
+if "clamped" in verdict:
+    summary.update({k: verdict["clamped"][k] for k in ("ratio_ok", "n_pairs", "n_non_tied", "n_disagree")})
+print(json.dumps(summary, indent=2))
 
 df = pd.DataFrame(rows)
-cols = ["scene", "config", "seed", "source", "predicted", "measured_train_clamped", "measured_test_clamped",
-        "ratio_train_clamped", "PSNR", "SSIM", "LPIPS", "shn_only_PSNR", "size_bytes", "shN_labels_bytes", "run3_dPSNR"]
+cols = ["scene", "config", "n_clusters", "seed", "source", "predicted", "objective_unquantized",
+        "measured_train_clamped", "measured_test_clamped", "ratio_train_clamped", "PSNR", "SSIM", "LPIPS",
+        "train_PSNR", "shn_only_PSNR", "size_bytes", "shN_centroids_bytes", "shN_labels_bytes", "run3_dPSNR"]
 display(df[[c for c in cols if c in df.columns]])
+if "clamped" in verdict:
+    display(pd.DataFrame(verdict["clamped"]["pairs"]))
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+markers = {4096: "v", 16384: "s", 65536: "o"}
 fig, axes = plt.subplots(1, len(SCENES), figsize=(6 * len(SCENES), 5))
 for ax, scene in zip(axes if len(SCENES) > 1 else [axes], SCENES):
-    sub = df[(df["scene"] == scene) & (df["config"].isin(g0.CONFIG_ORDER + ("gn_refine",)))]
-    for kind, marker in (("train", "o"), ("test", "s")):
-        ax.scatter(sub[f"measured_{kind}_clamped"].astype(float), sub["predicted"].astype(float), marker=marker, label=kind)
-        for _, r in sub.iterrows():
-            ax.annotate(r["config"], (float(r[f"measured_{kind}_clamped"]), float(r["predicted"])), fontsize=7)
-    lim = [float(min(sub[["predicted", "measured_train_clamped", "measured_test_clamped"]].astype(float).min())) * 0.8,
-           float(max(sub[["predicted", "measured_train_clamped", "measured_test_clamped"]].astype(float).max())) * 1.25]
+    sub = df[(df["scene"] == scene) & (df["config"] != "uncompressed")]
+    for _, r in sub.iterrows():
+        k = int(float(r["n_clusters"]))
+        for kind, face in (("train", None), ("test", "none")):
+            ax.scatter(float(r[f"measured_{kind}_clamped"]), float(r["predicted"]), marker=markers.get(k, "x"),
+                       facecolors=face, edgecolors="C0" if r["config"] in g0.CONFIG_ORDER else "C3")
+        ax.annotate(f"{r['config']} K{k}", (float(r["measured_train_clamped"]), float(r["predicted"])), fontsize=6)
+    vals = sub[["predicted", "measured_train_clamped", "measured_test_clamped"]].astype(float)
+    lim = [float(vals.min().min()) * 0.8, float(vals.max().max()) * 1.25]
     ax.plot(lim, lim, "k-", lw=0.8)
     ax.plot(lim, [2 * lim[0], 2 * lim[1]], "k:", lw=0.8)
     ax.plot(lim, [0.5 * lim[0], 0.5 * lim[1]], "k:", lw=0.8)
     ax.set_xscale("log"); ax.set_yscale("log")
-    ax.set_xlabel("measured shN-only dMSE (clamped)"); ax.set_ylabel("predicted P")
-    ax.set_title(f"{scene}: G0 {verdict['per_scene'][scene].get('pass')}")
-    ax.legend(frameon=False)
+    ax.set_xlabel("measured shN-only dMSE (clamped; filled = train, open = test)"); ax.set_ylabel("predicted P")
+    ax.set_title(f"{scene}: G0 verdict (both scenes) {verdict['verdict']}; red = refines (not in G0)", fontsize=9)
 fig.tight_layout()
 fig.savefig(f"{GN_OUT}/gn_g0.png", dpi=120)
 display(Image(f"{GN_OUT}/gn_g0.png"))

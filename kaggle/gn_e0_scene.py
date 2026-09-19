@@ -1,16 +1,16 @@
-"""E0 for one scene (kaggle/PREREG_GN.md): the Gauss-Newton metric for shN over the train views,
-its spectrum and rank correlations, predicted vs measured shN error for the three run-3 configs, and
-the exploratory GN refine.
+"""E0 for one scene (kaggle/PREREG_GN.md with Amendments 1-2): the Gauss-Newton metric for shN over
+the train views, its spectrum and rank correlations, predicted vs measured shN error for the three
+run-3 configs at K in {4096, 16384, 65536}, and the exploratory exact-assignment GN refines.
 
     python kaggle/gn_e0_scene.py --scene garden --data_dir /tmp/data/360_v2/garden \
         --ckpt .../garden/ckpts/ckpt_29999_rank0.pt --sort_cache_dir .../sweep/garden/cache \
         --run3_kmeans_dir .../run3/garden/kmeans --run3_csv .../run3_results.csv \
-        --gn_cache /kaggle/working/gn_cache/garden.pt --work_dir .../gn/work/garden \
+        --gn_cache /kaggle/working/gn_cache/garden.pt --work_dir .../gn_work/garden \
         --runs_dir /tmp/gn_runs/garden --out_dir /kaggle/working/gn --examples_dir gsplat/examples
 
 Resumable: the GN cache (``--gn_cache``), each clustering (``--work_dir``/clusters) and each
-(scene, config, seed) row of ``gn_results_<scene>.csv`` are kept; the spectrum and correlation files
-are skipped when present.
+(scene, config, K, seed) row of ``gn_results_<scene>.csv`` are kept; the spectrum and correlation
+files are skipped when present.
 """
 
 import argparse
@@ -53,21 +53,25 @@ CONFIGS: Dict[str, Dict] = {  # E0 name -> run-3 cache name and clustering
         weights="opacity_area",
     ),
 }
-REFINE = "gn_refine"
-DEFAULT_CONFIGS = list(CONFIGS) + [REFINE]
+REFINES = {"gn_refine_ridge": "ridge", "gn_refine_prox": "prox"}  # excluded from G0
+DEFAULT_CONFIGS = list(CONFIGS) + list(REFINES)
+K_VALUES = "4096,16384,65536"
 MAX_ITER, TOL = 100, 1e-4  # torchpq 0.3.0.6 defaults, as runs 3-5
+# The run-3 default K: run-3 caches, reproduction check, refine warm start.
 N_CLUSTERS = 65536
 
 COLUMNS = [
     "scene",
     "config",
+    "n_clusters",
     "seed",
     "source",
     "clustering",
     "distance",
     "weights",
-    "n_clusters",
+    "refine_variant",
     "predicted",
+    "objective_unquantized",
     "measured_train_clamped",
     "measured_test_clamped",
     "measured_train_raw",
@@ -77,6 +81,9 @@ COLUMNS = [
     "PSNR",
     "SSIM",
     "LPIPS",
+    "train_PSNR",
+    "train_SSIM",
+    "train_LPIPS",
     "shn_only_PSNR",
     "shn_only_SSIM",
     "shn_only_LPIPS",
@@ -112,12 +119,19 @@ def log(scene: str, msg: str) -> None:
 # ------------------------------------------------------------------------------ rows
 
 
+def _k_of(row: Dict) -> int:
+    return (
+        int(float(row["n_clusters"])) if row.get("n_clusters") not in (None, "") else 0
+    )
+
+
 def read_done(csv_path: str, scene: str) -> set:
+    """(config, K, seed) triples already measured for a scene."""
     if not os.path.exists(csv_path):
         return set()
     with open(csv_path, newline="") as f:
         return {
-            (r["config"], int(float(r["seed"])))
+            (r["config"], _k_of(r), int(float(r["seed"])))
             for r in csv.DictReader(f)
             if r["scene"] == scene
         }
@@ -215,6 +229,33 @@ def eval_renderer(runner):
     return render
 
 
+def split_metrics(runner, dataset, splats) -> Dict:
+    """PSNR / SSIM / LPIPS of ``splats`` against the dataset's images, computed as ``Runner.eval``
+    does (render, clamp to [0, 1], per-image metrics, mean over images)."""
+    render = eval_renderer(runner)
+    dev = runner.device
+    vals = {"psnr": [], "ssim": [], "lpips": []}
+    with torch.no_grad():
+        for i in range(len(dataset)):
+            d = dataset[i]
+            h, w = d["image"].shape[:2]
+            view = {
+                "camtoworld": d["camtoworld"],
+                "K": d["K"],
+                "width": int(w),
+                "height": int(h),
+                "camera_idx": d.get("camera_idx"),
+                "exposure": d.get("exposure"),
+                "mask": d.get("mask"),
+            }
+            colors = render(view, splats).clamp(0.0, 1.0)[None].permute(0, 3, 1, 2)
+            pixels = (d["image"].to(dev) / 255.0)[None].permute(0, 3, 1, 2)
+            vals["psnr"].append(runner.psnr(colors, pixels))
+            vals["ssim"].append(runner.ssim(colors, pixels))
+            vals["lpips"].append(runner.lpips(colors, pixels))
+    return {k: torch.stack(v).mean().item() for k, v in vals.items()}
+
+
 def render_parity(
     runner, settings: gm.RenderSettings, view: Dict, splats: Dict, render=None
 ) -> Dict:
@@ -255,21 +296,22 @@ def load_clustering(path: str, key: str, n_clusters: int) -> Optional[Dict]:
     return c
 
 
-def get_clustering(args, name: str, seed: int, sorted_raw: Dict, key3: str) -> Dict:
-    """Float centroids [K, 45] and labels [N] (sorted order): the run-3 cache when it matches, else
-    this job's cache, else computed with the run-3 code (torchpq) or the library (Lloyd)."""
+def get_clustering(
+    args, name: str, k: int, seed: int, sorted_raw: Dict, key3: str
+) -> Dict:
+    """Float centroids [K, 45] and labels [N] (sorted order): the run-3 cache when it matches (the
+    run-3 default K only), else this job's cache, else computed with the run-3 code (TorchPQ) or the
+    library (Lloyd) at K = ``k``."""
     spec = CONFIGS[name]
-    if args.run3_kmeans_dir:
+    if args.run3_kmeans_dir and k == args.n_clusters:
         c = load_clustering(
-            os.path.join(args.run3_kmeans_dir, f"{spec['run3']}_s{seed}.pt"),
-            key3,
-            args.n_clusters,
+            os.path.join(args.run3_kmeans_dir, f"{spec['run3']}_s{seed}.pt"), key3, k
         )
         if c is not None:
             c["source"] = "run3_cache"
             return c
-    local = os.path.join(args.work_dir, "clusters", f"{name}_s{seed}.pt")
-    c = load_clustering(local, key3, args.n_clusters)
+    local = os.path.join(args.work_dir, "clusters", f"{name}_k{k}_s{seed}.pt")
+    c = load_clustering(local, key3, k)
     if c is not None:
         c["source"] = c.get("source", "e0_cache")
         return c
@@ -280,7 +322,7 @@ def get_clustering(args, name: str, seed: int, sorted_raw: Dict, key3: str) -> D
     n_iters = None
     if spec["clustering"] == "torchpq":
         centroids, labels, klog = r3.torchpq_kmeans(
-            data, args.n_clusters, seed, spec["distance"], MAX_ITER
+            data, k, seed, spec["distance"], MAX_ITER
         )
         n_iters = len(klog)
     else:
@@ -290,12 +332,7 @@ def get_clustering(args, name: str, seed: int, sorted_raw: Dict, key3: str) -> D
             r3.cluster_weights(spec["weights"], sorted_raw) if spec["weights"] else None
         )
         centroids, labels = weighted_kmeans(
-            data,
-            args.n_clusters,
-            weights=weights,
-            max_iter=MAX_ITER,
-            tol=TOL,
-            seed=seed,
+            data, k, weights=weights, max_iter=MAX_ITER, tol=TOL, seed=seed
         )
     ts._sync()
     c = {
@@ -362,13 +399,14 @@ def main(argv=None):
     p.add_argument("--runs_dir", required=True)
     p.add_argument("--out_dir", required=True)
     p.add_argument("--configs", default=",".join(DEFAULT_CONFIGS))
+    p.add_argument("--k_values", default=K_VALUES)
     p.add_argument("--seeds", default="0")
     p.add_argument("--probe_seed", type=int, default=0)
-    p.add_argument("--n_clusters", type=int, default=N_CLUSTERS)
+    p.add_argument("--n_clusters", type=int, default=N_CLUSTERS, help="run-3 default K")
     p.add_argument("--refine_iters", type=int, default=3)
     p.add_argument("--topk", type=int, default=64)
     p.add_argument("--eps", type=float, default=1e-4)
-    p.add_argument("--n_recall", type=int, default=50000)
+    p.add_argument("--n_lifted_check", type=int, default=10000)
     p.add_argument("--data_factor", type=int, default=4)
     p.add_argument("--cap_max", type=int, default=1_000_000)
     p.add_argument("--examples_dir", required=True)
@@ -377,6 +415,14 @@ def main(argv=None):
     args = p.parse_args(argv)
     scene = args.scene
     configs = [c for c in args.configs.split(",") if c]
+    unknown = [c for c in configs if c not in CONFIGS and c not in REFINES]
+    if unknown:
+        raise ValueError(f"unknown configs {unknown}")
+    k_values = [int(k) for k in args.k_values.split(",") if k]
+    if args.n_clusters not in k_values:
+        raise ValueError(
+            f"--n_clusters {args.n_clusters} must be one of --k_values {k_values}"
+        )
     seeds = [int(s) for s in args.seeds.split(",") if s]
     os.makedirs(args.out_dir, exist_ok=True)
     os.makedirs(args.work_dir, exist_ok=True)
@@ -403,7 +449,8 @@ def main(argv=None):
     total_train_pixels = sum(v["width"] * v["height"] for v in train_views)
     log(
         scene,
-        f"{len(splats_raw['means'])} splats, {len(train_views)} train / {len(test_views)} test views, settings {settings.as_dict()}",
+        f"{len(splats_raw['means'])} splats, {len(train_views)} train / {len(test_views)} test "
+        f"views, K {k_values}, settings {settings.as_dict()}",
     )
     meta.update(
         ckpt_sha1=ckpt_sha1,
@@ -412,6 +459,8 @@ def main(argv=None):
         test_views=len(test_views),
         total_train_pixels=total_train_pixels,
         n_splats=len(splats_raw["means"]),
+        k_values=k_values,
+        default_k=args.n_clusters,
         gsplat_commit=args.commit,
     )
 
@@ -493,7 +542,9 @@ def main(argv=None):
         }
         tr_np = named["trace_M"]
         rows = gd.spearman_rows(
-            named, scene, {"all": np.ones(len(tr_np), bool), "trace_gt_0": tr_np > 0}
+            named,
+            scene,
+            {"all": np.ones(len(tr_np), bool), "trace_gt_0": tr_np > 0},
         )
         write_csv(corr_path, rows)
         meta["timings_s"]["spearman"] = time.perf_counter() - t
@@ -503,28 +554,42 @@ def main(argv=None):
     done = read_done(csv_path, scene)
 
     def evaluate_row(
-        name: str, seed: int, source: str, centroids, labels, extra: Dict
+        name: str, k: int, seed: int, source: str, centroids, labels, extra: Dict
     ) -> Dict:
-        out_dir = os.path.join(args.runs_dir, f"kseed{seed}", name)
+        out_dir = os.path.join(args.runs_dir, f"k{k}_s{seed}", name)
         wd = write_and_decode(out_dir, sorted_raw, centroids, labels)
         dec = wd["decoded"]
         shn_q = torch.empty_like(splats_raw["shN"])
         shn_q[order] = dec["shN"].to(dev)
         delta = (splats_raw["shN"] - shn_q).view(-1, gm.D, 3)
         predicted = gd.predicted_dmse(M, delta, total_train_pixels)
-        m_train = gd.measure_dmse(render_rgb, train_views, splats_raw, {name: shn_q})[
-            name
-        ]
-        m_test = gd.measure_dmse(render_rgb, test_views, splats_raw, {name: shn_q})[
-            name
-        ]
-        for k in dec:  # full compressed pipeline (sorted order, as runs 3-5)
-            runner.splats[k].data = dec[k].to(dev)
-        stats = ts.evaluate(runner, step, stage=f"gn_{name}_s{seed}")
-        for k, v in splats_raw.items():
-            runner.splats[k].data = v.clone()
+        m_train = gd.measure_dmse(render_rgb, train_views, splats_raw, {name: shn_q})
+        m_test = gd.measure_dmse(render_rgb, test_views, splats_raw, {name: shn_q})
+        if (
+            "render_range" not in meta
+        ):  # per-channel out-of-range pixels, original render
+            meta["render_range"] = {
+                "train": m_train["_reference"],
+                "test": m_test["_reference"],
+            }
+            write_json(meta_path, meta)
+        m_train, m_test = m_train[name], m_test[name]
+        for key_ in dec:  # full compressed pipeline (sorted order, as runs 3-5)
+            runner.splats[key_].data = dec[key_].to(dev)
+        stats = ts.evaluate(runner, step, stage=f"gn_{name}_k{k}_s{seed}")
+        train = split_metrics(runner, runner.trainset, runner.splats)
+        if (
+            "metric_parity" not in meta
+        ):  # split_metrics on the test views vs Runner.eval
+            test_again = split_metrics(runner, runner.valset, runner.splats)
+            meta["metric_parity"] = {
+                m: abs(test_again[m] - stats[m]) for m in ("psnr", "ssim", "lpips")
+            }
+            write_json(meta_path, meta)
+        for key_, v in splats_raw.items():
+            runner.splats[key_].data = v.clone()
         runner.splats["shN"].data = shn_q  # only shN swapped
-        stats_shn = ts.evaluate(runner, step, stage=f"gn_{name}_s{seed}_shn")
+        stats_shn = ts.evaluate(runner, step, stage=f"gn_{name}_k{k}_s{seed}_shn")
         runner.splats["shN"].data = splats_raw["shN"].clone()
         if not args.keep_runs:
             shutil.rmtree(out_dir, ignore_errors=True)
@@ -532,9 +597,9 @@ def main(argv=None):
         row = {
             "scene": scene,
             "config": name,
+            "n_clusters": int(centroids.shape[0]),
             "seed": seed,
             "source": source,
-            "n_clusters": int(centroids.shape[0]),
             "predicted": predicted,
             "measured_train_clamped": m_train["clamped"],
             "measured_test_clamped": m_test["clamped"],
@@ -549,12 +614,15 @@ def main(argv=None):
             "PSNR": stats["psnr"],
             "SSIM": stats["ssim"],
             "LPIPS": stats["lpips"],
+            "train_PSNR": train["psnr"],
+            "train_SSIM": train["ssim"],
+            "train_LPIPS": train["lpips"],
             "shn_only_PSNR": stats_shn["psnr"],
             "shn_only_SSIM": stats_shn["ssim"],
             "shn_only_LPIPS": stats_shn["lpips"],
             **{
-                k: wd["sizes"][k]
-                for k in (
+                k_: wd["sizes"][k_]
+                for k_ in (
                     "size_bytes",
                     "zip_bytes",
                     "png_bytes",
@@ -576,103 +644,134 @@ def main(argv=None):
         }
         return row
 
-    # c. the three run-3 configs
-    for seed in seeds:
-        for name in [c for c in configs if c in CONFIGS]:
-            if (name, seed) in done:
-                log(scene, f"{name} seed {seed}: row exists")
-                continue
-            spec = CONFIGS[name]
-            cl = get_clustering(args, name, seed, sorted_raw, key3)
-            log(scene, f"{name} seed {seed}: clustering from {cl['source']}")
-            extra = {
-                "clustering": spec["clustering"],
-                "distance": spec["distance"],
-                "weights": spec["weights"] or "none",
-                "kmeans_time_s": cl.get("time_s", ""),
-                "n_iters": cl.get("n_iters")
-                or (len(cl["log"]) if cl.get("log") else ""),
-            }
-            ref = run3_row(args.run3_csv, scene, spec["run3"], seed)
-            row = evaluate_row(
-                name, seed, cl["source"], cl["centroids"], cl["labels"], extra
-            )
-            if ref is not None:
-                row.update(
-                    run3_PSNR=float(ref["PSNR"]),
-                    run3_size_bytes=int(float(ref["size_bytes"])),
-                    run3_dPSNR=row["PSNR"] - float(ref["PSNR"]),
-                    run3_size_equal=int(row["size_bytes"])
-                    == int(float(ref["size_bytes"])),
-                )
-            append_row(csv_path, row)
-            log(
-                scene,
-                f"{name} seed {seed}: P {row['predicted']:.6g}, D_train {row['measured_train_clamped']:.6g}, "
-                f"D_test {row['measured_test_clamped']:.6g}, PSNR {row['PSNR']:.4f}, raw bytes {row['size_bytes']}",
-            )
+    def row_log(row: Dict) -> str:
+        return (
+            f"{row['config']} K {row['n_clusters']} seed {row['seed']}: P {row['predicted']:.6g}, "
+            f"D_train {row['measured_train_clamped']:.6g}, D_test {row['measured_test_clamped']:.6g}, "
+            f"PSNR {row['PSNR']:.4f} (train {row['train_PSNR']:.4f}), raw bytes {row['size_bytes']}"
+        )
 
-    # d. GN refine (exploratory), warm-started from lloyd_wopa_area seed 0
-    if REFINE in configs and (REFINE, 0) not in done:
-        warm = get_clustering(args, "lloyd_wopa_area", 0, sorted_raw, key3)
+    # c. the three run-3 configs at every K (G0)
+    for seed in seeds:
+        for k in k_values:
+            for name in [c for c in configs if c in CONFIGS]:
+                if (name, k, seed) in done:
+                    log(scene, f"{name} K {k} seed {seed}: row exists")
+                    continue
+                spec = CONFIGS[name]
+                cl = get_clustering(args, name, k, seed, sorted_raw, key3)
+                log(scene, f"{name} K {k} seed {seed}: clustering from {cl['source']}")
+                extra = {
+                    "clustering": spec["clustering"],
+                    "distance": spec["distance"],
+                    "weights": spec["weights"] or "none",
+                    "kmeans_time_s": cl.get("time_s", ""),
+                    "n_iters": cl.get("n_iters")
+                    or (len(cl["log"]) if cl.get("log") else ""),
+                }
+                row = evaluate_row(
+                    name, k, seed, cl["source"], cl["centroids"], cl["labels"], extra
+                )
+                ref = run3_row(args.run3_csv, scene, spec["run3"], seed)
+                if ref is not None and k == args.n_clusters:
+                    row.update(
+                        run3_PSNR=float(ref["PSNR"]),
+                        run3_size_bytes=int(float(ref["size_bytes"])),
+                        run3_dPSNR=row["PSNR"] - float(ref["PSNR"]),
+                        run3_size_equal=int(row["size_bytes"])
+                        == int(float(ref["size_bytes"])),
+                    )
+                append_row(csv_path, row)
+                log(scene, row_log(row))
+
+    # d. exact-assignment GN refines (exploratory, excluded from G0), warm-started from
+    # lloyd_wopa_area at the default K, seed 0. The G0 rows above are written first.
+    todo = [c for c in configs if c in REFINES and (c, args.n_clusters, 0) not in done]
+    if todo:
+        warm = get_clustering(
+            args, "lloyd_wopa_area", args.n_clusters, 0, sorted_raw, key3
+        )
         x = sorted_raw["shN"].reshape(len(sorted_raw["shN"]), -1).float().contiguous()
         M_sorted = M[order]
-        ts._sync()
-        tic = time.perf_counter()
-        C, labels, history = gd.gn_refine(
-            x,
-            warm["centroids"].to(dev),
-            warm["labels"].to(dev),
-            M_sorted,
-            total_train_pixels,
-            iters=args.refine_iters,
-            topk=args.topk,
-            eps=args.eps,
-            n_recall=args.n_recall,
-            seed=0,
-            log=lambda m: log(scene, m),
-        )
-        ts._sync()
-        refine_s = time.perf_counter() - tic
-        del M_sorted
-        write_json(
-            os.path.join(args.out_dir, f"gn_refine_{scene}.json"),
-            {
-                "warm_start": {
-                    "config": "lloyd_wopa_area",
-                    "seed": 0,
-                    "source": warm["source"],
-                },
-                "iters": args.refine_iters,
-                "topk": args.topk,
-                "eps": args.eps,
-                "n_recall": args.n_recall,
-                "history": history,
+        C0, L0 = warm["centroids"].to(dev), warm["labels"].to(dev)
+        if "lifted_check" not in meta or not meta["lifted_check"].get("pass"):
+            t = time.perf_counter()
+            chk = gd.lifted_check(x, M_sorted, C0, n_sample=args.n_lifted_check, seed=0)
+            chk["time_s"] = time.perf_counter() - t
+            meta["lifted_check"] = chk
+            write_json(meta_path, meta)
+            log(scene, f"lifted vs direct check: {chk}")
+            if not chk["pass"]:
+                raise RuntimeError(
+                    f"LIFTED CHECK FAILED: lifted fp32 argmin vs direct float64 minimum ({chk})"
+                )
+        for name in todo:
+            variant = REFINES[name]
+            ts._sync()
+            tic = time.perf_counter()
+            C, labels, history = gd.gn_refine(
+                x,
+                C0,
+                L0,
+                M_sorted,
+                total_train_pixels,
+                variant=variant,
+                iters=args.refine_iters,
+                eps=args.eps,
+                topk=args.topk,
+                log=lambda m: log(scene, m),
+            )
+            ts._sync()
+            refine_s = time.perf_counter() - tic
+            extra = {
+                "clustering": "gn_refine",
+                "distance": "mahalanobis",
+                "weights": "M_i",
+                "refine_variant": variant,
+                "objective_unquantized": history[-1]["objective"],
                 "refine_time_s": refine_s,
-            },
-        )
-        extra = {
-            "clustering": "gn_refine",
-            "distance": "mahalanobis",
-            "weights": "M_i",
-            "refine_time_s": refine_s,
-            "n_iters": args.refine_iters,
-        }
-        row = evaluate_row(
-            REFINE, 0, f"refine_of_{warm['source']}", C.cpu(), labels.cpu(), extra
-        )
-        append_row(csv_path, row)
-        log(
-            scene,
-            f"{REFINE}: P {row['predicted']:.6g}, D_train {row['measured_train_clamped']:.6g}, "
-            f"D_test {row['measured_test_clamped']:.6g}, PSNR {row['PSNR']:.4f}, raw bytes {row['size_bytes']}",
-        )
+                "n_iters": args.refine_iters,
+            }
+            row = evaluate_row(
+                name,
+                args.n_clusters,
+                0,
+                f"refine_of_{warm['source']}",
+                C.cpu(),
+                labels.cpu(),
+                extra,
+            )
+            write_json(
+                os.path.join(args.out_dir, f"gn_refine_{variant}_{scene}.json"),
+                {
+                    "config": name,
+                    "variant": variant,
+                    "warm_start": {
+                        "config": "lloyd_wopa_area",
+                        "n_clusters": args.n_clusters,
+                        "seed": 0,
+                        "source": warm["source"],
+                    },
+                    "iters": args.refine_iters,
+                    "eps": args.eps,
+                    "mu": "eps * tr(sum M) / 15 per cluster",
+                    "topk_diagnostic": args.topk,
+                    "history": history,
+                    "objective_unquantized_final": history[-1]["objective"],
+                    "objective_after_quantization": row["predicted"],
+                    "refine_time_s": refine_s,
+                },
+            )
+            append_row(csv_path, row)
+            log(scene, row_log(row))
+        del M_sorted
 
     # Uncompressed reference (GT metrics of the checkpoint itself), once.
-    if ("uncompressed", 0) not in read_done(csv_path, scene):
-        for k, v in splats_raw.items():
-            runner.splats[k].data = v.clone()
+    if ("uncompressed", 0, 0) not in read_done(csv_path, scene):
+        for k_, v in splats_raw.items():
+            runner.splats[k_].data = v.clone()
         stats = ts.evaluate(runner, step, stage="gn_uncompressed")
+        train = split_metrics(runner, runner.trainset, runner.splats)
         append_row(
             csv_path,
             {
@@ -683,6 +782,9 @@ def main(argv=None):
                 "PSNR": stats["psnr"],
                 "SSIM": stats["ssim"],
                 "LPIPS": stats["lpips"],
+                "train_PSNR": train["psnr"],
+                "train_SSIM": train["ssim"],
+                "train_LPIPS": train["lpips"],
                 "ckpt_sha1": ckpt_sha1,
                 "gsplat_commit": args.commit,
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
