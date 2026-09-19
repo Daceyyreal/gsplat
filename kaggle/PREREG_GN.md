@@ -139,3 +139,30 @@ GN-VQ against `lloyd_wopa_area`, at equal total bytes (raw bytes of the compress
 +-0.5% of `lloyd_wopa_area` at the same seed): at least +0.05 dB mean test PSNR over 3 k-means seeds,
 no seed with a negative PSNR difference, on both scenes. The exact GN-VQ variant and its size-matching
 procedure are fixed in writing before the E1 run.
+
+## Amendment 1 (2026-09-19, during implementation, before any E0 result)
+
+Only the toy exactness check changes. G0, the other validity checks and everything above stay as
+written.
+
+**Why:** on a CPU copy of the renderer (`bench/gn/toy_render.py`), the toy layout I first wrote put
+the 64-probe summed estimate 5% or more off the exact sum in 9.9% of probe draws (99 of 1,000;
+`bench/gn/toy_noise.json`). In that layout, splats of very different size and opacity cluster in the
+middle of the image, so a few large splats dominate the sum and share probes. A validity check should
+catch implementation errors, not probe noise.
+
+**Changes:**
+
+- **Toy scene** (`gn_metric.toy_scene`): 256 splats of similar size and opacity, spread uniformly over
+  a 128 x 96 view at depth 3 +- 0.3. With the scene the CUDA check uses (seed 0), 86.8% of covered
+  pixels still blend two or more splats. Over 1,000 simulated probe draws the summed estimate is off
+  by 1.2% on average, 3.7% at the 99th percentile and 4.95% at most; no draw reaches 5%
+  (`bench/gn/toy_noise.json`, from `bench/gn/toy_noise.py`). I chose the layout from these CPU
+  simulations only, before any CUDA run.
+- **Unchanged:** the pre-registered test itself, the summed 64-probe estimate within 5% of the exact
+  sum.
+- **Added, stricter:** a deterministic check. Per splat, the gradient-based estimate must equal the
+  Hutchinson formula `mean_c (sum_p w_pi r_pc)^2`, evaluated with the identity-render weights and the
+  same probe images, to 1e-4 relative. This tests the gradient plumbing exactly, independent of probe
+  noise. (Splats covering less than 1e-3 of the largest footprint are excluded from the per-splat
+  relative errors.)
