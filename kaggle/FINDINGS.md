@@ -19,6 +19,9 @@ passes the same rule on Tanks & Temples: **+0.052 dB** mean PSNR on train / truc
 Cost: k-means 510 s vs 405 s mean on MipNeRF360 and 328 s vs 416 s on Tanks & Temples; peak GPU
 memory 3.37-3.62 GB vs 1.03-1.26 GB.
 
+**E0 (section 8, branch `bench/gn-vq`): pending.** Does a Gauss-Newton metric on shN predict the
+rendering error of shN quantization? Pre-registered in `kaggle/PREREG_GN.md`; not run yet.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -647,3 +650,22 @@ The jobs summed to 6.05 GPU-hours over the 2 GPUs. The notebook's pre-run estima
   still hold the TorchPQ numbers; regenerating them is left to a follow-up.
 - **CUDA checks:** `lint/format-code.sh` and the test suite on a CUDA machine. Locally only CPU tests
   run (`tests/test_compression.py` skips its CUDA test).
+
+## 8. E0 — pending: a Gauss-Newton metric for the shN codebook (`bench/gn-vq`)
+
+**Status: not run.** This section has no results yet. The questions, definitions and decision rules
+were fixed before any E0 code or result, in `kaggle/PREREG_GN.md`: the original text (commit
+`464c46a5`) and Amendment 1 (toy exactness check only, commit `223faf91`).
+
+- **Question (G0):** on garden and bicycle, does the per-splat GN metric `M_i = sum_v s_iv y y^T`,
+  accumulated over the train views, rank the three run-3 clusterings the same way as the measured
+  shN-only render error does, on train and on test views? Is the predicted/measured ratio within the
+  pre-registered range on train views? The three clusterings are `upstream_l1` (TorchPQ manhattan),
+  `plain_l2` (unweighted Lloyd) and `lloyd_wopa_area`.
+- **Exploratory:** the spectrum of `M_i`; rank correlations between `tr(M_i)`, the `opacity_area`
+  weight, the footprint `F_i` and a C3DGS-style weight; and a GN refine of the `lloyd_wopa_area`
+  codebook (bytes per file, test metrics, shortlist recall).
+- **G1** (GN-VQ vs `lloyd_wopa_area` at equal size) is judged in E1, not in E0.
+- **Where results will come from:** the E0 notebook (`kaggle/gn_bench.ipynb`, built by
+  `kaggle/build_gn_bench.py`) writes `gn_bundle.zip`; its files will be committed under
+  `kaggle/gn_e0/gn/`, and this section will quote them.
