@@ -663,7 +663,11 @@ were fixed before any E0 code or result, in `kaggle/PREREG_GN.md`:
 - Amendment 3: the G0 verdict is the ranking alone, with the predicted/measured ratio reported as
   calibration; an end-to-end exactness validity check; a new criterion for the lifted-assignment
   check; a proximal-objective rise marks that refine invalid instead of stopping the run (commit
-  `86e5f35f`).
+  `86e5f35f`);
+- Amendment 4: the toy and end-to-end checks render committed scene fixtures whose hashes are
+  asserted before rendering (a correction: the CUDA toy check would have rendered a different scene
+  from the one simulated for Amendment 1); end-to-end preconditions read from gsplat's own render; a
+  report-only probe-noise diagnostic (commit `a8f4d9ae`).
 
 The sections:
 

@@ -33,7 +33,7 @@ Upstream main at the time of this work: `28e794c`.
 | `feat/png-tile-quantization` (`3ff67e8`) | `PngCompression(tile_size=, bits=)` | benchmark said no PR; leave alone |
 | `feat/png-weighted-kmeans` (`61cd1baf`) | `gsplat/compression/kmeans.py` + `kmeans_backend` / `kmeans_weighting` / `kmeans_chunk_size`, off upstream main `28e794c`; `tests/test_kmeans.py`. Commits `9348e32` (backend + options), `a4c31082` (`kmeans_chunk_size`), `61cd1baf` (default flip, droppable) | **upstream PR [#1063](https://github.com/nerfstudio-project/gsplat/pull/1063), open** (opened 2026-09-18), measured by run 5. Keep this branch clean: library only (3 files). Upstream main had not moved on 2026-09-18. |
 | `bench/tilequant` | both feat branches merged + benchmark code and results; never goes upstream | runs 1-5 done; head = `git log -1 fork/bench/tilequant`. The blog post links its FINDINGS, so keep those numbers stable. |
-| `bench/gn-vq` | off `bench/tilequant` (`12f912eb`): E0 pre-registration (Amendments 1-3), `bench/gn/` (GN metric, diagnostics, G0 rule, smoke tests), E0 job and notebook; never goes upstream | **E0 ready (Amendment 3), not run.** `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
+| `bench/gn-vq` | off `bench/tilequant` (`12f912eb`): E0 pre-registration (Amendments 1-4), `bench/gn/` (GN metric, diagnostics, G0 rule, smoke tests, scene fixtures), E0 job and notebook; never goes upstream | **E0 ready (Amendment 4), not run.** `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
 
 Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): `PR_DRAFT_weighted_kmeans.md`,
 `PR_DRAFT_empty_tensor.md`, `ISSUE_566_COMMENT.md`, `ISSUE_787_COMMENT.md`.
@@ -54,10 +54,10 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `FINDINGS.md` | results write-up, every number from the committed bundles |
 | `HANDOFF.md` | this file |
 | `run2/tilequant/` ... `run5/tilequant/` | results bundles (`results_bundle.zip` contents); each session restores the previous one, so files repeat (git stores them once). In `run5/`, `run5_tt_table.csv` and `rd_run5.png` were regenerated locally after the label fix `1b4d40f8` (see FINDINGS sources); the downloaded original is `~/Downloads/results_bundle (3).zip` |
-| `PREREG_GN.md` | E0 pre-registration (`bench/gn-vq`): G0 rule, validity checks, exploratory scope, G1 for E1. Amendment 1: the toy check. Amendment 2: G0 over 9 codebooks per scene with tie-exempt pairs, and exact-assignment refines instead of the shortlist one. Amendment 3: the G0 verdict is the ranking alone (the ratio is reported as calibration), the end-to-end exactness check, the lifted-check criterion v2, and a proximal rise invalidating that variant instead of stopping. **Never edit a rule after results exist**; add a dated amendment instead. |
+| `PREREG_GN.md` | E0 pre-registration (`bench/gn-vq`): G0 rule, validity checks, exploratory scope, G1 for E1. Amendment 1: the toy check. Amendment 2: G0 over 9 codebooks per scene with tie-exempt pairs, and exact-assignment refines instead of the shortlist one. Amendment 3: the G0 verdict is the ranking alone (the ratio is reported as calibration), the end-to-end exactness check, the lifted-check criterion v2, and a proximal rise invalidating that variant instead of stopping. Amendment 4: the toy and end-to-end scenes are committed fixtures with pinned hashes (a correction: the CUDA toy check would have drawn a different scene from the simulated one), end-to-end preconditions read from gsplat's render, and a report-only probe-noise diagnostic. **Never edit a rule after results exist**; add a dated amendment instead. |
 | `gn_e0_scene.py` | E0, one scene per process: render parity, GN pass (`gn_cache/<scene>.pt`), spectrum, Spearman, the 9 G0 codebooks (predicted vs measured, test and train GT metrics, reproduction fields at K = 65,536), the lifted-assignment check (gates only the refines), the ridge / proximal refines (a proximal rise marks that row invalid). Resumable per (scene, config, K, seed). |
 | `build_gn_bench.py` / `gn_bench.ipynb` | E0 notebook (build output; edit the builder, never the JSON) |
-| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` (the G0 rule as code), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (30 CPU tests), `dryrun/` (the E0 dry run and the writer-parity check; not collected by pytest) |
+| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` (the G0 rule as code), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (36 CPU tests), `dryrun/` (the E0 dry run and the writer-parity check; not collected by pytest) |
 | `.gitignore` | ignores only the 64 run-5 bundle files that were unpacked flat into `kaggle/` by hand (anchored names; nothing deleted; the committed copy is `run5/tilequant/`) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
@@ -147,14 +147,27 @@ reference-row labels. Logs: `..\r5\after_fix_*.log`, all OK.
   `setup.py` are unchanged since run 5), and builds with `MAX_JOBS=2` otherwise
   (`ALLOW_WHEEL_BUILD = True`). It installs torchpq + cupy only in case a TorchPQ clustering must be
   recomputed. PLAS is not needed: E0 uses the cached order with `use_sort=False`.
-- **CUDA smoke tests** (`bench/gn/selftest.py --device cuda`) go to `gn/gn_selftest.json`. The G0
-  validity checks there are `sh_basis` (`sh_basis.cuda_check`, max abs error < 1e-5 against gsplat's
-  `spherical_harmonics`), `toy_exactness` (`gn_metric.toy_exactness`, Amendment 1) and
-  `e2e_exactness` (`diagnostics.e2e_exactness`, Amendment 3: on 48 non-overlapping toy splats with
-  exact `s_iv` and a +-0.1 shN perturbation, predicted = measured unclamped dMSE to 1e-4; the
-  overlapping variants are reported only). If any fails, the script exits non-zero and the notebook
-  stops before the data download and the scene jobs. Also recorded, informational only:
-  `lifted_random`, the lifted fp32 vs direct float64 assignment on random data (criterion v2).
+- **CUDA smoke tests** (`bench/gn/selftest.py --device cuda`) go to `gn/gn_selftest.json`.
+  - **First, before anything is rendered:** the committed scene fixtures must hash to their pinned
+    values (Amendment 4): `bench/gn/fixtures/toy_scene_seed0` (`gn_metric.TOY_SCENE_SHA256`,
+    `1bb442ee...`) and `e2e_scene_seed0` (`diagnostics.E2E_SCENE_SHA256`, `103c99e0...`). On a
+    mismatch nothing else runs and the script exits with `FIXTURE HASH MISMATCH`.
+  - The G0 validity checks: `sh_basis` (`sh_basis.cuda_check`, max abs error < 1e-5 against
+    gsplat's `spherical_harmonics`); `toy_exactness` (`gn_metric.toy_exactness`, Amendment 1, on its
+    fixture); `e2e_exactness` (`diagnostics.e2e_exactness`, Amendments 3-4: on the 48 non-overlapping
+    fixture splats with exact `s_iv` and the fixture's +-0.1 shN perturbation, predicted = measured
+    unclamped dMSE to 1e-4; the overlapping variants are reported only).
+  - `e2e_exactness` first checks its preconditions on gsplat's own renders: one splat per pixel;
+    each splat's rendered colour (SH-render value / identity weight at a pixel only it covers) in
+    (0, 1); covered pixels in (0, 1), uncovered exactly 0. If one fails, its `status` is
+    `preconditions_failed`, nothing is compared, and the run stops with "the exactness claim does not
+    apply ... not a prediction mismatch". Otherwise `status` is `pass` or `mismatch`.
+  - If anything fails, the script exits non-zero and the notebook stops before the data download
+    and the scene jobs.
+  - Report-only, outside every verdict: the toy check's `noise_diagnostic` (exact `sigma_rel` of the
+    64-probe estimate of the sum and the normal-approximation false-fail probability of the 5% rule),
+    logged before the check is judged; `lifted_random`, the lifted fp32 vs direct float64 assignment
+    on random data (criterion v2).
 - **Jobs:** garden on GPU 0 and bicycle on GPU 1 in parallel (`run_on_gpus`), each running
   `kaggle/gn_e0_scene.py`. Each job:
   - checks **render parity** first: the direct `rasterization` call against `Runner.rasterize_splats`
@@ -228,8 +241,9 @@ reference-row labels. Logs: `..\r5\after_fix_*.log`, all OK.
   - `valid`, `invalid_reason`, `objective_rises` (each rise: iteration, step, before, after) and
     `monotone_rtol`;
   - the final unquantized and quantized objective, and times;
-- `gn_selftest.json` (`device`, `sh_basis`, `toy_exactness`, `e2e_exactness` with its
-  `non_overlapping` / `overlapping` / `overlapping_shared_delta` cases, `pass`, `lifted_random`),
+- `gn_selftest.json` (`device`, `fixtures`, `sh_basis`, `toy_exactness` with `noise_diagnostic`,
+  `e2e_exactness` with `status` and its `non_overlapping` / `overlapping` /
+  `overlapping_shared_delta` cases, `pass`, `lifted_random`),
   `gn_g0.json` (verdict, `clamped` and `raw` pairs, `calibration`), `gn_g0.png`, `timings.json`.
 
 **Bundle contents** (`/kaggle/working/gn_bundle.zip`; the top-level csv / json / png files of `gn/`,
@@ -249,13 +263,17 @@ there after the bundle cell.
 
 **Local checks** (no GPU):
 
-- `.venv\Scripts\python.exe -m pytest bench/gn/test_gn.py`: 30 CPU tests, among them the lifted
+- `.venv\Scripts\python.exe -m pytest bench/gn/test_gn.py`: 36 CPU tests, among them the lifted
   argmin on N = 2,000, K = 256 with rank-deficient and zero M_i against brute force; the v2 lifted
   criterion (passes fp32 near-tie rounding on rank-deficient M_i where d_min = 0, fails a wrong
   assignment, both branches, the version re-run rule); the end-to-end exactness check on the CPU
-  renderer and its failure on a 0.1% render mismatch; the CPU selftest and its non-zero exit;
-  clusters with `tr(sum M) = 0` keeping `q_old`; a proximal rise recorded, not raised; every G0
-  verdict path and degenerate case under Amendment 3.
+  renderer, its failure on a 0.1% render mismatch, and a failed precondition reported as such and
+  not as a mismatch; the fixtures (pinned hashes, provenance against a fresh CPU draw, both
+  provenance modes, a hash mismatch or a tampered file stopping everything before any render);
+  `sigma_rel` against Monte Carlo; the CPU selftest and its non-zero exits; clusters with
+  `tr(sum M) = 0` keeping `q_old`; a proximal rise recorded, not raised; every G0 verdict path and
+  degenerate case under Amendment 3. The suite also passes with `ATEN_CPU_CAPABILITY=default`
+  (the provenance test then compares within 1e-5 and warns with the capability difference).
 - `PYTHONPATH=F:\gsplat .venv\Scripts\python.exe bench/gn/selftest.py --device cpu --out <file>`: the
   smoke tests on the CPU stand-in (the venv has no installed gsplat; the script never puts the source
   tree ahead of an installed wheel, which matters on Kaggle).
@@ -435,6 +453,52 @@ no E0 result exists, so none was made after a result.
   instead of the installed wheel; locally the CPU stand-in is run with `PYTHONPATH`.
 - **Commit split as for Amendment 2:** the builder with the code, the rebuilt notebook with the docs.
 
+### Amendment 4 session (2026-09-20)
+
+Dace decided the toy-scene RNG item: fix it, as a correction (Amendment 1 already says the simulated
+scene is the scene the CUDA check uses). Re-deriving it showed that drawing on the CPU is not enough,
+and Dace chose committed fixtures over a fresh draw on Kaggle (bitwise or with a tolerance). As
+before, no E0 result exists.
+
+- **Why fixtures:** torch's CPU `randn` (float32, 16 or more values) uses an AVX2 SIMD approximation
+  of log/sin/cos under AVX2 dispatch and scalar libm calls under DEFAULT or AVX512 dispatch
+  (`ATen/native/cpu/DistributionTemplates.h`). On this machine (torch 2.11.0+cpu, Windows, AVX2 by
+  default), `ATEN_CPU_CAPABILITY=default` changes 5,037 of the toy scene's 15,104 values (max abs
+  1.76e-6) and both scene hashes (toy `f01d6b50...`, e2e `68934fd2...`). Kaggle's CPU and torch build
+  are not known in advance, so a bitwise hash of a draw made there would most likely have stopped the
+  run.
+- **What was verified:** `make_fixtures.py --verify-commit c69ba388` re-derives the toy scene with
+  `c69ba388`'s own `gn_metric.py` in a separate process: same hash as the current code's draw
+  (`1bb442ee...`). The scene-only fields of `toy_noise.json` (blending fraction 0.8680054926192928,
+  256 visible splats) reproduce exactly, but also from the DEFAULT-dispatch draw, so they cannot pin
+  the dispatch; the simulation ran with this machine's default (AVX2), and no override was recorded.
+  The probe simulation was not re-run.
+- **Format:** `.npz` of float32 little-endian arrays plus a `.json` (hash, hash definition, shapes,
+  CPU capability, torch version, platform, provenance). `fixtures/.gitattributes` marks `*.npz`
+  binary, so `autocrlf` never touches them; the committed blobs equal the files byte for byte.
+- **Hash:** SHA-256 over the sorted keys, each as `"<key>:<shape>:float32-le;"` then its bytes, so
+  the hash does not depend on the file format. `load_fixture` checks it (and the one in the `.json`)
+  before the tensors are moved to the device.
+- **The e2e fixture includes the perturbation** (`delta`). The perturbation comes from the CPU
+  generator too: `torch.rand` is exact integer-to-float, but committing it removes the question. The
+  overlapping variants are derived on the device from the fixture (scales x5), as before; they are
+  report-only.
+- **E2E colour precondition reads (0, 1), not only > 0.** Dace's list says `SH + 0.5 > 0`; Amendment 3
+  already pre-registered (0, 1), and the stricter range keeps both true. It is read from gsplat's own
+  render: in a pixel covered by one splat, SH render / identity render = that splat's
+  `max(SH + 0.5, 0)`. On the CPU stand-in it matches the basis value to 1e-5.
+- **"All rendered values in (0, 1)" is read as:** covered pixels in (0, 1), uncovered pixels exactly
+  0. With a background of 0 an uncovered pixel can't be in (0, 1); it contributes nothing to either
+  side, so clamping changes nothing. That is Amendment 3's wording, kept.
+- **Report-only diagnostic:** `hutchinson_rel_std` and `false_fail_probability` in `gn_metric`,
+  stored in `toy_exactness["noise_diagnostic"]` and logged before the check is judged. On the CPU
+  stand-in (the same fixture scene) `sigma_rel` is 0.01481 and the false-fail probability 0.000733
+  (the dry run's stage 0 prints them). The CUDA value is the one the run will log.
+- **A pre-existing test was fixed:** `test_predicted_dmse_matches_loop` compared a float32 reference
+  loop to 1e-9 absolute and failed under DEFAULT dispatch; the reference is now float64.
+- **Risk:** if a future torch changes its CPU RNG algorithm, the provenance test (tolerance mode)
+  would fail on that machine. The CUDA checks are unaffected, because they read the files.
+
 ### Open items (E0)
 
 - **Run E0 on Kaggle** (Dace). Session length is unknown. Since the first build, each scene also
@@ -448,14 +512,11 @@ no E0 result exists, so none was made after a result.
   - the fp32 lifted assignment on real data, and its v2 criterion there.
 
   The CPU dry run covers the plumbing, not these kernels.
-- **Toy check scene on CUDA (found 2026-09-19, not changed):** `gn_metric.toy_scene` draws with
-  `torch.Generator(device=device)`, and PyTorch's CUDA generator produces a different stream from the
-  CPU one for the same seed. So the CUDA toy check renders a different draw of the Amendment-1 layout
-  than the CPU scene that `toy_noise.py` simulated, although Amendment 1 calls that CPU scene "the
-  scene the CUDA check uses". Its probe-noise margin on the CUDA draw is therefore not measured; the
-  two CPU draws simulated (seeds 0 and 1) had no draw at 5% or more (`bench/gn/toy_noise.json`). The
-  fix (draw on the CPU, then move, as `e2e_scene` does) changes a pre-registered check's input, so
-  it needs Dace's decision and a dated amendment before any run.
+- ~~**Toy check scene on CUDA.**~~ **Resolved (2026-09-20, PREREG Amendment 4):** `toy_scene` drew
+  with the CUDA generator, so the CUDA toy check would have rendered a different scene from the one
+  `toy_noise.py` simulated. Dace treated it as a correction. `toy_scene` now draws on the CPU, and
+  because a CPU draw is not bitwise reproducible across CPU dispatch and platforms, both checks render
+  committed fixtures whose hashes are asserted before rendering (see "Amendment 4 session" above).
 - **Assumptions the run will confirm:**
   - the run-5 output contains the run-3 clustering caches; otherwise the configs are re-clustered, with
     a warning;
@@ -575,7 +636,7 @@ no E0 result exists, so none was made after a result.
 | 3 | k-means clustering levers (library format unchanged) | **found `lloyd_wopa_area`**: higher PSNR and lower LPIPS than the baseline on garden and bicycle at all 3 k-means seeds (+0.096 / +0.030 dB mean PSNR). The strict rule (`pr_worthy`) failed only on two garden SSIM cells, both inside the baseline's own SSIM seed spread. |
 | 4 | full MipNeRF360 validation of `lloyd_wopa` / `lloyd_wopa_area` (pre-registered rule) | **validated on all 9 scenes.** Both candidates pass; `pr_candidate` = `lloyd_wopa_area`, +0.111 dB mean PSNR at -0.10% mean size, better on every scene. All 7 sanity gates passed. |
 | 5 | the same change as library code (`feat/png-weighted-kmeans`): parity gate, MipNeRF360, Tanks & Temples, cost, CPU-only smoke test | **passed.** Parity exact (and all 18 library rows = the run-4 rows); Tanks & Temples +0.052 dB mean PSNR at +0.08% size, both scenes better; k-means 510 s vs 405 s (MipNeRF360), 328 s vs 416 s (T&T); peak GPU memory 3.37-3.62 GB vs 1.03-1.26 GB; CPU smoke test passed; torchpq baseline reproduced to ~0.002 dB. |
-| E0 (`bench/gn-vq`) | does a Gauss-Newton metric on shN predict the shN-only render error (G0, `PREREG_GN.md`)? | **pending**: code, tests and dry runs done, updated for PREREG Amendment 3 (ranking-only verdict, end-to-end exactness check); not run on Kaggle. |
+| E0 (`bench/gn-vq`) | does a Gauss-Newton metric on shN predict the shN-only render error (G0, `PREREG_GN.md`)? | **pending**: code, tests and dry runs done, updated for PREREG Amendments 3-4 (ranking-only verdict, end-to-end exactness check, scene fixtures with pinned hashes); not run on Kaggle. |
 
 ## PR plan (`feat/png-weighted-kmeans`)
 
