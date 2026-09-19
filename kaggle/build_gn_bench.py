@@ -55,7 +55,7 @@ wheel. To resume, also attach this notebook's own earlier output (`gn/`, `gn_cac
 | 1 | config, helpers |
 | 2 | find and restore inputs (checkpoints, sort caches, run-3 caches, wheel, earlier E0 output) |
 | 3 | install gsplat (`bench/gn-vq`, `MAX_JOBS=2`, restored wheel when its key matches), example dependencies |
-| 4 | **CUDA smoke tests** (`bench/gn/selftest.py`; the run stops here if one fails): SH basis against gsplat's `spherical_harmonics`; toy Hutchinson exactness; end-to-end exactness (non-overlapping toy: predicted = measured dMSE to 1e-4). Informational: lifted vs direct assignment on random data |
+| 4 | **CUDA smoke tests** (`bench/gn/selftest.py`; the run stops here if one fails): first the hashes of the committed toy and end-to-end scene fixtures (Amendment 4), before anything is rendered; SH basis against gsplat's `spherical_harmonics`; toy Hutchinson exactness (with a report-only probe-noise diagnostic); end-to-end exactness (non-overlapping toy, preconditions read from gsplat's render: predicted = measured dMSE to 1e-4). Informational: lifted vs direct assignment on random data |
 | 5 | MipNeRF360 data for garden and bicycle |
 | 6 | E0 jobs: garden on `cuda:0`, bicycle on `cuda:1` (`kaggle/gn_e0_scene.py`; the 10k-real-splat lifted check runs there and gates only the refines; a proximal-objective rise marks that variant invalid) |
 | 7 | G0 verdict (`gn_g0.json`, Amendment 3), calibration, tables, plot |
@@ -359,10 +359,13 @@ sh("nvidia-smi")
 
 code(
     r"""
-# CUDA smoke tests: the G0 validity checks of kaggle/PREREG_GN.md that need no scene. SH basis against
-# gsplat's spherical_harmonics, the toy Hutchinson exactness check (Amendment 1) and the end-to-end
-# exactness check (Amendment 3) on gsplat's rasterizer. selftest.py exits non-zero if one fails, sh()
-# raises, and the notebook stops here, before the data download and the scene jobs.
+# CUDA smoke tests: the G0 validity checks of kaggle/PREREG_GN.md that need no scene. First, before
+# anything is rendered, the committed toy and end-to-end scene fixtures must hash to their pinned
+# values (Amendment 4). Then the SH basis against gsplat's spherical_harmonics, the toy Hutchinson
+# exactness check (Amendment 1; its report-only noise diagnostic is logged first) and the end-to-end
+# exactness check (Amendments 3-4; a failed precondition is reported as such, not as a mismatch), on
+# gsplat's rasterizer. selftest.py exits non-zero if anything fails, sh() raises, and the notebook
+# stops here, before the data download and the scene jobs.
 # Informational only: lifted fp32 vs direct float64 assignment on random data.
 t0 = time.time()
 sh(f"{PY} {SRC_DIR}/bench/gn/selftest.py --device cuda --out {GN_OUT}/gn_selftest.json",

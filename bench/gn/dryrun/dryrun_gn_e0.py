@@ -320,14 +320,27 @@ assert proc.returncode == 0, proc.stdout[-3000:] + proc.stderr[-3000:]
 st = json.load(open(selftest_json))
 e2e = st["e2e_exactness"]
 assert st["pass"] and st["device"] == "cpu" and e2e["pass"], e2e
+# Amendment 4: both scene fixtures hash to their pinned values before anything is rendered
+assert st["fixtures"] == {
+    gm.TOY_SCENE_FIXTURE: {**st["fixtures"][gm.TOY_SCENE_FIXTURE], "ok": True},
+    gd.E2E_SCENE_FIXTURE: {**st["fixtures"][gd.E2E_SCENE_FIXTURE], "ok": True},
+}, st["fixtures"]
+assert st["toy_exactness"]["scene_sha256"] == gm.TOY_SCENE_SHA256
+assert e2e["scene_sha256"] == gd.E2E_SCENE_SHA256 and e2e["status"] == "pass"
+assert all(e2e["non_overlapping"]["preconditions"].values())
 assert e2e["non_overlapping"]["rel_err"] <= 1e-4
 assert e2e["non_overlapping"]["max_splats_per_pixel"] == 1
 assert e2e["overlapping"]["max_splats_per_pixel"] >= 2
+noise = st["toy_exactness"]["noise_diagnostic"]
+assert noise["report_only"] and "report only" in proc.stdout
 assert st["lifted_random"]["criterion_version"] == gd.LIFTED_CHECK_VERSION
 print(
-    "(0) smoke tests on the CPU stand-in (SH reference, toy check, end-to-end exactness: relative error "
-    f"{e2e['non_overlapping']['rel_err']:.3g}; overlapping P / D {e2e['overlapping']['ratio_raw']:.4g}, "
-    f"shared perturbation P / D {e2e['overlapping_shared_delta']['ratio_raw']:.4g}, not asserted): ok"
+    "(0) smoke tests on the CPU stand-in: fixture hashes, SH reference, toy check (report-only "
+    f"sigma_rel {noise['sigma_rel']:.4g}, false-fail probability "
+    f"{noise['false_fail_probability_normal']:.3g}), end-to-end exactness (preconditions from the "
+    f"render hold; relative error {e2e['non_overlapping']['rel_err']:.3g}; overlapping P / D "
+    f"{e2e['overlapping']['ratio_raw']:.4g}, shared perturbation P / D "
+    f"{e2e['overlapping_shared_delta']['ratio_raw']:.4g}, not asserted): ok"
 )
 
 # (1) both scenes; garden's measured lloyd_wopa_area K=64 row becomes the "run-3 row" for bicycle.

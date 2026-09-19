@@ -12,6 +12,9 @@ Per splat i, over the train views v where it is visible:
 and 1 on channel 16 gives ``sum_p w_ip r_p`` per channel.
 """
 
+import hashlib
+import json
+import math
 import os
 import sys
 import time
@@ -335,6 +338,127 @@ def load_cache(path: str, key: str, device) -> Optional[Dict]:
     return {k: (v.to(device) if torch.is_tensor(v) else v) for k, v in payload.items()}
 
 
+# ------------------------------------------------------ scene fixtures (PREREG_GN.md Amendment 4)
+
+# The toy and end-to-end checks render committed tensors, not fresh draws: torch's CPU randn differs
+# in its last bits between dispatched CPU capabilities and platforms, so a fresh draw on another
+# machine is not bitwise the pre-registered scene. Each fixture is an .npz (float32, little-endian)
+# with a .json of metadata (hash, CPU capability, torch version, platform); bench/gn/make_fixtures.py
+# wrote them.
+FIXTURE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures")
+TOY_SCENE_FIXTURE = "toy_scene_seed0"
+TOY_SCENE_SHA256 = "1bb442ee09b6d8417384f5aad10e019a3ebab15458141ef685c873d45f06e441"
+FIXTURE_TOL_ABS = 1e-5  # a re-draw under another CPU capability or torch version
+
+
+class FixtureHashMismatch(RuntimeError):
+    """A scene fixture does not hash to its pinned value: a check would not render the
+    pre-registered scene."""
+
+
+def tensors_sha256(tensors: Dict[str, Tensor]) -> str:
+    """SHA-256 over the tensors in sorted key order; for each, the bytes of
+    ``"<key>:<shape>:float32-le;"`` (shape as a Python tuple), then its values as float32
+    little-endian."""
+    h = hashlib.sha256()
+    for key in sorted(tensors):
+        t = tensors[key].detach().to("cpu", torch.float32).contiguous()
+        h.update(f"{key}:{tuple(t.shape)}:float32-le;".encode())
+        h.update(t.numpy().astype("<f4", copy=False).tobytes())
+    return h.hexdigest()
+
+
+def cpu_environment() -> Dict[str, str]:
+    """What a CPU draw's last bits depend on."""
+    return {
+        "cpu_capability": torch.backends.cpu.get_cpu_capability(),
+        "torch_version": torch.__version__,
+        "platform": sys.platform,
+    }
+
+
+def fixture_paths(name: str) -> Tuple[str, str]:
+    base = os.path.join(FIXTURE_DIR, name)
+    return base + ".npz", base + ".json"
+
+
+def save_fixture(name: str, tensors: Dict[str, Tensor], meta: Dict) -> Dict:
+    """Write ``<name>.npz`` and ``<name>.json``; returns the metadata."""
+    import numpy as np
+
+    npz, js = fixture_paths(name)
+    os.makedirs(FIXTURE_DIR, exist_ok=True)
+    arrays = {
+        k: v.detach().to("cpu", torch.float32).contiguous().numpy().astype("<f4")
+        for k, v in tensors.items()
+    }
+    np.savez(npz, **arrays)
+    full = {
+        "name": name,
+        "sha256": tensors_sha256(tensors),
+        "hash": "SHA-256 over sorted keys: '<key>:<shape>:float32-le;' then float32 little-endian values",
+        "shapes": {k: list(a.shape) for k, a in sorted(arrays.items())},
+        **cpu_environment(),
+        **meta,
+    }
+    with open(js, "w", newline="\n") as f:
+        json.dump(full, f, indent=2)
+        f.write("\n")
+    return full
+
+
+def load_fixture(
+    name: str, expected_sha256: str, device="cpu"
+) -> Tuple[Dict[str, Tensor], Dict]:
+    """The fixture's tensors, moved to ``device`` only after their hash (and the one its metadata
+    records) equals ``expected_sha256``; otherwise ``FixtureHashMismatch``."""
+    import numpy as np
+
+    npz, js = fixture_paths(name)
+    with np.load(npz, allow_pickle=False) as z:
+        tensors = {k: torch.from_numpy(z[k].astype(np.float32)) for k in z.files}
+    with open(js) as f:
+        meta = json.load(f)
+    got = tensors_sha256(tensors)
+    if got != expected_sha256 or meta.get("sha256") != expected_sha256:
+        raise FixtureHashMismatch(
+            f"scene fixture {name}: tensors hash to {got}, its metadata records "
+            f"{meta.get('sha256')}, the pinned hash is {expected_sha256} (PREREG_GN.md Amendment 4)"
+        )
+    return {k: v.to(device) for k, v in tensors.items()}, meta
+
+
+def fixture_provenance(
+    fixture: Dict[str, Tensor],
+    fresh: Dict[str, Tensor],
+    meta: Dict,
+    tol_abs: float = FIXTURE_TOL_ABS,
+) -> Dict:
+    """A fresh CPU draw against a fixture: bitwise equal when the fixture's CPU capability and torch
+    version both match this machine, otherwise within ``tol_abs``."""
+    here = cpu_environment()
+    same = (
+        meta.get("cpu_capability") == here["cpu_capability"]
+        and meta.get("torch_version") == here["torch_version"]
+    )
+    out = {
+        "mode": "bitwise" if same else "tolerance",
+        "fixture_cpu_capability": meta.get("cpu_capability"),
+        "fixture_torch_version": meta.get("torch_version"),
+        "cpu_capability": here["cpu_capability"],
+        "torch_version": here["torch_version"],
+        "same_keys": sorted(fixture) == sorted(fresh),
+    }
+    if not out["same_keys"]:
+        return {**out, "max_abs_diff": math.inf, "ok": False}
+    diff = max(
+        float((fixture[k].detach().cpu().double() - fresh[k].detach().cpu().double()).abs().max())
+        for k in fixture
+    )
+    ok = tensors_sha256(fresh) == meta.get("sha256") if same else diff <= tol_abs
+    return {**out, "max_abs_diff": diff, "tol_abs": tol_abs, "ok": bool(ok)}
+
+
 # ------------------------------------------------------------------ toy exactness check
 
 
@@ -344,20 +468,23 @@ TOY_WIDTH, TOY_HEIGHT, TOY_FOCAL, TOY_DEPTH = 128, 96, 140.0, 3.0
 def toy_scene(n: int = 256, seed: int = 0, device="cpu") -> Dict[str, Tensor]:
     """Pre-activation splats of similar size and opacity, spread uniformly over the toy view at
     depth 3 +- 0.3; most covered pixels blend two or more splats. Similar splats keep the
-    64-probe noise of the summed estimate near sqrt(2 / 64) / sqrt(n) (see ``toy_exactness``)."""
-    g = torch.Generator(device=device).manual_seed(seed)
+    64-probe noise of the summed estimate near sqrt(2 / 64) / sqrt(n) (see ``toy_exactness``).
+    Drawn with the CPU generator, then moved to ``device`` (Amendment 4). The toy check renders the
+    committed seed-0 draw (``TOY_SCENE_FIXTURE``), not a fresh one."""
+    g = torch.Generator().manual_seed(seed)
     half_w = 0.9 * TOY_DEPTH * (TOY_WIDTH / 2) / TOY_FOCAL
     half_h = 0.9 * TOY_DEPTH * (TOY_HEIGHT / 2) / TOY_FOCAL
-    xy = torch.rand(n, 2, generator=g, device=device) * 2 - 1
-    z = TOY_DEPTH + torch.randn(n, generator=g, device=device) * 0.3
-    return {
+    xy = torch.rand(n, 2, generator=g) * 2 - 1
+    z = TOY_DEPTH + torch.randn(n, generator=g) * 0.3
+    splats = {
         "means": torch.stack([xy[:, 0] * half_w, xy[:, 1] * half_h, z], dim=-1),
-        "quats": torch.randn(n, 4, generator=g, device=device),
-        "scales": torch.randn(n, 3, generator=g, device=device) * 0.1 - 3.0,
-        "opacities": torch.randn(n, generator=g, device=device) * 0.3 + 0.5,
-        "sh0": torch.randn(n, 1, 3, generator=g, device=device) * 0.5,
-        "shN": torch.randn(n, 15, 3, generator=g, device=device) * 0.2,
+        "quats": torch.randn(n, 4, generator=g),
+        "scales": torch.randn(n, 3, generator=g) * 0.1 - 3.0,
+        "opacities": torch.randn(n, generator=g) * 0.3 + 0.5,
+        "sh0": torch.randn(n, 1, 3, generator=g) * 0.5,
+        "shN": torch.randn(n, 15, 3, generator=g) * 0.2,
     }
+    return {k: t.to(device) for k, t in splats.items()}
 
 
 def toy_camera(device="cpu") -> Dict:
@@ -377,18 +504,46 @@ def toy_camera(device="cpu") -> Dict:
     }
 
 
+def hutchinson_rel_std(weights: Iterable[Tensor], n_probes: int) -> float:
+    """Exact relative standard deviation of the ``n_probes``-probe Rademacher estimate of
+    ``S = sum w^2`` (PREREG_GN.md Amendment 4), from exact weights per view given as
+    ``[pixels, splats]``: ``sqrt(sum_views 2 (||W W^T||_F^2 - sum_p (sum_i w_ip^2)^2) / n_probes) / S``
+    with ``W`` = splats x pixels (the variance of the quadratic form ``r^T W^T W r``)."""
+    var, total = 0.0, 0.0
+    for w in weights:
+        w = w.double()
+        gram = w.t() @ w  # W W^T, splats x splats
+        per_pixel = w.pow(2).sum(dim=1)  # sum_i w_ip^2
+        var += (
+            2.0 * (float(gram.pow(2).sum()) - float(per_pixel.pow(2).sum())) / n_probes
+        )
+        total += float(per_pixel.sum())
+    return math.sqrt(max(var, 0.0)) / total if total > 0 else math.nan
+
+
+def false_fail_probability(sigma_rel: float, tol_rel: float = 0.05) -> float:
+    """``P(|S_hat - S| >= tol_rel * S)`` for ``S_hat ~ Normal(S, (sigma_rel * S)^2)``."""
+    if sigma_rel == 0:
+        return 0.0
+    return math.erfc(tol_rel / (math.sqrt(2.0) * sigma_rel))
+
+
 def toy_exactness(
     render: Optional[Callable] = None,
     settings: Optional[RenderSettings] = None,
-    n: int = 256,
     n_renders: int = 4,
     seed: int = 0,
     device="cuda",
     tol_rel: float = 0.05,
     tol_exact: float = 1e-4,
+    log: Optional[Callable[[str], None]] = print,
 ) -> Dict:
     """Hutchinson (``n_renders`` x 16 probes) against the exact ``s_i = sum_p w_ip^2`` from an
     identity-feature render (channel j of the render is ``w_pj``) on the toy scene.
+
+    The scene is the committed fixture ``TOY_SCENE_FIXTURE`` (Amendment 4): loaded, its hash asserted
+    before anything is rendered (``FixtureHashMismatch`` otherwise), then moved to ``device``.
+    ``seed`` seeds the probes only.
 
     Pass needs all three:
     - the sum over splats of the 64-probe estimate within ``tol_rel`` of the exact sum (the
@@ -397,14 +552,18 @@ def toy_exactness(
       ``mean_c (sum_p w_pi r_pc)^2`` evaluated on the exact weights with the same probes: a
       deterministic test of the gradient plumbing;
     - the all-ones channel equal to ``sum_p w_pi`` to ``tol_exact`` relative.
-    Relative errors per splat use the splats with ``sum_p w_pi > 1e-3 * max``."""
-    if n > 256:
-        raise ValueError("the toy scene has at most 256 splats")
+    Relative errors per splat use the splats with ``sum_p w_pi > 1e-3 * max``.
+
+    Report-only, outside every verdict and logged before the check is judged (Amendment 4):
+    ``noise_diagnostic``, the exact relative std of the probe estimate of the sum
+    (``hutchinson_rel_std``) and the implied false-fail probability of the ``tol_rel`` rule under a
+    normal approximation."""
     render = render or gsplat_render
     settings = settings or RenderSettings(
         False, "classic", "pinhole", False, False, 0.01, 1e10, 3
     )
-    splats = toy_scene(n, seed, device)
+    splats, _ = load_fixture(TOY_SCENE_FIXTURE, TOY_SCENE_SHA256, device)
+    n = splats["means"].shape[0]
     cam = toy_camera(device=device)
     act = activated(splats)
 
@@ -425,6 +584,25 @@ def toy_exactness(
     exact_s = wts.pow(2).sum(dim=0)
     exact_f = wts.sum(dim=0)
     covered = exact_f > 1e-3 * float(exact_f.max())
+    n_probes = n_renders * N_PROBES
+    sigma = hutchinson_rel_std([wts], n_probes)
+    noise = {
+        "report_only": True,
+        "sigma_rel": sigma,
+        "n_probes": n_probes,
+        "tol_rel": tol_rel,
+        "false_fail_probability_normal": false_fail_probability(sigma, tol_rel),
+        "formula": (
+            "sigma_rel = sqrt(sum_views 2 (||W W^T||_F^2 - sum_p (sum_i w_ip^2)^2) / n_probes) / S; "
+            "false-fail = erfc(tol_rel / (sqrt(2) sigma_rel))"
+        ),
+    }
+    if log is not None:
+        log(
+            f"toy check, report only (not judged): sigma_rel {sigma:.4g} for {n_probes} probes, "
+            f"false-fail probability of the {tol_rel:g} rule under a normal approximation "
+            f"{noise['false_fail_probability_normal']:.3g}"
+        )
     gen = torch.Generator(device=device).manual_seed(seed + 1)
     est = torch.zeros(n, dtype=torch.float64, device=device)
     formula = torch.zeros(n, dtype=torch.float64, device=device)
@@ -447,8 +625,10 @@ def toy_exactness(
     total_rel = float((est.sum() - exact_s.sum()).abs() / exact_s.sum())
     per = ((est - exact_s).abs() / exact_s.clamp_min(1e-30))[covered]
     return {
+        "scene_fixture": TOY_SCENE_FIXTURE,
+        "scene_sha256": TOY_SCENE_SHA256,
         "n_splats": n,
-        "n_probes": n_renders * N_PROBES,
+        "n_probes": n_probes,
         "image": [TOY_WIDTH, TOY_HEIGHT],
         "n_covering": int(covered.sum()),
         "n_visible": int(vis.sum()),
@@ -456,6 +636,7 @@ def toy_exactness(
             ((wts > 1e-3).sum(1) >= 2).double().sum()
             / ((wts > 1e-3).sum(1) >= 1).double().sum().clamp_min(1)
         ),
+        "noise_diagnostic": noise,
         "sum_exact": float(exact_s.sum()),
         "sum_estimate": float(est.sum()),
         "total_rel_err": total_rel,

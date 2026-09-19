@@ -2,7 +2,7 @@
 
 a. per-splat spectrum of M_i; b. Spearman rank correlations; c. predicted vs measured shN error;
 d. exact Mahalanobis assignment, its check against brute force, and the GN refines of a codebook;
-e. the end-to-end exactness check of P against the measured error on a toy scene (Amendment 3).
+e. the end-to-end exactness check of P against the measured error on a toy scene (Amendments 3-4).
 
 Layout conventions: ``x`` is shN flattened as ``shN.reshape(N, 45)`` (index ``k * 3 + channel``),
 as ``PngCompression`` clusters it; centroids are ``[K, 45]`` in the same layout; ``M`` is the packed
@@ -657,6 +657,16 @@ E2E_GRID = (8, 6)  # splats per row and per column: one per 16 x 16 pixel cell o
 E2E_OVERLAP_SCALE = 5.0  # the overlapping variants: the same splats with 5x larger scales
 E2E_AMPLITUDE = 0.1  # shN perturbation, uniform in [-0.1, 0.1] per coefficient
 E2E_SHIFT = (0.06, -0.04, 0.15)  # translation of the second view
+# The committed scene and perturbation the check renders (Amendment 4; see gn_metric's fixtures).
+E2E_SCENE_FIXTURE = "e2e_scene_seed0"
+E2E_SCENE_SHA256 = "103c99e07bf582e8def6068efa103994041da1fdda4d9ca91523b178177ac757"
+E2E_PRECONDITIONS = {
+    "one_splat_per_pixel": "a pixel gets nonzero weight from two splats in the identity render",
+    "sh_plus_half_in_0_1": "a splat's SH + 0.5, read from gsplat's SH render, is not in (0, 1)",
+    "rendered_in_0_1": (
+        "a rendered value at a covered pixel is not in (0, 1), or an uncovered pixel is not 0"
+    ),
+}
 
 
 def e2e_scene(
@@ -665,8 +675,9 @@ def e2e_scene(
     """48 pre-activation splats, one per cell of an 8 x 6 grid over the toy view (jittered by up to
     1.5 px), depth 3 +- 0.05, scales small enough that no two footprints share a pixel, colours with
     SH + 0.5 well inside (0, 1). ``overlapping`` multiplies the scales by 5 and changes nothing else.
-    Drawn with a CPU generator and then moved to ``device``, so the CPU tests and the CUDA check use
-    the same scene. The identity render has 48 channels, rendered as 32 + 16 (both compiled)."""
+    Drawn with the CPU generator, then moved to ``device``; the check renders the committed seed-0
+    draw (``E2E_SCENE_FIXTURE``, Amendment 4). The identity render has 48 channels, rendered as
+    32 + 16 (both compiled)."""
     g = torch.Generator().manual_seed(seed)
     nx, ny = E2E_GRID
     n = nx * ny
@@ -697,6 +708,18 @@ def e2e_scene(
     return {k: t.to(device) for k, t in splats.items()}
 
 
+def e2e_delta(seed: int = 0, amplitude: float = E2E_AMPLITUDE) -> Tensor:
+    """The check's shN perturbation ``[48, 15, 3]``, uniform in [-amplitude, amplitude], CPU draw."""
+    nx, ny = E2E_GRID
+    g = torch.Generator().manual_seed(seed + 1)
+    return (torch.rand(nx * ny, D, 3, generator=g) * 2 - 1) * amplitude
+
+
+def e2e_fixture_tensors(seed: int = 0) -> Dict[str, Tensor]:
+    """What ``E2E_SCENE_FIXTURE`` holds: the non-overlapping scene and ``delta``, drawn on the CPU."""
+    return {**e2e_scene(False, seed, "cpu"), "delta": e2e_delta(seed)}
+
+
 def e2e_views(device="cpu") -> List[Dict]:
     """The toy camera, and the same camera translated by ``E2E_SHIFT``."""
     cam = gm.toy_camera(device=device)
@@ -711,12 +734,22 @@ def e2e_case(
     render: Callable,
     settings: "gm.RenderSettings",
     views: List[Dict],
+    judged: bool = True,
+    tol_rel: float = 1e-4,
 ) -> Dict:
     """``P`` (``predicted_dmse`` on ``M_i`` accumulated from the exact ``s_iv = sum_p w_ip^2`` of
     identity-feature renders) against the measured shN-only error (``measure_dmse`` on the SH render)
-    for ``shN + delta``, and the preconditions under which the two are equal: at most one splat per
-    pixel, ``SH + 0.5`` in (0, 1) for the original and perturbed coefficients at every visible splat
-    and view, rendered values in [0, 1) with covered pixels > 0."""
+    for ``shN + delta``.
+
+    The preconditions under which the two are equal are read from the renders themselves
+    (``E2E_PRECONDITIONS``): at most one splat per pixel in the identity render; each splat's
+    rendered colour ``max(SH + 0.5, 0)``, recovered as SH-render value / identity weight at its
+    strongest pixel that only it covers, in (0, 1), for the original and the perturbed
+    coefficients; rendered values in (0, 1) at covered pixels and exactly 0 elsewhere.
+
+    ``judged``: if a precondition fails, ``status`` is ``preconditions_failed`` and nothing is
+    compared, because the exactness claim does not apply; otherwise ``pass`` or ``mismatch``
+    (``tol_rel``). Not judged (the overlapping variants): ``reported_only``."""
     n = splats["means"].shape[0]
     device = splats["means"].device
     act = gm.activated(splats)
@@ -725,9 +758,10 @@ def e2e_case(
     coeffs_q = torch.cat([splats["sh0"], shn_q], dim=1)
     acc = gm.GNAccumulator(n, device)
     per_pixel_max, blend2, covered_px = 0, 0, 0
+    basis_lo, basis_hi = math.inf, -math.inf
     col_lo, col_hi = math.inf, -math.inf
-    img_lo, img_hi, covered_lo = math.inf, -math.inf, math.inf
-    n_visible = []
+    cov_lo, cov_hi, uncovered_max = math.inf, -math.inf, 0.0
+    n_visible, n_with_sole_pixel = [], []
     with torch.no_grad():
         for view in views:
             c2w, K = view["camtoworld"], view["K"]
@@ -735,11 +769,18 @@ def e2e_case(
             ident, info = render(
                 act, torch.eye(n, device=device), c2w, K, W, H, settings
             )
-            w = ident.double().reshape(-1, n)
+            w = ident.double().reshape(-1, n)  # [P, n]
             per_pixel = (w > 0).sum(dim=1)
             per_pixel_max = max(per_pixel_max, int(per_pixel.max()))
             blend2 += int((per_pixel >= 2).sum())
-            covered_px += int((per_pixel >= 1).sum())
+            covered = per_pixel >= 1
+            covered_px += int(covered.sum())
+            # each splat's strongest pixel that only it covers
+            best_w, best_p = torch.where(
+                (per_pixel == 1)[:, None], w, torch.zeros_like(w)
+            ).max(dim=0)
+            sole = best_w > 0
+            n_with_sole_pixel.append(int(sole.sum()))
             vis = gm.visible_from_info(info, n)
             n_visible.append(int(vis.sum()))
             campos = sb.camera_positions(gm.viewmat_of(c2w))[0]
@@ -753,18 +794,60 @@ def e2e_case(
                 W * H,
             )
             basis = sb.sh_basis(act["means"][vis] - campos, 3)
-            covered = (per_pixel >= 1).reshape(H, W)
             for c in (coeffs, coeffs_q):
-                col = (basis[:, :, None] * c[vis]).sum(dim=1) + 0.5
-                col_lo = min(col_lo, float(col.min()))
-                col_hi = max(col_hi, float(col.max()))
+                col_b = (basis[:, :, None] * c[vis]).sum(dim=1) + 0.5  # reported only
+                basis_lo = min(basis_lo, float(col_b.min()))
+                basis_hi = max(basis_hi, float(col_b.max()))
                 img, _ = render(
                     act, c, c2w, K, W, H, settings, sh_degree=settings.sh_degree
                 )
-                img_lo = min(img_lo, float(img.min()))
-                img_hi = max(img_hi, float(img.max()))
+                flat = img.double().reshape(-1, img.shape[-1])
+                if bool(sole.any()):
+                    col = flat[best_p[sole]] / best_w[sole, None]  # gsplat's max(SH + 0.5, 0)
+                    col_lo = min(col_lo, float(col.min()))
+                    col_hi = max(col_hi, float(col.max()))
                 if bool(covered.any()):
-                    covered_lo = min(covered_lo, float(img[covered].min()))
+                    cov_lo = min(cov_lo, float(flat[covered].min()))
+                    cov_hi = max(cov_hi, float(flat[covered].max()))
+                if bool((~covered).any()):
+                    uncovered_max = max(uncovered_max, float(flat[~covered].abs().max()))
+    checks = {
+        "one_splat_per_pixel": per_pixel_max <= 1,
+        "sh_plus_half_in_0_1": 0 < col_lo and col_hi < 1,
+        "rendered_in_0_1": covered_px > 0
+        and 0 < cov_lo
+        and cov_hi < 1
+        and uncovered_max == 0,
+    }
+    out = {
+        "n_splats": n,
+        "n_visible_per_view": n_visible,
+        "n_with_sole_pixel_per_view": n_with_sole_pixel,
+        "max_splats_per_pixel": per_pixel_max,
+        "overlap_fraction": blend2 / max(covered_px, 1),
+        "rendered_colour_min": col_lo,
+        "rendered_colour_max": col_hi,
+        "sh_plus_half_min_basis": basis_lo,
+        "sh_plus_half_max_basis": basis_hi,
+        "render_min_covered": cov_lo,
+        "render_max_covered": cov_hi,
+        "render_max_abs_uncovered": uncovered_max,
+        "preconditions": checks,
+        "preconditions_ok": all(checks.values()),
+    }
+    if judged and not out["preconditions_ok"]:
+        failed = [E2E_PRECONDITIONS[k] for k, ok in checks.items() if not ok]
+        return {
+            **out,
+            "status": "preconditions_failed",
+            "failed_preconditions": failed,
+            "message": (
+                "end-to-end preconditions failed ("
+                + "; ".join(failed)
+                + "): the exactness claim does not apply to this scene, so nothing was "
+                "compared; this is not a prediction mismatch"
+            ),
+        }
     gn = acc.result()
     predicted = predicted_dmse(gn["M_packed"], delta, gn["total_pixels"])
 
@@ -783,76 +866,66 @@ def e2e_case(
 
     meas = measure_dmse(render_rgb, views, splats, {"q": shn_q})["q"]
     d_raw = meas["raw"]
-    ok = (
-        per_pixel_max <= 1
-        and 0 < col_lo
-        and col_hi < 1
-        and img_lo >= 0
-        and img_hi < 1
-        and covered_lo > 0
-    )
+    rel = abs(predicted - d_raw) / d_raw if d_raw > 0 else math.inf
+    if judged:
+        status = "pass" if rel <= tol_rel else "mismatch"
+    else:
+        status = "reported_only"
     return {
-        "n_splats": n,
-        "n_visible_per_view": n_visible,
-        "max_splats_per_pixel": per_pixel_max,
-        "overlap_fraction": blend2 / max(covered_px, 1),
-        "sh_plus_half_min": col_lo,
-        "sh_plus_half_max": col_hi,
-        "render_min": img_lo,
-        "render_max": img_hi,
-        "render_min_covered": covered_lo,
-        "preconditions_ok": bool(ok),
+        **out,
         "total_pixels": gn["total_pixels"],
         "predicted": predicted,
         "measured_raw": d_raw,
         "measured_clamped": meas["clamped"],
-        "rel_err": abs(predicted - d_raw) / d_raw if d_raw > 0 else math.inf,
+        "rel_err": rel,
         "ratio_raw": predicted / d_raw if d_raw > 0 else math.inf,
         "cross_diagonal": d_raw / predicted - 1.0 if predicted > 0 else math.inf,
+        "status": status,
     }
 
 
 def e2e_exactness(
     render: Optional[Callable] = None,
     settings: Optional["gm.RenderSettings"] = None,
-    seed: int = 0,
     device="cuda",
-    amplitude: float = E2E_AMPLITUDE,
     tol_rel: float = 1e-4,
 ) -> Dict:
-    """End-to-end exactness of the GN prediction (PREREG_GN.md Amendment 3, a G0 validity check).
+    """End-to-end exactness of the GN prediction (PREREG_GN.md Amendments 3-4, a G0 validity check).
 
-    On the non-overlapping toy scene (``e2e_scene``) with exact ``s_iv`` and a random shN perturbation
-    (uniform, ``amplitude`` per coefficient), ``P`` must equal the measured unclamped shN-only error to
-    ``tol_rel`` relative, and the preconditions of ``e2e_case`` must hold. Reported, not asserted: the
-    same perturbation on the overlapping scene, and one perturbation shared by all splats there (the
-    fully correlated case); their ``preconditions_ok`` is False by construction.
-    ``render`` defaults to ``gm.gsplat_render``, looked up at call time."""
+    The scene and its perturbation are the committed fixture ``E2E_SCENE_FIXTURE``: loaded, the hash
+    asserted before anything is rendered (``gm.FixtureHashMismatch`` otherwise), then moved to
+    ``device``. On it, ``P`` must equal the measured unclamped shN-only error to ``tol_rel`` relative,
+    once the preconditions of ``e2e_case`` hold on the renders (``status`` ``pass``; ``mismatch``;
+    ``preconditions_failed``, which is not a mismatch). Reported, not judged: the same perturbation on
+    the overlapping scene, and one perturbation shared by all splats there (the fully correlated
+    case). ``render`` defaults to ``gm.gsplat_render``, looked up at call time."""
     render = render or gm.gsplat_render
     settings = settings or gm.RenderSettings(
         False, "classic", "pinhole", False, False, 0.01, 1e10, 3
     )
+    scene, _ = gm.load_fixture(E2E_SCENE_FIXTURE, E2E_SCENE_SHA256, device)
+    delta = scene.pop("delta")
     views = e2e_views(device)
-    nx, ny = E2E_GRID
-    g = torch.Generator().manual_seed(seed + 1)
-    delta = (torch.rand(nx * ny, D, 3, generator=g) * 2 - 1) * amplitude
-    delta = delta.to(device)
-    shared = delta[:1].expand_as(delta).contiguous()
-    out = {
-        "n_views": len(views),
-        "amplitude": amplitude,
-        "tol_rel": tol_rel,
-        "seed": seed,
-        "non_overlapping": e2e_case(
-            e2e_scene(False, seed, device), delta, render, settings, views
-        ),
-        "overlapping": e2e_case(
-            e2e_scene(True, seed, device), delta, render, settings, views
-        ),
-        "overlapping_shared_delta": e2e_case(
-            e2e_scene(True, seed, device), shared, render, settings, views
-        ),
+    overlapping = {
+        **scene,
+        "scales": scene["scales"] + math.log(E2E_OVERLAP_SCALE),
     }
-    ex = out["non_overlapping"]
-    out["pass"] = bool(ex["preconditions_ok"] and ex["rel_err"] <= tol_rel)
+    shared = delta[:1].expand_as(delta).contiguous()
+    ex = e2e_case(scene, delta, render, settings, views, True, tol_rel)
+    out = {
+        "scene_fixture": E2E_SCENE_FIXTURE,
+        "scene_sha256": E2E_SCENE_SHA256,
+        "n_views": len(views),
+        "amplitude": E2E_AMPLITUDE,
+        "tol_rel": tol_rel,
+        "non_overlapping": ex,
+        "overlapping": e2e_case(overlapping, delta, render, settings, views, False),
+        "overlapping_shared_delta": e2e_case(
+            overlapping, shared, render, settings, views, False
+        ),
+        "status": ex["status"],
+        "pass": ex["status"] == "pass",
+    }
+    if "message" in ex:
+        out["message"] = ex["message"]
     return out

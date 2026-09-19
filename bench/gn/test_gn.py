@@ -7,6 +7,7 @@ import json
 import math
 import os
 import sys
+import warnings
 
 import numpy as np
 import pytest
@@ -153,28 +154,170 @@ def test_accumulator_matches_explicit_sum():
 
 
 def test_toy_exactness_on_cpu_renderer():
-    r = gm.toy_exactness(render=tr.render_bruteforce, device="cpu", seed=0)
+    logged = []
+    r = gm.toy_exactness(
+        render=tr.render_bruteforce, device="cpu", seed=0, log=logged.append
+    )
     assert r["pass"], r
-    assert r["n_probes"] == 64 and r["n_splats"] <= 256
+    assert r["n_probes"] == 64 and r["n_splats"] == 256
+    assert r["scene_fixture"] == "toy_scene_seed0"
+    assert r["scene_sha256"] == gm.TOY_SCENE_SHA256
     assert (
         r["overlap_fraction"] > 0.5
     )  # the toy blends splats, it is not a set of isolated blobs
+    # report-only noise diagnostic (Amendment 4), logged before the check is judged
+    nd = r["noise_diagnostic"]
+    assert nd["report_only"] and nd["n_probes"] == 64 and nd["tol_rel"] == 0.05
+    assert 0 < nd["sigma_rel"] < 1 and 0 <= nd["false_fail_probability_normal"] <= 1
+    assert nd["false_fail_probability_normal"] == gm.false_fail_probability(
+        nd["sigma_rel"], 0.05
+    )
+    assert len(logged) == 1 and "report only" in logged[0]
+
+
+def test_hutchinson_rel_std_matches_monte_carlo():
+    """sigma_rel of Amendment 4 against the spread of simulated probe estimates of S = sum w^2."""
+    g = torch.Generator().manual_seed(11)
+    views = []
+    for _ in range(2):
+        w = torch.rand(40, 6, generator=g, dtype=torch.float64)  # [pixels, splats]
+        views.append(w * (torch.rand(40, 6, generator=g) < 0.5))  # partial overlap
+    n_probes = 4
+    sigma = gm.hutchinson_rel_std(views, n_probes)
+    total = sum(float(w.pow(2).sum()) for w in views)
+    n_draws = 40000
+    est = torch.zeros(n_draws, dtype=torch.float64)
+    for w in views:
+        r = torch.randint(0, 2, (n_draws, n_probes, w.shape[0]), generator=g).double()
+        proj = torch.einsum("tcp,pi->tci", r * 2 - 1, w)  # sum_p w_pi r_p, per probe
+        est += proj.pow(2).sum(dim=2).mean(dim=1)
+    assert abs(float(est.mean()) / total - 1) < 0.01  # unbiased
+    mc = float(est.std()) / total
+    assert abs(mc / sigma - 1) < 0.03, (mc, sigma)
+    # a single view equals the formula written out for it
+    w = views[0]
+    gram = w.t() @ w
+    direct = math.sqrt(
+        2 * (float(gram.pow(2).sum()) - float(w.pow(2).sum(1).pow(2).sum())) / n_probes
+    ) / float(w.pow(2).sum())
+    assert abs(gm.hutchinson_rel_std([w], n_probes) - direct) < 1e-15
+
+
+def test_false_fail_probability():
+    assert gm.false_fail_probability(0.0) == 0.0
+    assert abs(gm.false_fail_probability(0.05 / 1.959963984540054) - 0.05) < 1e-9
+    assert gm.false_fail_probability(0.01) < gm.false_fail_probability(0.02) < 1
+
+
+def test_fixtures_match_pinned_hashes_and_a_fresh_cpu_draw():
+    """Provenance (Amendment 4): bitwise when the fixture's CPU capability and torch version match
+    this machine, otherwise within 1e-5 with the difference reported."""
+    for name, pinned, fresh in (
+        (gm.TOY_SCENE_FIXTURE, gm.TOY_SCENE_SHA256, gm.toy_scene(256, 0, "cpu")),
+        (gd.E2E_SCENE_FIXTURE, gd.E2E_SCENE_SHA256, gd.e2e_fixture_tensors(0)),
+    ):
+        fx, meta = gm.load_fixture(name, pinned)
+        assert meta["sha256"] == pinned and gm.tensors_sha256(fx) == pinned
+        assert all(meta[k] for k in ("cpu_capability", "torch_version", "platform"))
+        assert {k: list(v.shape) for k, v in fx.items()} == meta["shapes"]
+        prov = gm.fixture_provenance(fx, fresh, meta)
+        if prov["mode"] == "tolerance":
+            warnings.warn(
+                f"{name}: drawn under {prov['fixture_cpu_capability']} / torch "
+                f"{prov['fixture_torch_version']}, this machine is {prov['cpu_capability']} / "
+                f"torch {prov['torch_version']}: compared within {prov['tol_abs']} (max abs "
+                f"difference {prov['max_abs_diff']:.3g}), not bitwise"
+            )
+        assert prov["ok"], prov
+    _, toy_meta = gm.load_fixture(gm.TOY_SCENE_FIXTURE, gm.TOY_SCENE_SHA256)
+    assert toy_meta["rederived_from_commit"] == "c69ba388"  # toy_noise.py / .json
+    assert toy_meta["rederived_sha256"] == gm.TOY_SCENE_SHA256
+
+
+def test_fixture_provenance_modes():
+    fx, meta = gm.load_fixture(gm.TOY_SCENE_FIXTURE, gm.TOY_SCENE_SHA256)
+    here = gm.cpu_environment()
+    same = {**meta, "cpu_capability": here["cpu_capability"], "torch_version": here["torch_version"]}
+    other = {**same, "cpu_capability": "AVX2" if here["cpu_capability"] != "AVX2" else "DEFAULT"}
+    exact = gm.fixture_provenance(fx, fx, same)
+    assert exact["mode"] == "bitwise" and exact["ok"] and exact["max_abs_diff"] == 0.0
+    nudged = {k: v + 1e-6 if k == "means" else v for k, v in fx.items()}
+    assert not gm.fixture_provenance(fx, nudged, same)["ok"]  # bitwise: any change fails
+    tol = gm.fixture_provenance(fx, nudged, other)
+    assert tol["mode"] == "tolerance" and tol["ok"] and 0 < tol["max_abs_diff"] <= 1e-5
+    far = {k: v + 1e-4 if k == "means" else v for k, v in fx.items()}
+    assert not gm.fixture_provenance(fx, far, other)["ok"]
+    fewer = {k: v for k, v in fx.items() if k != "sh0"}
+    assert not gm.fixture_provenance(fx, fewer, other)["ok"]
+    other_torch = {**same, "torch_version": "0.0.0"}  # a torch mismatch alone also relaxes
+    assert gm.fixture_provenance(fx, nudged, other_torch)["mode"] == "tolerance"
+
+
+def test_fixture_hash_mismatch_stops_before_rendering(tmp_path, monkeypatch):
+    import selftest
+
+    calls = []
+
+    def spy(*a, **k):
+        calls.append(1)
+        return tr.render_bruteforce(*a, **k)
+
+    # a tampered file (one value changed, metadata untouched) fails its hash
+    src_npz, src_js = gm.fixture_paths(gm.TOY_SCENE_FIXTURE)
+    with np.load(src_npz) as z:
+        arrays = {k: z[k].copy() for k in z.files}
+    arrays["opacities"][0] += np.float32(1e-3)
+    monkeypatch.setattr(gm, "FIXTURE_DIR", str(tmp_path))
+    np.savez(os.path.join(tmp_path, gm.TOY_SCENE_FIXTURE + ".npz"), **arrays)
+    with open(src_js) as f, open(os.path.join(tmp_path, gm.TOY_SCENE_FIXTURE + ".json"), "w") as g:
+        g.write(f.read())
+    with pytest.raises(gm.FixtureHashMismatch, match="toy_scene_seed0"):
+        gm.toy_exactness(render=spy, device="cpu", log=None)
+    assert calls == []
+    monkeypatch.undo()
+    # a pinned hash that the committed files do not have stops the selftest before any render
+    monkeypatch.setattr(gm, "TOY_SCENE_SHA256", "0" * 64)
+    with pytest.raises(gm.FixtureHashMismatch):
+        gm.toy_exactness(render=spy, device="cpu", log=None)
+    path = tmp_path / "gn_selftest.json"
+    monkeypatch.setattr(sb, "reference_check", lambda: calls.append("sh") or {"pass": True})
+    with pytest.raises(SystemExit, match="FIXTURE HASH MISMATCH"):
+        selftest.main(["--device", "cpu", "--out", str(path)])
+    out = json.load(open(path))
+    assert out["pass"] is False
+    assert not out["fixtures"]["toy_scene_seed0"]["ok"]
+    assert out["fixtures"]["e2e_scene_seed0"]["ok"]
+    assert "toy_exactness" not in out and "sh_basis" not in out
+    monkeypatch.setattr(gd, "E2E_SCENE_SHA256", "0" * 64)
+    with pytest.raises(gm.FixtureHashMismatch, match="e2e_scene_seed0"):
+        gd.e2e_exactness(render=spy, device="cpu")
+    assert calls == []  # nothing rendered, not even the SH check ran
 
 
 def test_e2e_exactness_on_cpu_renderer():
     r = gd.e2e_exactness(render=tr.render_bruteforce, device="cpu")
     ex = r["non_overlapping"]
-    assert r["pass"] and ex["preconditions_ok"] and ex["rel_err"] <= 1e-4, ex
+    assert r["pass"] and r["status"] == "pass" and ex["status"] == "pass", ex
+    assert r["scene_sha256"] == gd.E2E_SCENE_SHA256 and "message" not in r
+    assert ex["preconditions_ok"] and all(ex["preconditions"].values())
+    assert set(ex["preconditions"]) == set(gd.E2E_PRECONDITIONS)
+    assert ex["rel_err"] <= 1e-4
     assert ex["max_splats_per_pixel"] == 1 and ex["overlap_fraction"] == 0.0
     assert ex["n_splats"] == 48 and ex["n_visible_per_view"] == [48, 48]
-    assert 0 < ex["sh_plus_half_min"] and ex["sh_plus_half_max"] < 1
-    assert 0 < ex["render_min_covered"] and ex["render_max"] < 1
+    assert ex["n_with_sole_pixel_per_view"] == [48, 48]
+    # the colour read from the render is gsplat's max(SH + 0.5, 0); it matches the basis value
+    assert 0 < ex["rendered_colour_min"] and ex["rendered_colour_max"] < 1
+    assert abs(ex["rendered_colour_min"] - ex["sh_plus_half_min_basis"]) < 1e-5
+    assert abs(ex["rendered_colour_max"] - ex["sh_plus_half_max_basis"]) < 1e-5
+    assert 0 < ex["render_min_covered"] and ex["render_max_covered"] < 1
+    assert ex["render_max_abs_uncovered"] == 0.0
     assert ex["measured_clamped"] == ex["measured_raw"]  # nothing to clamp
     assert r["amplitude"] == 0.1 and r["n_views"] == 2
     # the overlapping variants are reported, not asserted on; they do blend splats
     for key in ("overlapping", "overlapping_shared_delta"):
         ov = r[key]
-        assert ov["max_splats_per_pixel"] >= 2 and not ov["preconditions_ok"]
+        assert ov["status"] == "reported_only" and ov["max_splats_per_pixel"] >= 2
+        assert not ov["preconditions_ok"]
         assert math.isfinite(ov["ratio_raw"]) and math.isfinite(ov["cross_diagonal"])
 
 
@@ -186,8 +329,45 @@ def test_e2e_exactness_detects_a_render_mismatch():
         return (img * 1.001 if sh_degree is not None else img), info
 
     r = gd.e2e_exactness(render=skewed, device="cpu")
-    assert not r["pass"] and r["non_overlapping"]["preconditions_ok"]
+    assert not r["pass"] and r["status"] == "mismatch"
+    assert r["non_overlapping"]["preconditions_ok"]
     assert r["non_overlapping"]["rel_err"] > 1e-4
+
+
+def test_e2e_precondition_failure_is_not_a_mismatch():
+    import selftest
+
+    def darkened(act, colors, *args, sh_degree=None):
+        if sh_degree is not None:  # splat 0's SH + 0.5 < 0: the renderer clamps its colour to 0
+            colors = colors.clone()
+            colors[0, 0, :] = -5.0
+        return tr.render_bruteforce(act, colors, *args, sh_degree=sh_degree)
+
+    r = gd.e2e_exactness(render=darkened, device="cpu")
+    ex = r["non_overlapping"]
+    assert not r["pass"] and r["status"] == ex["status"] == "preconditions_failed"
+    assert not ex["preconditions"]["sh_plus_half_in_0_1"]
+    assert not ex["preconditions"]["rendered_in_0_1"]
+    assert ex["preconditions"]["one_splat_per_pixel"]
+    assert "rel_err" not in ex and "predicted" not in ex  # nothing was compared
+    assert "does not apply" in r["message"] and "not a prediction mismatch" in r["message"]
+    msg = selftest.failure_message(
+        {
+            "fixtures": {"x": {"ok": True}},
+            "sh_basis": {"pass": True},
+            "toy_exactness": {"pass": True},
+            "e2e_exactness": r,
+        }
+    )
+    assert "PRECONDITIONS FAILED" in msg and "MISMATCH" not in msg.replace("not a prediction mismatch", "")
+    # overlap is a failed precondition too, when the case is judged
+    scene, _ = gm.load_fixture(gd.E2E_SCENE_FIXTURE, gd.E2E_SCENE_SHA256)
+    delta = scene.pop("delta")
+    wide = {**scene, "scales": scene["scales"] + math.log(gd.E2E_OVERLAP_SCALE)}
+    settings = gm.RenderSettings(False, "classic", "pinhole", False, False, 0.01, 1e10, 3)
+    case = gd.e2e_case(wide, delta, tr.render_bruteforce, settings, gd.e2e_views(), judged=True)
+    assert case["status"] == "preconditions_failed"
+    assert not case["preconditions"]["one_splat_per_pixel"]
 
 
 def test_selftest_cpu_writes_json_and_stops_on_a_failed_check(tmp_path, monkeypatch):
@@ -197,14 +377,25 @@ def test_selftest_cpu_writes_json_and_stops_on_a_failed_check(tmp_path, monkeypa
     selftest.main(["--device", "cpu", "--out", str(path)])
     out = json.load(open(path))
     assert out["pass"] and out["device"] == "cpu"
+    assert all(v["ok"] for v in out["fixtures"].values()) and len(out["fixtures"]) == 2
     assert all(out[k]["pass"] for k in selftest.VALIDITY)
     assert selftest.VALIDITY == ("sh_basis", "toy_exactness", "e2e_exactness")
+    assert out["toy_exactness"]["noise_diagnostic"]["report_only"]
     assert out["lifted_random"]["criterion_version"] == gd.LIFTED_CHECK_VERSION
     # a failed end-to-end check exits non-zero (the notebook's sh() then stops the run)
     monkeypatch.setattr(gm, "toy_exactness", lambda **k: {"pass": True})
     monkeypatch.setattr(selftest, "lifted_random", lambda device: {})
-    monkeypatch.setattr(gd, "e2e_exactness", lambda **k: {"pass": False})
-    with pytest.raises(SystemExit, match="e2e_exactness"):
+    monkeypatch.setattr(
+        gd,
+        "e2e_exactness",
+        lambda **k: {
+            "pass": False,
+            "status": "mismatch",
+            "tol_rel": 1e-4,
+            "non_overlapping": {"rel_err": 0.5},
+        },
+    )
+    with pytest.raises(SystemExit, match="e2e_exactness: MISMATCH"):
         selftest.main(["--device", "cpu", "--out", str(path)])
     assert json.load(open(path))["pass"] is False
 
@@ -296,10 +487,9 @@ def test_predicted_dmse_matches_loop():
     a = torch.randn(n, 15, 4, generator=g)
     M = gm.pack(a @ a.transpose(1, 2))
     delta = torch.randn(n, 15, 3, generator=g)
+    d64, m64 = delta.double(), gm.unpack(M.double())  # float64 reference (fp32 varies by CPU)
     ref = sum(
-        float(delta[i, :, c] @ gm.unpack(M[i : i + 1])[0] @ delta[i, :, c])
-        for i in range(n)
-        for c in range(3)
+        float(d64[i, :, c] @ m64[i] @ d64[i, :, c]) for i in range(n) for c in range(3)
     )
     assert abs(gd.predicted_dmse(M, delta, 1000, chunk=7) - ref / 3000) < 1e-9
 
