@@ -54,13 +54,13 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `FINDINGS.md` | results write-up, every number from the committed bundles |
 | `HANDOFF.md` | this file |
 | `run2/tilequant/` ... `run5/tilequant/` | results bundles (`results_bundle.zip` contents); each session restores the previous one, so files repeat (git stores them once). In `run5/`, `run5_tt_table.csv` and `rd_run5.png` were regenerated locally after the label fix `1b4d40f8` (see FINDINGS sources); the downloaded original is `~/Downloads/results_bundle (3).zip` |
-| `PREREG_GN.md` | E0 / E1 pre-registration (`bench/gn-vq`): G0 rule, validity checks, exploratory scope, G1 for E1. Amendment 1: the toy check. Amendment 2: G0 over 9 codebooks per scene with tie-exempt pairs, and exact-assignment refines instead of the shortlist one. Amendment 3: the G0 verdict is the ranking alone (the ratio is reported as calibration), the end-to-end exactness check, the lifted-check criterion v2, and a proximal rise invalidating that variant instead of stopping. Amendment 4: the toy and end-to-end scenes are committed fixtures with pinned hashes (a correction: the CUDA toy check would have drawn a different scene from the simulated one), end-to-end preconditions read from gsplat's render, and a report-only probe-noise diagnostic. Amendment 5 (after G0 passed, before any E1 code): E1's GN-VQ variant, the one-sided size matching that G1's last sentence delegates, the reported secondaries and the exploratory ablations. **Never edit a rule after results exist**; add a dated amendment instead. |
+| `PREREG_GN.md` | E0 / E1 pre-registration (`bench/gn-vq`): G0 rule, validity checks, exploratory scope, G1 for E1. Amendment 1: the toy check. Amendment 2: G0 over 9 codebooks per scene with tie-exempt pairs, and exact-assignment refines instead of the shortlist one. Amendment 3: the G0 verdict is the ranking alone (the ratio is reported as calibration), the end-to-end exactness check, the lifted-check criterion v2, and a proximal rise invalidating that variant instead of stopping. Amendment 4: the toy and end-to-end scenes are committed fixtures with pinned hashes (a correction: the CUDA toy check would have drawn a different scene from the simulated one), end-to-end preconditions read from gsplat's render, and a report-only probe-noise diagnostic. Amendment 5 (after G0 passed, before any E1 code): E1's GN-VQ variant, the one-sided size matching that G1's last sentence delegates, the reported secondaries and the exploratory ablations. Amendment 6 (2026-09-21, before any E1 run): two more exploratory rows, GN-VQ at ridge `eps` = 1e-3 and 1e-2, seed 0 at K = 65,536 on both scenes, not judged by anything; and the final codebook's own quantizer range logged beside the warm start's. **Never edit a rule after results exist**; add a dated amendment instead. |
 | `gn_e0/gn/` | the E0 results bundle, unpacked as downloaded (22 files); FINDINGS section 8 quotes it |
 | `gn_e1_scene.py` | E1, one scene per process: the G1 baseline and GN-VQ at K = 65,536 for seeds 0-2, the two secondary weightings, the seed-0 K grid, the two ablations and an `uncompressed` row. Reuses E0's GN cache; resumable per (config, K, seed) |
 | `build_gn_e1_bench.py` / `gn_e1_bench.ipynb` | E1 notebook (build output; edit the builder, never the JSON). E0's notebook is left exactly as it ran |
 | `gn_e0_scene.py` | E0, one scene per process: render parity, GN pass (`gn_cache/<scene>.pt`), spectrum, Spearman, the 9 G0 codebooks (predicted vs measured, test and train GT metrics, reproduction fields at K = 65,536), the lifted-assignment check (gates only the refines), the ridge / proximal refines (a proximal rise marks that row invalid). Resumable per (scene, config, K, seed). |
 | `build_gn_bench.py` / `gn_bench.ipynb` | E0 notebook (build output; edit the builder, never the JSON) |
-| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` / `g1.py` (the G0 and G1 rules as code), `gn_vq.py` (E1's variant and the codec's quantizer), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (51 CPU tests), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0 and E1 dry runs and the writer-parity check; not collected by pytest) |
+| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` / `g1.py` (the G0 and G1 rules as code), `gn_vq.py` (E1's variant and the codec's quantizer), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (56 CPU tests), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0 and E1 dry runs and the writer-parity check; not collected by pytest) |
 | `.gitignore` | ignores only the 64 run-5 bundle files that were unpacked flat into `kaggle/` by hand (anchored names; nothing deleted; the committed copy is `run5/tilequant/`) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
@@ -327,37 +327,76 @@ verdict was `pass`, and FINDINGS section 8 quotes the files. Nothing in E0 is le
 
 E1 judges **G1**: does GN-VQ beat `lloyd_wopa_area` at equal size? The variant, the size matching, the
 secondaries and the ablations were fixed in `PREREG_GN.md` **Amendment 5**, after G0 passed and before
-any E1 code. E0's notebook, builder and job are untouched.
+any E1 code; **Amendment 6** (2026-09-21, before any E1 run) adds two more exploratory rows and one
+logging field. E0's notebook, builder and job are untouched.
 
 **Kaggle steps:**
 
 1. Import the notebook from
    `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e1_bench.ipynb`.
-2. Attach **both**: the **E0 notebook output** (for `gn_cache/<scene>.pt`, so E1 skips the GN pass -
-   the cache version is unchanged) and the **run-5 notebook output** (checkpoints, seed-0 sort caches,
-   the run-3 `lloyd_wopa_area` caches for seeds 0-2, the gsplat wheel). To resume, also attach this
-   notebook's own earlier output (`gn1/`, `gn1_work/`).
+2. Attach the inputs in the table below.
 3. GPU T4 x2, Internet on. Save & Run All.
 4. Bring back `/kaggle/working/gn1_bundle.zip` (look in `~/Downloads`).
+
+**Inputs to attach, and what each is for.** Nothing else is needed, and nothing else is read: the
+restore cell copies only these.
+
+| Attach | Required | What E1 takes from it, and why |
+|---|---|---|
+| the **run-5 notebook output** | yes | the garden / bicycle checkpoints (`results/benchmark_mcmc_1M_png_compression/<scene>/ckpts/ckpt_29999_rank0.pt`), the seed-0 PLAS sort caches (`tilequant/sweep/<scene>/cache`), the run-3 `lloyd_wopa_area` clustering caches for seeds 0-2 at K = 65,536 (`tilequant/run3/<scene>/kmeans`) and the gsplat wheel (`wheels/`). The restore cell raises before any install if a checkpoint or sort cache is missing; a missing run-3 cache only warns, and those configs are re-clustered with the source recorded per row |
+| the **E0 notebook output** | no, but attach it | **`gn_cache/<scene>.pt` only** - the GN metric, so E1 skips the GN pass (`gm.CACHE_VERSION` is unchanged, so the key matches). Without it each job recomputes the metric, about 12 s per scene. **No E0 result row is taken from it:** E0 writes its rows into `gn/`, and its work into `gn_work/`, neither of which E1 restores |
+| **this notebook's own earlier output** | only to resume | `gn1/` (the rows already measured, the GN-VQ reports, the meta) and `gn1_work/` (the E1 clustering cache and the job logs). Every row resumes on its own |
+
+**E0's rows cannot reach E1's results,** although `gn_cache/` is shared and E0's whole output is
+attached. Five independent layers, each covered by the dry run's stage (4):
+
+1. `discover` matches only the directory names `gn_cache`, `gn1` and `gn1_work`. E0's results are in
+   `gn/` and its work in `gn_work/`, which match nothing, so they are never copied;
+2. for the `gn1` and `gn1_work` slots it additionally refuses any directory holding E0 result files
+   (`gn_g0.json`, `gn_selftest.json`, `gn_results_<scene>.csv`), and says so;
+3. after restoring, the cell raises **before any install** if an E0 result file is sitting in `gn1/`;
+4. `gn_e1_scene.assert_e1_csv` refuses a `gn1_results_<scene>.csv` whose header is not E1's own (E0's
+   header has `refine_variant` and the `run3_*` columns), **before any GPU work**, so a foreign file
+   can never reach the resume set or the CSV;
+5. the G1 cell calls `g1.check_rows`, which refuses any scene or config that is not E1's, and
+   `write_bundle` bundles only E1's own file names (`gn1_*`, `gn_e1_*_log_tail.json`,
+   `timings.json`), warning about anything else rather than raising - it runs in the jobs cell's
+   `finally` and must not hide a job failure.
+
+None of these deletes anything. `gn_cache/` is the one deliberately shared input and holds the GN
+metric, not rows.
 
 **What it does:** the same smoke tests as E0 (`bench/gn/selftest.py`: fixture hashes, SH, toy,
 end-to-end, and `linalg_scale`), then one job per scene in parallel (`kaggle/gn_e1_scene.py`), then the
 G1 cell.
 
-**Rows per scene** (`gn1_results_<scene>.csv`, 19):
+**Rows per scene** (`gn1_results_<scene>.csv`, 21):
 
 - `lloyd_wopa_area` at K = 65,536, seeds 0-2: G1's baseline, from the run-3 caches (a missing seed is
   reclustered and the row records `recomputed`);
 - `gn_vq` at K = 65,536, seeds 0-2: the variant G1 judges;
 - `lloyd_trace`, `lloyd_c3dgs` at K = 65,536, seeds 0-2: the secondary weightings, reported only;
 - `lloyd_wopa_area` and `gn_vq` at K = 4,096 and 16,384, seed 0: the rate-distortion grid;
-- `gn_vq_noclip`, `gn_vq_noqassign`: the exploratory ablations, seed 0;
+- `gn_vq_noclip`, `gn_vq_noqassign`: the exploratory ablations, seed 0 (Amendment 5 e);
+- `gn_vq_eps1e3`, `gn_vq_eps1e2`: GN-VQ at ridge `eps` = 1e-3 and 1e-2, seed 0 (Amendment 6). They
+  differ from `gn_vq` in that one number only; `VQ_CONFIGS` names the ridge per config and the job
+  passes it instead of `--eps`, so the pre-registered row keeps `vq.RIDGE_EPS` = 1e-4;
 - `uncompressed`.
+
+The four exploratory rows are reported only. `g1.py` picks G1's rows, the secondary comparisons and
+the rate-distortion curves by config name, so none of them can enter a verdict; a test adds them with
+absurd numbers and asserts the whole verdict object is unchanged.
 
 Every row logs predicted vs measured error on train and test, the quantizer's range and step, the
 fraction of centroid coordinates outside the warm-start range, the objective before and after
 quantization, and `writer_codes_equal` (the job raises if the writer's codes differ from the ones
 GN-VQ quantized). Train-view SSIM and LPIPS are **not** computed; train PSNR is.
+
+Two quantizer ranges per GN-VQ row (Amendment 6): `quant_mins` / `quant_maxs` / `quant_step` are the
+**final** codebook's own - the range the codec uses when that row is written - and `warm_quant_*` the
+**warm start's**, so the two read side by side. With the clip on the first is inside the second by
+construction, which the dry run asserts. `ridge_eps` records the ridge the row used, and
+`gn1_meta_<scene>.json` carries `gn_vq.ridge_eps_by_config`.
 
 **G1 cell** (`bench/gn/g1.py` -> `gn1_g1.json`): the verdict (`incomplete` > `fail` > `pass`), the
 per-seed size rule and PSNR differences, the dominance flags, the two secondary comparisons and the
@@ -374,10 +413,12 @@ quantizer range and both objectives), `gn1_g1.json`, `gn1_rd.png`, `gn1_selftest
 took 400-640 s each, so they dominate the run; everything else is the 19 evaluations and the GN-VQ
 iterations (E0's refines were about 10 s per iteration at K = 65,536).
 
-**Local checks:** `pytest bench/gn/test_gn.py` (51 tests) and
-`python bench/gn/dryrun/dryrun_gn_e1.py` (the whole job on the toy: all 19 rows, a reclustered seed,
-the writer codes, the GN-VQ reports, resume, and the notebook's G1 and bundle cells). Rebuild the
-notebook with `python kaggle/build_gn_e1_bench.py` before the dry run.
+**Local checks:** `pytest bench/gn/test_gn.py` (56 tests) and
+`python bench/gn/dryrun/dryrun_gn_e1.py` (the whole job on the toy: all 21 rows, a reclustered seed,
+the writer codes, the GN-VQ reports with each row's ridge and both quantizer ranges, resume, the
+notebook's G1 and bundle cells, and stage (4), the E0/E1 output isolation on a fake `/kaggle/input`
+holding both outputs). Rebuild the notebook with `python kaggle/build_gn_e1_bench.py` before the dry
+run.
 
 ## Session decisions (E0, 2026-09-19)
 
@@ -682,14 +723,71 @@ them.
   and the clustering cache. E0's notebook has to stay byte-identical to the version that ran, and
   sharing the writer keeps E1's rows comparable with E0's.
 
+### Amendment 6 session (2026-09-21, before any E1 run)
+
+Dace asked for two more exploratory GN-VQ rows and for a check that attaching E0's output cannot leak
+E0 rows into E1. The amendment was committed first, docs only, before any code. E1 has not run, so
+again nothing here was decided after a result.
+
+- **Two rows, not a sweep.** Amendment 6 fixes `eps` = 1e-3 and 1e-2 at seed 0 and K = 65,536 on both
+  scenes, one and two orders of magnitude above the pre-registered 1e-4. Dace named the values and the
+  scope; the reason recorded in the amendment is that the ridge is the knob for two risks at once
+  (overfitting to train-view directions, and centroid extrapolation widening the quantizer's global
+  range), with E0's train/test gap and E0's reading of the codec's quantizer as the evidence for each.
+  Both numbers in that rationale come from `kaggle/gn_e0/gn/gn_results_bicycle.csv`, recomputed from
+  the file: 34.51% on train views, 23.16% on test.
+- **The ridge lives in `VQ_CONFIGS`, not in a new flag.** `gn_vq()` already took `eps`; the job passed
+  `--eps` to every row. Now a config may name its own `eps`, the loop pops it, and `--eps` is the
+  default for the rows that do not. So the pre-registered row keeps `vq.RIDGE_EPS` and the two new
+  rows differ from it in one dict entry, which is what "identical otherwise" has to mean in code. A
+  test asserts each new config equals `gn_vq`'s once `eps` is removed.
+- **`wanted()` was not touched.** It already gave every GN-VQ variant except `gn_vq` seed 0 at G1's K,
+  which is exactly Amendment 6's scope, so the two rows needed no scheduling code. That is why E1 goes
+  from 19 to 21 rows and no other row moved.
+- **Exploratory means picked by nothing, and that is now pinned by a test.** `g1.py` selects rows by
+  config name, so the four exploratory rows were already invisible to G1, to the secondaries and to
+  the rate-distortion curves. The test adds all four on both scenes at every K with PSNR 99 and 1 byte
+  and asserts the entire verdict object is unchanged - a stronger statement than checking the verdict
+  string, and it would catch a future comparison that globbed configs instead of naming them.
+- **Both quantizer ranges were already computed; only the reporting was missing.** `report["quantizer"]`
+  is the final codebook's own range and `report["warm_start"]["quantizer"]` the warm start's, but the
+  CSV carried only the first. Amendment 6's logging item is therefore four new columns
+  (`warm_quant_mins` / `_maxs` / `_step`, `ridge_eps`), not new arithmetic, and the dry run asserts the
+  CSV's warm columns equal the report's dict.
+- **The isolation was already true, and is now checked.** E0 writes `gn/` and `gn_work/`; E1 writes
+  `gn1/` and `gn1_work/`; `discover` matches exact directory names, so no E0 result was ever going to
+  be restored. Nothing *verified* that, so a rename or a hand-copied file would have broken it
+  silently. The five layers listed under "E1 notebook" make it a checked property at every stage the
+  rows pass through - restore, resume, CSV, verdict, bundle - and stage (4) of the E1 dry run exercises
+  each on a fake `/kaggle/input` holding both outputs.
+  - **`write_bundle` warns instead of raising** because it runs in the jobs cell's `finally`; raising
+    there would replace a real job failure with a packaging error. Every other layer raises.
+  - **`assert_e1_csv` compares the whole header** rather than looking for a marker column: E0's header
+    differs by several columns in both directions, and an exact comparison also catches a CSV from a
+    future E1 whose columns changed, which is the case that would silently misalign `DictWriter`.
+  - **Nothing deletes anything,** here or in the restore cell. A refused file is reported and left
+    where it is.
+- **The stray `gn_bundle (1).zip` is ignored, not deleted,** by an anchored pattern in the root
+  `.gitignore` matching that one name. Its contents are committed unpacked in `kaggle/gn_e0/gn/`, and
+  no bundle zip is ever committed.
+
 ### Open items (E0: closed; E1: open)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
   about 41 minutes of timed steps with the two jobs in parallel.
-- **Run E1 on Kaggle** (Dace). `kaggle/gn_e1_bench.ipynb`, attaching **both** the E0 output (for
-  `gn_cache/`) and the run-5 output; see "E1 notebook" above. Everything resumes per row, so a short
-  session can be continued by attaching its own output.
+- **Run E1 on Kaggle** (Dace). `kaggle/gn_e1_bench.ipynb`, attaching the run-5 output (required)
+  and the E0 output (for `gn_cache/` only); the table under "E1 notebook" above says exactly what each
+  input is for, and why attaching E0's output cannot put an E0 row in E1's results. Everything resumes
+  per row, so a short session can be continued by attaching its own output. 21 rows per scene since
+  Amendment 6.
+- **Amendment 6's two rows cost little.** They are two more GN-VQ runs per scene at seed 0 and
+  K = 65,536, warm-started from a `lloyd_wopa_area` cache that is already on disk, so they add no
+  clustering. E0's refines measured the same loop at K = 65,536
+  (`gn_e0/gn/gn_refine_<variant>_<scene>.json`): 9.36-9.51 s per assignment and 1.31-1.32 s per
+  update, and 72.1-73.6 s for a whole three-iteration variant including the iteration-1 top-64
+  diagnostic. GN-VQ runs at most 10 iterations and stops at a relative drop below 1e-3, so each row
+  is a few minutes plus one evaluation. The secondary clusterings below still dominate.
 - **The secondary clusterings dominate E1's runtime.** `lloyd_trace` and `lloyd_c3dgs` are six fresh
   library-Lloyd runs per scene (two weightings x three seeds) at K = 65,536, and E0 measured that
   clustering at 281-642 s per run, so they are roughly half an hour to an hour per scene against about
@@ -749,11 +847,13 @@ them.
   there; the temp copies were removed.
 - **The 64 flat bundle files in `kaggle/`** are ignored, not deleted. Delete them by hand whenever
   convenient; the committed copy is `kaggle/run5/tilequant/`.
-- **`gn_bundle (1).zip` sits untracked in the repo root.** It is the E0 download; its contents are
-  committed, unpacked, in `kaggle/gn_e0/gn/`, and the zip itself is not meant to be committed (no
-  bundle zip is). Delete it or move it to `~/Downloads` whenever convenient; until then `git status`
-  shows it. E1's bundle will arrive the same way, so unpack it into `kaggle/gn_e1/` and remove the
-  zip.
+- ~~**`gn_bundle (1).zip` sits untracked in the repo root.**~~ **Ignored (2026-09-21), not
+  deleted.** The root `.gitignore` now has `/gn_bundle (1).zip`, anchored, matching that one name, so
+  `git status` is clean while the file stays where it is. Its contents are committed unpacked in
+  `kaggle/gn_e0/gn/`, and no bundle zip is ever committed. Delete it or move it to `~/Downloads`
+  whenever convenient. **E1's bundle will arrive the same way:** unpack `gn1_bundle.zip` into
+  `kaggle/gn_e1/`, check the files against the zip, and add its download name to `.gitignore` the same
+  way (or remove the zip).
 
 ## Conventions and gotchas
 
@@ -858,7 +958,7 @@ them.
 | 4 | full MipNeRF360 validation of `lloyd_wopa` / `lloyd_wopa_area` (pre-registered rule) | **validated on all 9 scenes.** Both candidates pass; `pr_candidate` = `lloyd_wopa_area`, +0.111 dB mean PSNR at -0.10% mean size, better on every scene. All 7 sanity gates passed. |
 | 5 | the same change as library code (`feat/png-weighted-kmeans`): parity gate, MipNeRF360, Tanks & Temples, cost, CPU-only smoke test | **passed.** Parity exact (and all 18 library rows = the run-4 rows); Tanks & Temples +0.052 dB mean PSNR at +0.08% size, both scenes better; k-means 510 s vs 405 s (MipNeRF360), 328 s vs 416 s (T&T); peak GPU memory 3.37-3.62 GB vs 1.03-1.26 GB; CPU smoke test passed; torchpq baseline reproduced to ~0.002 dB. |
 | E0 (`bench/gn-vq`) | does a Gauss-Newton metric on shN predict the shN-only render error (G0, `PREREG_GN.md`)? | **G0 passed** (2026-09-20, second attempt; the first crashed in cuSOLVER). 34 non-tied pairs of 36, none misordered, every codebook calibrated within 0.5-2x. The two exploratory refines cut the GN objective 3.7-4.0x and still lost 0.04-0.53 dB after the codec's centroid quantizer. Details in FINDINGS section 8. |
-| E1 (`bench/gn-vq`) | does GN-VQ beat `lloyd_wopa_area` at equal size (G1, `PREREG_GN.md` with Amendment 5)? | **built, not run**: `kaggle/gn_e1_bench.ipynb`, 51 CPU tests and a dry run pass. |
+| E1 (`bench/gn-vq`) | does GN-VQ beat `lloyd_wopa_area` at equal size (G1, `PREREG_GN.md` with Amendments 5 and 6)? | **built, not run**: `kaggle/gn_e1_bench.ipynb`, 21 rows per scene, 56 CPU tests and a dry run pass. |
 
 ## PR plan (`feat/png-weighted-kmeans`)
 

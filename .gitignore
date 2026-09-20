@@ -133,3 +133,8 @@ results
 planning/*.html
 
 scratch/**
+
+# The E0 results bundle as downloaded (2026-09-20). Its contents are committed unpacked in
+# kaggle/gn_e0/gn/, and no bundle zip is ever committed. This exact name at the repo root only;
+# nothing is deleted. E1's bundle arrives the same way - unpack it into kaggle/gn_e1/.
+/gn_bundle (1).zip
