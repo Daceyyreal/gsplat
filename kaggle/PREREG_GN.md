@@ -511,3 +511,63 @@ Neither can pass or fail G1.
   clusters whose clipped update was rejected;
 - bytes, total and per `shN.npz` member, and test PSNR / SSIM / LPIPS plus train PSNR. Train-view SSIM
   and LPIPS are dropped: no rule uses them.
+
+## Amendment 6 (2026-09-21, before any E1 run and before the code change it describes)
+
+Two exploratory rows are added to E1. Nothing else changes: G1's threshold and wording, the GN-VQ
+variant of Amendment 5 a, the size matching of Amendment 5 b, the secondary comparisons of
+Amendment 5 d and the exploratory rows of Amendment 5 e all stay exactly as written above. G0, the
+validity checks and Amendments 1-4 are unchanged. E1 has not run.
+
+### The rows
+
+Two more runs of the GN-VQ variant defined in Amendment 5 a, differing from it in one number only,
+the ridge `eps` of the per-cluster update `mu = eps * tr(sum M_k) / 15`:
+
+- **`gn_vq_eps1e3`**: `eps` = 1e-3;
+- **`gn_vq_eps1e2`**: `eps` = 1e-2.
+
+The pre-registered GN-VQ of Amendment 5 a keeps `eps` = 1e-4, the value E0's refines used.
+
+Both rows are at **k-means seed 0 and K = 65,536, on both scenes** (garden and bicycle). Warm start,
+assignment, clip, acceptance rule, stopping rule, final quantization, final assignment, writer and
+measurement are identical to Amendment 5 a in every other respect.
+
+**They are exploratory and not judged.** They are not part of G1 (Amendment 5 c), not part of either
+secondary comparison (Amendment 5 d), and not part of the rate-distortion curves or the BD-rate. They
+join the exploratory rows of Amendment 5 e: reported only. G1 remains GN-VQ (`eps` = 1e-4) against
+`lloyd_wopa_area` at K = 65,536 over seeds 0-2, and nothing here can pass or fail it.
+
+E1 therefore has 21 rows per scene instead of 19.
+
+### Why the ridge, and why these two values
+
+The ridge is the knob for two risks at once, and E0 measured a symptom of each.
+
+**Overfitting to train-view directions.** `M_i` is accumulated over the train views, so a direction of
+shN that no train view constrains is a direction the update is free to move in. Larger `mu` pulls
+those directions toward 0 instead. E0 saw the weighting advantage shrink out of sample: on bicycle at
+K = 65,536, the measured shN-only dMSE gap between `plain_l2` and `lloyd_wopa_area` was **34.51% on
+train views and 23.16% on test views** (`kaggle/gn_e0/gn/gn_results_bicycle.csv`:
+`measured_train_clamped` 1.3701e-4 vs 1.0186e-4, `measured_test_clamped` 1.5018e-4 vs 1.2195e-4). A
+codebook fitted harder on train-view `M` is not guaranteed to keep its advantage on test views, and
+test PSNR is what G1 judges.
+
+**Centroid extrapolation widening the quantizer's global range.** As recorded under Amendment 5, the
+codec quantizes the whole `[K, 45]` shN codebook with **one global scalar min/max at 6 bits**, so a
+single extreme coordinate coarsens the step for every coordinate. A weakly constrained cluster is
+exactly where an update can throw a coordinate far out. Amendment 5 a's clip is one answer to this;
+the ridge is the other, and it acts before the clip rather than after, so the two are worth
+separating.
+
+1e-3 and 1e-2 are one and two orders of magnitude above the pre-registered 1e-4, which is the range
+over which `mu` goes from negligible against a typical cluster's `tr(sum M_k) / 15` to comparable
+with it. No result is claimed for them, and no threshold is attached.
+
+### Also logged
+
+For these two rows **and for the pre-registered GN-VQ row**: the **final codebook's own** quantizer
+min, max and step - the range the codec's quantizer actually uses when that row is written - recorded
+**alongside the warm-start codebook's** min, max and step, so the two can be read side by side
+without recomputing either. This is a logging addition only; Amendment 5's "Logged for every E1 row"
+list is otherwise unchanged, and nothing reads these fields in a verdict.
