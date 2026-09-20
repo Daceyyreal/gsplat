@@ -19,9 +19,11 @@ passes the same rule on Tanks & Temples: **+0.052 dB** mean PSNR on train / truc
 Cost: k-means 510 s vs 405 s mean on MipNeRF360 and 328 s vs 416 s on Tanks & Temples; peak GPU
 memory 3.37-3.62 GB vs 1.03-1.26 GB.
 
-**E0 (section 8, branch `bench/gn-vq`): pending.** Does a Gauss-Newton metric on shN predict the
-rendering error of shN quantization? Pre-registered in `kaggle/PREREG_GN.md`. The first Kaggle run
-(2026-09-20) crashed before any result row; no results yet.
+**E0 (section 8, branch `bench/gn-vq`): G0 passed.** A per-splat Gauss-Newton metric on shN ranks
+codebooks by their rendering error: 34 non-tied pairs of 36, none misordered, on both view sets and at
+all three codebook sizes, and calibrated within 0.5-2x everywhere. Its two exploratory refines cut the
+GN objective by 3.7-4.0x and still lose 0.04-0.53 dB after the codec's centroid quantizer, which E1
+(pre-registered in Amendment 5) tests with a range clip.
 
 ## Sources
 
@@ -40,6 +42,10 @@ rendering error of shN quantization? Pre-registered in `kaggle/PREREG_GN.md`. Th
   locally from the bundle's own result files after a label fix (commit `1b4d40f8`):
   `run5_tt_table.csv` (only its reference-row label changes) and `rd_run5.png` (memory in decimal GB,
   titles no longer overlap). Every other file is as downloaded.
+- Section 8: every number comes from `kaggle/gn_e0/gn/` (one Kaggle session on 2x T4, 2026-09-20,
+  gsplat commit `cd3139c2` on `bench/gn-vq`, the run-5 wheel reused). It restored the run-5 output:
+  the garden / bicycle checkpoints, the seed-0 PLAS order, the run-3 clustering caches (used for
+  K = 65,536) and `run3_results.csv`. The bundle is unpacked unchanged in `kaggle/gn_e0/gn/`.
 - Section 4: every number comes from `kaggle/run3/tilequant/` (one Kaggle session, gsplat commit
   `f9b61526`). That session restored the run-2 output (training #2 checkpoints, seed-0 PLAS sort,
   run-1 / run-2 rows, gsplat wheel) and ran only the run-3 configs, so run-3 rows pair with the
@@ -652,13 +658,10 @@ The jobs summed to 6.05 GPU-hours over the 2 GPUs. The notebook's pre-run estima
 - **CUDA checks:** `lint/format-code.sh` and the test suite on a CUDA machine. Locally only CPU tests
   run (`tests/test_compression.py` skips its CUDA test).
 
-## 8. E0 — pending: a Gauss-Newton metric for the shN codebook (`bench/gn-vq`)
+## 8. E0: a Gauss-Newton metric for the shN codebook (`bench/gn-vq`) — G0 passed
 
-**Status: no results yet.** The first Kaggle run (2026-09-20) crashed in both scene jobs right after
-the GN pass, before any result row, in cuSOLVER's batched eigendecomposition; the batch limit is
-handled in `bench/gn/batched.py` and the run has not been repeated (`kaggle/HANDOFF.md`, E0 open
-items). The questions, definitions and decision rules
-were fixed before any E0 code or result, in `kaggle/PREREG_GN.md`:
+The questions, definitions and decision rules were fixed before any E0 code or result, in
+`kaggle/PREREG_GN.md`:
 
 - the original text (commit `464c46a5`);
 - Amendment 1: the toy exactness check (commit `223faf91`);
@@ -668,39 +671,272 @@ were fixed before any E0 code or result, in `kaggle/PREREG_GN.md`:
   calibration; an end-to-end exactness validity check; a new criterion for the lifted-assignment
   check; a proximal-objective rise marks that refine invalid instead of stopping the run (commit
   `86e5f35f`);
-- Amendment 4: the toy and end-to-end checks render committed scene fixtures whose hashes are
-  asserted before rendering (a correction: the CUDA toy check would have rendered a different scene
-  from the one simulated for Amendment 1); end-to-end preconditions read from gsplat's own render; a
-  report-only probe-noise diagnostic (commit `a8f4d9ae`).
+- Amendment 4: the toy and end-to-end checks render committed scene fixtures whose hashes are asserted
+  before rendering; end-to-end preconditions read from gsplat's own render; a report-only probe-noise
+  diagnostic (commit `a8f4d9ae`).
 
-The sections:
+The run before this one crashed in cuSOLVER's batched eigendecomposition and produced no rows; the
+batch limit is handled in `bench/gn/batched.py` (see the fallback sequence below).
 
-- **Question (G0, Amendment 3):** on garden and bicycle, does the per-splat GN metric
-  `M_i = sum_v s_iv y y^T`, accumulated over the train views, rank codebooks by their measured
-  shN-only render error? This is tested on 9 codebooks per scene: `upstream_l1` (TorchPQ manhattan),
-  `plain_l2` (unweighted Lloyd) and `lloyd_wopa_area`, each at three codebook sizes K.
-  - **Ranking (the verdict):** within each K, every config pair whose measured errors are not tied
-    must be ordered the same way by the prediction, on train and on test views. A minimum number of
-    non-tied pairs is required, otherwise the verdict is inconclusive; an inconclusive G0 is
-    re-judged in E1 over the non-GN rungs.
-  - **Calibration (reported, not judged):** predicted/measured on train views, clamped and unclamped,
-    flagged when it is within the pre-registered range, and the cross/diagonal term ratio. The GN
-    model drops cross-splat terms, and neighbouring splats that share a centroid have correlated
-    residuals, so the ratio measures how well that approximation fits, not the ranking.
-  - **Validity:** the SH basis, the toy Hutchinson check, the end-to-end exactness check (on
-    non-overlapping toy splats the prediction must equal the measured error), render parity and, where
-    the run-3 row exists, reproduction.
-- **Exploratory:**
-  - the spectrum of `M_i`;
-  - rank correlations between `tr(M_i)`, the `opacity_area` weight, the footprint `F_i` and a
-    C3DGS-style weight;
-  - exact Mahalanobis assignment (checked against brute force on real splats; a failed check skips
-    only the refines) and how often its argmin falls inside the plain-L2 top-64 shortlist;
-  - two refines of the `lloyd_wopa_area` codebook, ridge and proximal, excluded from G0: objective
-    per step, bytes per `shN.npz` member, and train and test metrics; a refine row marked invalid is
-    reported as such, not as a result;
-  - per-channel out-of-range pixels of the original render.
-- **G1** (GN-VQ vs `lloyd_wopa_area` at equal size) is judged in E1, not in E0.
-- **Where results will come from:** the E0 notebook (`kaggle/gn_bench.ipynb`, built by
-  `kaggle/build_gn_bench.py`) writes `gn_bundle.zip`; its files will be committed under
-  `kaggle/gn_e0/gn/`, and this section will quote them.
+### Verdict (`gn_g0.json`): `pass`
+
+The rule is Amendment 3: the ranking alone decides. Within each K, the 3 config pairs on train and
+test views of both scenes give 36 pair checks.
+
+| | Value |
+|---|---|
+| Verdict | **pass** |
+| Pair checks | 36 |
+| Non-tied pairs | 34 (minimum required: 6) |
+| Misordered non-tied pairs | 0 |
+| Ties (exempt, < 5% relative) | 2 |
+| Same on unclamped renders | 34 non-tied, 0 misordered, `pass` |
+| Validity checks | all 7 true: `sh_basis`, `toy_exactness`, `e2e_exactness`, render parity and reproduction per scene |
+
+Both ties are on bicycle at K = 4,096, test views: `upstream_l1` vs `plain_l2`
+(D 3.02307e-4 vs 3.15594e-4) and `upstream_l1` vs `lloyd_wopa_area` (3.02307e-4 vs 2.93374e-4). So
+the metric ordered every pair it was asked about, on both view sets, at all three codebook sizes.
+
+### Predicted vs measured (`gn_results_<scene>.csv`)
+
+`P` is the GN prediction, `D` the measured shN-only dMSE on clamped renders; PSNR and bytes are the
+full compressed pipeline. Uncompressed reference: garden 27.3150 dB, bicycle 25.5682 dB.
+
+| Scene | K | Config | P | D train | D test | PSNR (dB) | Raw bytes |
+|---|---|---|---|---|---|---|---|
+| garden | 4,096 | `upstream_l1` | 2.4782e-4 | 3.1545e-4 | 3.1185e-4 | 26.5670 | 14,783,177 |
+| garden | 4,096 | `plain_l2` | 2.6277e-4 | 3.4596e-4 | 3.4524e-4 | 26.5222 | 14,790,495 |
+| garden | 4,096 | `lloyd_wopa_area` | 2.3429e-4 | 2.8137e-4 | 2.7905e-4 | 26.6977 | 14,778,950 |
+| garden | 16,384 | `upstream_l1` | 1.9968e-4 | 2.3623e-4 | 2.3315e-4 | 26.7419 | 15,251,769 |
+| garden | 16,384 | `plain_l2` | 2.1723e-4 | 2.6340e-4 | 2.6263e-4 | 26.6851 | 15,243,082 |
+| garden | 16,384 | `lloyd_wopa_area` | 1.7895e-4 | 2.0010e-4 | 1.9953e-4 | 26.8461 | 15,244,312 |
+| garden | 65,536 | `upstream_l1` | 1.5600e-4 | 1.7412e-4 | 1.7293e-4 | 26.8813 | 16,445,885 |
+| garden | 65,536 | `plain_l2` | 1.6645e-4 | 1.8738e-4 | 1.8650e-4 | 26.8450 | 16,475,746 |
+| garden | 65,536 | `lloyd_wopa_area` | 1.3508e-4 | 1.4224e-4 | 1.4174e-4 | 26.9631 | 16,405,132 |
+| bicycle | 4,096 | `upstream_l1` | 2.2973e-4 | 2.8155e-4 | 3.0231e-4 | 25.1183 | 14,385,340 |
+| bicycle | 4,096 | `plain_l2` | 2.4533e-4 | 3.0694e-4 | 3.1559e-4 | 25.1276 | 14,396,759 |
+| bicycle | 4,096 | `lloyd_wopa_area` | 2.1216e-4 | 2.5289e-4 | 2.9337e-4 | 25.1487 | 14,396,171 |
+| bicycle | 16,384 | `upstream_l1` | 1.6521e-4 | 1.8341e-4 | 2.0492e-4 | 25.2528 | 14,891,479 |
+| bicycle | 16,384 | `plain_l2` | 1.7960e-4 | 2.0264e-4 | 2.1649e-4 | 25.2374 | 14,893,593 |
+| bicycle | 16,384 | `lloyd_wopa_area` | 1.4590e-4 | 1.6126e-4 | 1.8788e-4 | 25.2782 | 14,909,318 |
+| bicycle | 65,536 | `upstream_l1` | 1.1884e-4 | 1.2432e-4 | 1.4107e-4 | 25.3311 | 16,238,295 |
+| bicycle | 65,536 | `plain_l2` | 1.2825e-4 | 1.3701e-4 | 1.5018e-4 | 25.3086 | 16,246,985 |
+| bicycle | 65,536 | `lloyd_wopa_area` | 9.8475e-5 | 1.0186e-4 | 1.2195e-4 | 25.3577 | 16,216,069 |
+
+`lloyd_wopa_area` has both the lowest `P` and the lowest measured error at every K on both scenes, and
+the highest PSNR, which is run 3's and run 4's result seen through the metric.
+
+### Calibration (reported, not judged)
+
+| Quantity | Range over the 18 codebooks |
+|---|---|
+| `P / D` train, clamped | 0.7595 - 0.9668 |
+| `P / D` train, unclamped | 0.7586 - 0.9491 |
+| `P / D` test, clamped | 0.7232 - 0.9530 |
+| Calibrated (within 0.5-2x) | 18 of 18, clamped and unclamped |
+| Cross/diagonal term ratio `D_train_unclamped / P - 1` | 0.0536 - 0.3182 |
+
+The prediction is below the measurement everywhere, and the gap shrinks as K grows:
+
+| K | Cross/diagonal ratio |
+|---|---|
+| 4,096 | 0.2017 - 0.3182 |
+| 16,384 | 0.1189 - 0.2142 |
+| 65,536 | 0.0536 - 0.1271 |
+
+That is the direction and the ordering Amendment 3 gave as its reason for dropping the ratio from the
+verdict: the GN model is block-diagonal, so the cross terms of neighbouring splats that share a
+centroid are missing from `P`, and they matter most where the most neighbours share one.
+
+### Validity checks
+
+| Check | Result |
+|---|---|
+| `sh_basis` (vs gsplat's CUDA `spherical_harmonics`) | max abs error 6.50e-6 (rule: < 1e-5) |
+| `toy_exactness`, 64 probes | summed estimate off by 2.87% (rule: < 5%); per-splat median 12.4%, p90 27.7%, max 58.6% |
+| `toy_exactness` plumbing | gradient vs Hutchinson formula 4.84e-7, all-ones channel 2.01e-7 (rule: < 1e-4 each) |
+| `e2e_exactness`, non-overlapping | relative error 6.85e-8 (rule: <= 1e-4); preconditions all held |
+| Render parity, both scenes | max abs difference 0.0 |
+| Reproduction, both scenes | all three K = 65,536 rows equal to run 3: PSNR within 3.6e-15 dB, identical raw bytes |
+
+The reproduction check is exact because the K = 65,536 codebooks came from the restored run-3 caches
+(`source` = `run3_cache`); K = 4,096 and 16,384 were clustered in this run (`recomputed`).
+
+Report-only, outside every verdict: the toy check's exact probe-noise `sigma_rel` is 0.014806, whose
+implied false-fail probability for the 5% rule under a normal approximation is 7.33e-4. The
+overlapping end-to-end variants, also report-only: `P / D` 0.9614 with cross/diagonal +0.0402 for
+independent perturbations, and 0.5855 with +0.7079 when all splats share one perturbation - the
+correlated case Amendment 3 describes.
+
+### The GN pass (`gn_meta_<scene>.json`)
+
+| | garden | bicycle |
+|---|---|---|
+| Train / test views | 161 / 24 | 169 / 25 |
+| Train pixels | 175,406,280 | 171,702,648 |
+| GN pass | 11.75 s | 11.51 s |
+| Splats visible in any train view | 998,603 | 986,233 |
+| Splats with `tr(M) = 0` | 1,397 | 13,776 |
+| Clamp fraction (`SH + 0.5 < 0`, logged only) | 2.894% | 10.328% |
+| max abs entry of M, all finite | 18,842.88 | 36,533.97 |
+| Original render above 1 before clamping, train | 0.0217-0.0235% per channel | 2.177-3.233% |
+| Original render above 1 before clamping, test | 0.0394-0.0445% | 0.136-0.187% |
+| Train-metric code vs `Runner.eval` on test views | 0.0 on PSNR, SSIM, LPIPS | 0.0 |
+
+No pixel of either original render fell below 0.
+
+The lifted fp32 assignment against the exhaustive float64 minimum, on 10,000 sampled splats:
+
+| | garden | bicycle |
+|---|---|---|
+| Evaluated (`tr(M) > 0`) / sampled | 9,989 / 10,000 | 9,866 / 10,000 |
+| `sum excess / sum d_min` (rule: <= 1e-4) | 4.07e-13 | 3.43e-10 |
+| Worst `excess / scale` (rule: <= 1e-4) | 1.99e-12 | 9.89e-10 |
+| Splats over the tolerance | 0 | 0 |
+| Same index as brute force | 99.95% | 98.90% |
+| Splats with `d_min = 0` | 61 | 75 |
+| Splats with `d_min < 1e-3 * scale` | 8,197 | 9,489 |
+| Time | 29.05 s | 28.77 s |
+
+Amendment 3 replaced the Amendment-2 criterion (excess relative to `d_min`) for exactly this reason,
+and the run shows why: that measure reaches 0.197 on garden and 90,600.9 on bicycle, because for
+thousands of splats `d_min` is at or near 0, while the criterion actually used is met with 5 to 8
+orders of magnitude of margin.
+
+### Spectrum of `M_i` (`gn_spectrum_<scene>.csv`), over splats with `tr(M) > 0`
+
+| Metric | garden unweighted | garden trace-weighted | bicycle unweighted | bicycle trace-weighted |
+|---|---|---|---|---|
+| Participation ratio, mean | 2.221 | 2.403 | 2.846 | 2.222 |
+| Participation ratio, median | 1.946 | 2.014 | 2.307 | 1.280 |
+| Participation ratio, p95 | 4.505 | 5.460 | 5.721 | 5.573 |
+| Top-1 eigenvalue fraction, mean | 0.673 | 0.660 | 0.623 | 0.741 |
+| Top-1 fraction, median | 0.665 | 0.647 | 0.573 | 0.877 |
+| Top-3 fraction, mean | 0.932 | 0.916 | 0.875 | 0.919 |
+| Top-3 fraction, median | 0.973 | 0.970 | 0.955 | 0.998 |
+
+Out of 15 possible directions, a splat's metric occupies 2-3, and its top 3 eigenvalues carry about
+90% of the energy. The metric is strongly anisotropic, which is what a Mahalanobis codebook can use
+and plain L2 cannot.
+
+### Rank correlations (`gn_spearman_<scene>.csv`)
+
+Spearman over all 1,000,000 splats; the `tr(M) > 0` subsets differ by at most 0.011.
+
+| Pair | garden | bicycle |
+|---|---|---|
+| `tr(M)` vs `opacity_area` (run 3's weight) | 0.5678 | 0.5373 |
+| `tr(M)` vs `F` (footprint) | 0.9330 | 0.9479 |
+| `tr(M)` vs C3DGS-style weight | 0.9362 | 0.9434 |
+| `opacity_area` vs `F` | 0.5988 | 0.5799 |
+| `opacity_area` vs C3DGS-style | 0.6383 | 0.6513 |
+| `F` vs C3DGS-style | 0.9944 | 0.9923 |
+
+`tr(M)` is close to the footprint and to the C3DGS-style weight, and only moderately related to the
+weight that won run 3. So the scalar part of the metric is not what `opacity_area` measures.
+
+### The two exploratory refines (`gn_refine_<variant>_<scene>.json`, excluded from G0)
+
+Both warm-started from the `lloyd_wopa_area` K = 65,536 seed-0 codebook, 3 iterations, both **valid**
+(the proximal objective never rose).
+
+| | garden ridge | garden prox | bicycle ridge | bicycle prox |
+|---|---|---|---|---|
+| Objective at the warm start | 1.22224e-4 | 1.22224e-4 | 9.07304e-5 | 9.07304e-5 |
+| After iteration 1 (assign / update) | 5.60388e-5 / 3.68247e-5 | 5.60388e-5 / 3.68244e-5 | 4.72653e-5 / 3.01872e-5 | 4.72653e-5 / 3.01867e-5 |
+| After iteration 2 | 3.48557e-5 / 3.19806e-5 | 3.48570e-5 / 3.19574e-5 | 2.84626e-5 / 2.60212e-5 | 2.84630e-5 / 2.60165e-5 |
+| After iteration 3 | 3.15780e-5 / 3.05895e-5 | 3.15614e-5 / 3.05785e-5 | 2.56508e-5 / 2.47791e-5 | 2.56475e-5 / 2.47794e-5 |
+| **Unquantized objective, final** | 3.05895e-5 | 3.05785e-5 | 2.47791e-5 | 2.47794e-5 |
+| **After the codec's centroid quantization (= `P`)** | 1.38351e-4 | 3.58568e-4 | 2.21117e-4 | 2.98634e-4 |
+| Warm start's own quantized `P` | 1.35080e-4 | 1.35080e-4 | 9.84749e-5 | 9.84749e-5 |
+| Measured D train (clamped) | 1.4502e-4 | 3.6931e-4 | 2.1080e-4 | 2.6484e-4 |
+| PSNR (dB) | 26.9261 | 26.4300 | 25.1850 | 25.0972 |
+| PSNR minus `lloyd_wopa_area` (dB) | -0.0371 | -0.5331 | -0.1727 | -0.2605 |
+| Raw bytes | 16,211,546 | 16,041,615 | 15,496,773 | 15,537,571 |
+| vs `lloyd_wopa_area` bytes | -1.18% | -2.22% | -4.43% | -4.18% |
+| `centroids.npy` in `shN.npz` | 1,235,196 | 1,065,266 | 874,221 | 914,982 |
+| vs `lloyd_wopa_area` centroid bytes | -13.5% | -25.4% | -45.2% | -42.6% |
+| Refine time | 73.6 s | 73.4 s | 72.4 s | 72.1 s |
+
+Per iteration, for the ridge variant: labels changed 84.9% / 37.0% / 18.0% on garden and 78.0% /
+43.7% / 24.4% on bicycle; the assignment guard kept the current centroid for 168 / 241 / 448 splats on
+garden and 9,240 / 9,239 / 9,534 on bicycle; clusters with `tr(sum M) = 0` that kept `q_old`:
+65 / 27 / 18 and 420 / 278 / 257.
+
+The share of exact argmins inside the plain-L2 top-64 shortlist falls from 0.431 to 0.075 to 0.060 on
+garden, and from 0.510 to 0.303 to 0.269 on bicycle. A shortlist of 64 would have missed most of the
+exact assignments after the first update, which is why Amendment 2 replaced it with the exact lifted
+assignment. The shortlist diagnostic cost 12.4-13.0 s per iteration against 9.4-9.5 s for the
+assignment it checks, and the centroid update 1.3 s.
+
+**So the exact-Mahalanobis refine works on the objective it optimizes and loses on the objective that
+matters:** the unquantized GN objective falls by 4.0x (garden) and 3.7x (bicycle), while after the
+codec's centroid quantization every refined row is worse than its own warm start, by 0.04 to 0.53 dB.
+The refines are also smaller, by 1.2-4.4% of total bytes, with the `centroids.npy` member 13-45%
+smaller.
+
+**Hypothesis (not tested by this run):** the refines' loss comes from the range of the shN centroid
+quantizer. gsplat's `_compress_kmeans` quantizes the whole codebook with **one global scalar min/max
+and 6 bits** (`mins = min(centroids) + 1e-6`, `maxs = max(centroids)`, step `(maxs - mins) / 63`, 64
+levels for all K x 45 coordinates). The GN update is only constrained where `M` has curvature, so it
+is free to move centroid coordinates far in weakly constrained directions; a few such coordinates
+widen `maxs - mins`, and the step coarsens for every coordinate at once. Two observations from this
+run are consistent with it, and neither proves it: the quantized objective gets worse while the
+unquantized one improves 3.7-4.0x, and the `centroids.npy` member shrinks by 13-45%, which is what a
+coarser step does when many centroids collapse onto the same codes. The proximal variant, which pulls
+weakly constrained directions to the old centroid rather than to 0, ends up worse than the ridge
+variant on both scenes, which also fits: ridge at least shrinks those coordinates toward 0. E1 tests
+this directly by clipping every centroid coordinate to the warm-start codebook's range, per
+`PREREG_GN.md` Amendment 5.
+
+### The eigvalsh batch fallback
+
+`bench/gn/batched.py` starts each batched linalg call at `LINALG_MAX_BATCH` = 32,768 and halves on a
+backend error. What the run recorded:
+
+| Where | Sequence | Result |
+|---|---|---|
+| Smoke cell, `linalg_scale`, 1,000,000 float64 matrices | 32,768 -> `CUSOLVER_STATUS_INVALID_VALUE` -> 16,384 -> CUDA out of memory (9.49 GiB requested; 9.82 GiB for the last, odd chunk) -> 8,192 | 8,192 worked; 30 reductions logged (15 cuSOLVER, 15 out-of-memory); eigvalsh over 1M matrices 6.545 s, the 65,536-system solve 0.222 s |
+| Both scene jobs, `eigen_stats` over 1,000,000 splats | 32,768 -> `CUSOLVER_STATUS_INVALID_VALUE` -> 16,384 | 16,384 worked (the job process held less memory); 15 reductions in each job's last 200 log lines, one per chunk; spectrum step 8.21 s garden, 8.39 s bicycle |
+
+So 32,768 is refused outright by cuSOLVER's batched eigendecomposition on a T4, and 16,384 only fits
+when little else is allocated. The helper recovered every time, but it re-discovered the same
+reduction on every chunk, which is why E1 starts at 8,192 and remembers the batch that worked.
+
+### Timings (`timings.json`, `gn_meta_<scene>.json`, `gn_results_<scene>.csv`)
+
+| Step | Seconds |
+|---|---|
+| Restore inputs | 15.6 |
+| Install (restored run-5 wheel, no build) | 151.2 |
+| Smoke tests (including the 1M-matrix scale check) | 14.5 |
+| MipNeRF360 data for both scenes | 130.1 |
+| `gn_e0_garden` job | 2,145.1 |
+| `gn_e0_bicycle` job | 2,085.1 |
+
+The two jobs ran in parallel, one T4 each; the timed steps sum to about 41 minutes. Inside a job: GN pass
+11.7 / 11.5 s, spectrum 8.2 / 8.4 s, Spearman 4.8 / 4.8 s, lifted check 29.0 / 28.8 s, the two refines
+73.6 + 73.4 s (garden) and 72.4 + 72.1 s (bicycle). The rest is clustering and the 12 evaluated rows
+per scene.
+
+Clustering time per codebook (garden / bicycle):
+
+| Config | K = 4,096 | K = 16,384 | K = 65,536 |
+|---|---|---|---|
+| `upstream_l1` (TorchPQ manhattan, 100 iterations) | 102.5 / 99.0 | 104.7 / 105.4 | 419.1 / 432.1 |
+| `plain_l2` (library Lloyd) | 37.0 / 34.1 | 149.6 / 141.5 | 628.1 / 281.3 |
+| `lloyd_wopa_area` (library Lloyd, weighted) | 36.2 / 34.1 | 150.1 / 141.9 | 641.5 / 404.8 |
+
+The K = 65,536 columns are the recomputation cost only; those rows used the restored run-3 codebooks.
+Lloyd stopped early on bicycle at K = 65,536 (39 iterations for `plain_l2`, 56 for `lloyd_wopa_area`),
+which is why its times there are below garden's 100-iteration runs.
+
+### What E0 settles, and what it does not
+
+- **G0 passed:** the GN metric ranks these codebooks by rendering error, on both view sets, at all
+  three sizes, with no misordered pair.
+- It is also calibrated within 0.5-2x everywhere, though that was not part of the verdict, and the
+  missing cross terms account for the gap in the direction Amendment 3 predicted.
+- **G1 is untouched.** The refines show that lowering the GN objective does not by itself beat
+  `lloyd_wopa_area` once the codec's quantizer has its say; that is what E1 is for, with the range
+  clip and the size rule pre-registered in Amendment 5 before any E1 code.
