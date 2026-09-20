@@ -1,0 +1,127 @@
+{
+  "scene": "garden",
+  "timings_s": {
+    "gn_pass": 11.745824878000008,
+    "spectrum": 8.212501393000025,
+    "spearman": 4.783915728000011,
+    "job": 2131.817075371
+  },
+  "ckpt_sha1": "e1ac1e31dde161dac584ff107198217b5e90e1db",
+  "settings": {
+    "packed": false,
+    "rasterize_mode": "classic",
+    "camera_model": "pinhole",
+    "with_ut": false,
+    "with_eval3d": false,
+    "near_plane": 0.01,
+    "far_plane": 10000000000.0,
+    "sh_degree": 3
+  },
+  "train_views": 161,
+  "test_views": 24,
+  "total_train_pixels": 175406280,
+  "n_splats": 1000000,
+  "k_values": [
+    4096,
+    16384,
+    65536
+  ],
+  "default_k": 65536,
+  "gsplat_commit": "cd3139c277dc",
+  "render_parity": {
+    "max_abs_diff": 0.0,
+    "pass": true,
+    "view_size": [
+      1297,
+      840
+    ]
+  },
+  "gn": {
+    "cache_key": "v1|e1ac1e31dde161dac584ff107198217b5e90e1db|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views161|seed0",
+    "finite_check": {
+      "name": "M_packed",
+      "n_rows": 1000000,
+      "n_nonfinite_rows": 0,
+      "n_nonfinite_entries": 0,
+      "n_nan_entries": 0,
+      "n_inf_entries": 0,
+      "first_nonfinite_rows": [],
+      "max_abs": 18842.8828125,
+      "finite": true
+    },
+    "n_views": 161,
+    "total_pixels": 175406280,
+    "clamp_fraction": 0.02893837721225084,
+    "clamp_neg": 6958938,
+    "clamp_total": 240474369,
+    "splats_visible_in_any_train_view": 998603,
+    "splats_zero_trace": 1397,
+    "time_s": 11.745824878000008
+  },
+  "render_range": {
+    "train": {
+      "n_views": 161,
+      "n_pixels": 175406280,
+      "below_0_fraction_rgb": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "above_1_fraction_rgb": [
+        0.00021724421725379501,
+        0.00023530514414877278,
+        0.0001795203683699352
+      ],
+      "outside_fraction_rgb": [
+        0.00021724421725379501,
+        0.00023530514414877278,
+        0.0001795203683699352
+      ]
+    },
+    "test": {
+      "n_views": 24,
+      "n_pixels": 26147520,
+      "below_0_fraction_rgb": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "above_1_fraction_rgb": [
+        0.00044459283327826117,
+        0.0004364467452362595,
+        0.0003943777459583165
+      ],
+      "outside_fraction_rgb": [
+        0.00044459283327826117,
+        0.0004364467452362595,
+        0.0003943777459583165
+      ]
+    }
+  },
+  "metric_parity": {
+    "psnr": 0.0,
+    "ssim": 0.0,
+    "lpips": 0.0
+  },
+  "lifted_check": {
+    "criterion_version": 2,
+    "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+    "tol_rel": 0.0001,
+    "n_sample": 10000,
+    "n_zero_trace_in_sample": 11,
+    "n": 9989,
+    "sum_excess_over_sum_dmin": 4.0672337937083996e-13,
+    "max_excess_over_scale": 1.9893671789794157e-12,
+    "n_excess_over_tol_scale": 0,
+    "aggregate_pass": true,
+    "per_splat_pass": true,
+    "pass": true,
+    "n_dmin_below_1e-3_scale": 8197,
+    "n_dmin_zero": 61,
+    "max_excess_over_dmin": 0.19658308422779963,
+    "same_index_fraction": 0.9994994493943338,
+    "max_codebook_sq_dist_from_mean": 5.758791554846727,
+    "time_s": 29.049525457000072
+  },
+  "done": true
+}

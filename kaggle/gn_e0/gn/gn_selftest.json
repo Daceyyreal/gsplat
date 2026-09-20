@@ -1,0 +1,401 @@
+{
+  "device": "cuda",
+  "fixtures": {
+    "toy_scene_seed0": {
+      "ok": true,
+      "sha256": "1bb442ee09b6d8417384f5aad10e019a3ebab15458141ef685c873d45f06e441",
+      "drawn_under": {
+        "cpu_capability": "AVX2",
+        "torch_version": "2.11.0+cpu",
+        "platform": "win32"
+      }
+    },
+    "e2e_scene_seed0": {
+      "ok": true,
+      "sha256": "103c99e07bf582e8def6068efa103994041da1fdda4d9ca91523b178177ac757",
+      "drawn_under": {
+        "cpu_capability": "AVX2",
+        "torch_version": "2.11.0+cpu",
+        "platform": "win32"
+      }
+    }
+  },
+  "sh_basis": {
+    "n": 65536,
+    "n_cams": 3,
+    "max_abs_err": 6.496906280517578e-06,
+    "campos_vs_inverse_max_abs": 8.381903171539307e-07,
+    "pass": true,
+    "against": "gsplat CUDA spherical_harmonics"
+  },
+  "toy_exactness": {
+    "scene_fixture": "toy_scene_seed0",
+    "scene_sha256": "1bb442ee09b6d8417384f5aad10e019a3ebab15458141ef685c873d45f06e441",
+    "n_splats": 256,
+    "n_probes": 64,
+    "image": [
+      128,
+      96
+    ],
+    "n_covering": 255,
+    "n_visible": 256,
+    "overlap_fraction": 0.8680054926192928,
+    "noise_diagnostic": {
+      "report_only": true,
+      "sigma_rel": 0.014805905229773366,
+      "n_probes": 64,
+      "tol_rel": 0.05,
+      "false_fail_probability_normal": 0.0007327280853852622,
+      "formula": "sigma_rel = sqrt(sum_views 2 (||W W^T||_F^2 - sum_p (sum_i w_ip^2)^2) / n_probes) / S; false-fail = erfc(tol_rel / (sqrt(2) sigma_rel))"
+    },
+    "sum_exact": 1192.7700417593574,
+    "sum_estimate": 1226.9640948250053,
+    "total_rel_err": 0.028667766517015386,
+    "per_splat_rel_err_median": 0.12401995316989406,
+    "per_splat_rel_err_p90": 0.2769767232409472,
+    "per_splat_rel_err_max": 0.585713118757282,
+    "formula_max_rel_err": 4.840484541898025e-07,
+    "f_max_rel_err": 2.008628719218355e-07,
+    "pass": true
+  },
+  "e2e_exactness": {
+    "scene_fixture": "e2e_scene_seed0",
+    "scene_sha256": "103c99e07bf582e8def6068efa103994041da1fdda4d9ca91523b178177ac757",
+    "n_views": 2,
+    "amplitude": 0.1,
+    "tol_rel": 0.0001,
+    "non_overlapping": {
+      "n_splats": 48,
+      "n_visible_per_view": [
+        48,
+        48
+      ],
+      "n_with_sole_pixel_per_view": [
+        48,
+        48
+      ],
+      "max_splats_per_pixel": 1,
+      "overlap_fraction": 0.0,
+      "rendered_colour_min": 0.2830073173875463,
+      "rendered_colour_max": 0.704240643324868,
+      "sh_plus_half_min_basis": 0.28300732374191284,
+      "sh_plus_half_max_basis": 0.704240620136261,
+      "render_min_covered": 0.001119293854571879,
+      "render_max_covered": 0.5400221347808838,
+      "render_max_abs_uncovered": 0.0,
+      "preconditions": {
+        "one_splat_per_pixel": true,
+        "sh_plus_half_in_0_1": true,
+        "rendered_in_0_1": true
+      },
+      "preconditions_ok": true,
+      "total_pixels": 24576,
+      "predicted": 5.199247549059934e-05,
+      "measured_raw": 5.1992471929335806e-05,
+      "measured_clamped": 5.1992471929335806e-05,
+      "rel_err": 6.849575337257657e-08,
+      "ratio_raw": 1.0000000684957533,
+      "cross_diagonal": -6.849574862854979e-08,
+      "status": "pass"
+    },
+    "overlapping": {
+      "n_splats": 48,
+      "n_visible_per_view": [
+        48,
+        48
+      ],
+      "n_with_sole_pixel_per_view": [
+        4,
+        1
+      ],
+      "max_splats_per_pixel": 8,
+      "overlap_fraction": 0.9983723958333334,
+      "rendered_colour_min": 0.35462276459568903,
+      "rendered_colour_max": 0.5837962196558365,
+      "sh_plus_half_min_basis": 0.28300732374191284,
+      "sh_plus_half_max_basis": 0.704240620136261,
+      "render_min_covered": 0.07546789199113846,
+      "render_max_covered": 0.5448219776153564,
+      "render_max_abs_uncovered": 0.0,
+      "preconditions": {
+        "one_splat_per_pixel": false,
+        "sh_plus_half_in_0_1": true,
+        "rendered_in_0_1": true
+      },
+      "preconditions_ok": false,
+      "total_pixels": 24576,
+      "predicted": 0.0008340917879245794,
+      "measured_raw": 0.0008676075185210038,
+      "measured_clamped": 0.0008676075185210038,
+      "rel_err": 0.038630060114691056,
+      "ratio_raw": 0.9613699398853089,
+      "cross_diagonal": 0.04018230497127839,
+      "status": "reported_only"
+    },
+    "overlapping_shared_delta": {
+      "n_splats": 48,
+      "n_visible_per_view": [
+        48,
+        48
+      ],
+      "n_with_sole_pixel_per_view": [
+        4,
+        1
+      ],
+      "max_splats_per_pixel": 8,
+      "overlap_fraction": 0.9983723958333334,
+      "rendered_colour_min": 0.2768507624821505,
+      "rendered_colour_max": 0.5791968491735394,
+      "sh_plus_half_min_basis": 0.27685075998306274,
+      "sh_plus_half_max_basis": 0.704240620136261,
+      "render_min_covered": 0.07192519307136536,
+      "render_max_covered": 0.5057962536811829,
+      "render_max_abs_uncovered": 0.0,
+      "preconditions": {
+        "one_splat_per_pixel": false,
+        "sh_plus_half_in_0_1": true,
+        "rendered_in_0_1": true
+      },
+      "preconditions_ok": false,
+      "total_pixels": 24576,
+      "predicted": 0.0009140352668838246,
+      "measured_raw": 0.0015610895749721175,
+      "measured_clamped": 0.0015610895749721175,
+      "rel_err": 0.41448890471249855,
+      "ratio_raw": 0.5855110952875014,
+      "cross_diagonal": 0.7079095649058087,
+      "status": "reported_only"
+    },
+    "status": "pass",
+    "pass": true
+  },
+  "linalg_scale": {
+    "device": "cuda",
+    "max_batch": 32768,
+    "eigvalsh": {
+      "n": 1000000,
+      "dtype": "float64",
+      "n_zero_trace": 166667,
+      "time_s": 6.54504356700005,
+      "ok": true
+    },
+    "solve": {
+      "n_systems": 65536,
+      "dtype": "float64",
+      "variants": [
+        "ridge",
+        "prox"
+      ],
+      "clusters_kept": {
+        "ridge": 10923,
+        "prox": 10923
+      },
+      "clusters_kept_expected": 10923,
+      "time_s": 0.22155710399999862,
+      "ok": true
+    },
+    "fallbacks": [
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16384,
+        "retry_batch": 8192,
+        "error": "CUDA out of memory. Tried to allocate 9.49 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.40 GiB is free. Including non-PyTorch memory, this process has 10.16 GiB memory in use. Of the alloca"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16384,
+        "retry_batch": 8192,
+        "error": "CUDA out of memory. Tried to allocate 9.49 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.44 GiB is free. Including non-PyTorch memory, this process has 10.12 GiB memory in use. Of the alloca"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16384,
+        "retry_batch": 8192,
+        "error": "CUDA out of memory. Tried to allocate 9.49 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.44 GiB is free. Including non-PyTorch memory, this process has 10.12 GiB memory in use. Of the alloca"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16384,
+        "retry_batch": 8192,
+        "error": "CUDA out of memory. Tried to allocate 9.49 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.44 GiB is free. Including non-PyTorch memory, this process has 10.12 GiB memory in use. Of the alloca"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16384,
+        "retry_batch": 8192,
+        "error": "CUDA out of memory. Tried to allocate 9.49 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.44 GiB is free. Including non-PyTorch memory, this process has 10.12 GiB memory in use. Of the alloca"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16384,
+        "retry_batch": 8192,
+        "error": "CUDA out of memory. Tried to allocate 9.49 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.44 GiB is free. Including non-PyTorch memory, this process has 10.12 GiB memory in use. Of the alloca"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16384,
+        "retry_batch": 8192,
+        "error": "CUDA out of memory. Tried to allocate 9.49 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.44 GiB is free. Including non-PyTorch memory, this process has 10.12 GiB memory in use. Of the alloca"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16384,
+        "retry_batch": 8192,
+        "error": "CUDA out of memory. Tried to allocate 9.49 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.44 GiB is free. Including non-PyTorch memory, this process has 10.12 GiB memory in use. Of the alloca"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16384,
+        "retry_batch": 8192,
+        "error": "CUDA out of memory. Tried to allocate 9.49 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.44 GiB is free. Including non-PyTorch memory, this process has 10.12 GiB memory in use. Of the alloca"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16384,
+        "retry_batch": 8192,
+        "error": "CUDA out of memory. Tried to allocate 9.49 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.44 GiB is free. Including non-PyTorch memory, this process has 10.12 GiB memory in use. Of the alloca"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16384,
+        "retry_batch": 8192,
+        "error": "CUDA out of memory. Tried to allocate 9.49 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.44 GiB is free. Including non-PyTorch memory, this process has 10.12 GiB memory in use. Of the alloca"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16384,
+        "retry_batch": 8192,
+        "error": "CUDA out of memory. Tried to allocate 9.49 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.44 GiB is free. Including non-PyTorch memory, this process has 10.12 GiB memory in use. Of the alloca"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16384,
+        "retry_batch": 8192,
+        "error": "CUDA out of memory. Tried to allocate 9.49 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.44 GiB is free. Including non-PyTorch memory, this process has 10.12 GiB memory in use. Of the alloca"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 32768,
+        "retry_batch": 16384,
+        "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling `cusolverDnXsyevBatched_bufferSize( handle, params, jobz, uplo, n, CUDA_R_64F, reinterpret_cast<const void*>(A), lda, CUDA_R_64F, reinterpre"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16384,
+        "retry_batch": 8192,
+        "error": "CUDA out of memory. Tried to allocate 9.49 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.44 GiB is free. Including non-PyTorch memory, this process has 10.12 GiB memory in use. Of the alloca"
+      },
+      {
+        "op": "linalg_eigvalsh",
+        "batch": 16960,
+        "retry_batch": 8480,
+        "error": "CUDA out of memory. Tried to allocate 9.82 GiB. GPU 0 has a total capacity of 14.56 GiB of which 4.44 GiB is free. Including non-PyTorch memory, this process has 10.12 GiB memory in use. Of the alloca"
+      }
+    ],
+    "pass": true
+  },
+  "pass": true,
+  "lifted_random": {
+    "criterion_version": 2,
+    "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+    "tol_rel": 0.0001,
+    "n_sample": 2000,
+    "n_zero_trace_in_sample": 119,
+    "n": 1881,
+    "sum_excess_over_sum_dmin": -3.3046898263734547e-18,
+    "max_excess_over_scale": 1.0567013788785604e-17,
+    "n_excess_over_tol_scale": 0,
+    "aggregate_pass": true,
+    "per_splat_pass": true,
+    "pass": true,
+    "n_dmin_below_1e-3_scale": 677,
+    "n_dmin_zero": 0,
+    "max_excess_over_dmin": 8.322185403570513e-15,
+    "same_index_fraction": 1.0,
+    "max_codebook_sq_dist_from_mean": 7.726496041082907
+  }
+}

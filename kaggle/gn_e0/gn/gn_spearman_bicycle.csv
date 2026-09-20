@@ -1,0 +1,13 @@
+scene,subset,a,b,n,spearman
+bicycle,all,trace_M,opacity_area,1000000,0.5373375099548228
+bicycle,all,trace_M,F,1000000,0.9479072106788572
+bicycle,all,trace_M,c3dgs,1000000,0.9433801072564735
+bicycle,all,opacity_area,F,1000000,0.5799270058177347
+bicycle,all,opacity_area,c3dgs,1000000,0.6512917329082953
+bicycle,all,F,c3dgs,1000000,0.9922545022866173
+bicycle,trace_gt_0,trace_M,opacity_area,986224,0.5264502683665492
+bicycle,trace_gt_0,trace_M,F,986224,0.9456937548113461
+bicycle,trace_gt_0,trace_M,c3dgs,986224,0.9409742918750313
+bicycle,trace_gt_0,opacity_area,F,986224,0.5705004022818478
+bicycle,trace_gt_0,opacity_area,c3dgs,986224,0.6444344938568715
+bicycle,trace_gt_0,F,c3dgs,986224,0.991925391145059

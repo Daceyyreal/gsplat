@@ -1,0 +1,127 @@
+{
+  "scene": "bicycle",
+  "timings_s": {
+    "gn_pass": 11.51305446899994,
+    "spectrum": 8.388971753999954,
+    "spearman": 4.814882297000054,
+    "job": 2066.202693566
+  },
+  "ckpt_sha1": "122a280de4da86448d1581e9fb27f90ae6f71b8c",
+  "settings": {
+    "packed": false,
+    "rasterize_mode": "classic",
+    "camera_model": "pinhole",
+    "with_ut": false,
+    "with_eval3d": false,
+    "near_plane": 0.01,
+    "far_plane": 10000000000.0,
+    "sh_degree": 3
+  },
+  "train_views": 169,
+  "test_views": 25,
+  "total_train_pixels": 171702648,
+  "n_splats": 1000000,
+  "k_values": [
+    4096,
+    16384,
+    65536
+  ],
+  "default_k": 65536,
+  "gsplat_commit": "cd3139c277dc",
+  "render_parity": {
+    "max_abs_diff": 0.0,
+    "pass": true,
+    "view_size": [
+      1236,
+      822
+    ]
+  },
+  "gn": {
+    "cache_key": "v1|122a280de4da86448d1581e9fb27f90ae6f71b8c|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views169|seed0",
+    "finite_check": {
+      "name": "M_packed",
+      "n_rows": 1000000,
+      "n_nonfinite_rows": 0,
+      "n_nonfinite_entries": 0,
+      "n_nan_entries": 0,
+      "n_inf_entries": 0,
+      "first_nonfinite_rows": [],
+      "max_abs": 36533.97265625,
+      "finite": true
+    },
+    "n_views": 169,
+    "total_pixels": 171702648,
+    "clamp_fraction": 0.10327737277679387,
+    "clamp_neg": 19298669,
+    "clamp_total": 186862509,
+    "splats_visible_in_any_train_view": 986233,
+    "splats_zero_trace": 13776,
+    "time_s": 11.51305446899994
+  },
+  "render_range": {
+    "train": {
+      "n_views": 169,
+      "n_pixels": 171702648,
+      "below_0_fraction_rgb": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "above_1_fraction_rgb": [
+        0.027090776142252623,
+        0.03233060797058878,
+        0.02176820825733567
+      ],
+      "outside_fraction_rgb": [
+        0.027090776142252623,
+        0.03233060797058878,
+        0.02176820825733567
+      ]
+    },
+    "test": {
+      "n_views": 25,
+      "n_pixels": 25399800,
+      "below_0_fraction_rgb": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "above_1_fraction_rgb": [
+        0.0016138316049732675,
+        0.0018734399483460499,
+        0.0013593414121371035
+      ],
+      "outside_fraction_rgb": [
+        0.0016138316049732675,
+        0.0018734399483460499,
+        0.0013593414121371035
+      ]
+    }
+  },
+  "metric_parity": {
+    "psnr": 0.0,
+    "ssim": 0.0,
+    "lpips": 0.0
+  },
+  "lifted_check": {
+    "criterion_version": 2,
+    "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+    "tol_rel": 0.0001,
+    "n_sample": 10000,
+    "n_zero_trace_in_sample": 134,
+    "n": 9866,
+    "sum_excess_over_sum_dmin": 3.4281759393163043e-10,
+    "max_excess_over_scale": 9.893494934890132e-10,
+    "n_excess_over_tol_scale": 0,
+    "aggregate_pass": true,
+    "per_splat_pass": true,
+    "pass": true,
+    "n_dmin_below_1e-3_scale": 9489,
+    "n_dmin_zero": 75,
+    "max_excess_over_dmin": 90600.91227576035,
+    "same_index_fraction": 0.9889519562132577,
+    "max_codebook_sq_dist_from_mean": 10.54674073190866,
+    "time_s": 28.765776977000314
+  },
+  "done": true
+}

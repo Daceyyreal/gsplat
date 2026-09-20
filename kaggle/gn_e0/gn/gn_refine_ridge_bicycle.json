@@ -1,0 +1,85 @@
+{
+  "config": "gn_refine_ridge",
+  "variant": "ridge",
+  "warm_start": {
+    "config": "lloyd_wopa_area",
+    "n_clusters": 65536,
+    "seed": 0,
+    "source": "run3_cache"
+  },
+  "iters": 3,
+  "eps": 0.0001,
+  "mu": "eps * tr(sum M) / 15 per cluster",
+  "topk_diagnostic": 64,
+  "history": [
+    {
+      "iter": 0,
+      "step": "start",
+      "objective": 9.073042498372662e-05
+    },
+    {
+      "iter": 1,
+      "step": "assign",
+      "objective": 4.726531816474506e-05,
+      "labels_changed_fraction": 0.78004,
+      "top64_share_all": 0.509865,
+      "top64_share_trace_gt_0": 0.5030185840133682,
+      "time_s": 9.443001521000042,
+      "top64_time_s": 12.44045078399995,
+      "kept_current_by_guard": 9240,
+      "zero_trace": 13776
+    },
+    {
+      "iter": 1,
+      "step": "update",
+      "objective": 3.018718663894481e-05,
+      "clusters_kept_zero_M": 420,
+      "time_s": 1.313742314999672
+    },
+    {
+      "iter": 2,
+      "step": "assign",
+      "objective": 2.8462596266718474e-05,
+      "labels_changed_fraction": 0.43719199999999997,
+      "top64_share_all": 0.303121,
+      "top64_share_trace_gt_0": 0.293386695111861,
+      "time_s": 9.44744027600018,
+      "top64_time_s": 12.608179326000027,
+      "kept_current_by_guard": 9239,
+      "zero_trace": 13776
+    },
+    {
+      "iter": 2,
+      "step": "update",
+      "objective": 2.6021210583515947e-05,
+      "clusters_kept_zero_M": 278,
+      "time_s": 1.3188608420000492
+    },
+    {
+      "iter": 3,
+      "step": "assign",
+      "objective": 2.565082666043497e-05,
+      "labels_changed_fraction": 0.24348399999999998,
+      "top64_share_all": 0.268578,
+      "top64_share_trace_gt_0": 0.2583611836661854,
+      "time_s": 9.507092870999713,
+      "top64_time_s": 12.379049758999827,
+      "kept_current_by_guard": 9534,
+      "zero_trace": 13776
+    },
+    {
+      "iter": 3,
+      "step": "update",
+      "objective": 2.477911207232696e-05,
+      "clusters_kept_zero_M": 257,
+      "time_s": 1.313216908999948
+    }
+  ],
+  "valid": true,
+  "invalid_reason": "",
+  "monotone_rtol": 1e-06,
+  "objective_rises": [],
+  "objective_unquantized_final": 2.477911207232696e-05,
+  "objective_after_quantization": 0.0002211167619553269,
+  "refine_time_s": 72.37902510499998
+}

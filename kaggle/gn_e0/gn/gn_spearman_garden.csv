@@ -1,0 +1,13 @@
+scene,subset,a,b,n,spearman
+garden,all,trace_M,opacity_area,1000000,0.5678152899667163
+garden,all,trace_M,F,1000000,0.9329948551087176
+garden,all,trace_M,c3dgs,1000000,0.9361542241534131
+garden,all,opacity_area,F,1000000,0.5987537283450717
+garden,all,opacity_area,c3dgs,1000000,0.6383480964326397
+garden,all,F,c3dgs,1000000,0.994375201336615
+garden,trace_gt_0,trace_M,opacity_area,998603,0.5665272200586624
+garden,trace_gt_0,trace_M,F,998603,0.9327132502922032
+garden,trace_gt_0,trace_M,c3dgs,998603,0.9358858973253513
+garden,trace_gt_0,opacity_area,F,998603,0.5975745471132275
+garden,trace_gt_0,opacity_area,c3dgs,998603,0.6373185119644563
+garden,trace_gt_0,F,c3dgs,998603,0.9943515618026938
