@@ -7,11 +7,16 @@ camera matrix, as in gsplat's ``spherical_harmonics``. The constants are those o
 JCGT 2013), which are the usual 3DGS ``SH_C0..SH_C3`` written for unit directions.
 """
 
+import os
+import sys
 from typing import Dict
 
 import torch
 import torch.nn.functional as F
 from torch import Tensor
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import batched as bl  # noqa: E402
 
 N_BASIS = 16  # degree 3
 N_SHN = 15  # bands 1-3
@@ -110,14 +115,16 @@ def cuda_check(n: int = 65536, seed: int = 0, n_cams: int = 3) -> Dict:
     means = torch.randn(n, 3, generator=g, device=dev) * 3
     coeffs = torch.randn(n, N_BASIS, 3, generator=g, device=dev)
     # random rigid world-to-camera matrices
-    q, _ = torch.linalg.qr(torch.randn(n_cams, 3, 3, generator=g, device=dev))
-    q = q * torch.sign(torch.linalg.det(q))[:, None, None]
+    q, _ = bl.batched_linalg(
+        torch.linalg.qr, torch.randn(n_cams, 3, 3, generator=g, device=dev)
+    )
+    q = q * torch.sign(bl.batched_linalg(torch.linalg.det, q))[:, None, None]
     viewmats = torch.eye(4, device=dev).repeat(n_cams, 1, 1)
     viewmats[:, :3, :3] = q
     viewmats[:, :3, 3] = torch.randn(n_cams, 3, generator=g, device=dev) * 2
     ref = spherical_harmonics(3, means, viewmats, coeffs)  # [C, N, 3]
     campos = camera_positions(viewmats)  # [C, 3]
-    campos_inv = torch.linalg.inv(viewmats)[:, :3, 3]
+    campos_inv = bl.batched_linalg(torch.linalg.inv, viewmats)[:, :3, 3]
     ours = torch.stack([eval_sh(coeffs, view_dirs(means, c)) for c in campos])
     err = float((ours - ref).abs().max())
     return {

@@ -20,6 +20,7 @@ import torch
 from torch import Tensor
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import batched as bl  # noqa: E402
 import gn_metric as gm  # noqa: E402
 import sh_basis as sb  # noqa: E402
 
@@ -41,7 +42,7 @@ def eigen_stats(M_packed: Tensor, chunk: int = 65536) -> Dict[str, Tensor]:
     out["trace"] = torch.zeros(n, dtype=torch.float64)
     for start in range(0, n, chunk):
         m = gm.unpack(M_packed[start : start + chunk].double())
-        lam = torch.linalg.eigvalsh(m).clamp_min(0.0)  # ascending
+        lam = bl.batched_linalg(torch.linalg.eigvalsh, m).clamp_min(0.0)  # ascending
         tr = lam.sum(dim=-1)
         ok = tr > 0
         safe = torch.where(ok, tr, torch.ones_like(tr))
@@ -556,8 +557,8 @@ def update_centroids(
         rhs = B[ok]
         if variant == "prox":
             rhs = rhs + mu[:, None, None] * _x3(C_prev).double()[ok]
-        q = torch.linalg.solve(
-            gm.unpack(A[ok]) + mu[:, None, None] * eye, rhs
+        q = bl.batched_linalg(
+            torch.linalg.solve, gm.unpack(A[ok]) + mu[:, None, None] * eye, rhs
         )  # [k, 15, 3]
         new[ok] = q.reshape(-1, *C_prev.shape[1:]).to(C_prev.dtype)
     return new, int((~ok).sum())

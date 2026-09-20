@@ -55,9 +55,9 @@ wheel. To resume, also attach this notebook's own earlier output (`gn/`, `gn_cac
 | 1 | config, helpers |
 | 2 | find and restore inputs (checkpoints, sort caches, run-3 caches, wheel, earlier E0 output) |
 | 3 | install gsplat (`bench/gn-vq`, `MAX_JOBS=2`, restored wheel when its key matches), example dependencies |
-| 4 | **CUDA smoke tests** (`bench/gn/selftest.py`; the run stops here if one fails): first the hashes of the committed toy and end-to-end scene fixtures (Amendment 4), before anything is rendered; SH basis against gsplat's `spherical_harmonics`; toy Hutchinson exactness (with a report-only probe-noise diagnostic); end-to-end exactness (non-overlapping toy, preconditions read from gsplat's render: predicted = measured dMSE to 1e-4). Informational: lifted vs direct assignment on random data |
+| 4 | **CUDA smoke tests** (`bench/gn/selftest.py`; the run stops here if one fails): first the hashes of the committed toy and end-to-end scene fixtures (Amendment 4), before anything is rendered; SH basis against gsplat's `spherical_harmonics`; toy Hutchinson exactness (with a report-only probe-noise diagnostic); end-to-end exactness (non-overlapping toy, preconditions read from gsplat's render: predicted = measured dMSE to 1e-4); `linalg_scale`, the batched linalg at the job's sizes (an engineering check, not a G0 validity entry). Informational: lifted vs direct assignment on random data |
 | 5 | MipNeRF360 data for garden and bicycle |
-| 6 | E0 jobs: garden on `cuda:0`, bicycle on `cuda:1` (`kaggle/gn_e0_scene.py`; the 10k-real-splat lifted check runs there and gates only the refines; a proximal-objective rise marks that variant invalid) |
+| 6 | E0 jobs: garden on `cuda:0`, bicycle on `cuda:1` (`kaggle/gn_e0_scene.py`; the 10k-real-splat lifted check runs there and gates only the refines; a proximal-objective rise marks that variant invalid). Each job's exit code and last 200 log lines are written into `gn/` and bundled, pass or fail |
 | 7 | G0 verdict (`gn_g0.json`, Amendment 3), calibration, tables, plot |
 | 8 | `gn_bundle.zip` (top-level csv / json / png of `gn/`; `gn_cache/` and `gn_work/` stay in `/kaggle/working` for a later session) |
 """
@@ -125,10 +125,13 @@ def record_timing(name, seconds):
     json.dump(timings, open(path, "w"), indent=2)
 
 
+JOB_EXITS = {}  # job name -> exit code, for write_log_tails() in the jobs cell's finally
+
+
 def run_on_gpus(jobs, n_parallel, progress=None, poll_s=15):
     """Run jobs [(name, cmd, cwd, log)] with at most n_parallel at once, job i of a batch on
     GPU i (CUDA_VISIBLE_DEVICES). Lines of the logs matching `progress` (regex) are echoed.
-    Raises after all jobs of the batch finished if any failed."""
+    Exit codes go to JOB_EXITS. Raises after all jobs of the batch finished if any failed."""
     failed = []
     for start in range(0, len(jobs), n_parallel):
         running = []
@@ -157,6 +160,7 @@ def run_on_gpus(jobs, n_parallel, progress=None, poll_s=15):
                 job["file"].close()
                 elapsed = time.time() - job["t0"]
                 record_timing(f"{job['name']}_s", elapsed)
+                JOB_EXITS[job["name"]] = code
                 print(f"{job['name']}: exit {code} after {elapsed / 60:.1f} min", flush=True)
                 if code != 0:
                     failed.append(job)
@@ -166,6 +170,27 @@ def run_on_gpus(jobs, n_parallel, progress=None, poll_s=15):
                 with open(job["log"], errors="replace") as g:
                     print(f"--- tail of {job['log']}\n{g.read()[-6000:]}")
             raise RuntimeError(f"failed jobs: {[job['name'] for job in failed]}")
+
+
+def write_log_tails(jobs, out_dir, n_lines=200):
+    """For every job, its exit code and the last n_lines of its log, as out_dir/<name>_log_tail.json
+    (a bundled file). Written whether or not the job failed, so a crash is visible in the bundle
+    without the working directory."""
+    written = []
+    for name, _cmd, _cwd, log in jobs:
+        lines, total = [], 0
+        if os.path.exists(log):
+            with open(log, errors="replace") as f:
+                all_lines = f.read().splitlines()
+            total, lines = len(all_lines), all_lines[-n_lines:]
+        path = f"{out_dir}/{name}_log_tail.json"
+        json.dump(
+            {"name": name, "log": log, "exit_code": JOB_EXITS.get(name),
+             "lines_total": total, "lines_kept": len(lines), "tail": lines},
+            open(path, "w"), indent=2,
+        )
+        written.append(os.path.basename(path))
+    return written
 
 
 def write_bundle(out_dir, bundle_path, arc="gn"):
@@ -364,8 +389,10 @@ code(
 # values (Amendment 4). Then the SH basis against gsplat's spherical_harmonics, the toy Hutchinson
 # exactness check (Amendment 1; its report-only noise diagnostic is logged first) and the end-to-end
 # exactness check (Amendments 3-4; a failed precondition is reported as such, not as a mismatch), on
-# gsplat's rasterizer. selftest.py exits non-zero if anything fails, sh() raises, and the notebook
-# stops here, before the data download and the scene jobs.
+# gsplat's rasterizer. Then linalg_scale, an engineering check (not a G0 validity entry): the chunked
+# batched linalg at the job's sizes and dtypes, where E0's first run died in cuSOLVER.
+# selftest.py exits non-zero if anything fails, sh() raises, and the notebook stops here, before the
+# data download and the scene jobs.
 # Informational only: lifted fp32 vs direct float64 assignment on random data.
 t0 = time.time()
 sh(f"{PY} {SRC_DIR}/bench/gn/selftest.py --device cuda --out {GN_OUT}/gn_selftest.json",
@@ -455,6 +482,8 @@ try:
     run_on_gpus(jobs, max(1, min(N_GPUS, len(SCENES))),
                 progress=r"^\[(" + "|".join(SCENES) + r")\]|Traceback|Error|FAILED")
 finally:
+    # the log tails first, so they are in the bundle even when a job crashed
+    print("log tails:", write_log_tails(jobs, GN_OUT), flush=True)
     write_bundle(GN_OUT, f"{WORK}/gn_bundle.zip")
 """
 )

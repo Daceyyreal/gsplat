@@ -1,4 +1,4 @@
-"""E0 for one scene (kaggle/PREREG_GN.md with Amendments 1-3): the Gauss-Newton metric for shN over
+"""E0 for one scene (kaggle/PREREG_GN.md with Amendments 1-4): the Gauss-Newton metric for shN over
 the train views, its spectrum and rank correlations, predicted vs measured shN error for the three
 run-3 configs at K in {4096, 16384, 65536}, and the exploratory exact-assignment GN refines.
 
@@ -14,7 +14,9 @@ files are skipped when present; a lifted-check pass is reused only under the cur
 
 Failures (Amendment 3): a render-parity failure raises before any GN work. A failed lifted check skips
 only the refines. A proximal-objective rise marks that variant's row invalid (``valid`` = False) and
-the job goes on.
+the job goes on. A non-finite M stops the job before any linalg (that would be a bug in the GN pass);
+every batched linalg call goes through ``bench/gn/batched.py``, which keeps the batch below what
+cuSOLVER accepts.
 """
 
 import argparse
@@ -35,6 +37,7 @@ import torch
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "bench", "gn"))
+import batched as bl  # noqa: E402
 import diagnostics as gd  # noqa: E402
 import gn_metric as gm  # noqa: E402
 import tilequant_run3 as r3  # noqa: E402
@@ -498,9 +501,13 @@ def main(argv=None):
     else:
         log(scene, f"GN cache {args.gn_cache} reused")
     M = gn["M_packed"]
+    # Before any linalg on M: cuSOLVER reports non-finite input as an opaque backend error, and a
+    # non-finite M would be a bug in the GN pass, not in the linalg call.
+    finite = bl.finite_report(M, "M_packed")
     trace = gm.trace_packed(M)
     meta["gn"] = {
         "cache_key": key,
+        "finite_check": finite,
         "n_views": gn["n_views"],
         "total_pixels": gn["total_pixels"],
         "clamp_fraction": gn["clamp_fraction"],
@@ -516,6 +523,14 @@ def main(argv=None):
     )
     write_json(meta_path, meta)
     log(scene, f"GN: {meta['gn']}")
+    if not finite["finite"]:
+        raise RuntimeError(
+            f"NON-FINITE M: {finite['n_nonfinite_rows']} of {finite['n_rows']} splats have a "
+            f"non-finite entry ({finite['n_nan_entries']} NaN, {finite['n_inf_entries']} Inf "
+            f"entries; first rows {finite['first_nonfinite_rows']}). The GN pass produced "
+            "non-finite values: a separate bug, not the linalg batch limit. Nothing after this "
+            "would be trustworthy, so the job stops."
+        )
 
     # a. spectrum
     spec_path = os.path.join(args.out_dir, f"gn_spectrum_{scene}.csv")

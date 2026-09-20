@@ -1,4 +1,4 @@
-"""CPU dry run of kaggle/gn_e0_scene.py (E0 job, PREREG Amendments 2-3), of bench/gn/selftest.py and
+"""CPU dry run of kaggle/gn_e0_scene.py (E0 job, PREREG Amendments 2-4), of bench/gn/selftest.py and
 of the notebook's G0 / bundle cells.
 
 A fake runner stands in for simple_trainer.Runner (toy scene, brute-force CPU renderer, eval that
@@ -7,10 +7,11 @@ TorchPQ (not installed here) by a stand-in for recomputed L1 codebooks. PngCompr
 weighted_kmeans, the GN metric, diagnostics, the refines and the G0 rule are the real code. K is shrunk
 to {16, 32, 64} with 64 standing in for the run-3 default.
 
-Stages: (0) the smoke tests on the CPU stand-in (SH reference, toy check, end-to-end exactness check);
-(1) both scenes, bicycle with an injected proximal-objective rise (that variant is marked invalid, the
-job finishes); (2) resume; (3) a render-parity failure; (4) the notebook's G0 and bundle cells (the
-bundle holds no gn_cache/); (5) the lifted check: a failure skips only the refines, and a failed or
+Stages: (0) the smoke tests on the CPU stand-in (SH reference, toy check, end-to-end exactness check,
+the batched-linalg scale check); (1) both scenes, bicycle with an injected proximal-objective rise
+(that variant is marked invalid, the job finishes); (2) resume; (3) a render-parity failure; (4) the
+notebook's G0 and bundle cells, the log tails of cell 6's finally (exit codes included), and a bundle
+that holds no gn_cache/; (5) the lifted check: a failure skips only the refines, and a failed or
 other-version record is re-run on resume, a current pass is not.
 
     python bench/gn/dryrun/dryrun_gn_e0.py
@@ -40,6 +41,7 @@ REPO = os.path.dirname(
 sys.path.insert(0, REPO)
 sys.path.insert(0, os.path.join(REPO, "kaggle"))
 sys.path.insert(0, os.path.join(REPO, "bench", "gn"))
+import batched as bl  # noqa: E402
 import diagnostics as gd  # noqa: E402
 import gn_e0_scene as job  # noqa: E402
 import gn_metric as gm  # noqa: E402
@@ -333,9 +335,13 @@ assert e2e["non_overlapping"]["max_splats_per_pixel"] == 1
 assert e2e["overlapping"]["max_splats_per_pixel"] >= 2
 noise = st["toy_exactness"]["noise_diagnostic"]
 assert noise["report_only"] and "report only" in proc.stdout
+scale = st["linalg_scale"]  # engineering check: the chunked batched linalg, CPU-sized here
+assert scale["pass"] and scale["max_batch"] == bl.LINALG_MAX_BATCH <= 65535, scale
+assert scale["eigvalsh"]["ok"] and scale["solve"]["ok"] and scale["fallbacks"] == []
 assert st["lifted_random"]["criterion_version"] == gd.LIFTED_CHECK_VERSION
 print(
-    "(0) smoke tests on the CPU stand-in: fixture hashes, SH reference, toy check (report-only "
+    "(0) smoke tests on the CPU stand-in: fixture hashes, SH reference, batched-linalg scale check, "
+    "toy check (report-only "
     f"sigma_rel {noise['sigma_rel']:.4g}, false-fail probability "
     f"{noise['false_fail_probability_normal']:.3g}), end-to-end exactness (preconditions from the "
     f"render hold; relative error {e2e['non_overlapping']['rel_err']:.3g}; overlapping P / D "
@@ -576,6 +582,26 @@ assert os.path.exists(os.path.join(out_dir, "gn_g0.png"))
 cache_files = sorted(os.listdir(os.path.join(ROOT, "gn_cache")))
 assert cache_files == ["bicycle.pt", "garden.pt"], cache_files
 assert os.path.samefile(ns["GN_CACHE"], os.path.join(ROOT, "gn_cache"))
+# what cell 6 does in its finally: each job's exit code and log tail, bundled pass or fail
+os.makedirs(ns["GN_WORK"], exist_ok=True)
+fake_jobs = []
+for scene in SCENES:
+    log_path = os.path.join(ns["GN_WORK"], f"gn_e0_{scene}.log")
+    with open(log_path, "w") as f:
+        f.write("\n".join(f"[{scene}] line {i}" for i in range(500)) + "\n")
+    fake_jobs.append((f"gn_e0_{scene}", "cmd", "cwd", log_path))
+ns["JOB_EXITS"].update({"gn_e0_garden": 0, "gn_e0_bicycle": 1})  # bicycle crashed
+written = ns["write_log_tails"](fake_jobs, out_dir)
+assert written == [f"gn_e0_{s}_log_tail.json" for s in SCENES], written
+tail = json.load(open(os.path.join(out_dir, "gn_e0_bicycle_log_tail.json")))
+assert tail["exit_code"] == 1 and tail["lines_total"] == 500 and tail["lines_kept"] == 200
+assert tail["tail"][0] == "[bicycle] line 300" and tail["tail"][-1] == "[bicycle] line 499"
+assert json.load(open(os.path.join(out_dir, "gn_e0_garden_log_tail.json")))["exit_code"] == 0
+gone = os.path.join(ns["GN_WORK"], "never_started.log")  # a job that never wrote a log
+ns["write_log_tails"]([("gn_e0_never", "", "", gone)], out_dir)
+never = json.load(open(os.path.join(out_dir, "gn_e0_never_log_tail.json")))
+assert never["exit_code"] is None and never["lines_total"] == 0 and never["tail"] == []
+os.remove(os.path.join(out_dir, "gn_e0_never_log_tail.json"))
 exec(bundle_cell, ns)
 import re  # noqa: E402
 import zipfile  # noqa: E402
@@ -590,6 +616,8 @@ for f in (
     "gn/gn_refine_ridge_garden.json",
     "gn/gn_spectrum_garden.png",
     "gn/gn_selftest.json",
+    "gn/gn_e0_garden_log_tail.json",
+    "gn/gn_e0_bicycle_log_tail.json",
 ):
     assert f in names, (f, names)
 # only top-level csv / json / png files of gn/: no gn_cache/ (or gn_work/) in the bundle, and the
@@ -605,8 +633,9 @@ print(
     f"(4) notebook cells compile; the smoke cell runs selftest.py before the data and job cells; G0 "
     f"cell -> verdict {verdict['verdict']!r} on toy data ({verdict['clamped']['n_non_tied']} non-tied "
     f"of 36 pairs; ratio reported, {verdict['calibration']['summary']['n_calibrated_train_clamped']} "
-    f"of 18 calibrated), e2e_exactness in the validity dict, plot; bundle {len(names)} files, no "
-    "gn_cache/, caches left in place, the invalid bicycle prox variant bundled with its flag: ok"
+    f"of 18 calibrated), e2e_exactness in the validity dict, plot; log tails with exit codes; bundle "
+    f"{len(names)} files, no gn_cache/, caches left in place, the invalid bicycle prox variant "
+    "bundled with its flag: ok"
 )
 
 # (5) the lifted check, in a separate output directory (only lloyd_wopa_area at the default K and the

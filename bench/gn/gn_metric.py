@@ -25,6 +25,7 @@ import torch
 from torch import Tensor
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import batched as bl  # noqa: E402
 import sh_basis as sb  # noqa: E402
 
 N_PROBES = 16  # Rademacher channels per render
@@ -126,7 +127,9 @@ def activated(splats: Dict[str, Tensor]) -> Dict[str, Tensor]:
 
 def viewmat_of(camtoworld: Tensor) -> Tensor:
     """World-to-camera ``[1, 4, 4]``, computed as ``rasterize_splats`` does."""
-    return torch.linalg.inv_ex(camtoworld.reshape(1, 4, 4)).inverse
+    return bl.batched_linalg(
+        torch.linalg.inv_ex, camtoworld.reshape(1, 4, 4)
+    ).inverse
 
 
 def gsplat_render(

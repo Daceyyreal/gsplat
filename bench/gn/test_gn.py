@@ -16,6 +16,7 @@ import torch
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))  # repo root, for gsplat
+import batched as bl  # noqa: E402
 import diagnostics as gd  # noqa: E402
 import g0  # noqa: E402
 import gn_metric as gm  # noqa: E402
@@ -151,6 +152,139 @@ def test_accumulator_matches_explicit_sum():
     assert torch.allclose(res["c3dgs"].double(), (c3_ref / views).amax(-1), atol=1e-5)
     assert res["clamp_neg"] == neg and res["clamp_total"] == tot
     assert res["total_pixels"] == views * 100 and res["n_views"] == views
+
+
+# ------------------------------------------------------------- chunked batched linalg
+
+
+def _psd_batch(n=1000, rank_mod=7, dtype=torch.float64):
+    """PSD 15x15 matrices including zero (rank 0) and rank-deficient ones; ``n`` is not a multiple
+    of the max batches the tests use."""
+    g = torch.Generator().manual_seed(3)
+    a = torch.randn(n, 15, 6, generator=g, dtype=dtype)
+    rank = torch.arange(n) % rank_mod
+    a = a * (torch.arange(6)[None, None, :] < rank[:, None, None])
+    return a @ a.transpose(1, 2)
+
+
+def test_batched_linalg_equals_the_unchunked_call():
+    m = _psd_batch()
+    n = m.shape[0]
+    spd = m + 1e-3 * torch.eye(15, dtype=torch.float64)  # solvable even where m is zero
+    rhs = torch.randn(n, 15, 3, generator=torch.Generator().manual_seed(4), dtype=torch.float64)
+    assert n % 7 and n % 128 and n % 997  # the batch never divides the problem evenly
+
+    def same(a, b):
+        # not bitwise: LAPACK's eigenvalues of a near-singular matrix move by ~1e-15 with the
+        # batch's internal blocking, so the results agree to precision, not to the last bit
+        return torch.allclose(a, b, rtol=1e-12, atol=1e-12)
+
+    for max_batch in (1, 7, 128, 997, 10_000):
+        chunked = bl.batched_linalg(torch.linalg.eigvalsh, m, max_batch=max_batch, log=None)
+        assert same(chunked, torch.linalg.eigvalsh(m)), max_batch
+        got = bl.batched_linalg(torch.linalg.solve, spd, rhs, max_batch=max_batch, log=None)
+        assert same(got, torch.linalg.solve(spd, rhs)), max_batch
+    for op in (torch.linalg.cholesky, torch.linalg.inv, torch.linalg.eigvalsh):
+        assert same(bl.batched_linalg(op, spd, max_batch=97, log=None), op(spd)), op
+    # a struct-sequence return type survives chunking, fields and all
+    ref = torch.linalg.inv_ex(spd)
+    got = bl.batched_linalg(torch.linalg.inv_ex, spd, max_batch=97, log=None)
+    assert type(got) is type(ref) and same(got.inverse, ref.inverse)
+    assert torch.equal(got.info, ref.info)
+    # keyword arguments reach every chunk
+    assert same(
+        bl.batched_linalg(torch.linalg.cholesky, spd, max_batch=97, upper=True, log=None),
+        torch.linalg.cholesky(spd, upper=True),
+    )
+
+
+def test_batched_linalg_halves_the_batch_on_a_backend_error():
+    x = torch.arange(30.0).reshape(30, 1)
+    calls = []
+
+    def flaky(t):  # a backend that refuses batches above 4, as cuSOLVER refused 65,536
+        calls.append(t.shape[0])
+        if t.shape[0] > 4:
+            raise RuntimeError(
+                "cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling "
+                "`cusolverDnXsyevBatched_bufferSize(...)`"
+            )
+        return t * 2
+
+    before = len(bl.linalg_fallbacks())
+    out = bl.batched_linalg(flaky, x, max_batch=16, log=None)
+    assert torch.equal(out, x * 2)
+    assert [c for c in calls if c > 4] == [16, 8]  # 16 -> 8 -> 4, then it stays at 4
+    assert sum(c for c in calls if c <= 4) == 30
+    fell = bl.linalg_fallbacks()[before:]
+    assert [f["batch"] for f in fell] == [16, 8]
+    assert fell[-1]["retry_batch"] == 4 and "cusolver" in fell[-1]["error"].lower()
+    assert fell[-1]["op"] == "flaky"
+
+    def broken(t):  # anything else is a real failure, raised as it is
+        raise RuntimeError("linalg.eigh: (Batch element 3): The algorithm failed to converge")
+
+    with pytest.raises(RuntimeError, match="failed to converge"):
+        bl.batched_linalg(broken, x, max_batch=16, log=None)
+
+
+def test_batched_linalg_argument_checks():
+    m = _psd_batch(n=10)
+    with pytest.raises(ValueError, match="at least one"):
+        bl.batched_linalg(torch.linalg.eigvalsh)
+    with pytest.raises(ValueError, match="batch sizes differ"):
+        bl.batched_linalg(torch.linalg.solve, m, m[:5], log=None)
+    empty = m[:0]
+    assert bl.batched_linalg(torch.linalg.eigvalsh, empty, log=None).shape == (0, 15)
+    assert bl.LINALG_MAX_BATCH <= 65535  # below the batch cuSOLVER refused
+
+
+def test_finite_report():
+    m = _psd_batch(n=20).clone()
+    r = bl.finite_report(m, "M")
+    assert r["finite"] and r["n_nonfinite_rows"] == 0 and r["name"] == "M"
+    assert r["n_rows"] == 20 and r["n_nan_entries"] == 0 and r["n_inf_entries"] == 0
+    m[3, 0, 0] = float("nan")
+    m[7, 2, 1] = float("inf")
+    m[7, 1, 2] = float("-inf")
+    r = bl.finite_report(m)
+    assert not r["finite"] and r["n_nonfinite_rows"] == 2
+    assert r["n_nan_entries"] == 1 and r["n_inf_entries"] == 2
+    assert r["n_nonfinite_entries"] == 3 and r["first_nonfinite_rows"] == [3, 7]
+    flat = bl.finite_report(torch.tensor([1.0, float("nan")]))
+    assert not flat["finite"] and flat["n_nonfinite_rows"] == 1
+
+
+def test_routed_call_sites_go_through_the_helper(monkeypatch):
+    """The two batched linalg calls that run at 65,536 on Kaggle: the spectrum and the refines."""
+    seen = []
+    real = bl.batched_linalg
+
+    def spy(op, *tensors, **kwargs):
+        seen.append((getattr(op, "__name__", str(op)), tensors[0].shape[0]))
+        return real(op, *tensors, **kwargs)
+
+    monkeypatch.setattr(bl, "batched_linalg", spy)
+    M = gm.pack(_psd_batch(n=300).float())
+    gd.eigen_stats(M, chunk=128)
+    assert seen == [  # torch names its ops linalg_<op>
+        ("linalg_eigvalsh", 128),
+        ("linalg_eigvalsh", 128),
+        ("linalg_eigvalsh", 44),
+    ], seen
+    seen.clear()
+    x, _, C = _problem(n=300, k=20, seed=9)
+    labels = torch.cdist(x, C).argmin(dim=1)
+    gd.update_centroids(x, labels, M, C, "prox")
+    assert [s[0] for s in seen] == ["linalg_solve"] and seen[0][1] <= 20, seen
+    # routing the GN pass's own (batch 1) inverse changed no value, so the GN cache stays valid
+    monkeypatch.undo()
+    c2w = torch.eye(4, dtype=torch.float64)
+    c2w[:3, 3] = torch.tensor([0.3, -0.2, 1.5], dtype=torch.float64)
+    assert torch.equal(
+        gm.viewmat_of(c2w), torch.linalg.inv_ex(c2w.reshape(1, 4, 4)).inverse
+    )
+    assert gm.CACHE_VERSION == 1  # M is computed exactly as before
 
 
 def test_toy_exactness_on_cpu_renderer():
@@ -382,6 +516,23 @@ def test_selftest_cpu_writes_json_and_stops_on_a_failed_check(tmp_path, monkeypa
     assert selftest.VALIDITY == ("sh_basis", "toy_exactness", "e2e_exactness")
     assert out["toy_exactness"]["noise_diagnostic"]["report_only"]
     assert out["lifted_random"]["criterion_version"] == gd.LIFTED_CHECK_VERSION
+    # the engineering scale test of the batched linalg helper (not a G0 validity entry)
+    scale = out["linalg_scale"]
+    assert selftest.ENGINEERING == ("linalg_scale",)
+    assert scale["pass"] and scale["max_batch"] == bl.LINALG_MAX_BATCH
+    assert scale["eigvalsh"]["ok"] and scale["eigvalsh"]["n_zero_trace"] > 0
+    assert scale["solve"]["ok"] and scale["solve"]["variants"] == list(gd.REFINE_VARIANTS)
+    assert scale["fallbacks"] == []  # the default batch was enough
+    msg = selftest.failure_message(
+        {
+            "fixtures": {"x": {"ok": True}},
+            "linalg_scale": {"pass": False, "error": "cusolver error: CUSOLVER_STATUS_INVALID_VALUE"},
+            "sh_basis": {"pass": True},
+            "toy_exactness": {"pass": True},
+            "e2e_exactness": {"pass": True},
+        }
+    )
+    assert "linalg_scale" in msg and "not a G0 validity check" in msg
     # a failed end-to-end check exits non-zero (the notebook's sh() then stops the run)
     monkeypatch.setattr(gm, "toy_exactness", lambda **k: {"pass": True})
     monkeypatch.setattr(selftest, "lifted_random", lambda device: {})
