@@ -573,6 +573,115 @@ before, no E0 result exists.
 - **Risk:** if a future torch changes its CPU RNG algorithm, the provenance test (tolerance mode)
   would fail on that machine. The CUDA checks are unaffected, because they read the files.
 
+### Batched-linalg session (2026-09-20, after E0's first run crashed)
+
+The crash and the fix are in the open items below and in `bench/gn/batched.py`'s module docstring.
+These are the choices around them that neither records.
+
+- **The default batch is 32,768, not the 65,536 Dace asked for.** `eigen_stats` already looped in
+  chunks of 65,536, so 65,536 *was* the batch cuSOLVER refused: a helper defaulting to it would have
+  left the failing call unchanged and crashed again. 32,768 is half of it and below the 65,535 grid
+  limit. E0's run then measured the rest (see `OP_MAX_BATCH` below).
+- **The helper also halves on demand,** because the real limit could not be checked without a GPU. It
+  retries only when the backend's message names a batch or memory problem (`_RETRY_MARKERS`); a
+  matrix that fails to converge is raised unchanged, so a genuine numerical failure is never buried
+  under a ladder of retries.
+- **Every batched linalg call goes through it, including the small ones** (`sh_basis.cuda_check`'s
+  qr / det / inv at batch 3, `gn_metric.viewmat_of`'s inv_ex at batch 1). Uniformity means no call
+  site is forgotten later; a call below the batch limit is a pass-through that returns the op's own
+  result object, so values are bitwise unchanged. That is why the GN cache stayed valid across the
+  fix, and a test pins `viewmat_of` against the unrouted call.
+- **`linalg_scale` is an engineering check, not a G0 validity entry.** It is not pre-registered, so it
+  must not enter the validity dict that `gn_g0.json` records; but a failure means the job cannot run,
+  so it still stops the notebook. `selftest.py` keeps it in `ENGINEERING`, separate from `VALIDITY`.
+- **It runs the job's own functions at the job's sizes** (`eigen_stats` over 1,000,000 packed float64
+  matrices, `update_centroids` over 65,536 systems, both refine variants) rather than synthetic
+  `torch.linalg` calls, so it exercises the same call path, dtypes and allocation pattern that
+  crashed. It reports only the reductions made during its own run, not the process's whole history.
+- **A backend failure inside it is caught and recorded,** so `gn_selftest.json` is still written and
+  the run stops with a readable message instead of a bare traceback.
+- **The finite check runs right after `M` is loaded or computed,** before `trace_packed` and before
+  any linalg, and the job writes the meta file (with the counts) before raising. cuSOLVER reports
+  non-finite input as an opaque backend error, which would have looked like another batch problem.
+- **The per-job log tails** are written in cell 6's `finally`, before the bundle, from exit codes that
+  `run_on_gpus` records in `JOB_EXITS` as each job ends. 200 lines was enough to hold E0's whole
+  refine phase; a job that never wrote a log gets `exit_code: null` and an empty tail rather than
+  being skipped.
+
+### E0 results and E1 build (2026-09-20)
+
+E0 ran, G0 passed, and E1 was pre-registered and built in the same session. Amendment 5 carries the
+rules; `gn_vq.py`, `g1.py` and `gn_e1_scene.py` carry the mechanics. These are the choices behind
+them.
+
+- **The bundle is committed exactly as downloaded** (`kaggle/gn_e0/gn/`), each file checked byte for
+  byte against its zip entry before committing. The CSVs keep the writer's CRLF on disk and `autocrlf`
+  stores them as LF, as for the run 2-5 bundles; the PNGs are stored binary. Nothing was regenerated.
+- **FINDINGS section 8's numbers were checked mechanically:** a script regenerated every table row,
+  range and timing from the bundle and asserted each string appears in the section (0 failures). That
+  is how the "every number from result files" rule is enforced when a section has this many.
+- **The quantizer hypothesis is labelled a hypothesis** because the bundle cannot test it: it holds no
+  centroids, so the two supporting observations (the quantized objective worsening while the
+  unquantized one improves, and `centroids.npy` shrinking 13-45%) are consistent with it but do not
+  establish it. E1's clip is the test.
+- **Amendment 5's one-sided size rule was Dace's call.** G1's parenthetical is two-sided and the rule
+  Dace specified is not; the work stopped there and Dace chose the one-sided form, plus the dominance
+  flag and the rate-distortion reporting. The reason is recorded in Amendment 5 b.
+- **The 19 rows per scene** follow from Amendment 5 and nothing else: G1 needs the baseline and GN-VQ
+  at K = 65,536 for seeds 0, 1, 2 (6 rows); the two secondary weightings are "same K, same seeds"
+  (6); the rate-distortion grid is seed 0 at K = 4,096 and 16,384 for both the baseline and GN-VQ (4);
+  the two ablations are seed 0 at K = 65,536 (2); plus an `uncompressed` reference (1). The grid and
+  the ablations are seed 0 only because Amendment 5 says so, which also keeps the run affordable.
+- **E1 reuses E0's GN cache.** `gm.CACHE_VERSION` is unchanged and nothing on the GN path changed, so
+  the key matches and the GN pass is skipped; the restore cell warns if no `gn_cache/` was attached
+  and each job recomputes it (about 12 s per scene). Attaching E0's output is the documented step.
+- **Train-view SSIM and LPIPS are dropped, train PSNR is kept.** No rule uses SSIM or LPIPS on train
+  views, and computing them meant LPIPS-VGG over every train view (161 on garden, 169 on bicycle) for
+  every row, the most expensive part of E0's per-row cost. Train PSNR stays because the train/test gap is the number of interest for
+  a codebook fitted on train-view `M`.
+- **The top-64 shortlist diagnostic runs at iteration 1 only.** In E0 it cost 12.4-13.0 s per
+  iteration against 9.4-9.5 s for the assignment it checks, and the question it answers - would a
+  plain-L2 shortlist have contained the exact argmin - only matters at the warm start, where a
+  shortlist implementation would begin. E0's answer was 0.43 (garden) and 0.51 (bicycle) at iteration
+  1, falling after that.
+- **`OP_MAX_BATCH["linalg_eigvalsh"] = 8192` and a working batch is remembered.** E0 measured it:
+  32,768 refused, 16,384 wanted 9.49 GiB, 8,192 ran; and the helper rediscovered that ladder on every
+  chunk, 15 times per job. `LINALG_MAX_BATCH` stays 32,768 for everything else, because the
+  65,536-system centroid solve was never a problem and chunking it smaller would only cost time.
+- **One `dryrun/fake_env.py` for both dry runs.** E1 needed the same toy checkpoint, sort cache,
+  run-3 caches and fake runner; a second copy would have drifted from E0's. Extracting it changed the
+  toy's random permutation (the order now comes from its own generator), which changes the numbers the
+  E0 dry run prints but none of its assertions, since those are structural.
+- **The writer round-trip test pins `gn_vq`'s quantizer against the real one.** GN-VQ has to quantize
+  the codebook itself, to measure the objective after quantization and to run the final assignment
+  against the dequantized codebook, so its arithmetic must be the codec's. The test writes a codebook
+  through gsplat's own writer and asserts the stored codes equal `quantize_codebook`'s and the decoded
+  values equal `dequantize_codebook`'s bit for bit. The job repeats the code comparison for every row
+  (`writer_codes_equal`) and raises on a difference, which is Amendment 5's "assert that re-quantizing
+  gives the same codes".
+- **The quantizer mirrors the codec's dtypes, not just its formula.** A float64 version of
+  `mins = min + 1e-6` differed from the codec's float32 sum by 4.6e-8, enough to move a code at a
+  boundary, so `_codec_bounds` adds the epsilon in float32 and the decode uses the float32 span the
+  metadata stores. The reported `quant_step` is therefore the codec's float32 arithmetic, which agrees
+  with a float64 recomputation from the stored range only to float32 precision.
+- **`g1.py`: the size rule lives in `compare_seed`,** as `size_ratio = bytes / baseline_bytes - 1`,
+  `size_ok = size_ratio <= 0.005` and `negative = dPSNR < 0 or not size_ok`, so a seed that breaks the
+  size rule is negative whatever its PSNR did. The per-scene mean is the mean of the **measured**
+  PSNR differences even then: the verdict already fails through the negative seed, and a mean that
+  silently rewrote one seed's number would be harder to read. `dominates` is `bytes <= baseline` and
+  `PSNR >= baseline`, computed per seed, reported and never read by the verdict. `judge_pair` is
+  shared by G1 and the two secondary comparisons, so they cannot drift apart; only the GN-VQ vs
+  `lloyd_wopa_area` call is the verdict.
+- **BD-rate returns NaN when the two curves do not overlap in PSNR,** rather than extrapolating. The
+  E1 dry run asserts NaN exactly when there is no overlap, which is what the toy produces.
+- **G1 has no validity dict.** G0's validity checks are pre-registered and G1's are not, so inventing
+  an `invalid` verdict would be adding a rule after results. Instead the E1 job stops on a render-parity
+  failure or a writer-code mismatch, and a failed lifted check skips the GN-VQ rows, which leaves G1
+  `incomplete` rather than wrong.
+- **E1 got its own builder and notebook, and imports E0's job module** for the writer, the renderers
+  and the clustering cache. E0's notebook has to stay byte-identical to the version that ran, and
+  sharing the writer keeps E1's rows comparable with E0's.
+
 ### Open items (E0: closed; E1: open)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
@@ -580,8 +689,13 @@ before, no E0 result exists.
   about 41 minutes of timed steps with the two jobs in parallel.
 - **Run E1 on Kaggle** (Dace). `kaggle/gn_e1_bench.ipynb`, attaching **both** the E0 output (for
   `gn_cache/`) and the run-5 output; see "E1 notebook" above. Everything resumes per row, so a short
-  session can be continued by attaching its own output. The two secondary clusterings per seed are the
-  bulk of the cost.
+  session can be continued by attaching its own output.
+- **The secondary clusterings dominate E1's runtime.** `lloyd_trace` and `lloyd_c3dgs` are six fresh
+  library-Lloyd runs per scene (two weightings x three seeds) at K = 65,536, and E0 measured that
+  clustering at 281-642 s per run, so they are roughly half an hour to an hour per scene against about
+  12 s for the GN pass and a few minutes for all the GN-VQ iterations. They are reported, not gating
+  (Amendment 5 d), so if a session is short they can be dropped from `CONFIGS` in the notebook's
+  config cell and added later by attaching that session's output: every row resumes on its own.
 - ~~**The first run crashed in cuSOLVER.**~~ **Fixed (2026-09-20), not re-run.** Both scene jobs died
   right after the GN pass, in `diagnostics.eigen_stats`:
   `cusolverDnXsyevBatched_bufferSize` -> `CUSOLVER_STATUS_INVALID_VALUE`. `eigen_stats` already looped
@@ -635,6 +749,11 @@ before, no E0 result exists.
   there; the temp copies were removed.
 - **The 64 flat bundle files in `kaggle/`** are ignored, not deleted. Delete them by hand whenever
   convenient; the committed copy is `kaggle/run5/tilequant/`.
+- **`gn_bundle (1).zip` sits untracked in the repo root.** It is the E0 download; its contents are
+  committed, unpacked, in `kaggle/gn_e0/gn/`, and the zip itself is not meant to be committed (no
+  bundle zip is). Delete it or move it to `~/Downloads` whenever convenient; until then `git status`
+  shows it. E1's bundle will arrive the same way, so unpack it into `kaggle/gn_e1/` and remove the
+  zip.
 
 ## Conventions and gotchas
 
