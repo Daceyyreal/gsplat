@@ -409,3 +409,105 @@ deviation of the probe estimate of `S = sum w^2`,
 under a normal approximation, `erfc(0.05 / (sqrt(2) sigma_rel))`. Both are logged and stored. They do
 not enter the toy check, G0 or any other verdict. A CPU test checks the formula against Monte Carlo on
 a small `W`.
+
+## Amendment 5 (2026-09-20, before any E1 code; E0 has finished and G0 passed)
+
+E0 is closed: G0 passed, and its numbers are in `kaggle/FINDINGS.md` section 8 from the committed
+bundle `kaggle/gn_e0/gn/`. This amendment fixes E1 before any E1 code exists: the GN-VQ variant that
+G1 judges, the size-matching procedure that G1's last sentence delegates, the secondary comparisons,
+the exploratory rows and what every row logs. **G1's threshold and wording stay exactly as written
+above.** G0, the validity checks and Amendments 1-4 are unchanged.
+
+### The codec's shN centroid quantizer, which E1's clip depends on
+
+Read from `gsplat/compression/png_compression.py` (`_compress_kmeans` / `_decompress_kmeans`), the
+unchanged path E0 and E1 both write through:
+
+- **one global scalar min/max over the whole `[K, 45]` codebook**, not per dimension:
+  `mins = min(centroids) + 1e-6`, `maxs = max(centroids)`;
+- **6 bits**, so 64 levels: `round((c - mins) / (maxs - mins) * 63)`, stored as uint8 column-major
+  inside `shN.npz`; the step is `(maxs - mins) / 63`;
+- dequantization is `c' = q / 63 * (maxs - mins) + mins`.
+
+So one extreme centroid coordinate coarsens the step for all `K * 45` coordinates at once. That is the
+mechanism FINDINGS section 8 records as a hypothesis for the E0 refines' loss, and the clip below is
+its test.
+
+### a. GN-VQ: the variant G1 judges
+
+Per scene (garden, bicycle), at K = 65,536:
+
+1. **Warm start:** the `lloyd_wopa_area` codebook and labels at K = 65,536, k-means seeds 0, 1 and 2,
+   from the run-3 clustering caches. A seed whose cache is missing or whose key does not match is
+   reclustered with the same code and seed, and every row records which source it used.
+2. **Exact Mahalanobis Lloyd,** iterating:
+   - **assignment:** the lifted fp32 assignment of Amendment 2, with its guard (a splat keeps its
+     current centroid unless the new one is strictly closer by the direct float64 formula; splats with
+     `tr(M_i) = 0` take their L2-nearest centroid);
+   - **update:** ridge to zero, `q = (sum M + mu I)^-1 sum M c` with
+     `mu = 1e-4 * tr(sum M_k) / 15` per cluster, solved in float64 per channel. A cluster with
+     `tr(sum M_k) = 0` keeps `q_old`.
+   - **clip, after every update:** every centroid coordinate is clipped to the warm-start codebook's
+     range, in the form the codec's quantizer uses, which by the section above is the single global
+     interval `[min(C_0), max(C_0)]` of the warm-start codebook `C_0`. A clipped update is kept for a
+     cluster **only if it lowers that cluster's own objective** (the sum of the direct Mahalanobis
+     distances of its members); otherwise that cluster keeps `q_old`. So the objective cannot rise,
+     and the codebook's range cannot grow beyond the warm start's, which keeps the quantizer step no
+     coarser than the warm start's.
+3. **Stop** when an iteration lowers the objective by less than 1e-3 relative, or after 10 iterations,
+   whichever comes first.
+4. **Quantize** the centroids with the codec's own quantizer (above), then run **one final exact
+   assignment** against the dequantized codebook, with the same guard.
+5. **Write** with the unchanged library writer, and assert that re-quantizing the written codebook
+   gives the same codes as step 4 used.
+
+### b. Size matching for G1
+
+This is the size-matching procedure that G1's last sentence leaves to be fixed in writing, and it
+**replaces the lower bound of G1's parenthetical**. Bytes means the total compressed size as G1 defines
+it: the raw bytes of the compressed directory (`size_bytes`). Per scene and seed, GN-VQ against
+`lloyd_wopa_area` at the same seed:
+
+- GN-VQ **at most 0.5% larger**: compare test PSNR directly. Being smaller earns no credit.
+- GN-VQ **more than 0.5% larger**: that seed counts as **negative**.
+
+**Why the lower bound goes:** a row that is both smaller and better dominates `lloyd_wopa_area`, so
+allowing it cannot manufacture a PSNR win; the win has to come from PSNR at no byte cost. Keeping the
+bound two-sided would instead score a dominating row as a failure, and E0's refines already came out
+1.2-4.4% smaller than `lloyd_wopa_area` (FINDINGS section 8), so this is the likely case, not a corner
+one.
+
+**Per-seed dominance flag, reported and never part of any verdict:** GN-VQ bytes <= `lloyd_wopa_area`
+bytes **and** GN-VQ test PSNR >= `lloyd_wopa_area` test PSNR, at the same scene and seed.
+
+### c. G1 threshold: unchanged
+
+As written above: at least +0.05 dB mean test PSNR over the 3 k-means seeds, no seed with a negative
+PSNR difference, on both scenes. Nothing in this amendment changes that sentence.
+
+### d. Secondary comparisons: reported, not gating
+
+- GN-VQ against **`tr(M)`-weighted Lloyd**, and GN-VQ against **C3DGS-style-weighted Lloyd**: same K,
+  same seeds, same size rule as in b. Both weights are the ones E0 correlated against `tr(M)`
+  (`gn_spearman_<scene>.csv`); the Lloyd code, the writer and the measurement are unchanged.
+- **Rate-distortion curves** for GN-VQ and `lloyd_wopa_area` over K in {4,096, 16,384, 65,536}, seed 0,
+  both scenes, with **BD-rate** between the two curves. This exists so that a seed which trades PSNR
+  for bytes shows up as a rate-distortion result, not only as a negative G1 seed.
+
+Neither can pass or fail G1.
+
+### e. Exploratory rows: seed 0 only, not judged
+
+- GN-VQ **without the clip** of step a.2.
+- GN-VQ **without the final quantized assignment** of step a.4.
+
+### Logged for every E1 row
+
+- predicted `P` and measured `D` on train and test views, clamped and unclamped, as in E0;
+- the quantizer's **range and step** actually used by that row's write (`mins`, `maxs`,
+  `(maxs - mins) / 63`);
+- the **fraction of centroid coordinates outside the warm-start range** before clipping;
+- the **objective before and after quantization**, and the objective per iteration with the number of
+  clusters whose clipped update was rejected;
+- bytes, total and per `shN.npz` member, and test PSNR / SSIM / LPIPS plus train PSNR. Train-view SSIM
+  and LPIPS are dropped: no rule uses them.
