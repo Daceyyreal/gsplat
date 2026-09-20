@@ -33,7 +33,7 @@ Upstream main at the time of this work: `28e794c`.
 | `feat/png-tile-quantization` (`3ff67e8`) | `PngCompression(tile_size=, bits=)` | benchmark said no PR; leave alone |
 | `feat/png-weighted-kmeans` (`61cd1baf`) | `gsplat/compression/kmeans.py` + `kmeans_backend` / `kmeans_weighting` / `kmeans_chunk_size`, off upstream main `28e794c`; `tests/test_kmeans.py`. Commits `9348e32` (backend + options), `a4c31082` (`kmeans_chunk_size`), `61cd1baf` (default flip, droppable) | **upstream PR [#1063](https://github.com/nerfstudio-project/gsplat/pull/1063), open** (opened 2026-09-18), measured by run 5. Keep this branch clean: library only (3 files). Upstream main had not moved on 2026-09-18. |
 | `bench/tilequant` | both feat branches merged + benchmark code and results; never goes upstream | runs 1-5 done; head = `git log -1 fork/bench/tilequant`. The blog post links its FINDINGS, so keep those numbers stable. |
-| `bench/gn-vq` | off `bench/tilequant` (`12f912eb`): E0 pre-registration (Amendments 1-4), `bench/gn/` (GN metric, diagnostics, G0 rule, smoke tests, scene fixtures), E0 job and notebook; never goes upstream | **E0 ready (Amendment 4), not run.** `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
+| `bench/gn-vq` | off `bench/tilequant` (`12f912eb`): E0 pre-registration (Amendments 1-4), `bench/gn/` (GN metric, diagnostics, G0 rule, smoke tests, scene fixtures), E0 job and notebook; never goes upstream | **E0 ran once (2026-09-20) and crashed in both jobs; fixed, not re-run.** `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
 
 Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): `PR_DRAFT_weighted_kmeans.md`,
 `PR_DRAFT_empty_tensor.md`, `ISSUE_566_COMMENT.md`, `ISSUE_787_COMMENT.md`.
@@ -57,7 +57,7 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `PREREG_GN.md` | E0 pre-registration (`bench/gn-vq`): G0 rule, validity checks, exploratory scope, G1 for E1. Amendment 1: the toy check. Amendment 2: G0 over 9 codebooks per scene with tie-exempt pairs, and exact-assignment refines instead of the shortlist one. Amendment 3: the G0 verdict is the ranking alone (the ratio is reported as calibration), the end-to-end exactness check, the lifted-check criterion v2, and a proximal rise invalidating that variant instead of stopping. Amendment 4: the toy and end-to-end scenes are committed fixtures with pinned hashes (a correction: the CUDA toy check would have drawn a different scene from the simulated one), end-to-end preconditions read from gsplat's render, and a report-only probe-noise diagnostic. **Never edit a rule after results exist**; add a dated amendment instead. |
 | `gn_e0_scene.py` | E0, one scene per process: render parity, GN pass (`gn_cache/<scene>.pt`), spectrum, Spearman, the 9 G0 codebooks (predicted vs measured, test and train GT metrics, reproduction fields at K = 65,536), the lifted-assignment check (gates only the refines), the ridge / proximal refines (a proximal rise marks that row invalid). Resumable per (scene, config, K, seed). |
 | `build_gn_bench.py` / `gn_bench.ipynb` | E0 notebook (build output; edit the builder, never the JSON) |
-| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` (the G0 rule as code), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (36 CPU tests), `dryrun/` (the E0 dry run and the writer-parity check; not collected by pytest) |
+| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` (the G0 rule as code), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (41 CPU tests), `dryrun/` (the E0 dry run and the writer-parity check; not collected by pytest) |
 | `.gitignore` | ignores only the 64 run-5 bundle files that were unpacked flat into `kaggle/` by hand (anchored names; nothing deleted; the committed copy is `run5/tilequant/`) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
@@ -164,6 +164,10 @@ reference-row labels. Logs: `..\r5\after_fix_*.log`, all OK.
     apply ... not a prediction mismatch". Otherwise `status` is `pass` or `mismatch`.
   - If anything fails, the script exits non-zero and the notebook stops before the data download
     and the scene jobs.
+  - `linalg_scale`, an **engineering check** that also stops the run but is **not** a G0 validity
+    entry: the job's own batched linalg at the job's sizes and dtypes (`eigen_stats` over 1,000,000
+    packed PSD float64 matrices, `update_centroids` over 65,536 systems for both variants), the path
+    that crashed the first run. It reports any batch reductions the helper had to make.
   - Report-only, outside every verdict: the toy check's `noise_diagnostic` (exact `sigma_rel` of the
     64-probe estimate of the sum and the normal-approximation false-fail probability of the 5% rule),
     logged before the check is judged; `lifted_random`, the lifted fp32 vs direct float64 assignment
@@ -189,6 +193,9 @@ reference-row labels. Logs: `..\r5\after_fix_*.log`, all OK.
     any step, the rise is logged and that row gets `valid` = False (the variant still runs its 3
     iterations and is written); everything else continues;
   - adds an `uncompressed` reference row.
+- **After the jobs,** in the same cell's `finally`: each job's exit code and the last 200 lines of its
+  log go into `gn/gn_e0_<scene>_log_tail.json`, and then the bundle is written. This happens whether
+  or not a job failed, so a crash can be read from the bundle without the working directory.
 - **G0 cell:** `bench/gn/g0.py` (Amendment 3) on the rows, with the validity dict (`sh_basis`,
   `toy_exactness`, `e2e_exactness`, parity per scene, reproduction of the run-3 `lloyd_wopa_area`
   K = 65,536 seed-0 row when that row exists). It writes `gn/gn_g0.json`, prints the calibration
@@ -225,6 +232,7 @@ reference-row labels. Logs: `..\r5\after_fix_*.log`, all OK.
     zero-trace splats);
   - `render_range`: per view set and channel, the fraction of pixels of the original eval render
     below 0 / above 1 before clamping;
+  - `finite_check`: the non-finite entry counts of `M` (the guard before any linalg);
   - `lifted_check`: `criterion_version` (2), `n_sample`, `n_zero_trace_in_sample`, `n` (evaluated),
     `sum_excess_over_sum_dmin`, `max_excess_over_scale` (the worst per-splat relative excess),
     `n_excess_over_tol_scale`, `n_dmin_below_1e-3_scale`, `n_dmin_zero`, `max_excess_over_dmin` (the
@@ -242,17 +250,20 @@ reference-row labels. Logs: `..\r5\after_fix_*.log`, all OK.
     `monotone_rtol`;
   - the final unquantized and quantized objective, and times;
 - `gn_selftest.json` (`device`, `fixtures`, `sh_basis`, `toy_exactness` with `noise_diagnostic`,
+  `linalg_scale`,
   `e2e_exactness` with `status` and its `non_overlapping` / `overlapping` /
   `overlapping_shared_delta` cases, `pass`, `lifted_random`),
   `gn_g0.json` (verdict, `clamped` and `raw` pairs, `calibration`), `gn_g0.png`, `timings.json`.
 
 **Bundle contents** (`/kaggle/working/gn_bundle.zip`; the top-level csv / json / png files of `gn/`,
-20 files for the two scenes when both jobs finish, 16 if both skip the refines):
+22 files for the two scenes when both jobs finish, 18 if both skip the refines):
 
 - `gn/gn_g0.json`, `gn/gn_g0.png`, `gn/gn_selftest.json`, `gn/timings.json`
 - per scene (`garden`, `bicycle`): `gn/gn_results_<scene>.csv`, `gn/gn_meta_<scene>.json`,
   `gn/gn_refine_ridge_<scene>.json`, `gn/gn_refine_prox_<scene>.json`, `gn/gn_spectrum_<scene>.csv`,
-  `gn/gn_spectrum_hist_<scene>.csv`, `gn/gn_spectrum_<scene>.png`, `gn/gn_spearman_<scene>.csv`
+  `gn/gn_spectrum_hist_<scene>.csv`, `gn/gn_spectrum_<scene>.png`, `gn/gn_spearman_<scene>.csv`,
+  `gn/gn_e0_<scene>_log_tail.json` (the job's exit code and the last 200 lines of its log, written in
+  cell 6's `finally` whether or not the job failed, so a crash is readable from the bundle alone)
 
 **Not bundled** (`gn_cache/` and `gn_work/` are siblings of `gn/`, and the bundle takes only files at
 the top level of `gn/`): `gn_cache/<scene>.pt` (M is 1,000,000 x 120 fp32 = 480 MB per scene) and
@@ -263,7 +274,10 @@ there after the bundle cell.
 
 **Local checks** (no GPU):
 
-- `.venv\Scripts\python.exe -m pytest bench/gn/test_gn.py`: 36 CPU tests, among them the lifted
+- `.venv\Scripts\python.exe -m pytest bench/gn/test_gn.py`: 41 CPU tests, among them the chunked
+  batched linalg helper against the unchunked call (eigvalsh / solve / cholesky / inv / inv_ex, zero
+  and rank-deficient matrices, a batch that never divides evenly), its halving retry, the finite
+  check, the routed call sites; the lifted
   argmin on N = 2,000, K = 256 with rank-deficient and zero M_i against brute force; the v2 lifted
   criterion (passes fp32 near-tie rounding on rank-deficient M_i where d_min = 0, fails a wrong
   assignment, both branches, the version re-run rule); the end-to-end exactness check on the CPU
@@ -501,10 +515,28 @@ before, no E0 result exists.
 
 ### Open items (E0)
 
-- **Run E0 on Kaggle** (Dace). Session length is unknown. Since the first build, each scene also
+- **Re-run E0 on Kaggle** (Dace). Session length is unknown. Since the first build, each scene also
   clusters 6 codebooks at K = 4,096 / 16,384 and evaluates every row on the train views. If the
   session runs out, attach its output (`gn/`, `gn_cache/`, `gn_work/`) and run again; every step
-  resumes.
+  resumes. The first run's `gn_cache/<scene>.pt` is still valid (the GN cache version is unchanged),
+  so a re-run that attaches that output skips the GN pass.
+- ~~**The first run crashed in cuSOLVER.**~~ **Fixed (2026-09-20), not re-run.** Both scene jobs died
+  right after the GN pass, in `diagnostics.eigen_stats`:
+  `cusolverDnXsyevBatched_bufferSize` -> `CUSOLVER_STATUS_INVALID_VALUE`. `eigen_stats` already looped
+  in chunks of 65,536, so that was the batch cuSOLVER refused, one more than the CUDA grid limit of
+  65,535; the failing call is a workspace-size query, which does not read the matrix values. The
+  refines' centroid solve runs at the same size (one system per cluster, K = 65,536), so it would have
+  failed next.
+  - **Fix:** `bench/gn/batched.py`. `batched_linalg` slices the batch dimension, keeps each call at
+    `LINALG_MAX_BATCH` (32,768: half of the batch that failed, below 65,535) or below, and halves the
+    batch further on a backend batch or memory error, down to one matrix, recording each reduction in
+    `linalg_fallbacks()` (reported by `linalg_scale`). Every batched linalg call in `bench/gn/` and
+    `kaggle/gn_e0_scene.py` goes through it.
+  - **Not verified on a GPU:** the real cuSOLVER limit is unknown, which is why the helper also
+    halves on demand and why `selftest.py`'s `linalg_scale` runs the job's sizes before the jobs start.
+    If `linalg_scale` reports reductions, 32,768 was still too large; lower `LINALG_MAX_BATCH`.
+  - **Also added:** `finite_report(M)` before any linalg (a non-finite `M` would be a bug in the GN
+    pass, and cuSOLVER reports it as an opaque backend error), and the per-job log tails in the bundle.
 - **Never executed yet:** the CUDA-only paths.
   - the 17-channel gsplat feature render and its backward;
   - the CUDA SH, toy and end-to-end checks (the latter renders a 48-channel identity image, 32 + 16);
@@ -636,7 +668,7 @@ before, no E0 result exists.
 | 3 | k-means clustering levers (library format unchanged) | **found `lloyd_wopa_area`**: higher PSNR and lower LPIPS than the baseline on garden and bicycle at all 3 k-means seeds (+0.096 / +0.030 dB mean PSNR). The strict rule (`pr_worthy`) failed only on two garden SSIM cells, both inside the baseline's own SSIM seed spread. |
 | 4 | full MipNeRF360 validation of `lloyd_wopa` / `lloyd_wopa_area` (pre-registered rule) | **validated on all 9 scenes.** Both candidates pass; `pr_candidate` = `lloyd_wopa_area`, +0.111 dB mean PSNR at -0.10% mean size, better on every scene. All 7 sanity gates passed. |
 | 5 | the same change as library code (`feat/png-weighted-kmeans`): parity gate, MipNeRF360, Tanks & Temples, cost, CPU-only smoke test | **passed.** Parity exact (and all 18 library rows = the run-4 rows); Tanks & Temples +0.052 dB mean PSNR at +0.08% size, both scenes better; k-means 510 s vs 405 s (MipNeRF360), 328 s vs 416 s (T&T); peak GPU memory 3.37-3.62 GB vs 1.03-1.26 GB; CPU smoke test passed; torchpq baseline reproduced to ~0.002 dB. |
-| E0 (`bench/gn-vq`) | does a Gauss-Newton metric on shN predict the shN-only render error (G0, `PREREG_GN.md`)? | **pending**: code, tests and dry runs done, updated for PREREG Amendments 3-4 (ranking-only verdict, end-to-end exactness check, scene fixtures with pinned hashes); not run on Kaggle. |
+| E0 (`bench/gn-vq`) | does a Gauss-Newton metric on shN predict the shN-only render error (G0, `PREREG_GN.md`)? | **pending**: code, tests and dry runs done (PREREG Amendments 3-4). The first Kaggle run (2026-09-20) crashed in both jobs in cuSOLVER's batched eigendecomposition; fixed (`bench/gn/batched.py`), no results yet. |
 
 ## PR plan (`feat/png-weighted-kmeans`)
 

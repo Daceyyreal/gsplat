@@ -20,7 +20,8 @@ Cost: k-means 510 s vs 405 s mean on MipNeRF360 and 328 s vs 416 s on Tanks & Te
 memory 3.37-3.62 GB vs 1.03-1.26 GB.
 
 **E0 (section 8, branch `bench/gn-vq`): pending.** Does a Gauss-Newton metric on shN predict the
-rendering error of shN quantization? Pre-registered in `kaggle/PREREG_GN.md`; not run yet.
+rendering error of shN quantization? Pre-registered in `kaggle/PREREG_GN.md`. The first Kaggle run
+(2026-09-20) crashed before any result row; no results yet.
 
 ## Sources
 
@@ -653,7 +654,10 @@ The jobs summed to 6.05 GPU-hours over the 2 GPUs. The notebook's pre-run estima
 
 ## 8. E0 — pending: a Gauss-Newton metric for the shN codebook (`bench/gn-vq`)
 
-**Status: not run.** This section has no results yet. The questions, definitions and decision rules
+**Status: no results yet.** The first Kaggle run (2026-09-20) crashed in both scene jobs right after
+the GN pass, before any result row, in cuSOLVER's batched eigendecomposition; the batch limit is
+handled in `bench/gn/batched.py` and the run has not been repeated (`kaggle/HANDOFF.md`, E0 open
+items). The questions, definitions and decision rules
 were fixed before any E0 code or result, in `kaggle/PREREG_GN.md`:
 
 - the original text (commit `464c46a5`);
