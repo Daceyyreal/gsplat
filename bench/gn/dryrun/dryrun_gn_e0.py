@@ -23,234 +23,37 @@ failure); set GN_DRYRUN_KEEP=1 to keep it for debugging.
 
 import atexit
 import csv
-import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import types
+import zipfile
 
-import numpy as np
-import torch
-
-REPO = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 sys.path.insert(0, REPO)
 sys.path.insert(0, os.path.join(REPO, "kaggle"))
 sys.path.insert(0, os.path.join(REPO, "bench", "gn"))
 import batched as bl  # noqa: E402
 import diagnostics as gd  # noqa: E402
+import fake_env as fe  # noqa: E402  (the toy checkpoint, its caches and the fake runner)
 import gn_e0_scene as job  # noqa: E402
 import gn_metric as gm  # noqa: E402
-import toy_render as tr  # noqa: E402
-import tilequant_run3 as r3  # noqa: E402
 import tilequant_sweep as ts  # noqa: E402
-from gsplat.compression.kmeans import weighted_kmeans  # noqa: E402
 
 ROOT = tempfile.mkdtemp(prefix="gn_dry_")
 if os.environ.get("GN_DRYRUN_KEEP") != "1":
     atexit.register(shutil.rmtree, ROOT, True)
-N, H, W = 64 * 64, 24, 32
-KS, KDEF = [16, 32, 64], 64
-# GN pass, parity and toy test on the CPU renderer
-gm.gsplat_render = tr.render_bruteforce
-
-
-def fake_torchpq(data, n_clusters, seed, distance, max_iter):
-    c, l = weighted_kmeans(data, n_clusters, max_iter=5, seed=seed)
-    return c, l, [{}] * 5
-
-
-r3.torchpq_kmeans = fake_torchpq
-
-
-class FakeCfg:
-    packed = False
-    antialiased = False
-    camera_model = "pinhole"
-    with_ut = False
-    with_eval3d = False
-    near_plane = 0.01
-    far_plane = 1e10
-    sh_degree = 3
-    app_opt = False
-    post_processing = None
-    sh_fp16 = False
-
-
-KMAT = torch.tensor([[30.0, 0, W / 2], [0, 30.0, H / 2], [0, 0, 1]])
-
-
-class FakeDataset:
-    def __init__(self, cams, gt):
-        self.cams, self.gt = cams, gt
-
-    def __len__(self):
-        return len(self.cams)
-
-    def __getitem__(self, i):
-        return {
-            "camtoworld": self.cams[i],
-            "K": KMAT,
-            "image": self.gt[i] * 255.0,
-            "camera_idx": 0,
-            "image_id": i,
-        }
-
-
-def cam(tx, ty):
-    c = torch.eye(4)
-    c[0, 3], c[1, 3] = tx, ty
-    return c
-
-
-def _psnr(a, b):
-    return -10 * torch.log10(((a - b) ** 2).mean())
-
-
-class FakeRunner:
-    def __init__(self, work_dir, splats):
-        self.cfg = FakeCfg()
-        self.device = torch.device("cpu")
-        self.splats = torch.nn.ParameterDict(
-            {k: torch.nn.Parameter(v.clone()) for k, v in splats.items()}
-        )
-        self.stats_dir = os.path.join(work_dir, "runner", "stats")
-        os.makedirs(self.stats_dir, exist_ok=True)
-        self.psnr = _psnr
-        self.ssim = lambda a, b: torch.tensor(0.5) + 0 * a.mean()
-        self.lpips = lambda a, b: (a - b).abs().mean()
-        train = [cam(0.1 * i, -0.05 * i) for i in range(5)]
-        test = [cam(-0.07, 0.03), cam(0.2, 0.1)]
-        with torch.no_grad():
-            gt = [
-                self.rasterize_splats(c[None], KMAT[None], W, H, sh_degree=3)[0][
-                    0
-                ].clamp(0, 1)
-                + 0.02
-                for c in train + test
-            ]
-        self.trainset = FakeDataset(train, gt[:5])
-        self.valset = FakeDataset(test, gt[5:])
-        self.n_eval = 0
-
-    def rasterize_splats(
-        self,
-        camtoworlds,
-        Ks,
-        width,
-        height,
-        sh_degree=3,
-        near_plane=0.01,
-        far_plane=1e10,
-        masks=None,
-        frame_idcs=None,
-        camera_idcs=None,
-        exposure=None,
-        splats=None,
-        **kw,
-    ):
-        s = splats if splats is not None else self.splats
-        act = gm.activated(s)
-        coeffs = torch.cat([s["sh0"], s["shN"]], 1).detach()
-        settings = gm.RenderSettings.from_cfg(self.cfg)
-        img, info = tr.render_bruteforce(
-            act,
-            coeffs,
-            camtoworlds[0],
-            Ks[0],
-            width,
-            height,
-            settings,
-            sh_degree=sh_degree,
-        )
-        return img[None], None, info
-
-    def eval(self, step, stage):
-        # as Runner.eval: per-image metrics on the val views, then the mean
-        vals = {"psnr": [], "ssim": [], "lpips": []}
-        for i in range(len(self.valset)):
-            d = self.valset[i]
-            with torch.no_grad():
-                img = self.rasterize_splats(
-                    d["camtoworld"][None], d["K"][None], W, H, sh_degree=3
-                )[0].clamp(0, 1)
-            c, p = img.permute(0, 3, 1, 2), (d["image"] / 255.0)[None].permute(
-                0, 3, 1, 2
-            )
-            vals["psnr"].append(self.psnr(c, p))
-            vals["ssim"].append(self.ssim(c, p))
-            vals["lpips"].append(self.lpips(c, p))
-        self.n_eval += 1
-        stats = {k: torch.stack(v).mean().item() for k, v in vals.items()}
-        stats["num_GS"] = N
-        json.dump(
-            stats,
-            open(os.path.join(self.stats_dir, f"{stage}_step{step:04d}.json"), "w"),
-        )
-
-
-# toy checkpoint scene: 4096 splats (64 x 64, so PngCompression needs no crop)
-g = torch.Generator().manual_seed(0)
-xy = torch.rand(N, 2, generator=g) * 2 - 1
-SPLATS = {
-    "means": torch.stack(
-        [xy[:, 0] * 1.5, xy[:, 1] * 1.1, 3.0 + torch.randn(N, generator=g) * 0.3], -1
-    ),
-    "quats": torch.randn(N, 4, generator=g),
-    "scales": torch.randn(N, 3, generator=g) * 0.2 - 3.2,
-    "opacities": torch.randn(N, generator=g),
-    "sh0": torch.randn(N, 1, 3, generator=g) * 0.5,
-    "shN": torch.randn(N, 15, 3, generator=g) * 0.2,
-}
-ckpt = os.path.join(ROOT, "ckpt.pt")
-torch.save({"splats": SPLATS, "step": 29999}, ckpt)
-sha = ts.file_sha1(ckpt)
-order = torch.randperm(N, generator=g)
-sort_dir = os.path.join(ROOT, "sort")
-os.makedirs(os.path.join(sort_dir, "seed0"))
-json.dump(
-    {"key": sha, "seeds": {"0": {}}},
-    open(os.path.join(sort_dir, "cache_info.json"), "w"),
-)
-torch.save(order, os.path.join(sort_dir, "seed0", "order.pt"))
-key3 = hashlib.sha1(sha.encode() + order.numpy().tobytes()).hexdigest()
-
-# run-3 caches at the default K: manhattan_log and lloyd_wopa_area present, lloyd_w1 stale -> recomputed
-sorted_raw = {k: v[order] for k, v in SPLATS.items()}
-x = sorted_raw["shN"].reshape(N, -1)
-km_dir = os.path.join(ROOT, "run3", "kmeans")
-os.makedirs(km_dir)
-c_l1, l_l1 = weighted_kmeans(x, KDEF, max_iter=5, seed=0)
-torch.save(
-    {"key": key3, "centroids": c_l1, "labels": l_l1, "time_s": 1.0, "log": [{}] * 5},
-    os.path.join(km_dir, "manhattan_log_s0.pt"),
-)
-c_w, l_w = weighted_kmeans(
-    x, KDEF, weights=r3.cluster_weights("opacity_area", sorted_raw), max_iter=20, seed=0
-)
-torch.save(
-    {"key": key3, "centroids": c_w, "labels": l_w, "time_s": 2.0, "log": [{}] * 20},
-    os.path.join(km_dir, "lloyd_wopa_area_s0.pt"),
-)
-torch.save(
-    {"key": "stale", "centroids": c_w, "labels": l_w},
-    os.path.join(km_dir, "lloyd_w1_s0.pt"),
-)
-
-FAKE = {}
-
-
-def fake_build_runner(args):
-    r = FakeRunner(args.work_dir, SPLATS)
-    FAKE["runner"] = r
-    return r, 29999
-
-
-ts.build_runner = fake_build_runner
+fe.patch_all()  # CPU renderer, TorchPQ stand-in, FakeRunner
+env = fe.build(ROOT)
+N, KS, KDEF = fe.N, fe.KS, fe.KDEF
+ckpt, sort_dir, km_dir, key3 = env["ckpt"], env["sort_dir"], env["km_dir"], env["key3"]
+FAKE = fe.FAKE
 
 out_dir = os.path.join(ROOT, "gn")
 common = [
@@ -603,9 +406,6 @@ never = json.load(open(os.path.join(out_dir, "gn_e0_never_log_tail.json")))
 assert never["exit_code"] is None and never["lines_total"] == 0 and never["tail"] == []
 os.remove(os.path.join(out_dir, "gn_e0_never_log_tail.json"))
 exec(bundle_cell, ns)
-import re  # noqa: E402
-import zipfile  # noqa: E402
-
 names = zipfile.ZipFile(os.path.join(ROOT, "gn_bundle.zip")).namelist()
 for f in (
     "gn/gn_results_garden.csv",

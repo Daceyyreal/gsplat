@@ -11,11 +11,16 @@ query that failed only validates parameters (it does not read the matrix values)
 than 65,535, the CUDA limit on a grid dimension, so the batch itself is the suspect; the refines'
 centroid solve runs at the same size (one system per cluster, K = 65,536).
 
-So every batched ``torch.linalg`` call in ``bench/gn/`` and ``kaggle/gn_e0_scene.py`` goes through
-``batched_linalg``, which keeps each call at ``LINALG_MAX_BATCH`` or below and halves it further if a
-backend still refuses (the real limit cannot be checked without a GPU). ``finite_report`` is the guard
-to run before any linalg: non-finite input makes these backends fail in ways that look like batch
-problems.
+So every batched ``torch.linalg`` call in ``bench/gn/`` and the E0 / E1 jobs goes through
+``batched_linalg``, which keeps each call at its op's maximum batch or below and halves it further if a
+backend still refuses. ``finite_report`` is the guard to run before any linalg: non-finite input makes
+these backends fail in ways that look like batch problems.
+
+What E0's run then measured on a T4 (FINDINGS section 8): the eigendecomposition was refused at 32,768
+(``CUSOLVER_STATUS_INVALID_VALUE``), wanted 9.49 GiB at 16,384, and ran at 8,192; the 65,536-system
+centroid solve was never a problem. So ``OP_MAX_BATCH`` starts the eigendecomposition at 8,192, and a
+batch that works is remembered for the rest of the process (``linalg_working_batches``) instead of
+being rediscovered on every chunk, which is what E0 did 15 times per job.
 """
 
 import math
@@ -30,6 +35,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Half of the batch cuSOLVER refused, and below the 65,535 grid limit. Configurable per call.
 LINALG_MAX_BATCH = 32768
+# Per-op maxima, from what E0 measured on a T4; anything else uses LINALG_MAX_BATCH.
+OP_MAX_BATCH = {"linalg_eigvalsh": 8192, "linalg_eigh": 8192}
 # A backend refusing a batch, or running out of memory, says so in the message; anything else (a
 # matrix that does not converge, say) is a real failure and is raised.
 _RETRY_MARKERS = (
@@ -45,11 +52,28 @@ _RETRY_MARKERS = (
     "out of memory",
 )
 _FALLBACKS: List[Dict] = []
+_WORKING: Dict[str, int] = {}
 
 
 def linalg_fallbacks() -> List[Dict]:
     """Every batch reduction ``batched_linalg`` had to make; empty when the default was enough."""
     return list(_FALLBACKS)
+
+
+def linalg_working_batches() -> Dict[str, int]:
+    """The batch size each op last completed with, remembered for the next call."""
+    return dict(_WORKING)
+
+
+def op_max_batch(name: str) -> int:
+    """The starting batch for an op: its own maximum, lowered by whatever already worked here."""
+    return min(OP_MAX_BATCH.get(name, LINALG_MAX_BATCH), _WORKING.get(name, LINALG_MAX_BATCH))
+
+
+def reset_linalg_state() -> None:
+    """Forget the recorded reductions and remembered batches (tests)."""
+    _FALLBACKS.clear()
+    _WORKING.clear()
 
 
 def _retryable(err: BaseException) -> bool:
@@ -80,9 +104,11 @@ def batched_linalg(
     """``op(*tensors, **kwargs)`` in chunks of the batch dimension, results concatenated.
 
     Every tensor is sliced along dim 0 and must have the same size there; ``kwargs`` are passed to
-    every chunk. A chunk that fails with a batch or memory error from the backend (``_RETRY_MARKERS``)
-    is retried at half the batch, down to a single matrix, and the reduction is recorded in
-    ``linalg_fallbacks()``. Any other error is raised unchanged."""
+    every chunk. Without ``max_batch`` the call starts at ``op_max_batch(op)``: the op's own maximum,
+    lowered by any smaller batch that already worked in this process. A chunk that fails with a batch
+    or memory error from the backend (``_RETRY_MARKERS``) is retried at half the batch, down to a
+    single matrix, the reduction is recorded in ``linalg_fallbacks()``, and the batch that finally
+    worked is remembered (``linalg_working_batches()``). Any other error is raised unchanged."""
     if not tensors:
         raise ValueError("batched_linalg needs at least one batched tensor")
     n = tensors[0].shape[0]
@@ -92,7 +118,8 @@ def batched_linalg(
         )
     if n == 0:
         return op(*tensors, **kwargs)
-    step = max(1, min(max_batch or LINALG_MAX_BATCH, n))
+    name = getattr(op, "__name__", str(op))
+    step = max(1, min(max_batch or op_max_batch(name), n))
     parts: List = []
     start = 0
     while start < n:
@@ -102,7 +129,6 @@ def batched_linalg(
         except (torch._C._LinAlgError, RuntimeError) as err:
             if size <= 1 or not _retryable(err):
                 raise
-            name = getattr(op, "__name__", str(op))
             step = max(1, size // 2)
             first_line = str(err).splitlines()[0][:200]
             _FALLBACKS.append(
@@ -117,6 +143,7 @@ def batched_linalg(
                 torch.cuda.empty_cache()
             continue
         start += size
+    _WORKING[name] = min(step, _WORKING.get(name, step))
     return _concat(parts)
 
 

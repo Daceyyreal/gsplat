@@ -16,10 +16,13 @@ import torch
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(os.path.dirname(HERE)))  # repo root, for gsplat
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle"))  # the jobs
 import batched as bl  # noqa: E402
 import diagnostics as gd  # noqa: E402
 import g0  # noqa: E402
+import g1  # noqa: E402
 import gn_metric as gm  # noqa: E402
+import gn_vq as vq  # noqa: E402
 import sh_basis as sb  # noqa: E402
 import toy_render as tr  # noqa: E402
 
@@ -226,6 +229,33 @@ def test_batched_linalg_halves_the_batch_on_a_backend_error():
 
     with pytest.raises(RuntimeError, match="failed to converge"):
         bl.batched_linalg(broken, x, max_batch=16, log=None)
+
+
+def test_batched_linalg_remembers_the_batch_that_worked():
+    """E0 rediscovered the same reduction on every chunk; now the working batch is reused."""
+    bl.reset_linalg_state()
+    try:
+        x = torch.arange(24.0).reshape(24, 1)
+        calls = []
+
+        def flaky(t):
+            calls.append(t.shape[0])
+            if t.shape[0] > 4:
+                raise RuntimeError("cusolver error: CUSOLVER_STATUS_INVALID_VALUE")
+            return t * 2
+
+        bl.batched_linalg(flaky, x, max_batch=16, log=None)
+        assert [c for c in calls if c > 4] == [16, 8]
+        assert bl.linalg_working_batches()["flaky"] == 4
+        calls.clear()
+        bl.batched_linalg(flaky, x, log=None)  # no max_batch: starts at what worked
+        assert calls == [4, 4, 4, 4, 4, 4]
+        # the eigendecomposition starts at the batch E0 found on a T4; other ops at the default
+        assert bl.OP_MAX_BATCH["linalg_eigvalsh"] == 8192
+        assert bl.op_max_batch("linalg_eigvalsh") == 8192
+        assert bl.op_max_batch("linalg_solve") == bl.LINALG_MAX_BATCH
+    finally:
+        bl.reset_linalg_state()
 
 
 def test_batched_linalg_argument_checks():
@@ -1114,3 +1144,231 @@ def test_g0_same_rule_over_other_rungs():
     assert res["verdict"] == "pass" and res["configs"] == list(rungs)
     assert res["clamped"]["n_pairs"] == 2 * 3 * 6 * 2
     assert res["calibration"]["summary"]["n_codebooks"] == 24
+
+
+# ------------------------------------------------------------------- GN-VQ (Amendment 5)
+
+
+def _vq_problem(n=2000, k=64, seed=11, narrow=0.05):
+    """A warm start whose ridge update wants to leave the codebook's range: the codebook is squeezed
+    into [-narrow, narrow] while the data sit around 0.2, so the update pulls every centroid out."""
+    x, M, C = _problem(n=n, k=k, seed=seed)
+    C = C.clamp(-narrow, narrow)
+    labels = torch.cdist(x, C).argmin(dim=1)
+    return x, M, C, labels
+
+
+def test_gn_vq_quantizer_matches_the_codec(tmp_path):
+    """gn_vq's quantizer is the codec's: the writer must produce exactly these codes, and the
+    decoder exactly these values."""
+    import gn_e0_scene as job
+
+    g = torch.Generator().manual_seed(21)
+    n, k = 1024, 32  # a square number of splats, as PngCompression needs
+    splats = {
+        "means": torch.randn(n, 3, generator=g),
+        "quats": torch.randn(n, 4, generator=g),
+        "scales": torch.randn(n, 3, generator=g) - 3,
+        "opacities": torch.randn(n, generator=g),
+        "sh0": torch.randn(n, 1, 3, generator=g),
+        "shN": torch.randn(n, 15, 3, generator=g) * 0.2,
+    }
+    centroids = torch.randn(k, 45, generator=g) * 0.3
+    labels = torch.randint(0, k, (n,), generator=g)
+    wd = job.write_and_decode(str(tmp_path / "out"), splats, centroids, labels)
+    codes, rng = vq.quantize_codebook(centroids)
+    check = vq.check_writer_codes(str(tmp_path / "out"), codes)
+    assert check["equal"] and check["n_differing"] == 0, check
+    meta = json.load(open(tmp_path / "out" / "meta.json"))["shN"]
+    assert meta["quantization"] == vq.QUANT_BITS == 6
+    assert abs(meta["mins"] - rng["mins"]) < 1e-12 and abs(meta["maxs"] - rng["maxs"]) < 1e-12
+    deq = vq.dequantize_codebook(codes, rng)
+    assert torch.allclose(wd["decoded"]["shN"].reshape(n, 45), deq[labels], atol=0, rtol=0)
+    # the step is the codec's float32 arithmetic, so it agrees with a float64 recomputation
+    # from the stored range only to float32 precision
+    assert abs(rng["step"] / ((rng["maxs"] - rng["mins"]) / 63) - 1) < 1e-6
+
+
+def test_accept_by_cluster_keeps_the_old_centroid_when_it_is_better():
+    x, M, C, labels = _vq_problem(n=400, k=16, seed=12)
+    worse = C + 5.0  # far from every member
+    kept, rejected = vq.accept_by_cluster(x, labels, M, C, worse)
+    assert rejected == C.shape[0] and torch.equal(kept, C)
+    # a cluster that improves is taken: move one centroid onto its members' mean
+    better = C.clone()
+    members = labels == 0
+    better[0] = x[members].mean(dim=0)
+    kept, rejected = vq.accept_by_cluster(x, labels, M, C, better)
+    assert rejected == C.shape[0] - 1 and torch.equal(kept[0], better[0])
+    assert torch.equal(kept[1:], C[1:])
+
+
+def test_gn_vq_clips_to_the_warm_range_and_never_raises_the_objective():
+    x, M, C, labels = _vq_problem()
+    lo, hi = float(C.min()), float(C.max())
+    C_out, labels_out, rep = vq.gn_vq(
+        x, C, labels, M, total_pixels=1000, max_iters=4, rel_tol=0.0, log=None
+    )
+    assert float(C_out.min()) >= lo and float(C_out.max()) <= hi  # the clip holds
+    objs = [h["objective"] for h in rep["history"]]
+    assert all(b <= a * (1 + 1e-12) for a, b in zip(objs, objs[1:])), objs
+    assert rep["iterations"] == 4 and rep["stopped_because"] == "max_iters"
+    assert rep["clip"] and rep["final_quantized_assignment"]
+    assert rep["warm_start"]["range"] == [lo, hi]
+    assert rep["quantizer"]["bits"] == 6 and rep["quantizer"]["step"] > 0
+    assert rep["objective_before_quantization"] <= objs[0]
+    assert rep["fraction_outside_warm_range_final"] == 0.0
+    # the update wanted to leave the range, and the clip caught it
+    outs = [h["fraction_outside_warm_range"] for h in rep["history"] if h["step"] == "update"]
+    assert max(outs) > 0
+    assert rep["clusters_rejected_by_clip_total"] >= 0
+    # the top-64 diagnostic runs at iteration 1 only (it costs more than the assignment)
+    withshare = [h["iter"] for h in rep["history"] if "share_all" in h]
+    assert withshare == [1]
+
+
+def test_gn_vq_stopping_rule_and_ablations():
+    x, M, C, labels = _vq_problem()
+    _, _, rep = vq.gn_vq(x, C, labels, M, 1000, max_iters=10, rel_tol=1.0, log=None)
+    assert rep["iterations"] == 1 and rep["stopped_because"] == "rel_tol"
+    # without the clip, coordinates leave the warm-start range
+    lo, hi = float(C.min()), float(C.max())
+    C_noclip, _, rep_noclip = vq.gn_vq(
+        x, C, labels, M, 1000, max_iters=3, rel_tol=0.0, clip=False, log=None
+    )
+    assert not rep_noclip["clip"] and rep_noclip["clusters_rejected_by_clip_total"] == 0
+    assert rep_noclip["fraction_outside_warm_range_final"] > 0
+    assert float(C_noclip.min()) < lo or float(C_noclip.max()) > hi
+    # without the final quantized assignment, the labels are the ones the loop ended with
+    _, labels_a, rep_a = vq.gn_vq(x, C, labels, M, 1000, max_iters=2, rel_tol=0.0, log=None)
+    _, labels_b, rep_b = vq.gn_vq(
+        x, C, labels, M, 1000, max_iters=2, rel_tol=0.0,
+        final_quantized_assignment=False, log=None,
+    )
+    assert rep_b["final_assignment_labels_changed_fraction"] == 0.0
+    assert rep_a["final_assignment_labels_changed_fraction"] >= 0.0
+    assert not torch.equal(labels_a, labels_b) or rep_a["final_assignment_labels_changed_fraction"] == 0.0
+
+
+# --------------------------------------------------------------------------- G1 rule
+
+
+def _g1_row(scene, config, seed, psnr, size, k=65536):
+    return {
+        "scene": scene,
+        "config": config,
+        "n_clusters": str(k),
+        "seed": str(seed),
+        "PSNR": psnr,
+        "size_bytes": size,
+    }
+
+
+def _g1_rows(dpsnr=0.06, size_ratio=1.0, k=65536):
+    """Baseline rows plus GN-VQ rows offset by dpsnr and size_ratio, on both scenes and 3 seeds."""
+    rows = []
+    for scene in g1.SCENES:
+        for seed in g1.SEEDS:
+            base = 26.0 + 0.1 * seed
+            size = 16_000_000 + 1000 * seed
+            rows.append(_g1_row(scene, g1.BASELINE, seed, base, size, k))
+            rows.append(
+                _g1_row(scene, g1.GNVQ, seed, base + dpsnr, int(size * size_ratio), k)
+            )
+    return rows
+
+
+def test_g1_passes_when_the_gain_holds_on_both_scenes():
+    res = g1.judge_g1_only(_g1_rows(dpsnr=0.06))
+    assert res["verdict"] == "pass" and res["complete"]
+    for scene in g1.SCENES:
+        s = res["per_scene"][scene]
+        assert abs(s["mean_dPSNR"] - 0.06) < 1e-9 and s["n_negative_seeds"] == 0
+        assert s["passes"] and s["n_size_violations"] == 0
+    assert res["rule"].startswith("PREREG_GN.md G1 with Amendment 5 b")
+
+
+def test_g1_fails_on_a_small_mean_a_negative_seed_or_an_oversized_seed():
+    # the mean gain is below +0.05 dB
+    res = g1.judge_g1_only(_g1_rows(dpsnr=0.04))
+    assert res["verdict"] == "fail" and not res["per_scene"]["garden"]["mean_gain_ok"]
+    assert res["per_scene"]["garden"]["n_negative_seeds"] == 0
+    # one seed loses PSNR, although the mean is far above the threshold
+    rows = _g1_rows(dpsnr=0.2)
+    row = next(r for r in rows if r["config"] == g1.GNVQ and r["scene"] == "bicycle" and r["seed"] == "1")
+    row["PSNR"] = 26.0 + 0.1 * 1 - 0.01
+    res = g1.judge_g1_only(rows)
+    assert res["verdict"] == "fail"
+    assert res["per_scene"]["bicycle"]["n_negative_seeds"] == 1
+    assert res["per_scene"]["garden"]["passes"] and not res["per_scene"]["bicycle"]["passes"]
+    # a seed more than 0.5% larger counts as negative even with a PSNR gain
+    rows = _g1_rows(dpsnr=0.2)
+    row = next(r for r in rows if r["config"] == g1.GNVQ and r["scene"] == "garden" and r["seed"] == "0")
+    row["size_bytes"] = int(16_000_000 * 1.006)
+    res = g1.judge_g1_only(rows)
+    assert res["verdict"] == "fail"
+    seed0 = next(s for s in res["per_scene"]["garden"]["seeds"] if s["seed"] == 0)
+    assert seed0["negative"] and not seed0["size_ok"] and seed0["dPSNR"] > 0
+    assert res["per_scene"]["garden"]["n_size_violations"] == 1
+
+
+def test_g1_size_rule_boundary_and_no_credit_for_being_smaller():
+    # exactly +0.5% is allowed, a hair more is not
+    ok = g1.compare_seed(  # 16,080,000 is exactly +0.5% of 16,000,000
+        _g1_row("garden", g1.GNVQ, 0, 26.1, 16_080_000),
+        _g1_row("garden", g1.BASELINE, 0, 26.0, 16_000_000),
+    )
+    assert ok["size_ok"] and not ok["negative"] and not ok["dominates"]
+    assert abs(ok["size_ratio"] - 0.005) < 1e-15
+    over = g1.compare_seed(
+        _g1_row("garden", g1.GNVQ, 0, 26.1, 16_080_001),
+        _g1_row("garden", g1.BASELINE, 0, 26.0, 16_000_000),
+    )
+    assert not over["size_ok"] and over["negative"]
+    # much smaller is compared on PSNR alone: no credit for the bytes, and it can still be negative
+    small_worse = g1.compare_seed(
+        _g1_row("garden", g1.GNVQ, 0, 25.9, 15_000_000),
+        _g1_row("garden", g1.BASELINE, 0, 26.0, 16_000_000),
+    )
+    assert small_worse["size_ok"] and small_worse["negative"] and not small_worse["dominates"]
+    small_better = g1.compare_seed(
+        _g1_row("garden", g1.GNVQ, 0, 26.2, 15_000_000),
+        _g1_row("garden", g1.BASELINE, 0, 26.0, 16_000_000),
+    )
+    assert small_better["dominates"] and not small_better["negative"]
+    assert abs(small_better["size_ratio"] + 0.0625) < 1e-12
+    # a smaller-and-better run passes G1, which is the case Amendment 5 b exists for
+    res = g1.judge_g1_only(_g1_rows(dpsnr=0.06, size_ratio=0.96))
+    assert res["verdict"] == "pass"
+    assert all(v["n_dominating_seeds"] == 3 for v in res["per_scene"].values())
+
+
+def test_g1_incomplete_when_a_row_is_missing():
+    rows = [r for r in _g1_rows() if not (r["config"] == g1.GNVQ and r["seed"] == "2")]
+    res = g1.judge_g1_only(rows)
+    assert res["verdict"] == "incomplete" and not res["complete"]
+    assert res["missing"] == [f"{s} {g1.GNVQ} K=65536 seed=2" for s in g1.SCENES]
+
+
+def test_bd_rate_and_rd_curves():
+    psnr = [25.0, 25.5, 26.0]
+    ref = [1.0e7, 1.4e7, 2.0e7]
+    assert abs(g1.bd_rate(ref, psnr, ref, psnr)) < 1e-9  # a curve against itself
+    cheaper = [b * 0.9 for b in ref]  # 10% fewer bytes at every PSNR
+    assert abs(g1.bd_rate(ref, psnr, cheaper, psnr) + 10.0) < 1e-6
+    assert abs(g1.bd_rate(cheaper, psnr, ref, psnr) - 100 / 0.9 + 100) < 1e-6
+    assert math.isnan(g1.bd_rate(ref, [25.0, 25.5, 26.0], ref, [30.0, 30.5, 31.0]))  # no overlap
+    rows = []
+    for scene in g1.SCENES:
+        for i, k in enumerate(g1.K_VALUES):
+            rows.append(_g1_row(scene, g1.BASELINE, 0, psnr[i], int(ref[i]), k))
+            rows.append(_g1_row(scene, g1.GNVQ, 0, psnr[i], int(cheaper[i]), k))
+    rd = g1.rd_curves(rows)
+    for scene in g1.SCENES:
+        s = rd["scenes"][scene]
+        assert s["complete"] and len(s["points"][g1.GNVQ]) == 3
+        assert abs(s["bd_rate_vs_lloyd_wopa_area"][g1.GNVQ] + 10.0) < 1e-6
+    full = g1.judge_g1(rows + _g1_rows(dpsnr=0.06))
+    assert full["verdict"] == "pass" and set(full["secondary"]) == set(g1.SECONDARIES)
+    assert all(r["verdict"] == "incomplete" for r in full["secondary"].values())
+    assert len(full["dominance"]) == 6
