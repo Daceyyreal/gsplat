@@ -3,6 +3,7 @@
     python -m pytest bench/gn/test_gn.py -q
 """
 
+import argparse
 import json
 import math
 import os
@@ -1250,6 +1251,79 @@ def test_gn_vq_stopping_rule_and_ablations():
     assert not torch.equal(labels_a, labels_b) or rep_a["final_assignment_labels_changed_fraction"] == 0.0
 
 
+def test_gn_vq_ridge_eps_is_a_knob_and_both_quantizer_ranges_are_reported():
+    """Amendment 6: two exploratory rows that differ from the pre-registered variant in the ridge
+    alone, and the final codebook's own quantizer range logged beside the warm start's."""
+    x, M, C, labels = _vq_problem()
+    reports = {}
+    for eps in (1e-4, 1e-3, 1e-2):
+        C_out, _, rep = vq.gn_vq(
+            x, C, labels, M, total_pixels=1000, max_iters=3, rel_tol=0.0, eps=eps, log=None
+        )
+        reports[eps] = (C_out, rep)
+        assert rep["ridge_eps"] == eps
+        # the report carries both ranges: the final codebook's own, and the warm start's
+        warm = rep["warm_start"]["quantizer"]
+        final = rep["quantizer"]
+        for r in (warm, final):
+            assert r["bits"] == 6 and r["levels"] == 63 and r["step"] > 0
+            assert abs(r["step"] - (r["maxs"] - r["mins"]) / 63) <= 1e-6 * abs(r["step"])
+        assert warm == vq.codec_range(C)  # the warm start's is the warm-start codebook's
+        assert final == vq.codec_range(C_out)  # the final one is the codebook that gets written
+        # with the clip on, the written range never grows past the warm start's
+        assert warm["mins"] <= final["mins"] and final["maxs"] <= warm["maxs"]
+    # the default is the pre-registered value, and a bigger ridge really does change the codebook
+    assert vq.RIDGE_EPS == 1e-4
+    _, _, rep_default = vq.gn_vq(x, C, labels, M, 1000, max_iters=3, rel_tol=0.0, log=None)
+    assert rep_default["ridge_eps"] == 1e-4
+    assert not torch.equal(reports[1e-4][0], reports[1e-2][0])
+    assert not torch.equal(reports[1e-4][0], reports[1e-3][0])
+    # The ridge acts in the update, before the clip and the per-cluster acceptance: `q = (A + mu
+    # I)^-1 A c` shrinks toward 0 as mu grows. (The finished codebook is not monotone in eps - the
+    # clip and the acceptance rule both intervene - so the knob is checked where it applies.)
+    norms = {}
+    for eps in (1e-4, 1e-3, 1e-2):
+        upd, _ = gd.update_centroids(x, labels, M, C, "ridge", eps)
+        norms[eps] = float(upd.double().norm())
+    assert norms[1e-2] < norms[1e-3] < norms[1e-4], norms
+
+
+def test_e1_job_configs_match_amendment_6():
+    """The job's table of GN-VQ variants: the pre-registered one at the pre-registered ridge, and
+    Amendment 6's two rows differing in the ridge alone."""
+    import gn_e1_scene as job
+
+    assert "eps" not in job.VQ_CONFIGS["gn_vq"]  # uses --eps, i.e. vq.RIDGE_EPS
+    assert job.VQ_CONFIGS["gn_vq_eps1e3"]["eps"] == 1e-3
+    assert job.VQ_CONFIGS["gn_vq_eps1e2"]["eps"] == 1e-2
+    for name in ("gn_vq_eps1e3", "gn_vq_eps1e2"):
+        spec = dict(job.VQ_CONFIGS[name])
+        spec.pop("eps")
+        assert spec == job.VQ_CONFIGS["gn_vq"], (name, spec)  # identical otherwise
+    # every GN-VQ variant but the pre-registered one is seed 0 at G1's K
+    args = argparse.Namespace(n_clusters=job.N_CLUSTERS)
+    for name in job.VQ_CONFIGS:
+        wanted = _wanted_for(job, args, name, seeds=[0, 1, 2], k_values=[4096, 16384, 65536])
+        if name == "gn_vq":
+            assert (job.N_CLUSTERS, 1) in wanted and (4096, 0) in wanted
+        else:
+            assert wanted == [(job.N_CLUSTERS, 0)], (name, wanted)
+    # the warm-start quantizer columns Amendment 6 adds, beside the final codebook's
+    for col in ("quant_mins", "quant_maxs", "quant_step", "warm_quant_mins", "warm_quant_maxs",
+                "warm_quant_step", "ridge_eps"):
+        assert col in job.COLUMNS, col
+
+
+def _wanted_for(job, args, name, seeds, k_values):
+    """`gn_e1_scene.main`'s `wanted`, which is a closure, re-stated for the test."""
+    if name in job.VQ_CONFIGS and name != "gn_vq":
+        return [(args.n_clusters, 0)]
+    out = [(args.n_clusters, s) for s in seeds]
+    if name in ("lloyd_wopa_area", "gn_vq"):
+        out += [(k, 0) for k in k_values if k != args.n_clusters]
+    return out
+
+
 # --------------------------------------------------------------------------- G1 rule
 
 
@@ -1372,3 +1446,62 @@ def test_bd_rate_and_rd_curves():
     assert full["verdict"] == "pass" and set(full["secondary"]) == set(g1.SECONDARIES)
     assert all(r["verdict"] == "incomplete" for r in full["secondary"].values())
     assert len(full["dominance"]) == 6
+
+
+def test_exploratory_rows_never_enter_g1_or_a_secondary_comparison():
+    """Amendment 5 e and Amendment 6: the exploratory rows are reported only. Adding them, with
+    absurd numbers, changes no verdict, no mean and no rate-distortion point."""
+    rows = _g1_rows(dpsnr=0.06)
+    before = g1.judge_g1(rows)
+    loud = []
+    for scene in g1.SCENES:
+        for config in g1.EXPLORATORY:
+            for k in g1.K_VALUES:
+                loud.append(_g1_row(scene, config, 0, 99.0, 1, k))
+    after = g1.judge_g1(rows + loud)
+    assert after["verdict"] == before["verdict"] == "pass"
+    assert after["per_scene"] == before["per_scene"]
+    assert after["seeds_compared"] == before["seeds_compared"]
+    assert after["secondary"] == before["secondary"]
+    assert after["rd"] == before["rd"]
+    assert g1.check_rows(rows + loud)["n_rows"] == len(rows) + len(loud)
+
+
+def test_check_rows_refuses_rows_e1_did_not_produce():
+    """G1's input must hold only E1's rows, even though E0's output is attached to the run."""
+    rows = _g1_rows(dpsnr=0.06)
+    assert g1.check_rows(rows)["n_rows"] == len(rows)
+    counts = g1.check_rows(rows)["per_scene"]["garden"]
+    assert counts[g1.BASELINE] == len(g1.SEEDS) and counts[g1.GNVQ] == len(g1.SEEDS)
+    # an E0 row: E0's own configs and its refine variants are not E1's
+    for config in ("upstream_l1", "plain_l2", "gn_refine_ridge", "gn_refine_prox"):
+        with pytest.raises(RuntimeError, match="not E1 rows"):
+            g1.check_rows(rows + [_g1_row("garden", config, 0, 26.0, 16_000_000)])
+    with pytest.raises(RuntimeError, match="not E1 rows"):
+        g1.check_rows(rows + [_g1_row("stump", g1.GNVQ, 0, 26.0, 16_000_000)])
+    assert set(g1.KNOWN_CONFIGS) == {g1.BASELINE, g1.GNVQ, g1.UNCOMPRESSED} | set(
+        g1.SECONDARIES
+    ) | set(g1.EXPLORATORY)
+
+
+def test_e1_job_refuses_a_results_csv_that_is_not_its_own(tmp_path):
+    """The other half of the isolation: E1 appends to and resumes from its own CSV only, so an E0
+    file under E1's name stops the job before any GPU work instead of reaching G1 or the bundle."""
+    import csv as _csv
+
+    import gn_e0_scene as e0job
+    import gn_e1_scene as job
+
+    path = tmp_path / "gn1_results_garden.csv"
+    job.assert_e1_csv(str(path))  # missing file: nothing to check
+    with open(path, "w", newline="") as f:
+        w = _csv.DictWriter(f, fieldnames=job.COLUMNS)
+        w.writeheader()
+    job.assert_e1_csv(str(path))  # E1's own header
+    with open(path, "w", newline="") as f:
+        w = _csv.DictWriter(f, fieldnames=e0job.COLUMNS)
+        w.writeheader()
+        w.writerow({k: "" for k in e0job.COLUMNS})
+    with pytest.raises(RuntimeError, match="not an E1 result file"):
+        job.assert_e1_csv(str(path))
+    assert os.path.exists(path)  # it refuses; it deletes nothing

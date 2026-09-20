@@ -15,7 +15,11 @@ Rows per scene (`gn1_results_<scene>.csv`), all at k-means seed 0 unless stated:
 - `lloyd_trace`, `lloyd_c3dgs`, K = 65,536, seeds 0-2: the secondary weightings (Amendment 5 d);
 - `lloyd_wopa_area` and `gn_vq` at K = 4,096 and 16,384: the rate-distortion grid (Amendment 5 d);
 - `gn_vq_noclip`, `gn_vq_noqassign`, K = 65,536: the exploratory ablations (Amendment 5 e);
+- `gn_vq_eps1e3`, `gn_vq_eps1e2`, K = 65,536: the exploratory ridge rows (Amendment 6);
 - `uncompressed`: the checkpoint itself.
+
+The four exploratory rows are reported only. `bench/gn/g1.py` picks G1's rows and the secondary
+comparisons by config name, so none of them can enter a verdict.
 
 It reuses E0's GN cache (`gm.CACHE_VERSION` is unchanged, so the key matches) and is resumable per
 (config, K, seed) row, per clustering and per GN-VQ report. Train-view SSIM and LPIPS are not
@@ -57,11 +61,16 @@ LLOYD_CONFIGS: Dict[str, Dict] = {
     "lloyd_trace": dict(run3=None, weights="trace_M"),
     "lloyd_c3dgs": dict(run3=None, weights="c3dgs"),
 }
-# GN-VQ and its two ablations; all warm-start from `lloyd_wopa_area` at the same K and seed.
+# GN-VQ and its exploratory variants; all warm-start from `lloyd_wopa_area` at the same K and seed.
+# `eps` is the ridge of `mu = eps * tr(sum M_k) / 15`; a config that does not name it uses --eps
+# (vq.RIDGE_EPS, 1e-4, the pre-registered value). The `eps` rows are Amendment 6, the other two
+# Amendment 5 e; all four are exploratory, seed 0 at G1's K, and judged by nothing.
 VQ_CONFIGS: Dict[str, Dict] = {
     "gn_vq": dict(clip=True, final_quantized_assignment=True),
     "gn_vq_noclip": dict(clip=False, final_quantized_assignment=True),
     "gn_vq_noqassign": dict(clip=True, final_quantized_assignment=False),
+    "gn_vq_eps1e3": dict(clip=True, final_quantized_assignment=True, eps=1e-3),
+    "gn_vq_eps1e2": dict(clip=True, final_quantized_assignment=True, eps=1e-2),
 }
 DEFAULT_CONFIGS = list(LLOYD_CONFIGS) + list(VQ_CONFIGS)
 
@@ -103,6 +112,10 @@ COLUMNS = [
     "quant_mins",
     "quant_maxs",
     "quant_step",
+    "warm_quant_mins",
+    "warm_quant_maxs",
+    "warm_quant_step",
+    "ridge_eps",
     "fraction_outside_warm_range",
     "vq_iterations",
     "vq_stopped_because",
@@ -125,6 +138,27 @@ COLUMNS = [
 
 def log(scene: str, msg: str) -> None:
     print(f"[{scene}] {msg}", flush=True)
+
+
+def assert_e1_csv(csv_path: str) -> None:
+    """Refuse to read or append to anything but an E1 result CSV.
+
+    E1 reuses E0's ``gn_cache/`` and may run with E0's notebook output attached. E0's rows live in
+    ``gn_results_<scene>.csv`` inside ``gn/``, which E1 never restores, and its header differs from
+    this one (``refine_variant``, ``run3_*``). Checking the header here means a file that is not
+    E1's own stops the job before any GPU work, instead of reaching the resume set, the CSV, G1 or
+    the bundle. Nothing is deleted."""
+    if not os.path.exists(csv_path):
+        return
+    with open(csv_path, newline="") as f:
+        header = next(csv.reader(f), None)
+    if header != COLUMNS:
+        raise RuntimeError(
+            f"{csv_path} is not an E1 result file: its header is not gn_e1_scene.COLUMNS "
+            f"(unexpected {sorted(set(header or []) - set(COLUMNS))}, "
+            f"missing {sorted(set(COLUMNS) - set(header or []))}). E1 reads and writes only rows it "
+            "produced; move the file aside."
+        )
 
 
 def append_row(csv_path: str, row: Dict) -> None:
@@ -252,6 +286,7 @@ def main(argv=None):
     os.makedirs(args.out_dir, exist_ok=True)
     os.makedirs(args.work_dir, exist_ok=True)
     csv_path = os.path.join(args.out_dir, f"gn1_results_{scene}.csv")
+    assert_e1_csv(csv_path)  # only E1's own rows, before any GPU work
     meta_path = os.path.join(args.out_dir, f"gn1_meta_{scene}.json")
     meta = (
         json.load(open(meta_path))
@@ -286,7 +321,10 @@ def main(argv=None):
         gn_vq={
             "max_iters": args.vq_iters,
             "rel_tol": args.vq_rel_tol,
-            "ridge_eps": args.eps,
+            "ridge_eps": args.eps,  # the default; Amendment 6's rows override it
+            "ridge_eps_by_config": {
+                c: VQ_CONFIGS[c].get("eps", args.eps) for c in configs if c in VQ_CONFIGS
+            },
             "quantizer_bits": vq.QUANT_BITS,
         },
     )
@@ -460,7 +498,8 @@ def main(argv=None):
     for name in [c for c in configs if c in VQ_CONFIGS]:
         if not vq_ok:
             break
-        opts = VQ_CONFIGS[name]
+        opts = dict(VQ_CONFIGS[name])
+        eps = opts.pop("eps", args.eps)  # Amendment 6's rows name their own ridge
         for k, seed in wanted(name):
             if (name, k, seed) in done:
                 log(scene, f"{name} K {k} seed {seed}: row exists")
@@ -471,7 +510,7 @@ def main(argv=None):
             tic = time.perf_counter()
             C, labels, report = vq.gn_vq(
                 x, C0, L0, M_sorted, total_train_pixels,
-                max_iters=args.vq_iters, rel_tol=args.vq_rel_tol, eps=args.eps,
+                max_iters=args.vq_iters, rel_tol=args.vq_rel_tol, eps=eps,
                 topk_at_iter=args.topk_at_iter, topk=args.topk,
                 log=lambda m: log(scene, m), **opts,
             )
@@ -491,6 +530,12 @@ def main(argv=None):
                 "objective_unquantized": report["objective_before_quantization"],
                 "objective_after_quantization": report["objective_after_quantization"],
                 "fraction_outside_warm_range": report["fraction_outside_warm_range_final"],
+                # the warm start's own quantizer range, beside the final codebook's that
+                # `evaluate_row` writes into quant_* (Amendment 6, "Also logged")
+                "warm_quant_mins": report["warm_start"]["quantizer"]["mins"],
+                "warm_quant_maxs": report["warm_start"]["quantizer"]["maxs"],
+                "warm_quant_step": report["warm_start"]["quantizer"]["step"],
+                "ridge_eps": report["ridge_eps"],
                 "vq_iterations": report["iterations"],
                 "vq_stopped_because": report["stopped_because"],
                 "clusters_rejected_by_clip": report["clusters_rejected_by_clip_total"],

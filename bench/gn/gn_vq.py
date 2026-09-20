@@ -19,6 +19,13 @@ It stops when an iteration lowers the objective by less than ``rel_tol`` (1e-3) 
 assignment runs against the dequantized codebook, so the labels point at the values the decoder will
 return. The float centroids are handed to the unchanged library writer, which re-quantizes them;
 ``check_writer_codes`` asserts it produces the codes used here.
+
+``eps`` is the ridge of ``mu``. The pre-registered variant uses ``RIDGE_EPS`` (1e-4, E0's value);
+Amendment 6 adds two exploratory rows at 1e-3 and 1e-2, which differ from it in this number alone.
+The report carries both quantizer ranges, so they can be read side by side (Amendment 6, "Also
+logged"): ``report["quantizer"]`` is the **final** codebook's own min / max / step, the range the
+codec uses when that row is written, and ``report["warm_start"]["quantizer"]`` is the **warm-start**
+codebook's. With the clip on, the first is inside the second by construction.
 """
 
 import os

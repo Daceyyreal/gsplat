@@ -50,15 +50,27 @@ update clipped to the warm-start codebook's range and accepted per cluster only 
 objective drops - because E0 showed that an unclipped refine cuts the GN objective by 3.7-4.0x and
 still loses up to 0.53 dB once the codec's 6-bit, one-global-min/max centroid quantizer has its say.
 
+**Amendment 6** (committed before this notebook was rebuilt) adds two exploratory rows, GN-VQ with
+ridge `eps` = 1e-3 and `eps` = 1e-2 at seed 0 and K = 65,536 on both scenes, identical to the
+pre-registered variant (`eps` = 1e-4) otherwise. They are reported only: G1, the secondary
+comparisons and the rate-distortion curves pick their rows by config name and never see them. Every
+GN-VQ row also logs the final codebook's own quantizer range beside the warm start's.
+
 **Kaggle settings:** accelerator *GPU T4 x2* (garden on GPU 0, bicycle on GPU 1, in parallel),
-Internet *on*. Attach:
+Internet *on*.
 
-1. the **E0 notebook output** - it has `gn_cache/<scene>.pt`, so E1 reuses the GN metric instead of
-   recomputing it (the cache version is unchanged);
-2. the **run-5 notebook output** - checkpoints, seed-0 sort caches, the run-3 clustering caches
-   (`lloyd_wopa_area` seeds 0-2 at K = 65,536) and the gsplat wheel.
+**Attach exactly these inputs:**
 
-To resume a partial E1 run, also attach that session's output (`gn1/`, `gn1_work/`).
+| Attach | What E1 takes from it |
+|---|---|
+| the **run-5 notebook output** (required) | the garden / bicycle checkpoints (`results/benchmark_mcmc_1M_png_compression/<scene>/ckpts/`), the seed-0 PLAS sort caches (`tilequant/sweep/<scene>/cache`), the run-3 `lloyd_wopa_area` clustering caches for seeds 0-2 at K = 65,536 (`tilequant/run3/<scene>/kmeans`) and the gsplat wheel (`wheels/`) |
+| the **E0 notebook output** (recommended) | `gn_cache/<scene>.pt` only - the GN metric, so E1 skips the GN pass. **No E0 result rows are taken:** E0 writes its rows into `gn/`, which is never restored, and the cache holds the metric, not rows. Without it each job recomputes the metric (about 12 s per scene) |
+| **this notebook's own earlier output** (only to resume) | `gn1/`, `gn1_work/` - the rows already measured, the E1 clustering cache and the job logs |
+
+Attaching E0's output cannot put an E0 row into E1's results: `discover` matches only `gn_cache`,
+`gn1` and `gn1_work` and refuses any of the latter two that holds E0 result files, the restore cell
+raises if one ever lands in `gn1/`, the job refuses a `gn1_results_<scene>.csv` whose header is not
+its own, the G1 cell calls `g1.check_rows`, and the bundle takes only E1's own file names.
 
 | Step | What |
 |---|---|
@@ -67,7 +79,7 @@ To resume a partial E1 run, also attach that session's output (`gn1/`, `gn1_work
 | 3 | install gsplat (`bench/gn-vq`, restored wheel when its key matches), example dependencies |
 | 4 | **CUDA smoke tests** (`bench/gn/selftest.py`): scene-fixture hashes, SH basis, toy exactness, end-to-end exactness, and `linalg_scale` at the job's sizes (the eigendecomposition now starts at 8,192, the batch E0 found works) |
 | 5 | MipNeRF360 data for garden and bicycle |
-| 6 | E1 jobs: garden on `cuda:0`, bicycle on `cuda:1` (`kaggle/gn_e1_scene.py`). Each job's exit code and last 200 log lines are bundled, pass or fail |
+| 6 | E1 jobs: garden on `cuda:0`, bicycle on `cuda:1` (`kaggle/gn_e1_scene.py`), 21 rows per scene. Each job's exit code and last 200 log lines are bundled, pass or fail |
 | 7 | **G1 verdict** (`bench/gn/g1.py` -> `gn1_g1.json`): the size rule, the per-seed table, the dominance flags, the secondary weightings and the rate-distortion curves with BD-rate |
 | 8 | `gn1_bundle.zip` (top-level csv / json / png of `gn1/`) |
 """
@@ -89,7 +101,8 @@ BRANCH = "bench/gn-vq"
 SCENES = ["garden", "bicycle"]  # job i runs on GPU i
 CAP_MAX = 1_000_000
 RESULT_NAME = "benchmark_mcmc_1M_png_compression"
-CONFIGS = "lloyd_wopa_area,lloyd_trace,lloyd_c3dgs,gn_vq,gn_vq_noclip,gn_vq_noqassign"
+CONFIGS = ("lloyd_wopa_area,lloyd_trace,lloyd_c3dgs,gn_vq,gn_vq_noclip,gn_vq_noqassign"
+           ",gn_vq_eps1e3,gn_vq_eps1e2")  # the last two are Amendment 6, exploratory
 K_VALUES = "4096,16384,65536"  # G1 at 65,536; the others are the seed-0 rate-distortion grid
 SEEDS = "0,1,2"  # G1 is judged over the three k-means seeds
 
@@ -201,14 +214,38 @@ def write_log_tails(jobs, out_dir, n_lines=200):
     return written
 
 
+# E1 reuses E0's gn_cache/ and normally runs with E0's notebook output attached. Everything below
+# keeps E0's rows out of E1's results: E0 writes them into `gn/` (gn_results_<scene>.csv, gn_g0.json,
+# gn_selftest.json) and E1 into `gn1/`, and the restore cell never copies `gn/` or `gn_work/`.
+# `gn_cache/` is the one directory deliberately shared, and it holds the GN metric, no rows.
+E0_RESULT_FILES = ("gn_g0.json", "gn_selftest.json", "gn_results_garden.csv", "gn_results_bicycle.csv")
+
+
+def e0_artifacts(d):
+    """E0 result files sitting directly in d; empty for an E1 output or a fresh directory."""
+    if not os.path.isdir(d):
+        return []
+    return sorted(n for n in os.listdir(d) if n in E0_RESULT_FILES)
+
+
+def is_e1_file(name):
+    """E1's own bundled file names: gn1_*, the per-job log tails, timings.json."""
+    return name.startswith("gn1_") or name.startswith("gn_e1_") or name == "timings.json"
+
+
 def write_bundle(out_dir, bundle_path, arc="gn1"):
-    """Zip the top-level csv / json / png files of out_dir under arc/; returns their names."""
+    """Zip the top-level csv / json / png files of out_dir under arc/; returns their names.
+    A file that is not E1's own is skipped with a warning rather than bundled: this runs in the
+    jobs cell's `finally`, so it must never raise and hide a job failure."""
     import zipfile
 
-    names = sorted(
-        n for n in os.listdir(out_dir)
-        if os.path.isfile(os.path.join(out_dir, n)) and n.rsplit(".", 1)[-1].lower() in ("csv", "json", "png")
-    )
+    names, foreign = [], []
+    for n in sorted(os.listdir(out_dir)):
+        if not (os.path.isfile(os.path.join(out_dir, n)) and n.rsplit(".", 1)[-1].lower() in ("csv", "json", "png")):
+            continue
+        (names if is_e1_file(n) else foreign).append(n)
+    if foreign:
+        print(f"WARNING: not bundled, not E1 output: {foreign}", flush=True)
     with zipfile.ZipFile(bundle_path + ".tmp", "w", zipfile.ZIP_DEFLATED) as z:
         for n in names:
             z.write(os.path.join(out_dir, n), arcname=f"{arc}/{n}")
@@ -265,7 +302,13 @@ def discover(root, scenes, max_depth=6):
         if name == "wheels" and found["wheels"] is None:
             found["wheels"] = dirpath
         if name in ("gn_cache", "gn1", "gn1_work") and found[name] is None and depth > 0:
-            found[name] = dirpath
+            # `gn/` and `gn_work/` (E0's output directories) do not match these names. This also
+            # refuses a directory named like E1's that holds E0 result files, so no E0 row can be
+            # restored into E1's output directory.
+            if name == "gn_cache" or not e0_artifacts(dirpath):
+                found[name] = dirpath
+            else:
+                print(f"ignoring {dirpath}: E0 result files {e0_artifacts(dirpath)}, not E1 output")
     return found
 
 
@@ -303,8 +346,19 @@ for key, dst in (("gn_cache", GN_CACHE), ("gn1", GN1_OUT), ("gn1_work", GN1_WORK
         print(f"restoring {FOUND[key]} -> {dst}")
         shutil.copytree(FOUND[key], dst, dirs_exist_ok=True)
 record_timing("restore_s", time.time() - t0)
-print("checkpoints:", CKPTS, "\nrun-3 caches:", RUN3_KMEANS,
-      "\nGN caches:", sorted(os.listdir(GN_CACHE)) if os.path.isdir(GN_CACHE) else [])
+# E1's output directory must hold only E1's own files. E0's results live in `gn/`, which is
+# never restored; this raises before any install if one ever reaches `gn1/`, instead of letting
+# it into the CSVs, G1 or the bundle. Nothing is deleted.
+stray = e0_artifacts(GN1_OUT)
+if stray:
+    raise RuntimeError(f"{GN1_OUT} holds E0 result files {stray}. E1 reports only rows it produced; "
+                       "move them aside (E0's bundle belongs in kaggle/gn_e0/)")
+print("checkpoints (run 5):", CKPTS,
+      "\nrun-3 lloyd_wopa_area caches (run 5):", RUN3_KMEANS,
+      "\nGN metric caches (E0) - the metric only, no rows:",
+      sorted(os.listdir(GN_CACHE)) if os.path.isdir(GN_CACHE) else [],
+      "\nE1 output restored (this notebook's own earlier run, for resume):",
+      sorted(os.listdir(GN1_OUT)) if os.path.isdir(GN1_OUT) else [])
 """
 )
 
@@ -503,6 +557,12 @@ for scene in SCENES:
     path = f"{GN1_OUT}/gn1_results_{scene}.csv"
     if os.path.exists(path):
         rows += list(csv.DictReader(open(path, newline="")))
+# Only rows E1 produced are judged. The files read above are E1's own (gn1_results_<scene>.csv in
+# gn1/, which the restore cell keeps free of E0 output, and whose header the job checks), and
+# check_rows refuses any scene or config that is not E1's. The exploratory rows - the two ablations
+# of Amendment 5 e and the two ridge rows of Amendment 6 - are in this list but picked by nothing:
+# g1 selects G1's rows, the secondaries and the RD curves by config name.
+print("G1 input:", json.dumps(g1.check_rows(rows, SCENES), indent=2))
 verdict = g1.judge_g1(rows)
 json.dump(verdict, open(f"{GN1_OUT}/gn1_g1.json", "w"), indent=2)
 summary = {
@@ -530,8 +590,9 @@ print(json.dumps(summary, indent=2))
 df = pd.DataFrame(rows)
 cols = ["scene", "config", "n_clusters", "seed", "source", "predicted", "objective_unquantized",
         "objective_after_quantization", "measured_train_clamped", "measured_test_clamped", "PSNR",
-        "SSIM", "LPIPS", "train_PSNR", "size_bytes", "shN_centroids_bytes", "quant_step",
-        "fraction_outside_warm_range", "vq_iterations", "vq_stopped_because",
+        "SSIM", "LPIPS", "train_PSNR", "size_bytes", "shN_centroids_bytes", "ridge_eps",
+        "quant_mins", "quant_maxs", "quant_step", "warm_quant_mins", "warm_quant_maxs",
+        "warm_quant_step", "fraction_outside_warm_range", "vq_iterations", "vq_stopped_because",
         "clusters_rejected_by_clip", "writer_codes_equal"]
 display(df[[c for c in cols if c in df.columns]])
 if verdict["complete"]:

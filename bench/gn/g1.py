@@ -17,6 +17,11 @@ negative whatever its PSNR difference is, which is what makes the verdict fail.
 Reported, never part of the verdict: a per-seed dominance flag (bytes <= and test PSNR >= the
 baseline's), the same comparison for the secondary weightings (Amendment 5 d), and rate-distortion
 curves with BD-rate over the K grid at seed 0.
+
+Every comparison here picks its rows by config name (``_pick``), so the exploratory rows - the two
+ablations of Amendment 5 e and the two ridge rows of Amendment 6 - are never read by G1, by a
+secondary comparison or by a rate-distortion curve. ``check_rows`` is the other half of that: it
+refuses a row that is not one of E1's own, so a foreign file cannot reach a verdict unnoticed.
 """
 
 import math
@@ -25,6 +30,10 @@ from typing import Dict, Iterable, List, Optional, Sequence
 GNVQ = "gn_vq"
 BASELINE = "lloyd_wopa_area"
 SECONDARIES = ("lloyd_trace", "lloyd_c3dgs")
+# Reported only, and picked by no comparison: Amendment 5 e's ablations and Amendment 6's ridge rows.
+EXPLORATORY = ("gn_vq_noclip", "gn_vq_noqassign", "gn_vq_eps1e3", "gn_vq_eps1e2")
+UNCOMPRESSED = "uncompressed"
+KNOWN_CONFIGS = (BASELINE, GNVQ) + SECONDARIES + EXPLORATORY + (UNCOMPRESSED,)
 SCENES = ("garden", "bicycle")
 SEEDS = (0, 1, 2)
 K_DEFAULT = 65536
@@ -51,6 +60,32 @@ def _pick(
         and int(float(r.get("seed", -1))) == seed
     ]
     return found[-1] if found else None
+
+
+def check_rows(
+    rows: Iterable[Dict],
+    scenes: Sequence[str] = SCENES,
+    configs: Sequence[str] = KNOWN_CONFIGS,
+) -> Dict:
+    """Assert that every row is one E1 produced, and count them per scene and config.
+
+    E1 reuses E0's ``gn_cache/`` and normally runs with E0's notebook output attached, so this is
+    the check that G1's input holds only E1's rows: a scene or a config that is not E1's own raises
+    before any verdict is computed. It is a guard on the input, not a rule; it reads no number."""
+    rows = list(rows)
+    bad_scene = sorted({str(r.get("scene")) for r in rows} - set(scenes))
+    bad_config = sorted({str(r.get("config")) for r in rows} - set(configs))
+    if bad_scene or bad_config:
+        raise RuntimeError(
+            f"not E1 rows: unknown scenes {bad_scene}, unknown configs {bad_config}. G1 is judged "
+            f"only on rows E1 produced (scenes {list(scenes)}, configs {list(configs)})"
+        )
+    counts: Dict[str, Dict[str, int]] = {}
+    for r in rows:
+        counts.setdefault(str(r.get("scene")), {})
+        key = str(r.get("config"))
+        counts[str(r.get("scene"))][key] = counts[str(r.get("scene"))].get(key, 0) + 1
+    return {"n_rows": len(rows), "per_scene": counts}
 
 
 def compare_seed(row: Dict, base: Dict) -> Dict:

@@ -7,10 +7,12 @@ and a fake ``simple_trainer.Runner`` over the brute-force renderer. ``PngCompres
 shrunk to {16, 32, 64}, with 64 standing in for G1's 65,536.
 
 Stages: (0) the E1 notebook's cells compile and its smoke cell runs `selftest.py` before the data and
-job cells; (1) both scenes: all 19 rows, the warm-start sources (seed 2 has no run-3 cache, so it is
-reclustered), the clip and the codec's codes, the GN-VQ reports and the ablations; (2) resume runs
-nothing again; (3) the notebook's G1 cell (size rule, dominance, secondaries, rate-distortion with
-BD-rate) and its bundle.
+job cells; (1) both scenes: all 21 rows, the warm-start sources (seed 2 has no run-3 cache, so it is
+reclustered), the clip and the codec's codes, the GN-VQ reports, the ablations and Amendment 6's two
+ridge rows with both quantizer ranges; (2) resume runs nothing again; (3) the notebook's G1 cell
+(size rule, dominance, secondaries, rate-distortion with BD-rate) and its bundle; (4) the E0/E1
+output isolation: E1 reads, judges and bundles only rows it produced, although E0's output is
+attached for its GN cache.
 
     python bench/gn/dryrun/dryrun_gn_e1.py
 
@@ -59,7 +61,9 @@ EXPECTED = (
     + [("lloyd_c3dgs", KDEF, s) for s in SEEDS]
     + [("gn_vq", KDEF, s) for s in SEEDS]
     + [("gn_vq", k, 0) for k in KS if k != KDEF]
-    + [("gn_vq_noclip", KDEF, 0), ("gn_vq_noqassign", KDEF, 0), ("uncompressed", 0, 0)]
+    + [("gn_vq_noclip", KDEF, 0), ("gn_vq_noqassign", KDEF, 0)]
+    + [("gn_vq_eps1e3", KDEF, 0), ("gn_vq_eps1e2", KDEF, 0)]  # Amendment 6, exploratory
+    + [("uncompressed", 0, 0)]
 )
 
 
@@ -137,6 +141,13 @@ for scene in SCENES:
         for col in ("predicted", "measured_train_clamped", "measured_test_clamped", "PSNR",
                     "train_PSNR", "size_bytes", "quant_mins", "quant_maxs", "quant_step"):
             assert r[col] not in ("", "nan"), (scene, key, col)
+        if r["config"].startswith("gn_vq"):  # Amendment 6: both ranges on every GN-VQ row
+            for col in ("warm_quant_mins", "warm_quant_maxs", "warm_quant_step", "ridge_eps"):
+                assert r[col] not in ("", "nan"), (scene, key, col)
+            assert float(r["warm_quant_step"]) > 0
+            if r["config"] != "gn_vq_noclip":  # the clip keeps the written range inside the warm one
+                assert float(r["warm_quant_mins"]) <= float(r["quant_mins"]), key
+                assert float(r["quant_maxs"]) <= float(r["warm_quant_maxs"]), key
         assert r["writer_codes_equal"] == "True", (key, r["writer_codes_equal"])
         assert float(r["quant_step"]) > 0 and r["valid"] == "True"
         assert json.loads(r["file_bytes"]) and int(r["size_bytes"]) > 0
@@ -164,15 +175,25 @@ for scene in SCENES:
             assert lo <= rep["quantizer"]["mins"] and rep["quantizer"]["maxs"] <= hi
         if name == "gn_vq_noqassign":
             assert rep["final_assignment_labels_changed_fraction"] == 0.0
+        expected_eps = {"gn_vq_eps1e3": 1e-3, "gn_vq_eps1e2": 1e-2}.get(name, vq.RIDGE_EPS)
+        assert rep["ridge_eps"] == expected_eps == float(row["ridge_eps"]), (name, rep["ridge_eps"])
+        assert rep["warm_start"]["quantizer"] == {
+            "mins": float(row["warm_quant_mins"]), "maxs": float(row["warm_quant_maxs"]),
+            "step": float(row["warm_quant_step"]), "bits": 6, "levels": 63,
+        }, name
     meta = json.load(open(os.path.join(out_dir, f"gn1_meta_{scene}.json")))
     assert meta["done"] and meta["render_parity"]["pass"] and meta["gn"]["finite_check"]["finite"]
     assert meta["lifted_check"]["pass"] and meta["gn"]["cache_key"].startswith("v1|")
     assert meta["linalg"]["op_max_batch"]["linalg_eigvalsh"] == 8192
     assert "working_batches" in meta["linalg"] and meta["seeds"] == SEEDS
+    by_config = meta["gn_vq"]["ridge_eps_by_config"]
+    assert by_config["gn_vq"] == vq.RIDGE_EPS and by_config["gn_vq_eps1e3"] == 1e-3
+    assert by_config["gn_vq_eps1e2"] == 1e-2
 print(
-    "(1) garden + bicycle: 19 rows each (G1's 3 seeds, the 2 secondary weightings, the seed-0 K grid, "
-    "2 ablations, uncompressed), warm-start sources including the reclustered seed 2, the codec's "
-    "codes reproduced by the writer, GN-VQ reports monotone with the clip holding: ok"
+    "(1) garden + bicycle: 21 rows each (G1's 3 seeds, the 2 secondary weightings, the seed-0 K grid, "
+    "2 ablations, Amendment 6's 2 ridge rows, uncompressed), warm-start sources including the "
+    "reclustered seed 2, the codec's codes reproduced by the writer, GN-VQ reports monotone with the "
+    "clip holding, each row's ridge and both quantizer ranges: ok"
 )
 
 # (2) resume: nothing is recomputed and nothing is evaluated again
@@ -237,6 +258,7 @@ for f in (
     assert f in names, (f, names)
 assert all(n.startswith("gn1/") and n.count("/") == 1 for n in names), names
 assert not any("gn_cache" in n or n.endswith(".pt") for n in names), names
+names = [n.split("/", 1)[1] for n in names]  # stage (4) compares plain file names
 assert sorted(os.listdir(os.path.join(ROOT, "gn_cache"))) == ["bicycle.pt", "garden.pt"]
 print(
     f"(3) notebook G1 cell -> verdict {verdict['verdict']!r} on toy data (size rule, "
@@ -246,6 +268,79 @@ print(
     f"{ {s: round(verdict['rd']['scenes'][s]['bd_rate_vs_lloyd_wopa_area']['gn_vq'], 2) for s in SCENES} }"
     f"), plot; bundle {len(names)} files, no gn_cache/: ok"
 )
+# (4) E1 reuses E0's gn_cache/ and runs with E0's output attached, so nothing E0 produced may reach
+# E1's CSVs, G1 or the bundle. Every layer is checked here on a fake /kaggle/input holding both.
+import gn_e0_scene as e0job  # noqa: E402
+
+inp = os.path.join(ROOT, "input")
+e0_out = os.path.join(inp, "e0_notebook", "gn")  # E0's results: never restored
+os.makedirs(e0_out)
+os.makedirs(os.path.join(inp, "e0_notebook", "gn_cache"))  # E0's GN metric: the shared input
+os.makedirs(os.path.join(inp, "e0_notebook", "gn_work"))
+for name in ("gn_g0.json", "gn_selftest.json"):
+    open(os.path.join(e0_out, name), "w").write("{}")
+with open(os.path.join(e0_out, "gn_results_garden.csv"), "w", newline="") as f:
+    w = csv.DictWriter(f, fieldnames=e0job.COLUMNS)
+    w.writeheader()
+    row0 = {k: "" for k in e0job.COLUMNS}
+    row0.update(scene="garden", config="gn_refine_ridge", n_clusters="64", seed="0", PSNR="99")
+    w.writerow(row0)
+open(os.path.join(inp, "e0_notebook", "gn_cache", "garden.pt"), "wb").write(b"")
+
+ns4 = {}
+exec(cfg_cell.replace('WORK = "/kaggle/working"', f"WORK = {ROOT!r}"), ns4)
+restore_cell = next(s for s in srcs if "def discover" in s)
+exec(compile(restore_cell.split("FOUND = discover")[0], "<cell>", "exec"), ns4)
+assert os.path.normpath(ns4["GN1_OUT"]) == os.path.normpath(out_dir), ns4["GN1_OUT"]
+
+# a. discover takes E0's gn_cache and nothing else of E0's: `gn/` and `gn_work/` match no slot
+found = ns4["discover"](inp, SCENES)
+assert found["gn_cache"] and os.path.basename(found["gn_cache"]) == "gn_cache", found
+assert found["gn1"] is None and found["gn1_work"] is None, found
+# b. ... and it refuses even a directory named like E1's that holds E0 result files
+shutil.copytree(e0_out, os.path.join(inp, "disguised", "gn1"))
+assert ns4["discover"](inp, SCENES)["gn1"] is None, "an E0 output was accepted as E1 output"
+assert ns4["e0_artifacts"](e0_out) == [
+    "gn_g0.json", "gn_results_garden.csv", "gn_selftest.json"
+], ns4["e0_artifacts"](e0_out)
+assert ns4["e0_artifacts"](out_dir) == [], "E1's own output looks like E0's"
+# c. the job refuses a results CSV that is not its own, before any GPU work, and deletes nothing
+probe = os.path.join(ROOT, "probe")
+os.makedirs(probe, exist_ok=True)
+foreign_csv = os.path.join(probe, "gn1_results_garden.csv")
+shutil.copy2(os.path.join(e0_out, "gn_results_garden.csv"), foreign_csv)
+try:
+    job.assert_e1_csv(foreign_csv)
+    raise AssertionError("an E0 CSV was accepted under an E1 name")
+except RuntimeError as exc:
+    assert "not an E1 result file" in str(exc), exc
+assert os.path.exists(foreign_csv)
+job.assert_e1_csv(os.path.join(out_dir, "gn1_results_garden.csv"))  # E1's own passes
+# d. an E0 file inside gn1/ is caught by the restore check and never bundled
+shutil.copy2(os.path.join(e0_out, "gn_g0.json"), os.path.join(out_dir, "gn_g0.json"))
+assert ns4["e0_artifacts"](out_dir) == ["gn_g0.json"]  # what the restore cell raises on
+names4 = ns4["write_bundle"](out_dir, os.path.join(ROOT, "gn1_bundle.zip"))
+assert "gn_g0.json" not in names4 and all(ns4["is_e1_file"](n) for n in names4), names4
+assert sorted(names4) == sorted(names), "the bundle changed apart from the skipped file"
+os.remove(os.path.join(out_dir, "gn_g0.json"))
+# e. G1's input check refuses E0 rows and accepts exactly E1's
+e0_rows = list(csv.DictReader(open(os.path.join(e0_out, "gn_results_garden.csv"), newline="")))
+try:
+    g1.check_rows(rows_of("garden") + e0_rows, SCENES)
+    raise AssertionError("E0 rows reached G1")
+except RuntimeError as exc:
+    assert "not E1 rows" in str(exc), exc
+counts = g1.check_rows(rows_of("garden") + rows_of("bicycle"), SCENES)
+assert counts["n_rows"] == len(SCENES) * len(EXPECTED), counts
+assert set(counts["per_scene"]["garden"]) == {c for c, _k, _s in EXPECTED}
+print(
+    "(4) isolation with E0's output attached: discover takes only its gn_cache (the metric, no "
+    "rows) and refuses an E0 directory in E1's slots; the job refuses a foreign results CSV without "
+    "deleting it; an E0 file in gn1/ is caught by the restore check and skipped by the bundle; "
+    f"g1.check_rows refuses E0 rows and counts {counts['n_rows']} E1 rows over {len(SCENES)} "
+    "scenes: ok"
+)
+
 print(
     "GN E1 DRY RUN OK",
     "(scratch kept: " + ROOT + ")" if os.environ.get("GN_DRYRUN_KEEP") == "1" else "",
