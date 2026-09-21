@@ -1,8 +1,9 @@
 # Handoff: gsplat `PngCompression` benchmark (`bench/tilequant`, `bench/gn-vq`)
 
 For a fresh session. Results live in `kaggle/FINDINGS.md`; this file covers how the work is organized.
-Runs 1-5 are on `bench/tilequant`. E0 (a Gauss-Newton metric for shN) is on `bench/gn-vq`: see
-"E0 notebook" below and `kaggle/PREREG_GN.md`.
+Runs 1-5 are on `bench/tilequant`. E0 (a Gauss-Newton metric for shN), E1 (GN-VQ, G1 failed) and E2
+(GN-VQ on held-out scenes, built, not run) are on `bench/gn-vq`: see the E0, E1 and E2 notebook sections
+below and `kaggle/PREREG_GN.md`.
 
 ## Context and rules
 
@@ -33,7 +34,7 @@ Upstream main at the time of this work: `28e794c`.
 | `feat/png-tile-quantization` (`3ff67e8`) | `PngCompression(tile_size=, bits=)` | benchmark said no PR; leave alone |
 | `feat/png-weighted-kmeans` (`61cd1baf`) | `gsplat/compression/kmeans.py` + `kmeans_backend` / `kmeans_weighting` / `kmeans_chunk_size`, off upstream main `28e794c`; `tests/test_kmeans.py`. Commits `9348e32` (backend + options), `a4c31082` (`kmeans_chunk_size`), `61cd1baf` (default flip, droppable) | **upstream PR [#1063](https://github.com/nerfstudio-project/gsplat/pull/1063), open** (opened 2026-09-18), measured by run 5. Keep this branch clean: library only (3 files). Upstream main had not moved on 2026-09-18. |
 | `bench/tilequant` | both feat branches merged + benchmark code and results; never goes upstream | runs 1-5 done; head = `git log -1 fork/bench/tilequant`. The blog post links its FINDINGS, so keep those numbers stable. |
-| `bench/gn-vq` | off `bench/tilequant` (`12f912eb`): the E0 / E1 pre-registration (Amendments 1-5), `bench/gn/` (GN metric, diagnostics, G0 and G1 rules, GN-VQ, smoke tests, scene fixtures), the E0 and E1 jobs and notebooks, and E0's results; never goes upstream | **E0 done: G0 passed** (2026-09-20, `kaggle/gn_e0/gn/`, FINDINGS section 8). **E1 is built, not run.** `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
+| `bench/gn-vq` | off `bench/tilequant` (`12f912eb`): the E0 / E1 / E2 pre-registration (Amendments 1-7), `bench/gn/` (GN metric, diagnostics, G0 / G1 / G2 rules, GN-VQ, smoke tests, scene fixtures), the E0, E1 and E2 jobs and notebooks, and E0's and E1's results; never goes upstream | **E0 done: G0 passed** (2026-09-20, `kaggle/gn_e0/gn/`, FINDINGS section 8). **E1 done: G1 failed** on the size rule (`kaggle/gn_e1/gn1/`, FINDINGS section 9). **E2 is built, not run** (Amendment 7). `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
 
 Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): `PR_DRAFT_weighted_kmeans.md`,
 `PR_DRAFT_empty_tensor.md`, `ISSUE_566_COMMENT.md`, `ISSUE_787_COMMENT.md`.
@@ -54,13 +55,16 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `FINDINGS.md` | results write-up, every number from the committed bundles |
 | `HANDOFF.md` | this file |
 | `run2/tilequant/` ... `run5/tilequant/` | results bundles (`results_bundle.zip` contents); each session restores the previous one, so files repeat (git stores them once). In `run5/`, `run5_tt_table.csv` and `rd_run5.png` were regenerated locally after the label fix `1b4d40f8` (see FINDINGS sources); the downloaded original is `~/Downloads/results_bundle (3).zip` |
-| `PREREG_GN.md` | E0 / E1 pre-registration (`bench/gn-vq`): G0 rule, validity checks, exploratory scope, G1 for E1. Amendment 1: the toy check. Amendment 2: G0 over 9 codebooks per scene with tie-exempt pairs, and exact-assignment refines instead of the shortlist one. Amendment 3: the G0 verdict is the ranking alone (the ratio is reported as calibration), the end-to-end exactness check, the lifted-check criterion v2, and a proximal rise invalidating that variant instead of stopping. Amendment 4: the toy and end-to-end scenes are committed fixtures with pinned hashes (a correction: the CUDA toy check would have drawn a different scene from the simulated one), end-to-end preconditions read from gsplat's render, and a report-only probe-noise diagnostic. Amendment 5 (after G0 passed, before any E1 code): E1's GN-VQ variant, the one-sided size matching that G1's last sentence delegates, the reported secondaries and the exploratory ablations. Amendment 6 (2026-09-21, before any E1 run): two more exploratory rows, GN-VQ at ridge `eps` = 1e-3 and 1e-2, seed 0 at K = 65,536 on both scenes, not judged by anything; and the final codebook's own quantizer range logged beside the warm start's. **Never edit a rule after results exist**; add a dated amendment instead. |
+| `PREREG_GN.md` | E0 / E1 pre-registration (`bench/gn-vq`): G0 rule, validity checks, exploratory scope, G1 for E1. Amendment 1: the toy check. Amendment 2: G0 over 9 codebooks per scene with tie-exempt pairs, and exact-assignment refines instead of the shortlist one. Amendment 3: the G0 verdict is the ranking alone (the ratio is reported as calibration), the end-to-end exactness check, the lifted-check criterion v2, and a proximal rise invalidating that variant instead of stopping. Amendment 4: the toy and end-to-end scenes are committed fixtures with pinned hashes (a correction: the CUDA toy check would have drawn a different scene from the simulated one), end-to-end preconditions read from gsplat's render, and a report-only probe-noise diagnostic. Amendment 5 (after G0 passed, before any E1 code): E1's GN-VQ variant, the one-sided size matching that G1's last sentence delegates, the reported secondaries and the exploratory ablations. Amendment 6 (2026-09-21, before any E1 run): two more exploratory rows, GN-VQ at ridge `eps` = 1e-3 and 1e-2, seed 0 at K = 65,536 on both scenes, not judged by anything; and the final codebook's own quantizer range logged beside the warm start's. Amendment 7 (2026-09-21, after E1's results, before any E2 code): G1 failed as pre-registered and is not amended; the project's deviation, stated as one (it continues on Amendment 5 d's rate-distortion evidence; garden and bicycle become development scenes); E2's variant (eps = 1e-2, 20 iterations), 9 held-out scenes, 4 configs x 4 K, G2a (gate) and H2b (reported). **Never edit a rule after results exist**; add a dated amendment instead. |
 | `gn_e0/gn/` | the E0 results bundle, unpacked as downloaded (22 files); FINDINGS section 8 quotes it |
+| `gn_e1/gn1/` | the E1 results bundle, unpacked as downloaded (28 files); FINDINGS section 9 quotes it |
+| `gn_e2_scene.py` | E2, one scene per process (Amendment 7): `upstream_l1`, `lloyd_wopa_area`, `lloyd_trace` and `gn_vq` (eps 1e-2, 20 iterations) at K = 1,024-65,536, seed 0, plus `uncompressed`. Checks the checkpoint's pinned sha1 first, downloads and later deletes its own scene, reuses E0's / E1's modules unchanged; resumable per (config, K) |
+| `build_gn_e2_bench.py` / `gn_e2_bench.ipynb` | E2 notebook (build output; edit the builder, never the JSON). E0's and E1's notebooks are left exactly as they ran |
 | `gn_e1_scene.py` | E1, one scene per process: the G1 baseline and GN-VQ at K = 65,536 for seeds 0-2, the two secondary weightings, the seed-0 K grid, the two ablations and an `uncompressed` row. Reuses E0's GN cache; resumable per (config, K, seed) |
 | `build_gn_e1_bench.py` / `gn_e1_bench.ipynb` | E1 notebook (build output; edit the builder, never the JSON). E0's notebook is left exactly as it ran |
 | `gn_e0_scene.py` | E0, one scene per process: render parity, GN pass (`gn_cache/<scene>.pt`), spectrum, Spearman, the 9 G0 codebooks (predicted vs measured, test and train GT metrics, reproduction fields at K = 65,536), the lifted-assignment check (gates only the refines), the ridge / proximal refines (a proximal rise marks that row invalid). Resumable per (scene, config, K, seed). |
 | `build_gn_bench.py` / `gn_bench.ipynb` | E0 notebook (build output; edit the builder, never the JSON) |
-| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` / `g1.py` (the G0 and G1 rules as code), `gn_vq.py` (E1's variant and the codec's quantizer), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (56 CPU tests), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0 and E1 dry runs and the writer-parity check; not collected by pytest) |
+| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` / `g1.py` / `g2.py` (the G0, G1 and G2a / H2b rules as code), `gn_vq.py` (E1's variant and the codec's quantizer), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (66 CPU tests), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1 and E2 dry runs and the writer-parity check; not collected by pytest) |
 | `.gitignore` | ignores only the 64 run-5 bundle files that were unpacked flat into `kaggle/` by hand (anchored names; nothing deleted; the committed copy is `run5/tilequant/`) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
@@ -325,6 +329,10 @@ verdict was `pass`, and FINDINGS section 8 quotes the files. Nothing in E0 is le
 
 ## E1 notebook (`bench/gn-vq`, `kaggle/gn_e1_bench.ipynb`)
 
+**Done (run 2026-09-20, bundle committed 2026-09-21): G1 failed, on the size rule, on all six seeds.**
+The bundle is unpacked unchanged in `kaggle/gn_e1/gn1/` (28 files) and FINDINGS section 9 quotes it.
+Nothing in E1 is left to run; the notebook stays as it ran. What follows is how it was run.
+
 E1 judges **G1**: does GN-VQ beat `lloyd_wopa_area` at equal size? The variant, the size matching, the
 secondaries and the ablations were fixed in `PREREG_GN.md` **Amendment 5**, after G0 passed and before
 any E1 code; **Amendment 6** (2026-09-21, before any E1 run) adds two more exploratory rows and one
@@ -419,6 +427,87 @@ the writer codes, the GN-VQ reports with each row's ridge and both quantizer ran
 notebook's G1 and bundle cells, and stage (4), the E0/E1 output isolation on a fake `/kaggle/input`
 holding both outputs). Rebuild the notebook with `python kaggle/build_gn_e1_bench.py` before the dry
 run.
+
+## E2 notebook (`bench/gn-vq`, `kaggle/gn_e2_bench.ipynb`)
+
+E2 is **pre-registered in `PREREG_GN.md` Amendment 7** (after E1's results, before any E2 code). G1
+failed and is not amended; the project continues on the rate-distortion evidence Amendment 5 d
+pre-registered for that case, which is a deviation and is stated as one. Garden and bicycle are now
+development scenes; the gate is on **9 held-out scenes**. E0's and E1's notebooks, builders and jobs are
+untouched.
+
+**Kaggle steps:**
+
+1. Import the notebook from
+   `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e2_bench.ipynb`.
+2. Attach the inputs in the table below.
+3. GPU T4 x2, Internet on. Save & Run All.
+4. Bring back `/kaggle/working/gn2_bundle.zip` (look in `~/Downloads`).
+
+**Inputs to attach, and what each is for.** The restore cell copies only these.
+
+| Attach | Required | What E2 takes from it, and why |
+|---|---|---|
+| the **run-5 notebook output** | yes | the 11 MCMC-1M checkpoints: `results/benchmark_mcmc_1M_png_compression/<scene>/ckpts/ckpt_29999_rank0.pt` for the 9 MipNeRF360 scenes and `results/benchmark_tt_mcmc_1M_png_compression/<scene>/ckpts/ckpt_29999_rank0.pt` for train and truck; the 11 seed-0 PLAS sort caches (`tilequant/sweep/<scene>/cache`); the K = 65,536 clustering caches `tilequant/run3/<scene>/kmeans` (garden, bicycle) and `tilequant/run4/<scene>/kmeans` (the 7 other MipNeRF360 scenes), of which only `lloyd_wopa_area_s0.pt` and `manhattan_log_s0.pt` are copied; the gsplat wheel (`wheels/`). **Every checkpoint's sha1 is checked against Amendment 7's pin, and a missing checkpoint or sort cache or a wrong sha1 stops the notebook before any install** |
+| the **E0 or E1 notebook output** | no | `gn_cache/garden.pt`, `gn_cache/bicycle.pt`: the GN metric, so those two jobs skip a GN pass of about 12 s each. No E0 or E1 result row is read: their rows are in `gn/` and `gn1/`, which match no restore slot, and an E2-named directory holding E0 / E1 result files is refused |
+| **this notebook's own earlier output** | only to resume | `gn2/` (the rows measured so far, the GN-VQ reports) and `gn2_work/` (the E2 clustering cache, the job logs). Every (config, K) row resumes on its own. Only the first `gn_cache/` found is restored, so with several outputs attached a scene may redo its GN pass (about 12 s on garden); the cache key makes any mix safe |
+
+**What it does:**
+
+- **Restore** (above), then **install**: the restored run-5 wheel when its key matches, TorchPQ + cupy
+  (for `upstream_l1`), the example dependencies.
+- **CUDA smoke tests** (`bench/gn/selftest.py`, as in E0 and E1) -> `gn2_selftest.json`; a failure
+  stops the notebook before any scene job.
+- **Scene jobs** (`kaggle/gn_e2_scene.py`), each on the first free GPU in this order: train, truck
+  (the longest jobs first), stump, bonsai, counter, kitchen, room, treehill, flowers, then garden and
+  bicycle. Each job:
+  - checks the checkpoint's sha1 and loads the cached sort order before any download or GPU work;
+  - downloads its own scene (run 4's MipNeRF360 downloader, run 5's Tanks & Temples one; one download
+    at a time) with the data factor of `mcmc.sh` / `mcmc_tt.sh` (4 outdoor, 2 indoor, 1 for T&T);
+  - checks render parity, computes or reuses the GN metric, checks the lifted assignment once;
+  - writes 17 rows, per K the G2a pair (`lloyd_wopa_area`, then `gn_vq` warm-started from it) first,
+    then `lloyd_trace` and `upstream_l1`, then `uncompressed`;
+  - deletes the scene's data at the end.
+  A failed job does not stop the others. No job starts after 9.5 h of notebook time, so a started
+  Tanks & Temples job still ends inside Kaggle's 12 h. Each job's exit code and last 200 log lines are
+  bundled.
+- **G2 cell** (`bench/gn/g2.py` -> `gn2_g2.json`, `gn2_rd.png`): G2a (the gate), H2b (reported), and the
+  reported extras. Then the **bundle cell**, which raises last if a scene job failed.
+
+**The verdicts (Amendment 7 f-g, `g2.py`):** per held-out scene, the BD-rate of `gn_vq` against the
+comparator over the four points (degree-3 Bjontegaard, defined only if the curves share a PSNR
+range): a win if below 0; if undefined, the BD-PSNR over the shared byte range decides (a win if above
+0); if neither is defined, a loss; a missing row makes the scene incomplete. **G2a** (against
+`lloyd_wopa_area`) passes with at least 8 of 9 wins and a mean BD-rate of at most -5% over the held-out
+scenes where it is defined (not met if none is). **H2b** (against `lloyd_trace`) holds with at least 7
+of 9 wins. Verdict order `incomplete` > `fail` > `pass`. Garden and bicycle are reported and never read.
+
+**Outputs** (`gn2_bundle.zip`, arcname `gn2/`): `gn2_results_<scene>.csv` (E1's columns plus `dataset`,
+`scene_set`, `data_factor`, `vq_max_iters`), `gn2_meta_<scene>.json`, `gn2_gn_vq_k<K>_s0_<scene>.json`,
+`gn2_g2.json`, `gn2_rd.png`, `gn2_selftest.json`, `gn_e2_<scene>_log_tail.json`, `timings.json`. Not
+bundled, left in `/kaggle/working` for a resume: the copied checkpoints and caches, `gn_cache/` (480 MB
+per scene, 11 scenes) and `gn2_work/`.
+
+**Cost, from measured parts:** per scene, 12 clusterings, 4 GN-VQ runs and 17 evaluations. Measured
+so far: TorchPQ `upstream_l1` 99.0-105.4 s at K = 4,096 and 16,384 and 419.1-432.1 s at K = 65,536
+(E0, FINDINGS section 8); library Lloyd 37.7-39.8 s at K = 4,096, 158.4-165.2 s at K = 16,384 and
+266.6-655.7 s at K = 65,536 (E1); GN-VQ 61.8-62.7 s at K = 4,096, 78.8-80.8 s at K = 16,384 and
+138.9-156.7 s at K = 65,536 for 9-10 iterations (E1); downloads 40.5-141.1 s per MipNeRF360 scene and
+234.8 / 508.4 s for truck / train (run 5). The `lloyd_wopa_area` K = 65,536 clustering is cached for
+the 9 MipNeRF360 scenes. By those numbers a MipNeRF360 scene takes on the order of an hour and a Tanks
+& Temples scene more, so the queue should fit one session on two GPUs; **that is an estimate, not a
+measurement**: nothing has run at K = 1,024, at data factor 1 for the GN pass and train PSNR, or with
+eps = 1e-2 below K = 65,536. The start cutoff and per-row resume cover an overrun.
+
+**Local checks:** `pytest bench/gn/test_gn.py` (66 tests; the G2 rules on every verdict path) and
+`python bench/gn/dryrun/dryrun_gn_e2.py` (7 stages: notebook structure and pins; three scenes with all
+17 rows; resume; four refusals before GPU work; the G2 and bundle cells; the queue; the restore cell on
+a fake `/kaggle/input`). Rebuild the notebook with `python kaggle/build_gn_e2_bench.py` first.
+
+**After the run:** unpack `gn2_bundle.zip` into `kaggle/gn_e2/` (arcname `gn2/`) and check the files
+against the zip; read `gn2_g2.json` first (`g2a.verdict`, then `h2b.verdict`); check `writer_codes_equal`,
+`valid` and each meta's `missing_rows` before quoting a row; then write FINDINGS section 10 from the
+files.
 
 ## Session decisions (E0, 2026-09-19)
 
@@ -771,16 +860,91 @@ again nothing here was decided after a result.
   `.gitignore` matching that one name. Its contents are committed unpacked in `kaggle/gn_e0/gn/`, and
   no bundle zip is ever committed.
 
-### Open items (E0: closed; E1: open)
+### E1 results and E2 build (2026-09-21)
+
+E1's bundle was committed, FINDINGS section 9 written, and E2 pre-registered (Amendment 7) and built
+in one session. No E2 result exists, so every E2 choice below was made before one.
+
+- **The bundle is committed exactly as downloaded,** 28 files, each checked byte for byte against the
+  zip on disk and again as a staged blob (the PNG exactly, the text files CR-insensitively).
+- **FINDINGS section 9 was checked mechanically,** as section 8 was: a script recomputed every number
+  from the bundle, and every numeric token in the section was matched against its output (the only
+  unmatched tokens were range dashes and commit hashes). That check caught one wrong sentence before
+  commit: the secondary clusterings were "most of each job's time" on garden (60.9%) but not on bicycle
+  (44.9%).
+- **Post-hoc material in section 9 is labelled as such:** the scalar weightings against
+  `lloyd_wopa_area` (computed with the same `judge_pair`, not pre-registered) and the cross-K
+  comparisons. Nothing in section 9 re-judges G1.
+- **A logging quirk worth knowing:** `quant_step` (the written codebook, computed on the CPU) and
+  `warm_quant_step` (the warm start, on the GPU) can differ by a float32 ulp (up to 3.73e-09) at
+  identical min and max. Compare the min and max, or `quant_step` against the `lloyd_wopa_area` row's.
+- **Do the 11 checkpoints exist?** Dace asked for this before any E2 code, and to stop if one is
+  missing. There are no Kaggle credentials here, so the run-5 output cannot be listed directly. What
+  the committed bundles show, per scene:
+
+  | Scenes | Trained | Sort cache built | Evidence it is in the run-5 output |
+  |---|---|---|---|
+  | garden, bicycle | training #2 (runs 1-3) | runs 1-2 | E0 and E1 restored both checkpoints and sort caches from the run-5 output; E1's meta records the same sha1s |
+  | stump, bonsai, counter, kitchen, room, treehill, flowers | run 4 (`run4_train_<scene>_s`) | run 4 (`run4_sort_<scene>_s`) | run 5's discovery cell raises unless all 9 MipNeRF360 checkpoints are restored into `/kaggle/working/results/`; run 5 evaluated each (`run5_results.csv`, one sha1 per scene) and did not re-sort them (no `run5_sort_` timing), so their caches were restored too |
+  | train, truck | run 5 (`run5_train_<scene>_s`), into `results/benchmark_tt_mcmc_1M_png_compression/` | run 5 (`run5_sort_<scene>_s`) | written into `/kaggle/working` by run 5 itself |
+
+  Nothing in the tilequant notebook deletes a final checkpoint or a sort cache (its cleanups remove
+  `/tmp` data, run directories and `renders/`). So no checkpoint is known to be missing, and none was
+  designed around; but for 9 of the 11 the only direct confirmation will be E2's restore cell, which
+  lists every missing checkpoint or sort cache and checks every sha1 before any install.
+- **Checkpoints are pinned by sha1** (Amendment 7 d), in both the notebook and each job, because E2's
+  scenes are only comparable with runs 4-5 and with each other if they are the same checkpoints.
+- **Amendment 7's reasons were recorded from the files, not restated.** "eps = 1e-2 had the best dev
+  RD" rests on single points at K = 65,536 (the ridge rows have no curve), so the amendment says that
+  and gives the numbers; "seed spread <= 0.006 dB" is true of G1's paired difference (0.0058 / 0.0040
+  dB) but not of every config's PSNR (up to 0.0087 dB for `lloyd_trace` on garden), so the amendment
+  gives both. Also recorded as not measured: eps = 1e-2 below K = 65,536.
+- **Choices Amendment 7 makes that Dace's outline left open:**
+  - **degree 3 for both BD measures** (the classic Bjontegaard cubic, exact on four points; E1's
+    reported BD-rate was degree 2 on three points, also exact). `g2.bd_rate` is `g1.bd_rate` at degree
+    3, so E1's function is reused, not rewritten;
+  - **BD-PSNR's definition** (PSNR as a cubic in log10 bytes, averaged over the common byte range);
+  - **"mean BD-rate over the scenes where it is defined" with no scene defined is "not met"**, so G2a
+    fails. This is the conservative reading of an unstated case. It matters: garden in E1 was exactly
+    this case (GN-VQ entirely above), so if every held-out scene looked like garden, G2a would fail on
+    magnitude with 9 wins. **Dace may want to amend this before E2 runs;**
+  - a non-finite BD value counts as undefined; a BD-rate of exactly 0 is not a win; a missing row
+    makes the scene `incomplete`, and any incomplete held-out scene makes the verdict `incomplete`.
+- **E2 imports E0's and E1's job modules and changes neither.** The per-row measurement in E1 is a
+  closure inside `gn_e1_scene.main`, so E2 carries its own copy (`evaluate_row` in `gn_e2_scene.main`)
+  rather than refactoring code that produced E1's results; the clustering caches, the writer, the
+  renderers and `train_psnr` are called from E0 and E1 directly.
+- **Row order is the G2a pair first at each K** (`lloyd_wopa_area`, then `gn_vq` warm-started from
+  it), so a scene cut short still has its gate rows; the lifted check needs the K = 65,536 warm start,
+  which comes from a cache on 9 scenes.
+- **The queue is first-free-GPU, not E1's paired batches,** because 11 jobs of different lengths would
+  leave a GPU idle behind every long one; the Tanks & Temples scenes go first because they are the
+  longest (larger downloads, data factor 1). **A failed scene does not stop the queue** (E1 raised
+  after the batch): scenes are independent and a missing one only makes the verdicts incomplete, so the
+  G2 cell still runs and the bundle cell raises at the end instead. **The 9.5 h start cutoff** exists
+  because a Kaggle run killed at 12 h may not keep its output.
+- **Each job downloads and deletes its own scene,** as run 4 and run 5 did (with their downloaders and
+  their lock), instead of E1's notebook-level download: 11 scenes of data would not fit `/tmp` at once.
+- **Only the two usable cache files are copied** from the run-3 / run-4 clustering directories, not
+  the whole directories, to keep `/kaggle/working` small next to 11 checkpoints and 11 GN caches.
+- **`gn1_bundle.zip` is ignored, not deleted,** by an anchored line in the root `.gitignore` next to
+  E0's, following the procedure the previous session recorded for E1's bundle.
+
+### Open items (E0, E1: closed; E2: open)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
   about 41 minutes of timed steps with the two jobs in parallel.
-- **Run E1 on Kaggle** (Dace). `kaggle/gn_e1_bench.ipynb`, attaching the run-5 output (required)
-  and the E0 output (for `gn_cache/` only); the table under "E1 notebook" above says exactly what each
-  input is for, and why attaching E0's output cannot put an E0 row in E1's results. Everything resumes
-  per row, so a short session can be continued by attaching its own output. 21 rows per scene since
-  Amendment 6.
+- ~~**Run E1 on Kaggle.**~~ **Done: G1 failed** on the size rule, all six seeds (FINDINGS section 9,
+  `kaggle/gn_e1/gn1/`). Not amended (Amendment 7 a).
+- **Run E2 on Kaggle** (Dace). `kaggle/gn_e2_bench.ipynb`, attaching the run-5 output (required) and,
+  optionally, the E0 or E1 output (for garden's and bicycle's `gn_cache/` only); see "E2 notebook"
+  above. Before running, decide whether Amendment 7 f's "no defined BD-rate -> the mean condition is not
+  met" is the reading wanted (see "E1 results and E2 build"); changing it after results would not be
+  allowed.
+- **E2 unknowns the run will settle:** whether all 11 checkpoints and sort caches are in the run-5
+  output (the restore cell checks before any install); the cost at K = 1,024 and at data factor 1; how
+  many iterations eps = 1e-2 takes below K = 65,536.
 - **Amendment 6's two rows cost little.** They are two more GN-VQ runs per scene at seed 0 and
   K = 65,536, warm-started from a `lloyd_wopa_area` cache that is already on disk, so they add no
   clustering. E0's refines measured the same loop at K = 65,536
@@ -829,12 +993,10 @@ again nothing here was decided after a result.
     a warning;
   - the run-5 wheel key matches the current Kaggle image; otherwise a build of about 73 min, as in run
     5.
-- **If the 10k lifted check fails in E1,** the GN-VQ rows are skipped and the Lloyd rows (including
-  G1's baseline) still run; G1 is then `incomplete`. In E0 the check passed with 5 to 8 orders of
-  margin on both scenes, so this is unlikely.
-- **After the E1 run:** commit the bundle under `kaggle/gn_e1/`, read `gn1_g1.json` first (the verdict
-  is `pass` / `fail` / `incomplete`), then write FINDINGS section 9 from the files. Check
-  `writer_codes_equal` and the `valid` column before quoting any row.
+- **If the 10k lifted check fails in E2** on a scene, that scene's GN-VQ rows are skipped and G2a / H2b
+  are `incomplete`. In E1 it passed on both scenes (sum excess / sum d_min 4.07e-13 and 2.82e-09).
+- ~~**After the E1 run.**~~ **Done:** bundle in `kaggle/gn_e1/gn1/`, FINDINGS section 9. After the E2
+  run: see "E2 notebook", "After the run".
 - ~~**E1: write down the GN-VQ variant and its size matching before any E1 run.**~~ **Done:**
   PREREG_GN.md Amendment 5, committed before any E1 code.
 - **What E1 will settle, and what it will not:** G1 is only GN-VQ against `lloyd_wopa_area` at
@@ -848,7 +1010,7 @@ again nothing here was decided after a result.
 - **The 64 flat bundle files in `kaggle/`** are ignored, not deleted. Delete them by hand whenever
   convenient; the committed copy is `kaggle/run5/tilequant/`.
 - ~~**`gn_bundle (1).zip` sits untracked in the repo root.**~~ **Ignored (2026-09-21), not
-  deleted.** The root `.gitignore` now has `/gn_bundle (1).zip`, anchored, matching that one name, so
+  deleted.** `gn1_bundle.zip` (E1's) is ignored the same way. The root `.gitignore` now has `/gn_bundle (1).zip`, anchored, matching that one name, so
   `git status` is clean while the file stays where it is. Its contents are committed unpacked in
   `kaggle/gn_e0/gn/`, and no bundle zip is ever committed. Delete it or move it to `~/Downloads`
   whenever convenient. **E1's bundle will arrive the same way:** unpack `gn1_bundle.zip` into
@@ -958,7 +1120,8 @@ again nothing here was decided after a result.
 | 4 | full MipNeRF360 validation of `lloyd_wopa` / `lloyd_wopa_area` (pre-registered rule) | **validated on all 9 scenes.** Both candidates pass; `pr_candidate` = `lloyd_wopa_area`, +0.111 dB mean PSNR at -0.10% mean size, better on every scene. All 7 sanity gates passed. |
 | 5 | the same change as library code (`feat/png-weighted-kmeans`): parity gate, MipNeRF360, Tanks & Temples, cost, CPU-only smoke test | **passed.** Parity exact (and all 18 library rows = the run-4 rows); Tanks & Temples +0.052 dB mean PSNR at +0.08% size, both scenes better; k-means 510 s vs 405 s (MipNeRF360), 328 s vs 416 s (T&T); peak GPU memory 3.37-3.62 GB vs 1.03-1.26 GB; CPU smoke test passed; torchpq baseline reproduced to ~0.002 dB. |
 | E0 (`bench/gn-vq`) | does a Gauss-Newton metric on shN predict the shN-only render error (G0, `PREREG_GN.md`)? | **G0 passed** (2026-09-20, second attempt; the first crashed in cuSOLVER). 34 non-tied pairs of 36, none misordered, every codebook calibrated within 0.5-2x. The two exploratory refines cut the GN objective 3.7-4.0x and still lost 0.04-0.53 dB after the codec's centroid quantizer. Details in FINDINGS section 8. |
-| E1 (`bench/gn-vq`) | does GN-VQ beat `lloyd_wopa_area` at equal size (G1, `PREREG_GN.md` with Amendments 5 and 6)? | **built, not run**: `kaggle/gn_e1_bench.ipynb`, 21 rows per scene, 56 CPU tests and a dry run pass. |
+| E1 (`bench/gn-vq`) | does GN-VQ beat `lloyd_wopa_area` at equal size (G1, `PREREG_GN.md` with Amendments 5 and 6)? | **G1 failed** (run 2026-09-20), on the size rule, on all six seeds: GN-VQ was +2.37% (garden) and +0.98% to +1.01% (bicycle) larger, beyond 0.5%, while gaining +0.195 to +0.201 / +0.087 to +0.091 dB. The rate-distortion secondary favours GN-VQ (bicycle BD-rate -9.84%; garden entirely above). Details in FINDINGS section 9. |
+| E2 (`bench/gn-vq`) | does GN-VQ (eps 1e-2) beat `lloyd_wopa_area` in rate-distortion on 9 held-out scenes (G2a, `PREREG_GN.md` Amendment 7)? | **built, not run**: `kaggle/gn_e2_bench.ipynb`, 17 rows per scene over 11 scenes, 66 CPU tests and a dry run pass. |
 
 ## PR plan (`feat/png-weighted-kmeans`)
 
@@ -979,6 +1142,7 @@ again nothing here was decided after a result.
   follow-up, only if maintainers want the default flip.
 - `lint/format-code.sh` and the tests on a CUDA machine (locally only CPU).
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
-- **E0 / E1:** see "Open items (E0: closed; E1: open)". E0 is done and G0 passed
-  (`kaggle/gn_e0/gn/`, FINDINGS section 8); E1 is built and waiting for a Kaggle run
-  (`kaggle/gn_e1_bench.ipynb`, "E1 notebook" above).
+- **E0 / E1 / E2:** see "Open items (E0, E1: closed; E2: open)". E0 is done and G0 passed
+  (`kaggle/gn_e0/gn/`, FINDINGS section 8); E1 is done and G1 failed (`kaggle/gn_e1/gn1/`, FINDINGS
+  section 9); E2 is built and waiting for a Kaggle run (`kaggle/gn_e2_bench.ipynb`, "E2 notebook"
+  above).
