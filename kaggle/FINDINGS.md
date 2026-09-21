@@ -25,6 +25,14 @@ all three codebook sizes, and calibrated within 0.5-2x everywhere. Its two explo
 GN objective by 3.7-4.0x and still lose 0.04-0.53 dB after the codec's centroid quantizer, which E1
 (pre-registered in Amendment 5) tests with a range clip.
 
+**E1 (section 9, branch `bench/gn-vq`): G1 failed, on the size rule.** GN-VQ beat `lloyd_wopa_area` at
+K = 65,536 on every seed in test PSNR, by +0.195 to +0.201 dB on garden and +0.087 to +0.091 dB on
+bicycle, but it was +2.37% and +0.98% to +1.01% larger, beyond the pre-registered 0.5%, so all six
+seeds count as negative. The extra bytes are the codebook codes, which compress worse at the same
+quantizer step. The pre-registered rate-distortion secondary favours GN-VQ on both scenes (bicycle
+BD-rate -9.84%; on garden every GN-VQ point is above every `lloyd_wopa_area` point in PSNR), at seed 0
+on the two scenes GN-VQ was designed on.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -46,6 +54,11 @@ GN objective by 3.7-4.0x and still lose 0.04-0.53 dB after the codec's centroid 
   gsplat commit `cd3139c2` on `bench/gn-vq`, the run-5 wheel reused). It restored the run-5 output:
   the garden / bicycle checkpoints, the seed-0 PLAS order, the run-3 clustering caches (used for
   K = 65,536) and `run3_results.csv`. The bundle is unpacked unchanged in `kaggle/gn_e0/gn/`.
+- Section 9: every number comes from `kaggle/gn_e1/gn1/` (one Kaggle session on 2x T4, rows timestamped
+  2026-09-20, gsplat commit `9b6c5bab` on `bench/gn-vq`, the run-5 wheel reused). It restored the run-5
+  output (the garden / bicycle checkpoints, the seed-0 PLAS order, the run-3 `lloyd_wopa_area` caches
+  for seeds 0-2) and E0's GN cache. The bundle is unpacked unchanged in `kaggle/gn_e1/gn1/`. A script
+  recomputed every number in the section from those files and checked each against the text.
 - Section 4: every number comes from `kaggle/run3/tilequant/` (one Kaggle session, gsplat commit
   `f9b61526`). That session restored the run-2 output (training #2 checkpoints, seed-0 PLAS sort,
   run-1 / run-2 rows, gsplat wheel) and ran only the run-3 configs, so run-3 rows pair with the
@@ -940,3 +953,286 @@ which is why its times there are below garden's 100-iteration runs.
 - **G1 is untouched.** The refines show that lowering the GN objective does not by itself beat
   `lloyd_wopa_area` once the codec's quantizer has its say; that is what E1 is for, with the range
   clip and the size rule pre-registered in Amendment 5 before any E1 code.
+
+## 9. E1: GN-VQ against `lloyd_wopa_area` at equal size (`bench/gn-vq`) — G1 failed
+
+**G1 failed.** Every GN-VQ seed was more than 0.5% larger than `lloyd_wopa_area` at the same seed:
++2.37% on garden and +0.98% to +1.01% on bicycle. Under Amendment 5 b a seed that breaks the size rule
+counts as negative whatever its PSNR did, so all six seeds are negative and G1 fails on both scenes.
+The PSNR half of the rule held on its own: GN-VQ gained +0.195 to +0.201 dB on garden and +0.087 to
++0.091 dB on bicycle, no seed below zero, means +0.1972 and +0.0893 dB against the +0.05 dB threshold.
+No seed dominates (smaller and better). The extra bytes are all in the shN codebook file, at a
+quantizer range and step identical to `lloyd_wopa_area`'s.
+
+The rules were fixed before any E1 code or result: G1 in the original `PREREG_GN.md` (commit
+`464c46a5`); the GN-VQ variant, the one-sided size rule, the secondaries and the ablations in
+Amendment 5 (`48b6c0fe`); the two ridge rows and the extra quantizer logging in Amendment 6
+(`d35c4492`). The verdict below is `bench/gn/g1.py`'s, written by the notebook into `gn1_g1.json`;
+nothing here re-judges it.
+
+### Verdict (`gn1_g1.json`): `fail`
+
+K = 65,536, raw bytes of the compressed directory, test PSNR of the full compressed pipeline.
+
+| Scene | Seed | GN-VQ bytes | `lloyd_wopa_area` bytes | Size | GN-VQ PSNR | `lloyd_wopa_area` PSNR | dPSNR (dB) | Negative | Dominates |
+|---|---|---|---|---|---|---|---|---|---|
+| garden | 0 | 16,793,118 | 16,405,132 | +2.37% | 27.1642 | 26.9631 | +0.2011 | True | False |
+| garden | 1 | 16,794,029 | 16,405,784 | +2.37% | 27.1618 | 26.9665 | +0.1953 | True | False |
+| garden | 2 | 16,794,112 | 16,405,503 | +2.37% | 27.1620 | 26.9667 | +0.1953 | True | False |
+| bicycle | 0 | 16,380,637 | 16,216,069 | +1.01% | 25.4445 | 25.3577 | +0.0868 | True | False |
+| bicycle | 1 | 16,412,866 | 16,253,928 | +0.98% | 25.4520 | 25.3618 | +0.0902 | True | False |
+| bicycle | 2 | 16,402,556 | 16,242,429 | +0.99% | 25.4488 | 25.3580 | +0.0908 | True | False |
+
+| Scene | Mean dPSNR (dB) | Negative seeds | Size violations | Dominating seeds |
+|---|---|---|---|---|
+| garden | +0.1972 | 3 | 3 | 0 |
+| bicycle | +0.0893 | 3 | 3 | 0 |
+
+The paired difference barely moves with the k-means seed: its spread over seeds 0-2 is 0.0058 dB on
+garden and 0.0040 dB on bicycle. Every seed is negative for the same reason, the size.
+
+### Where the extra bytes are
+
+Between a GN-VQ row and `lloyd_wopa_area` at the same seed, only `shN.npz` differs (`file_bytes`), and
+inside it almost all of the difference is `centroids.npy`, the 6-bit codebook codes stored with
+`np.savez_compressed` (the member's compressed size):
+
+| Scene | Seed | Size difference (B) | `centroids.npy` (B) | Change | `labels.npy` change (B) |
+|---|---|---|---|---|---|
+| garden | 0 | +387,986 | 1,428,796 -> 1,816,769 | +27.2% | +13 |
+| garden | 1 | +388,245 | 1,429,456 -> 1,817,674 | +27.2% | +27 |
+| garden | 2 | +388,609 | 1,429,172 -> 1,817,760 | +27.2% | +21 |
+| bicycle | 0 | +164,568 | 1,594,007 -> 1,759,141 | +10.4% | -566 |
+| bicycle | 1 | +158,938 | 1,631,935 -> 1,791,627 | +9.8% | -754 |
+| bicycle | 2 | +160,127 | 1,620,433 -> 1,781,013 | +9.9% | -453 |
+
+The clip held exactly: each GN-VQ row wrote the same quantizer min and max as `lloyd_wopa_area` at the
+same seed (garden seed 0: [-1.076333, 1.078585], step 0.034205; bicycle seed 0: [-0.802158, 0.883134],
+step 0.026751), and so the same step. GN-VQ did not lose bytes to a wider or coarser quantizer. At the
+same step its codes compress worse.
+
+### Rate-distortion (Amendment 5 d; seed 0, reported, not gating)
+
+| Scene | Config | K | Raw bytes | PSNR (dB) |
+|---|---|---|---|---|
+| garden | `lloyd_wopa_area` | 4,096 | 14,778,950 | 26.6977 |
+| garden | `lloyd_wopa_area` | 16,384 | 15,244,312 | 26.8461 |
+| garden | `lloyd_wopa_area` | 65,536 | 16,405,132 | 26.9631 |
+| garden | `gn_vq` | 4,096 | 14,803,113 | 27.0065 |
+| garden | `gn_vq` | 16,384 | 15,318,406 | 27.0959 |
+| garden | `gn_vq` | 65,536 | 16,793,118 | 27.1642 |
+| bicycle | `lloyd_wopa_area` | 4,096 | 14,396,171 | 25.1487 |
+| bicycle | `lloyd_wopa_area` | 16,384 | 14,909,318 | 25.2782 |
+| bicycle | `lloyd_wopa_area` | 65,536 | 16,216,069 | 25.3577 |
+| bicycle | `gn_vq` | 4,096 | 14,429,045 | 25.3335 |
+| bicycle | `gn_vq` | 16,384 | 14,959,165 | 25.4016 |
+| bicycle | `gn_vq` | 65,536 | 16,380,637 | 25.4445 |
+
+| Scene | BD-rate of `gn_vq` vs `lloyd_wopa_area` | PSNR overlap of the two curves |
+|---|---|---|
+| garden | undefined (NaN) | none |
+| bicycle | **-9.84%** | 25.3335-25.3577 dB (0.0242 dB) |
+
+**Why garden's BD-rate is undefined.** BD-rate averages the log-byte difference between the two
+curves over the PSNR range both of them cover, and `g1.bd_rate` returns NaN when there is no such range
+rather than extrapolate (a choice recorded before the run). On garden there is none: GN-VQ's lowest
+point (K = 4,096, 27.0065 dB) is above `lloyd_wopa_area`'s highest (K = 65,536, 26.9631 dB), so the
+whole GN-VQ curve lies above the whole baseline curve. It is undefined in GN-VQ's favour: GN-VQ at
+K = 4,096 (14,803,113 B) is 9.77% smaller than `lloyd_wopa_area` at K = 65,536 (16,405,132 B) and
++0.0434 dB better.
+
+**Bicycle's -9.84%** comes from a narrow overlap, 0.0242 dB wide, which lies inside both measured
+curves (the bottom of GN-VQ's, the top of `lloyd_wopa_area`'s), so both are interpolated there, not
+extrapolated. Recomputing it from the bundled points with the same function gives the bundled value
+(-9.8445%). Across K on bicycle, GN-VQ at K = 16,384 is 7.75% smaller than `lloyd_wopa_area` at
+K = 65,536 and +0.0438 dB better, and GN-VQ at K = 4,096 is 3.22% smaller than `lloyd_wopa_area` at
+K = 16,384 and +0.0554 dB better.
+
+**At equal K, the size premium grows with K and the PSNR gain shrinks:**
+
+| Scene | K | GN-VQ bytes vs `lloyd_wopa_area` | dPSNR (dB) |
+|---|---|---|---|
+| garden | 4,096 | +0.16% | +0.3089 |
+| garden | 16,384 | +0.49% | +0.2499 |
+| garden | 65,536 | +2.37% | +0.2011 |
+| bicycle | 4,096 | +0.23% | +0.1848 |
+| bicycle | 16,384 | +0.33% | +0.1234 |
+| bicycle | 65,536 | +1.01% | +0.0868 |
+
+At K = 4,096 and 16,384 GN-VQ was within 0.5% of `lloyd_wopa_area`'s bytes on both scenes; G1 was
+judged at K = 65,536 only, as pre-registered.
+
+### The scalar weightings (Amendment 5 d; reported, not gating)
+
+GN-VQ against the `tr(M)`-weighted and the C3DGS-weighted Lloyd, same K, same seeds, same size rule.
+Both comparisons `fail` for the same reason G1 does:
+
+| Comparison | Scene | Mean dPSNR (dB) | GN-VQ size vs the weighting | Negative | Size violations | Dominating |
+|---|---|---|---|---|---|---|
+| GN-VQ vs `lloyd_trace` | garden | +0.1519 | +2.28% to +2.46% | 3 | 3 | 0 |
+| GN-VQ vs `lloyd_trace` | bicycle | +0.0520 | +0.94% to +1.06% | 3 | 3 | 0 |
+| GN-VQ vs `lloyd_c3dgs` | garden | +0.1621 | +2.12% to +2.47% | 3 | 3 | 0 |
+| GN-VQ vs `lloyd_c3dgs` | bicycle | +0.0613 | +0.98% to +1.05% | 3 | 3 | 0 |
+
+**Post hoc, not pre-registered:** the scalar weightings themselves against `lloyd_wopa_area`, with the
+same `judge_pair` code. Neither pays in bytes:
+
+| Weighting | Scene | dPSNR vs `lloyd_wopa_area` (dB), seeds 0-2 | Mean (dB) | Size vs `lloyd_wopa_area` | Dominating seeds |
+|---|---|---|---|---|---|
+| `lloyd_trace` | garden | +0.0398 to +0.0521 | +0.0454 | -0.089% to +0.081% | 2 |
+| `lloyd_trace` | bicycle | +0.0364 to +0.0382 | +0.0373 | -0.073% to +0.077% | 2 |
+| `lloyd_c3dgs` | garden | +0.0312 to +0.0420 | +0.0351 | -0.102% to +0.242% | 2 |
+| `lloyd_c3dgs` | bicycle | +0.0258 to +0.0302 | +0.0280 | -0.067% to +0.033% | 2 |
+
+So a scalar per-splat weight taken from `M` (its trace) already beats `lloyd_wopa_area` on all six
+seeds at about equal bytes, by less than GN-VQ does.
+
+### Ablations and ridge rows (Amendments 5 e and 6; seed 0, K = 65,536, reported only)
+
+| Scene | Config | Raw bytes | vs `lloyd_wopa_area` | `centroids.npy` | PSNR | dPSNR (dB) | Quantizer range | Step | Iterations | Clusters rejected by the clip |
+|---|---|---|---|---|---|---|---|---|---|---|
+| garden | `lloyd_wopa_area` | 16,405,132 | | 1,428,796 | 26.9631 | | [-1.0763, 1.0786] | 0.03421 | | |
+| garden | `gn_vq` | 16,793,118 | +2.37% | 1,816,769 | 27.1642 | +0.2011 | [-1.0763, 1.0786] | 0.03421 | 10 (rel_tol) | 262,736 |
+| garden | `gn_vq_noclip` | 16,224,242 | -1.10% | 1,247,887 | 27.0655 | +0.1023 | [-3.5480, 3.1656] | 0.10656 | 10 (rel_tol) | 0 |
+| garden | `gn_vq_noqassign` | 16,793,099 | +2.36% | 1,816,769 | 27.1614 | +0.1982 | [-1.0763, 1.0786] | 0.03421 | 10 (rel_tol) | 262,789 |
+| garden | `gn_vq_eps1e3` | 16,619,127 | +1.30% | 1,642,786 | 27.1620 | +0.1989 | [-1.0763, 1.0786] | 0.03421 | 10 (rel_tol) | 265,205 |
+| garden | `gn_vq_eps1e2` | 16,495,694 | +0.55% | 1,519,339 | 27.1581 | +0.1950 | [-0.9133, 1.0215] | 0.03071 | 10 (rel_tol) | 290,509 |
+| bicycle | `lloyd_wopa_area` | 16,216,069 | | 1,594,007 | 25.3577 | | [-0.8022, 0.8831] | 0.02675 | | |
+| bicycle | `gn_vq` | 16,380,637 | +1.01% | 1,759,141 | 25.4445 | +0.0868 | [-0.8022, 0.8831] | 0.02675 | 10 (rel_tol) | 220,728 |
+| bicycle | `gn_vq_noclip` | 15,816,038 | -2.47% | 1,195,222 | 25.4104 | +0.0527 | [-2.4160, 2.5484] | 0.07880 | 10 (rel_tol) | 0 |
+| bicycle | `gn_vq_noqassign` | 16,381,718 | +1.02% | 1,759,141 | 25.4430 | +0.0853 | [-0.8022, 0.8831] | 0.02675 | 10 (rel_tol) | 220,902 |
+| bicycle | `gn_vq_eps1e3` | 16,301,438 | +0.53% | 1,679,910 | 25.4502 | +0.0925 | [-0.8022, 0.8831] | 0.02675 | 10 (rel_tol) | 251,419 |
+| bicycle | `gn_vq_eps1e2` | 16,213,719 | -0.01% | 1,592,107 | 25.4478 | +0.0901 | [-0.8022, 0.8831] | 0.02675 | 9 (rel_tol) | 266,304 |
+
+The warm start for every GN-VQ row here is the `lloyd_wopa_area` codebook in the first row of its
+scene, so its range and step are the warm-start range and step (`warm_quant_*`).
+
+- **No clip** widened the range about threefold: to [-3.5480, 3.1656] on garden (step 0.10656,
+  3.1155 times the warm step) and [-2.4160, 2.5484] on bicycle (0.07880, 2.9458 times). Against the
+  clipped GN-VQ it lost 0.0987 dB on garden and 0.0341 dB on bicycle, and it was 3.39% and 3.45%
+  smaller. That is section 8's quantizer hypothesis seen from both sides: the widened range costs
+  PSNR, and the coarser step makes the codes compress better. It still beat `lloyd_wopa_area` by
+  +0.1023 / +0.0527 dB while being 1.10% / 2.47% smaller, so it **dominates `lloyd_wopa_area` on both
+  scenes**, at this single seed.
+- **No final quantized assignment:** within 0.01% of GN-VQ's bytes, -0.0029 / -0.0015 dB. Its objective
+  after quantization was higher (garden 4.0827e-05 against GN-VQ's 3.8165e-05; bicycle 3.1020e-05
+  against 2.8409e-05), so the final assignment did what it was for, by a small margin in PSNR.
+- **eps = 1e-3:** 1.04% / 0.48% smaller than GN-VQ, -0.0022 / +0.0057 dB, range unchanged. Against
+  `lloyd_wopa_area`: +1.30% and +0.53%, both outside the 0.5% tolerance.
+- **eps = 1e-2:** 1.77% / 1.02% smaller than GN-VQ, -0.0061 / +0.0033 dB. On garden the range
+  **shrank** to [-0.9133, 1.0215], step 0.03071 (0.8979 of the warm step); on bicycle it kept the warm
+  range. Against `lloyd_wopa_area`: +0.55% on garden (outside the 0.5% tolerance) and -0.01% on bicycle
+  at +0.0901 dB, so on bicycle it **dominates `lloyd_wopa_area`**.
+
+None of these rows enters a verdict. Each is one seed.
+
+One reading note on the logged steps. `quant_*` is computed from the written codebook on the CPU and
+`warm_quant_*` from the warm-start codebook on the GPU. Where the two ranges are identical, the two
+steps still differ by up to 3.73e-09 (float32 rounding on the two devices), which is not a range
+change; compare the min and max, or compare `quant_step` with the `lloyd_wopa_area` row's, which is
+computed the same way (they are equal).
+
+### Measured error, train vs test views (against `lloyd_wopa_area` at the same K and seed)
+
+`D` is the measured shN-only dMSE on clamped renders, as in E0. The ratio is the row's `D` over
+`lloyd_wopa_area`'s; the PSNR columns are the row's gain over `lloyd_wopa_area`. Rows marked (s0) are
+compared with `lloyd_wopa_area` K = 65,536 seed 0.
+
+| Scene | Config | K | Seed | `D` ratio, train | `D` ratio, test | Train PSNR gain (dB) | Test PSNR gain (dB) |
+|---|---|---|---|---|---|---|---|
+| garden | `gn_vq` | 65,536 | 0 | 0.314 | 0.337 | +0.2729 | +0.2011 |
+| garden | `gn_vq` | 65,536 | 1 | 0.316 | 0.338 | +0.2761 | +0.1953 |
+| garden | `gn_vq` | 65,536 | 2 | 0.316 | 0.338 | +0.2724 | +0.1953 |
+| garden | `gn_vq` | 4,096 | 0 | 0.391 | 0.413 | +0.4356 | +0.3089 |
+| garden | `gn_vq` | 16,384 | 0 | 0.360 | 0.381 | +0.3440 | +0.2499 |
+| garden | `gn_vq_noclip` (s0) | 65,536 | 0 | 0.581 | 0.613 | +0.1444 | +0.1023 |
+| garden | `gn_vq_noqassign` (s0) | 65,536 | 0 | 0.328 | 0.348 | +0.2686 | +0.1982 |
+| garden | `gn_vq_eps1e3` (s0) | 65,536 | 0 | 0.317 | 0.339 | +0.2698 | +0.1989 |
+| garden | `gn_vq_eps1e2` (s0) | 65,536 | 0 | 0.329 | 0.353 | +0.2579 | +0.1950 |
+| garden | `lloyd_trace` | 65,536 | 0 | 0.858 | 0.863 | +0.0604 | +0.0521 |
+| garden | `lloyd_c3dgs` | 65,536 | 0 | 0.881 | 0.886 | +0.0501 | +0.0420 |
+| bicycle | `gn_vq` | 65,536 | 0 | 0.308 | 0.463 | +0.1092 | +0.0868 |
+| bicycle | `gn_vq` | 65,536 | 1 | 0.306 | 0.468 | +0.1078 | +0.0902 |
+| bicycle | `gn_vq` | 65,536 | 2 | 0.309 | 0.465 | +0.1069 | +0.0908 |
+| bicycle | `gn_vq` | 4,096 | 0 | 0.380 | 0.531 | +0.2082 | +0.1848 |
+| bicycle | `gn_vq` | 16,384 | 0 | 0.347 | 0.517 | +0.1524 | +0.1234 |
+| bicycle | `gn_vq_noclip` (s0) | 65,536 | 0 | 0.484 | 0.674 | +0.0709 | +0.0527 |
+| bicycle | `gn_vq_noqassign` (s0) | 65,536 | 0 | 0.326 | 0.469 | +0.1091 | +0.0853 |
+| bicycle | `gn_vq_eps1e3` (s0) | 65,536 | 0 | 0.313 | 0.472 | +0.1068 | +0.0925 |
+| bicycle | `gn_vq_eps1e2` (s0) | 65,536 | 0 | 0.339 | 0.491 | +0.0956 | +0.0901 |
+| bicycle | `lloyd_trace` | 65,536 | 0 | 0.782 | 0.777 | +0.0382 | +0.0382 |
+| bicycle | `lloyd_c3dgs` | 65,536 | 0 | 0.825 | 0.813 | +0.0344 | +0.0279 |
+
+- GN-VQ cuts the shN-only error to about a third of `lloyd_wopa_area`'s on train views on both scenes
+  (0.306-0.316 at K = 65,536). **Out of sample the cut is smaller, much more so on bicycle:** 0.337-0.338
+  on garden's test views, 0.463-0.468 on bicycle's. That is the pattern Amendment 6 recorded from E0,
+  where bicycle's weighting advantage also shrank from train to test views.
+- The train PSNR gain exceeds the test PSNR gain for every GN-VQ row on both scenes.
+- The ridge rows did not narrow bicycle's train/test gap: the `D` ratios are 0.308 / 0.463 at
+  eps = 1e-4, 0.313 / 0.472 at 1e-3 and 0.339 / 0.491 at 1e-2. What the larger ridge changed was the
+  bytes (previous section).
+- The scalar weightings show no such gap on bicycle (`lloyd_trace` 0.782 train, 0.777 test).
+
+Uncompressed reference (`uncompressed` rows): garden 27.3150 dB test, 28.5197 dB train; bicycle
+25.5682 dB test, 24.2350 dB train.
+
+### GN-VQ iterations (`gn1_<config>_k<K>_s<seed>_<scene>.json`)
+
+- At K = 65,536 every row stopped on the 1e-3 relative-drop rule, at iteration 10 (iteration 9 for
+  bicycle at eps = 1e-2). At K = 4,096 and 16,384 GN-VQ ran into the 10-iteration cap on both scenes.
+- The GN objective, warm start -> before quantization -> after quantization, for GN-VQ at K = 65,536
+  seed 0: garden 1.2222e-04 -> 2.9381e-05 -> 3.8165e-05; bicycle 9.0730e-05 -> 2.3698e-05 ->
+  2.8409e-05.
+- The clip's per-cluster acceptance rejected more clusters every iteration: on garden seed 0, from 785
+  at iteration 1 to 54,463 at iteration 10 (262,736 in total); on bicycle from 665 to 49,571 (220,728).
+- The top-64 L2 share at iteration 1, K = 65,536: 0.431-0.433 on garden, 0.510-0.511 on bicycle.
+
+### Validity and engineering checks
+
+| Check | Result |
+|---|---|
+| CUDA smoke tests (`gn1_selftest.json`) | pass: `sh_basis` 6.50e-06, toy check 2.87%, end-to-end `pass`, `linalg_scale` pass |
+| Render parity, both scenes | max abs difference 0.0 |
+| GN metric | E0's cache reused on both scenes (neither job ran a GN pass), `M` finite |
+| Lifted check (10,000 splats) | pass; sum excess / sum d_min 4.07e-13 garden, 2.82e-09 bicycle; worst excess / scale 1.99e-12, 9.89e-10 |
+| Writer codes | `writer_codes_equal` True on all 40 compressed rows; `valid` True on all 42 rows |
+| Batched linalg | no fallbacks in either job |
+| Warm starts | `lloyd_wopa_area` K = 65,536 seeds 0-2 from the run-3 caches on both scenes (none reclustered); K = 4,096 and 16,384 clustered in the job |
+| Both jobs | exit code 0, `gsplat_commit` `9b6c5babdf24` |
+
+### Timings (`timings.json`, `gn1_meta_<scene>.json`, `gn1_results_<scene>.csv`)
+
+| Step | Seconds |
+|---|---|
+| Restore inputs | 23.2 |
+| Install (restored run-5 wheel, no build) | 170.5 |
+| Smoke tests | 15.8 |
+| MipNeRF360 data for both scenes | 149.0 |
+| `gn_e1_garden` job | 6,450.4 |
+| `gn_e1_bicycle` job | 4,455.3 |
+
+The two jobs ran in parallel, one T4 each. Inside them:
+
+- `lloyd_trace` / `lloyd_c3dgs` clustering at K = 65,536: 651.7-655.7 s per run on garden, 266.6-451.8 s
+  on bicycle, six runs per scene, 3,921.6 s and 1,997.3 s in total: 60.9% of garden's job and 44.9% of
+  bicycle's.
+- `lloyd_wopa_area` clustering: 39.8 / 37.7 s at K = 4,096 and 165.2 / 158.4 s at K = 16,384 (garden /
+  bicycle).
+- GN-VQ per row: 143.5-156.7 s on garden and 138.9-153.7 s on bicycle at K = 65,536; 62.7 / 61.8 s at
+  K = 4,096; 80.8 / 78.8 s at K = 16,384.
+
+### What E1 settles, and what it does not
+
+- **G1 failed, as pre-registered, on the size rule, on all six seeds.** The PSNR condition was met with
+  room to spare; the bytes were not.
+- **Equal K is not equal bytes.** GN-VQ's codes compress worse than `lloyd_wopa_area`'s at the same
+  quantizer step, and the premium grows with K. The rate-distortion secondary of Amendment 5 d was
+  pre-registered for exactly this case, and it favours GN-VQ on both scenes: bicycle's BD-rate is
+  -9.84%, and on garden every GN-VQ point is above every `lloyd_wopa_area` point in PSNR.
+- **Limits of that evidence:** it is seed 0, two scenes, and three points per curve, and those two
+  scenes are the ones GN-VQ was designed and tuned on. On bicycle the gain also shrinks markedly from
+  train to test views. E1 cannot say whether the rate-distortion advantage holds on scenes GN-VQ has
+  not seen.
+- **Exploratory, one seed:** without the clip GN-VQ dominated `lloyd_wopa_area` on both scenes, and at
+  eps = 1e-2 on bicycle; a scalar `tr(M)` weight beat `lloyd_wopa_area` at about equal bytes on all six
+  seeds (post hoc).
