@@ -1505,3 +1505,220 @@ def test_e1_job_refuses_a_results_csv_that_is_not_its_own(tmp_path):
     with pytest.raises(RuntimeError, match="not an E1 result file"):
         job.assert_e1_csv(str(path))
     assert os.path.exists(path)  # it refuses; it deletes nothing
+
+
+# --------------------------------------------------------------------------- G2 rules (E2, Amendment 7)
+
+import g2  # noqa: E402
+
+_G2_BASE_BYTES = [14_000_000, 14_500_000, 15_200_000, 16_400_000]  # K = 1,024 ... 65,536
+_G2_BASE_PSNR = [25.00, 25.12, 25.21, 25.27]
+
+
+def _g2_curve_rows(scene, config, byte_factor=1.0, dpsnr=0.0):
+    """One scene's four rows for a config: the base curve with bytes scaled and PSNR shifted."""
+    return [
+        _g1_row(scene, config, 0, p + dpsnr, int(round(b * byte_factor)), k)
+        for k, b, p in zip(g2.K_VALUES, _G2_BASE_BYTES, _G2_BASE_PSNR)
+    ]
+
+
+def _g2_rows(gnvq=None, trace=None, scenes=g2.HELD_OUT):
+    """Rows for every scene in `scenes`: lloyd_wopa_area, lloyd_trace and upstream_l1 on the base curve,
+    GN-VQ transformed by gnvq[scene] = (byte_factor, dpsnr) (default: 10% fewer bytes); lloyd_trace by
+    trace[scene] when given."""
+    rows = []
+    for s in scenes:
+        rows += _g2_curve_rows(s, g2.BASELINE)
+        rows += _g2_curve_rows(s, g2.UPSTREAM)
+        rows += _g2_curve_rows(s, g2.SCALAR, *((trace or {}).get(s, (1.0, 0.0))))
+        rows += _g2_curve_rows(s, g2.GNVQ, *((gnvq or {}).get(s, (0.9, 0.0))))
+    return rows
+
+
+def test_g2_bd_measures_on_exact_shifts():
+    b, p = _G2_BASE_BYTES, _G2_BASE_PSNR
+    # same PSNR at 10% fewer bytes: the fitted log-byte curves differ by a constant, so -10% up to
+    # the cubic fit's rounding (about 1e-7 percentage points with PSNR near 25)
+    assert abs(g2.bd_rate(b, p, [x * 0.9 for x in b], p) - (-10.0)) < 1e-6
+    assert abs(g2.bd_rate(b, p, [x * 1.1 for x in b], p) - 10.0) < 1e-6
+    # same bytes at +0.5 dB: exactly +0.5 dB BD-PSNR
+    assert abs(g2.bd_psnr(b, p, b, [x + 0.5 for x in p]) - 0.5) < 1e-6
+    assert abs(g2.bd_psnr(b, p, b, [x - 0.2 for x in p]) - (-0.2)) < 1e-6
+    # no PSNR overlap: BD-rate undefined; no byte overlap: BD-PSNR undefined
+    assert math.isnan(g2.bd_rate(b, p, b, [x + 1.0 for x in p]))
+    assert math.isnan(g2.bd_psnr(b, p, [x * 10 for x in b], p))
+    # degree 3 on four points interpolates exactly, unlike E1's degree 2 default
+    assert g2.DEGREE == 3
+
+
+def test_g2_scene_outcomes_and_the_fallbacks():
+    rows = _g2_rows({
+        "stump": (0.9, 0.0),  # BD-rate -10%: win on BD-rate
+        "bonsai": (1.1, 0.0),  # +10%: loss on BD-rate
+        "counter": (1.0, 1.0),  # entirely above in PSNR: BD-rate undefined, BD-PSNR +1 dB: win
+        "kitchen": (1.0, -1.0),  # entirely below: BD-rate undefined, BD-PSNR -1 dB: loss
+        "room": (10.0, 1.0),  # neither overlaps: loss
+    })
+    out = {s: g2.judge_scene(rows, s) for s in ("stump", "bonsai", "counter", "kitchen", "room")}
+    assert out["stump"]["outcome"] == "win" and out["stump"]["decided_by"] == "bd_rate"
+    assert abs(out["stump"]["bd_rate"] + 10.0) < 1e-6
+    assert out["bonsai"]["outcome"] == "loss" and out["bonsai"]["decided_by"] == "bd_rate"
+    assert out["counter"]["outcome"] == "win" and out["counter"]["decided_by"] == "bd_psnr"
+    assert math.isnan(out["counter"]["bd_rate"]) and abs(out["counter"]["bd_psnr"] - 1.0) < 1e-6
+    assert out["kitchen"]["outcome"] == "loss" and out["kitchen"]["decided_by"] == "bd_psnr"
+    assert out["room"]["outcome"] == "loss" and out["room"]["decided_by"] == "neither_defined"
+    assert math.isnan(out["room"]["bd_rate"]) and math.isnan(out["room"]["bd_psnr"])
+    # a BD-rate of exactly 0 is not below 0
+    zero = g2.judge_scene(_g2_rows({"stump": (1.0, 0.0)}, scenes=("stump",)), "stump")
+    assert zero["outcome"] == "loss" and abs(zero["bd_rate"]) < 1e-6
+
+
+def test_g2a_passes_fails_on_breadth_and_fails_on_magnitude():
+    res = g2.judge_g2a(_g2_rows())  # 9 wins at -10%
+    assert res["verdict"] == "pass" and res["n_wins"] == 9 and res["complete"]
+    assert abs(res["mean_bd_rate"] + 10.0) < 1e-6 and res["mean_ok"] and res["n_bd_rate_defined"] == 9
+    assert res["rule"].startswith("PREREG_GN.md Amendment 7 f")
+    # breadth: 7 wins fails even with a mean below -5% (7 x -10 and 2 x +10 average -5.56%)
+    res = g2.judge_g2a(_g2_rows({"train": (1.1, 0.0), "truck": (1.1, 0.0)}))
+    assert res["n_wins"] == 7 and not res["wins_ok"] and res["mean_ok"] and res["verdict"] == "fail"
+    # 8 wins pass
+    res = g2.judge_g2a(_g2_rows({"truck": (1.1, 0.0)}))
+    assert res["n_wins"] == 8 and res["mean_ok"] and res["verdict"] == "pass"
+    # magnitude: 9 wins at -2% each fail the mean condition
+    res = g2.judge_g2a(_g2_rows({s: (0.98, 0.0) for s in g2.HELD_OUT}))
+    assert res["n_wins"] == 9 and res["wins_ok"] and not res["mean_ok"] and res["verdict"] == "fail"
+
+
+def test_g2a_mean_counts_only_defined_bd_rates_and_is_not_met_when_none_is():
+    # 4 scenes win by BD-PSNR (no PSNR overlap), 5 by BD-rate at -6%: the mean is over the 5 only
+    gnvq = {s: (1.0, 1.0) for s in g2.HELD_OUT[:4]} | {s: (0.94, 0.0) for s in g2.HELD_OUT[4:]}
+    res = g2.judge_g2a(_g2_rows(gnvq))
+    assert res["n_wins"] == 9 and res["n_bd_rate_defined"] == 5
+    assert abs(res["mean_bd_rate"] + 6.0) < 1e-6 and res["verdict"] == "pass"
+    # every scene above the baseline in PSNR: 9 wins by BD-PSNR, but no BD-rate exists, so the mean
+    # condition is not met (Amendment 7 f) and G2a fails
+    res = g2.judge_g2a(_g2_rows({s: (1.0, 1.0) for s in g2.HELD_OUT}))
+    assert res["n_wins"] == 9 and res["n_bd_rate_defined"] == 0 and res["mean_bd_rate"] is None
+    assert not res["mean_ok"] and res["verdict"] == "fail"
+
+
+def test_g2a_boundaries_are_inclusive(monkeypatch):
+    """At least 8 wins; mean BD-rate at most -5%: both boundaries included."""
+    table = {}
+
+    def fake_judge_scene(rows, scene, config, baseline, k_values, seed):
+        outcome, bd = table[scene]
+        return {"scene": scene, "missing": [], "outcome": outcome, "bd_rate": bd, "bd_psnr": math.nan}
+
+    monkeypatch.setattr(g2, "judge_scene", fake_judge_scene)
+    table.update({s: ("win", -5.0) for s in g2.HELD_OUT[:8]} | {g2.HELD_OUT[8]: ("loss", -5.0)})
+    res = g2.judge_g2a([])
+    assert res["n_wins"] == 8 and res["mean_bd_rate"] == -5.0 and res["verdict"] == "pass"
+    table[g2.HELD_OUT[8]] = ("loss", -4.99)
+    assert g2.judge_g2a([])["verdict"] == "fail"  # mean -4.998...
+    table.update({g2.HELD_OUT[7]: ("loss", -5.0), g2.HELD_OUT[8]: ("loss", -5.0)})
+    assert g2.judge_g2a([])["n_wins"] == 7 and g2.judge_g2a([])["verdict"] == "fail"
+
+
+def test_g2_incomplete_and_the_development_scenes_are_never_read():
+    rows = _g2_rows()
+    drop = next(r for r in rows if r["scene"] == "flowers" and r["config"] == g2.GNVQ
+                and r["n_clusters"] == "16384")
+    res = g2.judge_g2a([r for r in rows if r is not drop])
+    assert res["verdict"] == "incomplete" and res["missing"] == ["flowers gn_vq K=16384 seed=0"]
+    assert res["per_scene"]["flowers"]["outcome"] == "incomplete"
+    # a missing lloyd_trace row leaves G2a complete and makes H2b incomplete
+    drop_t = next(r for r in rows if r["scene"] == "truck" and r["config"] == g2.SCALAR)
+    kept = [r for r in rows if r is not drop_t]
+    assert g2.judge_g2a(kept)["verdict"] == "pass" and g2.judge_h2b(kept)["verdict"] == "incomplete"
+    # garden and bicycle: absurd rows change neither verdict, and they are reported as development
+    dev = _g2_rows({s: (100.0, -5.0) for s in g2.DEV}, scenes=g2.DEV)
+    before, after = g2.judge_e2(rows), g2.judge_e2(rows + dev)
+    for key in ("g2a", "h2b"):
+        assert json.dumps(before[key], sort_keys=True, default=str) == json.dumps(
+            after[key], sort_keys=True, default=str)
+    assert set(after["reported"]["development"]) == set(g2.DEV)
+    assert after["reported"]["development"]["garden"][g2.BASELINE]["outcome"] == "loss"
+    assert set(g2.HELD_OUT) & set(g2.DEV) == set() and len(g2.HELD_OUT) == 9
+
+
+def test_h2b_threshold_and_independence_from_g2a():
+    # GN-VQ vs lloyd_trace: lloyd_trace at 5% fewer bytes than the baseline, GN-VQ at 10%: a win
+    trace = {s: (0.95, 0.0) for s in g2.HELD_OUT}
+    res = g2.judge_h2b(_g2_rows(trace=trace))
+    assert res["verdict"] == "pass" and res["n_wins"] == 9 and "mean_ok" not in res
+    # lloyd_trace better than GN-VQ on 3 scenes: 6 wins, H2b fails while G2a still passes
+    worse = trace | {s: (0.8, 0.0) for s in g2.HELD_OUT[:3]}
+    rows = _g2_rows(trace=worse)
+    assert g2.judge_h2b(rows)["n_wins"] == 6 and g2.judge_h2b(rows)["verdict"] == "fail"
+    assert g2.judge_g2a(rows)["verdict"] == "pass"
+    worse = trace | {s: (0.8, 0.0) for s in g2.HELD_OUT[:2]}
+    assert g2.judge_h2b(_g2_rows(trace=worse))["verdict"] == "pass"  # 7 wins
+    assert g2.judge_e2(rows)["verdict"] == g2.judge_g2a(rows)["verdict"]  # the gate is G2a
+
+
+def test_g2_reported_extras_and_input_check():
+    rows = _g2_rows()
+    out = g2.judge_e2(rows)
+    eq = out["reported"]["equal_k"]["stump"]
+    assert len(eq) == 12  # 4 K x 3 baselines
+    one = next(x for x in eq if x["K"] == 4096 and x["baseline"] == g2.BASELINE)
+    assert abs(one["size_ratio"] + 0.1) < 1e-6 and one["dPSNR"] == 0.0 and one["dominates"]
+    assert out["reported"]["vs_upstream_l1"]["stump"]["outcome"] == "win"
+    # only E2's own rows: E1's exploratory and secondary configs, and E0's, are refused
+    for config in ("gn_vq_eps1e2", "lloyd_c3dgs", "plain_l2", "gn_refine_ridge"):
+        with pytest.raises(RuntimeError, match="not E2 rows"):
+            g2.check_rows(rows + [_g1_row("stump", config, 0, 26.0, 16_000_000)])
+    with pytest.raises(RuntimeError, match="not E2 rows"):
+        g2.check_rows(rows + [_g1_row("playroom", g2.GNVQ, 0, 26.0, 16_000_000)])
+    assert g2.check_rows(rows)["n_rows"] == len(rows)
+
+
+def test_e2_job_constants_columns_and_foreign_csv(tmp_path):
+    """Amendment 7's variant and grid as the job's defaults; E1's columns plus the E2 ones; a CSV that
+    is not E2's (E1's, for instance) refused before any work."""
+    import csv as _csv
+
+    import gn_e1_scene as e1job
+    import gn_e2_scene as job
+
+    assert job.VQ_EPS == 1e-2 and job.VQ_MAX_ITERS == 20
+    assert job.K_VALUES == "1024,4096,16384,65536" and tuple(job.CONFIGS) == g2.CONFIGS
+    assert job.ROW_ORDER[:2] == (g2.BASELINE, g2.GNVQ)  # the G2a pair first at every K
+    assert set(e1job.COLUMNS) < set(job.COLUMNS)
+    assert set(job.COLUMNS) - set(e1job.COLUMNS) == {"dataset", "scene_set", "data_factor", "vq_max_iters"}
+    assert job.COLUMNS.index("vq_max_iters") == job.COLUMNS.index("vq_iterations") - 1
+    assert [job.scene_set(s) for s in ("stump", "truck", "garden")] == ["held_out", "held_out", "development"]
+    with pytest.raises(ValueError, match="not an E2 scene"):
+        job.scene_set("playroom")
+    path = tmp_path / "gn2_results_stump.csv"
+    job.assert_e2_csv(str(path))
+    with open(path, "w", newline="") as f:
+        _csv.DictWriter(f, fieldnames=job.COLUMNS).writeheader()
+    job.assert_e2_csv(str(path))
+    with open(path, "w", newline="") as f:
+        _csv.DictWriter(f, fieldnames=e1job.COLUMNS).writeheader()
+    with pytest.raises(RuntimeError, match="not an E2 result file"):
+        job.assert_e2_csv(str(path))
+    assert os.path.exists(path)
+
+
+def test_e2_pinned_checkpoints_match_run5_and_amendment_7():
+    """The checkpoint sha1s the E2 notebook pins are the ones runs 4-5 measured, and Amendment 7's."""
+    import csv as _csv
+    import re
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    rows = list(_csv.DictReader(open(os.path.join(repo, "kaggle", "run5", "tilequant", "run5_results.csv"), newline="")))
+    run5 = {r["scene"]: r["ckpt_sha1"] for r in rows}
+    assert set(run5) == set(g2.SCENES)
+    builder = open(os.path.join(repo, "kaggle", "build_gn_e2_bench.py"), encoding="utf-8").read()
+    pinned = dict(re.findall(r'"(\w+)": \("(?:tandt|mipnerf360)", "\w+", "([0-9a-f]{40})"\)', builder))
+    assert pinned == run5
+    amendment = open(os.path.join(repo, "kaggle", "PREREG_GN.md"), encoding="utf-8").read().split("## Amendment 7")[1]
+    table = dict(re.findall(r"\| (\w+) \| (?:held-out|development) \| [^|]+ \| `([0-9a-f]{40})` \|", amendment))
+    assert table == run5
+    # the queue: the held-out scenes first, garden and bicycle last
+    order = list(pinned)
+    assert set(order[:9]) == set(g2.HELD_OUT) and order[9:] == list(g2.DEV)

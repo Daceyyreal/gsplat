@@ -1,4 +1,4 @@
-"""The CPU stand-in the E0 and E1 dry runs share: a toy checkpoint, its sort and clustering caches,
+"""The CPU stand-in the E0, E1 and E2 dry runs share: a toy checkpoint, its sort and clustering caches,
 and a fake ``simple_trainer.Runner``.
 
 Nothing here is GPU code. ``gm.gsplat_render`` is replaced by ``bench/gn/toy_render.py``, TorchPQ
