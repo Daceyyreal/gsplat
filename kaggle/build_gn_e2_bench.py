@@ -37,10 +37,15 @@ flowers; Tanks & Temples train, truck).
   4,096, 16,384 and 65,536, seed 0, plus `uncompressed` (17 rows).
 - **G2a (the gate):** per held-out scene, the BD-rate of `gn_vq` vs `lloyd_wopa_area` over the four
   points; a win if below 0 (BD-PSNR above 0 if the curves share no PSNR range; a loss if neither is
-  defined). Passes with at least 8 of 9 wins and a mean BD-rate of at most -5% over the scenes where it
-  is defined.
+  defined). Passes with at least 8 of 9 wins and a mean of at most -5% over **all 9** held-out scenes,
+  each entering with its BD-rate or, where that is undefined, **Amendment 8**'s substitute (committed
+  before any E2 data): a, `gn_vq` reaches the baseline's best PSNR for fewer bytes; b, the reverse;
+  c, 0%.
 - **H2b (reported, own verdict):** the same rule against `lloyd_trace`, at least 7 of 9 wins.
 - Garden and bicycle run last and are never read by a verdict.
+- **Exploratory (Amendment 8 b), not judged:** `gn_vq_eps1e4` (eps = 1e-4, otherwise E2's variant) at
+  all four K on garden and bicycle, in a final phase after every scene job, so the eps choice has a
+  curve.
 
 **Kaggle settings:** accelerator *GPU T4 x2* (one scene job per GPU, next scene on the first free GPU),
 Internet *on*.
@@ -62,7 +67,8 @@ missing checkpoint or sort cache stops the notebook **before any install**.
 | 2 | find and check the inputs (11 checkpoints with their sha1s, 11 sort caches, clustering caches, wheel, GN caches, earlier E2 output) |
 | 3 | install gsplat (restored wheel), TorchPQ (for `upstream_l1`), example dependencies |
 | 4 | **CUDA smoke tests** (`bench/gn/selftest.py`), as in E0 and E1 |
-| 5 | E2 jobs (`kaggle/gn_e2_scene.py`): held-out scenes first, Tanks & Temples leading, garden and bicycle last; each job downloads and later deletes its own scene's data. No new job starts after 9.5 h |
+| 5 | E2 jobs (`kaggle/gn_e2_scene.py`): held-out scenes first, Tanks & Temples leading, garden and bicycle last; each job downloads and later deletes its own scene's data (garden and bicycle keep theirs for step 5b). No new job starts after 9.5 h |
+| 5b | **exploratory phase**, after every scene job has finished: `gn_vq_eps1e4` on garden and bicycle (8 rows), under the same start cutoff; these jobs delete the two scenes' data |
 | 6 | **G2a and H2b** (`bench/gn/g2.py` -> `gn2_g2.json`) and the rate-distortion plot (`gn2_rd.png`) |
 | 7 | `gn2_bundle.zip` (top-level csv / json / png of `gn2/`); raises last if any scene job failed |
 """
@@ -99,6 +105,8 @@ SCENE_INFO = {
 SCENES = list(SCENE_INFO)  # queue order
 BENCHMARK_SH = {"mipnerf360": "mcmc.sh", "tandt": "mcmc_tt.sh"}
 CONFIGS = "upstream_l1,lloyd_wopa_area,lloyd_trace,gn_vq"
+EXPLORATORY_CONFIGS = "gn_vq_eps1e4"  # Amendment 8 b: not judged, development scenes, last
+EXPLORATORY_SCENES = ["garden", "bicycle"]
 K_VALUES = "1024,4096,16384,65536"
 START_CUTOFF_S = 9.5 * 3600  # no scene job starts later: a T&T job must still end inside Kaggle's 12 h
 
@@ -463,10 +471,12 @@ record_timing("selftest_s", time.time() - t0)
 code(
     r"""
 # E2 jobs, one per scene, each on the first free GPU, in SCENES order (held-out first). Each job
-# downloads its own scene, writes its rows (resumable per config and K) and deletes the data. A failed
-# job does not stop the others; the bundle cell raises at the very end if one failed.
-jobs = []
-for scene in SCENES:
+# downloads its own scene, writes its rows (resumable per config and K) and deletes the data; garden
+# and bicycle keep theirs for the exploratory phase. A failed job does not stop the others; the bundle
+# cell raises at the very end if one failed.
+
+
+def scene_job(scene, configs, name, keep_data):
     dataset = SCENE_INFO[scene][0]
     args = [
         PY, f"{SRC_DIR}/kaggle/gn_e2_scene.py", "--scene", scene, "--dataset", dataset,
@@ -474,16 +484,23 @@ for scene in SCENES:
         "--data_root", DATA_ROOT, "--ckpt", CKPTS[scene], "--expected_sha1", SCENE_INFO[scene][2],
         "--sort_cache_dir", SORT_CACHE[scene], "--run3_kmeans_dir", KMEANS.get(scene, "''"),
         "--gn_cache", f"{GN_CACHE}/{scene}.pt", "--work_dir", f"{GN2_WORK}/{scene}",
-        "--runs_dir", f"{RUNS_ROOT}/{scene}", "--out_dir", GN2_OUT, "--configs", CONFIGS,
+        "--runs_dir", f"{RUNS_ROOT}/{scene}", "--out_dir", GN2_OUT, "--configs", configs,
         "--k_values", K_VALUES, "--examples_dir", f"{SRC_DIR}/examples", "--commit", COMMIT[:12],
-    ]
-    jobs.append((f"gn_e2_{scene}", " ".join(args), f"{SRC_DIR}/examples", f"{GN2_WORK}/gn_e2_{scene}.log"))
+    ] + (["--keep_data"] if keep_data else [])
+    return (name, " ".join(args), f"{SRC_DIR}/examples", f"{GN2_WORK}/{name}.log")
+
+
+jobs = [scene_job(s, CONFIGS, f"gn_e2_{s}", s in EXPLORATORY_SCENES) for s in SCENES]
+# Amendment 8 b: the exploratory rows, queued after everything else - a second queue that starts only
+# once every scene job above has finished, under the same start cutoff. Not judged.
+explore_jobs = [scene_job(s, EXPLORATORY_CONFIGS, f"gn_e2_{s}_eps1e4", False) for s in EXPLORATORY_SCENES]
+progress = r"^\[(" + "|".join(SCENES) + r")\]|Traceback|Error|FAILED|MISMATCH"
 try:
-    run_gpu_queue(jobs, max(1, N_GPUS), progress=r"^\[(" + "|".join(SCENES) + r")\]|Traceback|Error|FAILED|MISMATCH",
-                  start_cutoff_s=START_CUTOFF_S)
+    run_gpu_queue(jobs, max(1, N_GPUS), progress=progress, start_cutoff_s=START_CUTOFF_S)
+    run_gpu_queue(explore_jobs, max(1, N_GPUS), progress=progress, start_cutoff_s=START_CUTOFF_S)
 finally:
     # the log tails first, so they are in the bundle even when a job crashed
-    print("log tails:", write_log_tails(jobs, GN2_OUT), flush=True)
+    print("log tails:", write_log_tails(jobs + explore_jobs, GN2_OUT), flush=True)
     write_bundle(GN2_OUT, f"{WORK}/gn2_bundle.zip")
 JOB_FAILED = sorted(name for name, code in JOB_EXITS.items() if code != 0)
 print("exit codes:", JOB_EXITS, "\nfailed:", JOB_FAILED, "\nnot started (cutoff):", JOB_SKIPPED)
@@ -514,17 +531,20 @@ json.dump(verdict, open(f"{GN2_OUT}/gn2_g2.json", "w"), indent=2)
 
 
 def scene_line(v):
-    return {k: v[k] for k in ("outcome", "decided_by", "bd_rate", "bd_psnr")}
+    return {k: v[k] for k in ("outcome", "decided_by", "bd_rate", "bd_psnr", "mean_term", "mean_term_source")}
 
 
 summary = {
     "G2a (gate)": {k: verdict["g2a"][k] for k in ("verdict", "n_wins", "min_wins", "mean_bd_rate",
-                                                     "n_bd_rate_defined", "mean_ok", "missing")},
+                                                     "n_bd_rate_defined", "n_substituted", "mean_ok",
+                                                     "missing")},
     "H2b (reported)": {k: verdict["h2b"][k] for k in ("verdict", "n_wins", "min_wins", "missing")},
     "G2a per held-out scene": {s: scene_line(v) for s, v in verdict["g2a"]["per_scene"].items()},
     "H2b per held-out scene": {s: scene_line(v) for s, v in verdict["h2b"]["per_scene"].items()},
     "development (reported only)": {s: {b: scene_line(v) for b, v in d.items()}
                                     for s, d in verdict["reported"]["development"].items()},
+    "exploratory, eps 1e-4 (development, reported only)": {
+        s: {c: scene_line(v) for c, v in d.items()} for s, d in verdict["reported"]["exploratory"].items()},
 }
 print(json.dumps(summary, indent=2))
 
@@ -546,7 +566,7 @@ ncol = 4
 nrow = math.ceil(len(SCENES) / ncol)
 fig, axes = plt.subplots(nrow, ncol, figsize=(5 * ncol, 4 * nrow), squeeze=False)
 for ax, scene in zip(axes.flat, SCENES):
-    for config in g2.CONFIGS:
+    for config in g2.CONFIGS + (g2.EXPLORATORY if scene in g2.DEV else ()):
         pts = sorted(g2.curve(rows, scene, config)["points"], key=lambda p: p["bytes"])
         if pts:
             ax.plot([p["bytes"] / 1e6 for p in pts], [p["PSNR"] for p in pts], "o-", ms=3, label=config)

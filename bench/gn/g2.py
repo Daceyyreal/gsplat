@@ -1,15 +1,19 @@
-"""The E2 verdicts of kaggle/PREREG_GN.md Amendment 7, applied to the E2 result rows.
+"""The E2 verdicts of kaggle/PREREG_GN.md Amendments 7 and 8, applied to the E2 result rows.
 
 **G2a (the gate):** per held-out scene, the BD-rate of GN-VQ against ``lloyd_wopa_area`` over the
 four-point curves (K = 1,024, 4,096, 16,384, 65,536, seed 0). A scene wins if the BD-rate is below 0.
 If the BD-rate is undefined (the curves share no PSNR range), the scene is judged by the BD-PSNR over
 the overlapping byte range and wins if that is above 0. If both are undefined, the scene is a loss.
-G2a passes if at least 8 of the 9 held-out scenes win AND the mean BD-rate over the held-out scenes
-where it is defined is at most -5%; if no held-out scene has a defined BD-rate, that condition is not
-met.
+G2a passes if at least 8 of the 9 held-out scenes win AND the mean over all 9 held-out scenes is at most
+-5% (Amendment 8 a, which replaced Amendment 7's mean over the scenes with a defined BD-rate): a scene
+enters the mean with its BD-rate, or, if that is undefined, with ``mean_substitute``'s value.
 
 **H2b (reported, own verdict, not gating):** the same per-scene rule against ``lloyd_trace``; it holds
-if at least 7 of the 9 held-out scenes win.
+if at least 7 of the 9 held-out scenes win. Its reported mean is built the same way; its verdict has no
+mean condition.
+
+**Exploratory (Amendment 8 b):** ``gn_vq_eps1e4`` rows exist on garden and bicycle only; no verdict
+reads them, and ``check_rows`` refuses one on a held-out scene.
 
 A missing row makes its scene, and so the verdict, ``incomplete`` (``incomplete`` > ``fail`` >
 ``pass``). Garden and bicycle are development scenes: they are reported and never read by a verdict.
@@ -31,7 +35,9 @@ SCALAR = "lloyd_trace"  # H2b
 UPSTREAM = "upstream_l1"  # reported only
 UNCOMPRESSED = "uncompressed"
 CONFIGS = (UPSTREAM, BASELINE, SCALAR, GNVQ)
-KNOWN_CONFIGS = CONFIGS + (UNCOMPRESSED,)
+EPS1E4 = "gn_vq_eps1e4"  # Amendment 8 b: exploratory, development scenes only
+EXPLORATORY = (EPS1E4,)
+KNOWN_CONFIGS = CONFIGS + EXPLORATORY + (UNCOMPRESSED,)
 HELD_OUT = ("stump", "bonsai", "counter", "kitchen", "room", "treehill", "flowers", "train", "truck")
 DEV = ("garden", "bicycle")
 SCENES = HELD_OUT + DEV
@@ -42,11 +48,12 @@ G2A_MIN_WINS = 8
 G2A_MAX_MEAN_BD_RATE = -5.0  # percent
 H2B_MIN_WINS = 7
 RULE_G2A = (
-    "PREREG_GN.md Amendment 7 f: per held-out scene, BD-rate of gn_vq vs lloyd_wopa_area over the "
-    "4-point curves (K 1,024-65,536, seed 0); win if < 0; if undefined, BD-PSNR over the overlapping "
-    "byte range, win if > 0; if both undefined, a loss. Pass if >= 8 of the 9 held-out scenes win and "
-    "the mean BD-rate over the held-out scenes where it is defined is <= -5% (not met if none is "
-    "defined)"
+    "PREREG_GN.md Amendment 7 f with Amendment 8 a: per held-out scene, BD-rate of gn_vq vs "
+    "lloyd_wopa_area over the 4-point curves (K 1,024-65,536, seed 0); win if < 0; if undefined, "
+    "BD-PSNR over the overlapping byte range, win if > 0; if both undefined, a loss. Pass if >= 8 of "
+    "the 9 held-out scenes win and the mean over all 9 is <= -5%, each scene entering with its BD-rate "
+    "or, where that is undefined, Amendment 8's substitute (a: gn_vq reaches the baseline's best PSNR "
+    "for fewer bytes; b: the reverse; c: 0%)"
 )
 RULE_H2B = (
     "PREREG_GN.md Amendment 7 g: the same per-scene rule for gn_vq vs lloyd_trace; holds if >= 7 of "
@@ -89,6 +96,35 @@ def bd_psnr(ref_bytes, ref_psnr, new_bytes, new_psnr, degree: int = DEGREE) -> f
     return _finite_or_nan(float(avg2 - avg1))
 
 
+def _best(points: List[Dict]) -> Dict:
+    """A curve's best point: the highest PSNR; a tie goes to fewer bytes (Amendment 8 a)."""
+    return max(points, key=lambda p: (p["PSNR"], -p["bytes"]))
+
+
+def mean_substitute(new_points: List[Dict], ref_points: List[Dict]) -> Dict:
+    """Amendment 8 a: the term a scene without a defined BD-rate enters the mean with, in percent.
+
+    a. some ``new`` point has PSNR >= ``ref``'s best PSNR at fewer bytes than ``ref``'s best point:
+       ``-(1 - bytes_new / bytes_ref) x 100``, the cheapest such ``new`` point against ``ref``'s best;
+    b. some ``ref`` point has PSNR >= ``new``'s best PSNR at fewer bytes than ``new``'s best point:
+       ``+(bytes_new / bytes_ref - 1) x 100``, ``new``'s best against the cheapest such ``ref`` point;
+    c. otherwise 0.
+
+    Only measured points are compared; nothing is fitted or extrapolated."""
+    best_ref, best_new = _best(ref_points), _best(new_points)
+    a = [q for q in new_points if q["PSNR"] >= best_ref["PSNR"] and q["bytes"] < best_ref["bytes"]]
+    if a:
+        cheapest = min(a, key=lambda q: q["bytes"])
+        return {"value": -(1.0 - cheapest["bytes"] / best_ref["bytes"]) * 100.0, "source": "substitute_a",
+                "new_point": cheapest, "ref_point": best_ref}
+    b = [q for q in ref_points if q["PSNR"] >= best_new["PSNR"] and q["bytes"] < best_new["bytes"]]
+    if b:
+        cheapest = min(b, key=lambda q: q["bytes"])
+        return {"value": (best_new["bytes"] / cheapest["bytes"] - 1.0) * 100.0, "source": "substitute_b",
+                "new_point": best_new, "ref_point": cheapest}
+    return {"value": 0.0, "source": "substitute_c", "new_point": None, "ref_point": None}
+
+
 def curve(
     rows: Iterable[Dict], scene: str, config: str,
     k_values: Sequence[int] = K_VALUES, seed: int = SEED,
@@ -123,6 +159,8 @@ def judge_scene(
         "bd_psnr": math.nan,
         "decided_by": None,
         "win": False,
+        "mean_term": None,  # Amendment 8 a: the BD-rate, or the substitute where it is undefined
+        "mean_term_source": None,
     }
     if out["missing"]:
         out["outcome"] = "incomplete"
@@ -139,6 +177,12 @@ def judge_scene(
     else:
         out["decided_by"], out["win"] = "neither_defined", False
     out["outcome"] = "win" if out["win"] else "loss"
+    if not math.isnan(out["bd_rate"]):
+        out["mean_term"], out["mean_term_source"] = out["bd_rate"], "bd_rate"
+    else:  # the substitute feeds only the mean; the outcome above is Amendment 7's
+        sub_ = mean_substitute(new["points"], ref["points"])
+        out["mean_term"], out["mean_term_source"] = sub_["value"], sub_["source"]
+        out["substitute"] = sub_
     return out
 
 
@@ -148,9 +192,11 @@ def _judge_wins(
     per_scene = {s: judge_scene(rows, s, config, baseline, k_values, seed) for s in scenes}
     missing = [m for v in per_scene.values() for m in v["missing"]]
     n_wins = sum(1 for v in per_scene.values() if v["outcome"] == "win")
-    defined = [v["bd_rate"] for v in per_scene.values() if v["outcome"] != "incomplete"
-               and not math.isnan(v["bd_rate"])]
-    mean_bd = sum(defined) / len(defined) if defined else None
+    # Amendment 8 a: the mean over every scene, each with its BD-rate or its substitute. It exists
+    # whenever every scene is complete; with a scene incomplete the verdict is incomplete anyway.
+    terms = [v["mean_term"] for v in per_scene.values()]
+    mean_bd = None if missing else sum(terms) / len(terms)
+    sources = [v["mean_term_source"] for v in per_scene.values() if v["mean_term_source"]]
     out = {
         "rule": rule,
         "config": config,
@@ -164,7 +210,9 @@ def _judge_wins(
         "missing": missing,
         "complete": not missing,
         "mean_bd_rate": mean_bd,
-        "n_bd_rate_defined": len(defined),
+        "mean_over": "all scenes, BD-rate or Amendment 8 substitute",
+        "n_bd_rate_defined": sources.count("bd_rate"),
+        "n_substituted": {k: sources.count(k) for k in ("substitute_a", "substitute_b", "substitute_c")},
         "per_scene": per_scene,
     }
     wins_ok = n_wins >= min_wins
@@ -224,6 +272,11 @@ def check_rows(rows: Iterable[Dict], scenes: Sequence[str] = SCENES,
             f"not E2 rows: unknown scenes {bad_scene}, unknown configs {bad_config}. G2a and H2b are "
             f"judged only on rows E2 produced (scenes {list(scenes)}, configs {list(configs)})"
         )
+    stray = sorted({str(r.get("scene")) for r in rows
+                    if r.get("config") in EXPLORATORY and r.get("scene") not in DEV})
+    if stray:
+        raise RuntimeError(f"not E2 rows: exploratory {list(EXPLORATORY)} rows on {stray}; Amendment 8 b "
+                           f"runs them on the development scenes {list(DEV)} only")
     counts: Dict[str, Dict[str, int]] = {}
     for r in rows:
         per = counts.setdefault(str(r.get("scene")), {})
@@ -242,6 +295,15 @@ def judge_e2(rows: Iterable[Dict], k_values: Sequence[int] = K_VALUES, seed: int
         "development": {
             s: {base: judge_scene(rows, s, GNVQ, base, k_values, seed)
                 for base in (BASELINE, SCALAR, UPSTREAM)}
+            for s in DEV
+        },
+        # Amendment 8 b, reported only: the eps = 1e-4 curve against the baseline and against E2's
+        # variant (eps = 1e-2), on the development scenes
+        "exploratory": {
+            s: {
+                f"{EPS1E4}_vs_{BASELINE}": judge_scene(rows, s, EPS1E4, BASELINE, k_values, seed),
+                f"{GNVQ}_vs_{EPS1E4}": judge_scene(rows, s, GNVQ, EPS1E4, k_values, seed),
+            }
             for s in DEV
         },
     }

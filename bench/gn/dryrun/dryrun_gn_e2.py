@@ -7,9 +7,12 @@ renderer. ``PngCompression``, the library ``weighted_kmeans``, the GN metric, GN
 are the real code. K is shrunk to {8, 16, 32, 64}, with 64 standing in for 65,536.
 
 Stages: (0) the notebook's cells compile, the smoke cell runs before the jobs, the pinned checkpoints
-are run 5's, held-out scenes are queued first; (1) three scenes (stump and train held-out, garden
-development): all 17 rows each, the row order, the sources, the E2 variant (eps 1e-2, the iteration
-budget) and E1's logging; (2) resume runs nothing again; (3) refusals before any GPU work: a checkpoint
+are run 5's, held-out scenes are queued first, and the exploratory phase (Amendment 8 b) is a second
+queue after every scene job; (1) three scenes (stump and train held-out, garden development): all 17
+rows each, the row order, the sources, the E2 variant (eps 1e-2, the iteration budget) and E1's
+logging; (1b) the exploratory eps = 1e-4 rows: refused on a held-out scene, appended after garden's
+pre-registered rows, and never marking a scene done on their own (bicycle); (2) resume runs nothing
+again; (3) refusals before any GPU work: a checkpoint
 sha1 mismatch, a missing sort cache, a foreign results CSV, an unknown scene; (4) the notebook's G2 cell
 (incomplete on the three scenes, then complete with the toy rows copied to all nine held-out scenes)
 and its bundle cell; (5) the GPU queue: a failed job does not stop the others, and the start cutoff;
@@ -78,7 +81,7 @@ def fake_data(scene):
     return d
 
 
-def argv(scene, **over):
+def argv(scene, keep=None, **over):
     a = {
         "--scene": scene,
         "--dataset": SCENES.get(scene, "mipnerf360"),
@@ -103,7 +106,8 @@ def argv(scene, **over):
     }
     a.update(over)
     out = [x for kv in a.items() for x in kv]
-    return out + (["--keep_data"] if scene != "stump" else [])
+    keep = scene != "stump" if keep is None else keep
+    return out + (["--keep_data"] if keep else [])
 
 
 def rows_of(scene):
@@ -138,8 +142,30 @@ assert {s: v[2] for s, v in ns0["SCENE_INFO"].items()} == run5, "pins differ fro
 assert set(ns0["SCENES"][:9]) == set(g2.HELD_OUT) and ns0["SCENES"][9:] == list(g2.DEV)
 assert ns0["CONFIGS"].split(",") == list(g2.CONFIGS) and ns0["K_VALUES"] == job.K_VALUES
 assert job.VQ_EPS == 1e-2 and job.VQ_MAX_ITERS == 20
+assert ns0["EXPLORATORY_CONFIGS"] == g2.EPS1E4 and ns0["EXPLORATORY_SCENES"] == list(g2.DEV)
+# the jobs cell, with the queue stubbed: the scene jobs first, then - only once that queue has
+# returned - the exploratory jobs, both under the start cutoff
+calls = []
+jns = dict(ns0)
+jns.update(
+    run_gpu_queue=lambda jobs, n, progress=None, start_cutoff_s=None: calls.append(
+        ([j[0] for j in jobs], [j[1] for j in jobs], start_cutoff_s)),
+    write_log_tails=lambda jobs, out: [], write_bundle=lambda *a, **k: [],
+    CKPTS={s: f"/x/{s}.pt" for s in ns0["SCENES"]}, SORT_CACHE={s: f"/x/{s}" for s in ns0["SCENES"]},
+    KMEANS={}, COMMIT="0" * 40, N_GPUS=2,
+)
+exec(srcs[jobs_i], jns)
+assert len(calls) == 2, calls
+(main_names, main_cmds, cut0), (x_names, x_cmds, cut1) = calls
+assert main_names == [f"gn_e2_{s}" for s in ns0["SCENES"]] and cut0 == cut1 == ns0["START_CUTOFF_S"]
+for name, cmd in zip(main_names, main_cmds):
+    assert f"--configs {ns0['CONFIGS']} " in cmd and g2.EPS1E4 not in cmd, cmd
+    assert cmd.endswith("--keep_data") == (name[6:] in g2.DEV), cmd  # dev data kept for phase 2
+assert x_names == [f"gn_e2_{s}_eps1e4" for s in g2.DEV]
+assert all(f"--configs {g2.EPS1E4} " in c and "--keep_data" not in c for c in x_cmds), x_cmds
 print(f"(0) E2 notebook: {len(srcs)} code cells compile; restore before the smoke tests before the jobs; "
-      "the 11 pinned sha1s are run 5's; held-out scenes queued first; eps 1e-2, 20 iterations: ok")
+      "the 11 pinned sha1s are run 5's; held-out scenes queued first; eps 1e-2, 20 iterations; the "
+      "exploratory eps 1e-4 jobs are a second queue after all scene jobs, dev data kept until then: ok")
 
 # (1) three scenes
 for scene in SCENES:
@@ -175,12 +201,49 @@ for scene, dataset in SCENES.items():
     meta = json.load(open(os.path.join(out_dir, f"gn2_meta_{scene}.json")))
     assert meta["done"] and meta["missing_rows"] == [] and meta["lifted_check"]["pass"]
     assert meta["ckpt_sha1"] == meta["expected_sha1"] == env["sha"] and meta["data_factor"] == factor
-    assert meta["gn_vq"] == {"max_iters": VQ_ITERS, "rel_tol": 1e-3, "ridge_eps": 1e-2, "quantizer_bits": 6}
+    assert meta["gn_vq"] == {"max_iters": VQ_ITERS, "rel_tol": 1e-3, "ridge_eps": 1e-2, "quantizer_bits": 6,
+                             "exploratory": {}}
     assert meta["data_deleted"] == (scene == "stump")
     assert os.path.isdir(os.path.join(data_root, scene)) == (scene != "stump")
 print("(1) stump, train (held-out) and garden (development): 17 rows each in the G2a-first order, sources "
       "(K = 64 from the run-3 caches, the rest clustered), eps 1e-2 and the iteration budget in every "
       "GN-VQ report, both quantizer ranges, the data factor per dataset, data deleted unless kept: ok")
+
+# (1b) the exploratory rows (Amendment 8 b)
+n_builds = BUILDS["n"]
+try:
+    job.main(argv("stump", **{"--configs": g2.EPS1E4}))
+    raise AssertionError("exploratory rows were accepted on a held-out scene")
+except ValueError as e:
+    assert "development scenes only" in str(e), e
+assert BUILDS["n"] == n_builds, "the refusal built a runner"
+before_x = triples("garden")
+assert job.main(argv("garden", keep=False, **{"--configs": g2.EPS1E4})) == 0
+got = triples("garden")
+assert got[:len(before_x)] == before_x == EXPECTED
+assert got[len(before_x):] == [(g2.EPS1E4, k) for k in KS], got  # after every pre-registered row
+rows = {(r["config"], job.e0._k_of(r)): r for r in rows_of("garden")}
+for k in KS:
+    r = rows[(g2.EPS1E4, k)]
+    rep = json.load(open(os.path.join(out_dir, f"gn2_{g2.EPS1E4}_k{k}_s0_garden.json")))
+    assert rep["ridge_eps"] == 1e-4 == float(r["ridge_eps"]) and rep["max_iters"] == VQ_ITERS
+    assert int(r["vq_max_iters"]) == VQ_ITERS and r["scene_set"] == "development"
+    assert r["source"] == ("gn_vq_of_run3_cache" if k == KDEF else "gn_vq_of_recomputed"), r["source"]
+    assert r["writer_codes_equal"] == "True" and rep["clip"] and rep["final_quantized_assignment"]
+meta = json.load(open(os.path.join(out_dir, "gn2_meta_garden.json")))
+assert meta["done"] and meta["missing_rows"] == [] and meta["missing_exploratory"] == []
+assert meta["gn_vq"]["exploratory"] == {g2.EPS1E4: {"eps": 1e-4}} and meta["gn_vq"]["ridge_eps"] == 1e-2
+assert meta["data_deleted"] and not os.path.isdir(os.path.join(data_root, "garden"))
+# an exploratory-only run on a scene with no pre-registered rows writes only its 4 rows (no
+# uncompressed row) and does not mark the scene done
+fake_data("bicycle")
+assert job.main(argv("bicycle", keep=False, **{"--configs": g2.EPS1E4})) == 0
+assert triples("bicycle") == [(g2.EPS1E4, k) for k in KS], triples("bicycle")
+meta = json.load(open(os.path.join(out_dir, "gn2_meta_bicycle.json")))
+assert not meta["done"] and len(meta["missing_rows"]) == len(EXPECTED) and meta["missing_exploratory"] == []
+print("(1b) exploratory eps 1e-4: refused on stump before any GPU work; on garden 4 rows after the 17 "
+      "pre-registered ones (eps 1e-4, the same budget and warm starts), data deleted afterwards; on a "
+      "fresh bicycle only those 4 rows, no uncompressed row, and the scene is not marked done: ok")
 
 # (2) resume
 before = {s: triples(s) for s in SCENES}
@@ -238,6 +301,11 @@ assert missing_scenes == set(g2.HELD_OUT) - {"stump", "train"}, missing_scenes
 for s in ("stump", "train"):
     assert v["g2a"]["per_scene"][s]["outcome"] in ("win", "loss")
 assert set(v["reported"]["development"]) == set(g2.DEV)
+ex = v["reported"]["exploratory"]
+for c in (f"{g2.EPS1E4}_vs_{g2.BASELINE}", f"{g2.GNVQ}_vs_{g2.EPS1E4}"):
+    assert ex["garden"][c]["outcome"] in ("win", "loss"), (c, ex["garden"][c]["outcome"])
+assert ex["bicycle"][f"{g2.EPS1E4}_vs_{g2.BASELINE}"]["outcome"] == "incomplete"  # no baseline rows
+assert v["g2a"]["missing"] and not any(g2.EPS1E4 in m for m in v["g2a"]["missing"])
 assert v["reported"]["development"]["garden"][g2.BASELINE]["outcome"] in ("win", "loss")
 # a complete verdict through the same cell: the toy rows under every held-out scene's name
 full = os.path.join(ROOT, "gn2_full")
@@ -268,7 +336,8 @@ exec(bundle_cell, ns)
 names = zipfile.ZipFile(os.path.join(ROOT, "gn2_bundle.zip")).namelist()
 for f in ("gn2/gn2_results_stump.csv", "gn2/gn2_results_train.csv", "gn2/gn2_results_garden.csv",
           "gn2/gn2_g2.json", "gn2/gn2_rd.png", "gn2/gn2_meta_train.json",
-          f"gn2/gn2_gn_vq_k{KDEF}_s0_stump.json", "gn2/gn_e2_train_log_tail.json"):
+          f"gn2/gn2_gn_vq_k{KDEF}_s0_stump.json", "gn2/gn_e2_train_log_tail.json",
+          f"gn2/gn2_{g2.EPS1E4}_k{KDEF}_s0_garden.json", "gn2/gn2_results_bicycle.csv"):
     assert f in names, (f, names)
 assert "gn2/gn1_g1.json" not in names and all(n.startswith("gn2/") and n.count("/") == 1 for n in names)
 assert not any(n.endswith(".pt") or "gn_cache" in n for n in names)

@@ -1590,26 +1590,117 @@ def test_g2a_passes_fails_on_breadth_and_fails_on_magnitude():
     assert res["n_wins"] == 9 and res["wins_ok"] and not res["mean_ok"] and res["verdict"] == "fail"
 
 
-def test_g2a_mean_counts_only_defined_bd_rates_and_is_not_met_when_none_is():
-    # 4 scenes win by BD-PSNR (no PSNR overlap), 5 by BD-rate at -6%: the mean is over the 5 only
+def _pts(*bp):
+    """Curve points from (bytes, PSNR) pairs; K is only a label here."""
+    return [{"K": 1024 * 4 ** i, "bytes": b, "PSNR": p} for i, (b, p) in enumerate(bp)]
+
+
+def test_g2_mean_substitute_every_branch():
+    """Amendment 8 a: a, b and c, the cheapest point, the strict and inclusive comparisons, the tie."""
+    base = _pts((14_000_000, 25.00), (14_500_000, 25.12), (15_200_000, 25.21), (16_400_000, 25.27))
+    # a: gn_vq entirely above; three of its points reach the baseline's best PSNR at fewer bytes than
+    # the baseline's best point (16.4 MB), and the cheapest of them decides
+    gn = _pts((14_200_000, 25.40), (14_600_000, 25.45), (15_000_000, 25.50), (16_800_000, 25.60))
+    s = g2.mean_substitute(gn, base)
+    assert s["source"] == "substitute_a" and s["new_point"]["bytes"] == 14_200_000
+    assert s["ref_point"]["bytes"] == 16_400_000
+    assert abs(s["value"] - (-(1 - 14_200_000 / 16_400_000) * 100)) < 1e-12 and s["value"] < 0
+    # a: PSNR equal to the baseline's best counts (>=); bytes equal to its best point do not (strict)
+    gn = _pts((16_400_000, 25.30), (16_500_000, 25.40), (13_000_000, 25.27), (17_000_000, 25.50))
+    s = g2.mean_substitute(gn, base)
+    assert s["source"] == "substitute_a" and s["new_point"]["bytes"] == 13_000_000
+    gn = _pts((16_400_000, 25.30), (16_500_000, 25.40), (16_600_000, 25.45), (17_000_000, 25.50))
+    assert g2.mean_substitute(gn, base)["source"] == "substitute_c"  # a fails on bytes, b on PSNR
+    # b: the baseline entirely above gn_vq; the cheapest baseline point that reaches gn_vq's best PSNR
+    # (24.60 at 15.9 MB) at fewer bytes, against gn_vq's best point
+    gn = _pts((13_000_000, 24.30), (14_000_000, 24.45), (15_000_000, 24.55), (15_900_000, 24.60))
+    s = g2.mean_substitute(gn, base)
+    assert s["source"] == "substitute_b" and s["ref_point"]["bytes"] == 14_000_000
+    assert s["new_point"]["bytes"] == 15_900_000
+    assert abs(s["value"] - (15_900_000 / 14_000_000 - 1) * 100) < 1e-12 and s["value"] > 0
+    # c, the other side: the baseline entirely above, but no baseline point is cheaper than gn_vq's best
+    gn = _pts((10_000_000, 24.00), (11_000_000, 24.10), (12_000_000, 24.20), (13_000_000, 24.30))
+    assert g2.mean_substitute(gn, base) == {"value": 0.0, "source": "substitute_c", "new_point": None,
+                                            "ref_point": None}
+    # a tie on the best PSNR goes to fewer bytes: the baseline's best is then the 15.0 MB point
+    tie = _pts((14_000_000, 25.00), (15_000_000, 25.27), (15_500_000, 25.10), (16_400_000, 25.27))
+    gn = _pts((14_800_000, 25.40), (15_100_000, 25.45), (16_000_000, 25.50), (16_900_000, 25.55))
+    s = g2.mean_substitute(gn, tie)
+    assert s["ref_point"]["bytes"] == 15_000_000 and s["new_point"]["bytes"] == 14_800_000
+
+
+def test_g2_mean_substitute_on_e1_garden_is_minus_9_77_percent():
+    """Amendment 8's worked example, from E1's committed bundle: garden has no defined BD-rate, and
+    gn_vq at K = 4,096 (14,803,113 B) reaches lloyd_wopa_area's best (16,405,132 B)."""
+    repo = os.path.dirname(os.path.dirname(HERE))
+    rd = json.load(open(os.path.join(repo, "kaggle", "gn_e1", "gn1", "gn1_g1.json")))["rd"]["scenes"]
+    garden = rd["garden"]["points"]
+    assert math.isnan(rd["garden"]["bd_rate_vs_lloyd_wopa_area"]["gn_vq"])
+    s = g2.mean_substitute(garden["gn_vq"], garden["lloyd_wopa_area"])
+    assert s["source"] == "substitute_a" and s["new_point"]["K"] == 4096 and s["ref_point"]["K"] == 65536
+    assert s["new_point"]["bytes"] == 14_803_113 and s["ref_point"]["bytes"] == 16_405_132
+    assert abs(s["value"] - (-(1 - 14_803_113 / 16_405_132) * 100)) < 1e-12
+    assert round(s["value"], 2) == -9.77
+
+
+def test_g2a_mean_over_all_nine_with_substitutes():
+    """Amendment 8 a: every held-out scene enters the mean, with its BD-rate or its substitute."""
+    # 4 scenes above the baseline in PSNR at the same bytes (substitute a: the 14.0 MB gn_vq point
+    # against the baseline's 16.4 MB best), 5 at -6% BD-rate
+    sub_a = -(1 - 14_000_000 / 16_400_000) * 100
     gnvq = {s: (1.0, 1.0) for s in g2.HELD_OUT[:4]} | {s: (0.94, 0.0) for s in g2.HELD_OUT[4:]}
     res = g2.judge_g2a(_g2_rows(gnvq))
     assert res["n_wins"] == 9 and res["n_bd_rate_defined"] == 5
-    assert abs(res["mean_bd_rate"] + 6.0) < 1e-6 and res["verdict"] == "pass"
-    # every scene above the baseline in PSNR: 9 wins by BD-PSNR, but no BD-rate exists, so the mean
-    # condition is not met (Amendment 7 f) and G2a fails
-    res = g2.judge_g2a(_g2_rows({s: (1.0, 1.0) for s in g2.HELD_OUT}))
-    assert res["n_wins"] == 9 and res["n_bd_rate_defined"] == 0 and res["mean_bd_rate"] is None
+    assert res["n_substituted"] == {"substitute_a": 4, "substitute_b": 0, "substitute_c": 0}
+    assert abs(res["mean_bd_rate"] - (4 * sub_a + 5 * -6.0) / 9) < 1e-6 and res["verdict"] == "pass"
+    for s in g2.HELD_OUT[:4]:
+        v = res["per_scene"][s]
+        assert v["mean_term_source"] == "substitute_a" and abs(v["mean_term"] - sub_a) < 1e-9
+        assert v["decided_by"] == "bd_psnr" and v["outcome"] == "win"  # the win rule is unchanged
+    # a losing scene below the baseline enters with substitute b (+17.1%) and can sink the mean:
+    # 8 wins at -6% and one such scene average -3.43%, so G2a fails with 8 wins
+    sub_b = (16_400_000 / 14_000_000 - 1) * 100
+    res = g2.judge_g2a(_g2_rows({s: (0.94, 0.0) for s in g2.HELD_OUT[:8]} | {"truck": (1.0, -1.0)}))
+    v = res["per_scene"]["truck"]
+    assert v["outcome"] == "loss" and v["mean_term_source"] == "substitute_b"
+    assert abs(v["mean_term"] - sub_b) < 1e-9
+    assert res["n_wins"] == 8 and abs(res["mean_bd_rate"] - (8 * -6.0 + sub_b) / 9) < 1e-6
     assert not res["mean_ok"] and res["verdict"] == "fail"
+    # the 0% fallback: a scene above in PSNR but never cheaper (bytes x 10, no overlap either way) is a
+    # loss and enters with 0%: 8 x -6% and 0% average -5.33%, so G2a passes with 8 wins
+    res = g2.judge_g2a(_g2_rows({s: (0.94, 0.0) for s in g2.HELD_OUT[:8]} | {"truck": (10.0, 1.0)}))
+    v = res["per_scene"]["truck"]
+    assert v["outcome"] == "loss" and v["decided_by"] == "neither_defined"
+    assert v["mean_term_source"] == "substitute_c" and v["mean_term"] == 0.0
+    assert abs(res["mean_bd_rate"] - 8 * -6.0 / 9) < 1e-6 and res["verdict"] == "pass"
+
+
+def test_g2a_all_undefined_passes_now_and_failed_under_amendment_7():
+    """The case Amendment 8 was written for: every held-out scene like E1's garden (GN-VQ entirely
+    above). Under Amendment 7 the mean over defined BD-rates did not exist, so G2a failed with 9 of 9
+    wins; now each scene enters with substitute a and the mean is defined."""
+    res = g2.judge_g2a(_g2_rows({s: (1.0, 1.0) for s in g2.HELD_OUT}))
+    assert res["n_wins"] == 9 and res["n_bd_rate_defined"] == 0
+    assert res["n_substituted"]["substitute_a"] == 9
+    # what Amendment 7 computed: the mean over the scenes with a defined BD-rate - none
+    old_defined = [v["bd_rate"] for v in res["per_scene"].values() if not math.isnan(v["bd_rate"])]
+    assert old_defined == []
+    sub_a = -(1 - 14_000_000 / 16_400_000) * 100
+    assert abs(res["mean_bd_rate"] - sub_a) < 1e-9 and res["mean_ok"] and res["verdict"] == "pass"
+    # and the mirror image, every scene entirely below: 9 losses, substitute b everywhere
+    res = g2.judge_g2a(_g2_rows({s: (1.0, -1.0) for s in g2.HELD_OUT}))
+    assert res["n_wins"] == 0 and res["n_substituted"]["substitute_b"] == 9
+    assert res["mean_bd_rate"] > 0 and res["verdict"] == "fail"
 
 
 def test_g2a_boundaries_are_inclusive(monkeypatch):
-    """At least 8 wins; mean BD-rate at most -5%: both boundaries included."""
+    """At least 8 wins; the mean at most -5%: both boundaries included."""
     table = {}
 
     def fake_judge_scene(rows, scene, config, baseline, k_values, seed):
-        outcome, bd = table[scene]
-        return {"scene": scene, "missing": [], "outcome": outcome, "bd_rate": bd, "bd_psnr": math.nan}
+        outcome, term = table[scene]
+        return {"scene": scene, "missing": [], "outcome": outcome, "bd_rate": term,
+                "bd_psnr": math.nan, "mean_term": term, "mean_term_source": "bd_rate"}
 
     monkeypatch.setattr(g2, "judge_scene", fake_judge_scene)
     table.update({s: ("win", -5.0) for s in g2.HELD_OUT[:8]} | {g2.HELD_OUT[8]: ("loss", -5.0)})
@@ -1619,6 +1710,38 @@ def test_g2a_boundaries_are_inclusive(monkeypatch):
     assert g2.judge_g2a([])["verdict"] == "fail"  # mean -4.998...
     table.update({g2.HELD_OUT[7]: ("loss", -5.0), g2.HELD_OUT[8]: ("loss", -5.0)})
     assert g2.judge_g2a([])["n_wins"] == 7 and g2.judge_g2a([])["verdict"] == "fail"
+
+
+def test_g2_h2b_mean_uses_the_substitutes_and_upstream_has_none():
+    """Amendment 8 a, 'same construction elsewhere': H2b's reported mean takes the substitutes (its
+    verdict is still the win count); the upstream_l1 comparison reports per-scene terms, no mean."""
+    trace = {s: (1.0, -1.0) for s in g2.HELD_OUT[:3]}  # lloyd_trace below GN-VQ by 1 dB, same bytes
+    res = g2.judge_h2b(_g2_rows(trace=trace))
+    assert res["n_bd_rate_defined"] == 6 and res["n_substituted"]["substitute_a"] == 3
+    assert res["mean_bd_rate"] is not None and "mean_ok" not in res
+    assert res["verdict"] == "pass" and res["n_wins"] == 9
+    out = g2.judge_e2(_g2_rows(trace=trace))
+    up = out["reported"]["vs_upstream_l1"]["stump"]
+    assert up["mean_term_source"] == "bd_rate" and "mean_bd_rate" not in out["reported"]
+
+
+def test_g2_exploratory_rows_dev_only_and_never_read():
+    """Amendment 8 b: gn_vq_eps1e4 exists on garden and bicycle only, and no verdict reads it."""
+    rows = _g2_rows()
+    dev = _g2_rows(scenes=g2.DEV)
+    explore = [dict(r, config=g2.EPS1E4, PSNR=r["PSNR"] - 0.5) for r in dev if r["config"] == g2.GNVQ]
+    before, after = g2.judge_e2(rows + dev), g2.judge_e2(rows + dev + explore)
+    for key in ("g2a", "h2b"):
+        assert json.dumps(before[key], sort_keys=True, default=str) == json.dumps(
+            after[key], sort_keys=True, default=str)
+    ex = after["reported"]["exploratory"]["garden"]
+    assert ex[f"{g2.EPS1E4}_vs_{g2.BASELINE}"]["outcome"] in ("win", "loss")
+    assert ex[f"{g2.GNVQ}_vs_{g2.EPS1E4}"]["outcome"] == "win"  # eps 1e-2 is 0.5 dB above here
+    assert before["reported"]["exploratory"]["garden"][f"{g2.GNVQ}_vs_{g2.EPS1E4}"]["outcome"] == "incomplete"
+    assert g2.check_rows(rows + dev + explore)["per_scene"]["garden"][g2.EPS1E4] == 4
+    stray = [dict(explore[0], scene="stump")]
+    with pytest.raises(RuntimeError, match="exploratory"):
+        g2.check_rows(rows + stray)
 
 
 def test_g2_incomplete_and_the_development_scenes_are_never_read():
@@ -1686,6 +1809,9 @@ def test_e2_job_constants_columns_and_foreign_csv(tmp_path):
     assert job.VQ_EPS == 1e-2 and job.VQ_MAX_ITERS == 20
     assert job.K_VALUES == "1024,4096,16384,65536" and tuple(job.CONFIGS) == g2.CONFIGS
     assert job.ROW_ORDER[:2] == (g2.BASELINE, g2.GNVQ)  # the G2a pair first at every K
+    # Amendment 8 b: one exploratory variant, differing from gn_vq in the ridge alone
+    assert job.EXPLORATORY == {g2.EPS1E4: {"eps": 1e-4}} and job.VQ_VARIANTS == (g2.GNVQ, g2.EPS1E4)
+    assert g2.EPS1E4 not in job.CONFIGS and g2.EPS1E4 not in job.ROW_ORDER
     assert set(e1job.COLUMNS) < set(job.COLUMNS)
     assert set(job.COLUMNS) - set(e1job.COLUMNS) == {"dataset", "scene_set", "data_factor", "vq_max_iters"}
     assert job.COLUMNS.index("vq_max_iters") == job.COLUMNS.index("vq_iterations") - 1

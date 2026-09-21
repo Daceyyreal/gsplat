@@ -12,6 +12,10 @@ Rows per scene (`gn2_results_<scene>.csv`, 17): `upstream_l1`, `lloyd_wopa_area`
 `gn_vq` at each K (seed 0), and `uncompressed`. The verdicts (G2a, H2b) are `bench/gn/g2.py`'s, over
 the nine held-out scenes; garden and bicycle run too and are never read by a verdict.
 
+Exploratory (Amendment 8 b): `--configs gn_vq_eps1e4` adds E2's GN-VQ with eps = 1e-4 at each K, on
+garden and bicycle only (refused elsewhere before any work). Those rows come after every pre-registered
+row of the invocation; the notebook runs them in a final phase, after every scene job has finished.
+
 The job:
 
 - refuses a checkpoint whose sha1 is not the one runs 4-5 measured (`--expected_sha1`, Amendment 7 d),
@@ -62,6 +66,10 @@ VQ_MAX_ITERS = 20  # Amendment 7 c
 CONFIGS = list(g2.CONFIGS)  # upstream_l1, lloyd_wopa_area, lloyd_trace, gn_vq
 # The order rows are written in, per K: the G2a pair first, so a cut-short scene has its gate rows.
 ROW_ORDER = (g2.BASELINE, g2.GNVQ, g2.SCALAR, g2.UPSTREAM)
+# Amendment 8 b: exploratory GN-VQ variants, development scenes only, never read by a verdict. They
+# differ from gn_vq in the ridge alone.
+EXPLORATORY = {g2.EPS1E4: {"eps": 1e-4}}
+VQ_VARIANTS = (g2.GNVQ,) + tuple(EXPLORATORY)
 
 # E1's columns and the few E2 adds: which dataset and scene set the row belongs to, its data
 # factor, and the GN-VQ iteration budget (Amendment 7 c changes it from E1's 10).
@@ -169,9 +177,13 @@ def main(argv=None):
     scene = args.scene
     sset = scene_set(scene)
     configs = [c for c in args.configs.split(",") if c]
-    unknown = [c for c in configs if c not in CONFIGS]
+    unknown = [c for c in configs if c not in CONFIGS and c not in EXPLORATORY]
     if unknown:
         raise ValueError(f"unknown configs {unknown}")
+    explore = [c for c in configs if c in EXPLORATORY]
+    if explore and sset != "development":
+        raise ValueError(f"exploratory configs {explore} run on the development scenes only "
+                         f"(Amendment 8 b), not on {scene}")
     k_values = [int(k) for k in args.k_values.split(",") if k]
     parsed = r5a.parse_benchmark_sh(open(args.benchmark_sh).read())
     if scene not in parsed["scenes"]:
@@ -200,8 +212,11 @@ def main(argv=None):
     done = e0.read_done(csv_path, scene)
     wanted = [(name, k) for k in k_values for name in ROW_ORDER if name in configs]
     todo = [(n, k) for n, k in wanted if (n, k, args.seed) not in done]
-    need_unc = ("uncompressed", 0, 0) not in done
-    if not todo and not need_unc:
+    wanted_x = [(name, k) for name in explore for k in k_values]  # after everything pre-registered
+    todo_x = [(n, k) for n, k in wanted_x if (n, k, args.seed) not in done]
+    # the uncompressed row belongs to the pre-registered set: an exploratory-only invocation skips it
+    need_unc = any(c in CONFIGS for c in configs) and ("uncompressed", 0, 0) not in done
+    if not todo and not todo_x and not need_unc:
         log(scene, "all rows exist")
         meta["done"] = True
         e0.write_json(meta_path, meta)
@@ -234,7 +249,9 @@ def main(argv=None):
         seed=args.seed,
         gsplat_commit=args.commit,
         gn_vq={"max_iters": args.vq_iters, "rel_tol": args.vq_rel_tol, "ridge_eps": args.eps,
-               "quantizer_bits": vq.QUANT_BITS},
+               "quantizer_bits": vq.QUANT_BITS,
+               "exploratory": {c: EXPLORATORY[c] for c in explore} if explore else meta.get(
+                   "gn_vq", {}).get("exploratory", {})},
     )
     log(scene, f"{sset}, {len(splats_raw['means'])} splats, {len(train_views)} train / "
                f"{len(test_views)} test views, K {k_values}")
@@ -273,7 +290,8 @@ def main(argv=None):
 
     # The lifted assignment is what GN-VQ is built on: checked once per scene, as in E1. A failure
     # skips the GN-VQ rows, which leaves this scene incomplete for G2a and H2b (Amendment 7 i).
-    if g2.GNVQ in configs and gd.lifted_check_needed(meta.get("lifted_check")):
+    uses_vq = any(c in VQ_VARIANTS for c in configs)
+    if uses_vq and gd.lifted_check_needed(meta.get("lifted_check")):
         warm = get_codebook(args, g2.BASELINE, args.n_clusters, sorted_raw, gn_sorted, key3)
         t = time.perf_counter()
         chk = gd.lifted_check(x, M_sorted, warm["centroids"].to(dev), n_sample=args.n_lifted_check,
@@ -282,7 +300,7 @@ def main(argv=None):
         meta["lifted_check"] = chk
         e0.write_json(meta_path, meta)
         log(scene, f"lifted vs direct check: {chk}")
-    vq_ok = bool(meta.get("lifted_check", {}).get("pass", g2.GNVQ not in configs))
+    vq_ok = bool(meta.get("lifted_check", {}).get("pass", not uses_vq))
     if not vq_ok:
         log(scene, "LIFTED CHECK FAILED: the GN-VQ rows are skipped; the scene stays incomplete")
 
@@ -367,17 +385,18 @@ def main(argv=None):
         return (f"{row['config']} K {row['n_clusters']}: P {row['predicted']:.6g}, D_test "
                 f"{row['measured_test_clamped']:.6g}, PSNR {row['PSNR']:.4f}, raw bytes {row['size_bytes']}")
 
-    for name, k in todo:
-        if name == g2.GNVQ:
+    def write_row(name, k) -> None:
+        if name in VQ_VARIANTS:
             if not vq_ok:
-                continue
+                return
+            eps = EXPLORATORY.get(name, {}).get("eps", args.eps)
             warm = get_codebook(args, g2.BASELINE, k, sorted_raw, gn_sorted, key3)
             C0, L0 = warm["centroids"].to(dev), warm["labels"].to(dev)
             ts._sync()
             tic = time.perf_counter()
             C, labels, report = vq.gn_vq(
                 x, C0, L0, M_sorted, total_train_pixels, max_iters=args.vq_iters,
-                rel_tol=args.vq_rel_tol, eps=args.eps, topk_at_iter=args.topk_at_iter,
+                rel_tol=args.vq_rel_tol, eps=eps, topk_at_iter=args.topk_at_iter,
                 topk=args.topk, log=lambda m: log(scene, m),
             )
             ts._sync()
@@ -419,6 +438,9 @@ def main(argv=None):
         append_row(csv_path, row)
         log(scene, row_log(row))
 
+    for name, k in todo:
+        write_row(name, k)
+
     if need_unc:
         for k_, v in splats_raw.items():
             runner.splats[k_].data = v.clone()
@@ -436,12 +458,22 @@ def main(argv=None):
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
         })
 
+    for name, k in todo_x:  # Amendment 8 b: exploratory, after every pre-registered row
+        write_row(name, k)
+
     meta["linalg"] = {"max_batch": bl.LINALG_MAX_BATCH, "op_max_batch": bl.OP_MAX_BATCH,
                       "working_batches": bl.linalg_working_batches(), "fallbacks": bl.linalg_fallbacks()}
     meta["timings_s"]["job"] = meta["timings_s"].get("job", 0.0) + (time.perf_counter() - t_job)
-    missing = [(n, k) for n, k in wanted if (n, k, args.seed) not in e0.read_done(csv_path, scene)]
-    meta["missing_rows"] = [f"{n} K={k}" for n, k in missing]
+    # completeness is over the pre-registered rows whatever this invocation asked for, so an
+    # exploratory-only run can never mark a scene done
+    done_now = e0.read_done(csv_path, scene)
+    missing = [(n, k) for k in k_values for n in ROW_ORDER if (n, k, args.seed) not in done_now]
+    missing += [("uncompressed", 0)] if ("uncompressed", 0, 0) not in done_now else []
+    meta["missing_rows"] = [f"{n} K={k}" if k else n for n, k in missing]
     meta["done"] = not missing
+    if sset == "development":
+        meta["missing_exploratory"] = [f"{n} K={k}" for n in EXPLORATORY for k in k_values
+                                       if (n, k, args.seed) not in done_now]
     meta["data_deleted"] = delete_data(args)
     e0.write_json(meta_path, meta)
     log(scene, "E2 DONE" if not missing else f"E2 FINISHED WITH MISSING ROWS {meta['missing_rows']}")
