@@ -1,0 +1,800 @@
+{
+  "rule": "PREREG_GN.md G1 with Amendment 5 b: GN-VQ vs lloyd_wopa_area at K = 65,536, seeds 0-2. A seed whose raw bytes are at most 0.5% above the baseline's compares test PSNR directly (smaller earns no credit); a seed more than 0.5% larger counts as negative. G1 passes when the mean test PSNR difference is at least +0.05 dB and no seed is negative, on both scenes",
+  "config": "gn_vq",
+  "baseline": "lloyd_wopa_area",
+  "k": 65536,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "size_tol": 0.005,
+  "psnr_gain": 0.05,
+  "missing": [],
+  "complete": true,
+  "per_scene": {
+    "garden": {
+      "mean_dPSNR": 0.19721857706705728,
+      "n_negative_seeds": 3,
+      "n_size_violations": 3,
+      "n_dominating_seeds": 0,
+      "mean_gain_ok": true,
+      "passes": false,
+      "seeds": [
+        {
+          "scene": "garden",
+          "seed": 0,
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 16793118,
+          "baseline_bytes": 16405132,
+          "size_ratio": 0.023650282119034527,
+          "size_ok": false,
+          "PSNR": 27.16421127319336,
+          "baseline_PSNR": 26.963132858276367,
+          "dPSNR": 0.2010784149169922,
+          "negative": true,
+          "dominates": false
+        },
+        {
+          "scene": "garden",
+          "seed": 1,
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 16794029,
+          "baseline_bytes": 16405784,
+          "size_ratio": 0.023665129322682832,
+          "size_ok": false,
+          "PSNR": 27.161800384521484,
+          "baseline_PSNR": 26.966476440429688,
+          "dPSNR": 0.19532394409179688,
+          "negative": true,
+          "dominates": false
+        },
+        {
+          "scene": "garden",
+          "seed": 2,
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 16794112,
+          "baseline_bytes": 16405503,
+          "size_ratio": 0.02368772234536176,
+          "size_ok": false,
+          "PSNR": 27.16197967529297,
+          "baseline_PSNR": 26.966726303100586,
+          "dPSNR": 0.1952533721923828,
+          "negative": true,
+          "dominates": false
+        }
+      ]
+    },
+    "bicycle": {
+      "mean_dPSNR": 0.08928553263346355,
+      "n_negative_seeds": 3,
+      "n_size_violations": 3,
+      "n_dominating_seeds": 0,
+      "mean_gain_ok": true,
+      "passes": false,
+      "seeds": [
+        {
+          "scene": "bicycle",
+          "seed": 0,
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 16380637,
+          "baseline_bytes": 16216069,
+          "size_ratio": 0.010148452131031327,
+          "size_ok": false,
+          "PSNR": 25.444547653198242,
+          "baseline_PSNR": 25.35771369934082,
+          "dPSNR": 0.08683395385742188,
+          "negative": true,
+          "dominates": false
+        },
+        {
+          "scene": "bicycle",
+          "seed": 1,
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 16412866,
+          "baseline_bytes": 16253928,
+          "size_ratio": 0.009778436326283613,
+          "size_ok": false,
+          "PSNR": 25.45200538635254,
+          "baseline_PSNR": 25.36181640625,
+          "dPSNR": 0.09018898010253906,
+          "negative": true,
+          "dominates": false
+        },
+        {
+          "scene": "bicycle",
+          "seed": 2,
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 16402556,
+          "baseline_bytes": 16242429,
+          "size_ratio": 0.009858562410831606,
+          "size_ok": false,
+          "PSNR": 25.448808670043945,
+          "baseline_PSNR": 25.357975006103516,
+          "dPSNR": 0.09083366394042969,
+          "negative": true,
+          "dominates": false
+        }
+      ]
+    }
+  },
+  "seeds_compared": [
+    {
+      "scene": "garden",
+      "seed": 0,
+      "config": "gn_vq",
+      "baseline": "lloyd_wopa_area",
+      "bytes": 16793118,
+      "baseline_bytes": 16405132,
+      "size_ratio": 0.023650282119034527,
+      "size_ok": false,
+      "PSNR": 27.16421127319336,
+      "baseline_PSNR": 26.963132858276367,
+      "dPSNR": 0.2010784149169922,
+      "negative": true,
+      "dominates": false
+    },
+    {
+      "scene": "garden",
+      "seed": 1,
+      "config": "gn_vq",
+      "baseline": "lloyd_wopa_area",
+      "bytes": 16794029,
+      "baseline_bytes": 16405784,
+      "size_ratio": 0.023665129322682832,
+      "size_ok": false,
+      "PSNR": 27.161800384521484,
+      "baseline_PSNR": 26.966476440429688,
+      "dPSNR": 0.19532394409179688,
+      "negative": true,
+      "dominates": false
+    },
+    {
+      "scene": "garden",
+      "seed": 2,
+      "config": "gn_vq",
+      "baseline": "lloyd_wopa_area",
+      "bytes": 16794112,
+      "baseline_bytes": 16405503,
+      "size_ratio": 0.02368772234536176,
+      "size_ok": false,
+      "PSNR": 27.16197967529297,
+      "baseline_PSNR": 26.966726303100586,
+      "dPSNR": 0.1952533721923828,
+      "negative": true,
+      "dominates": false
+    },
+    {
+      "scene": "bicycle",
+      "seed": 0,
+      "config": "gn_vq",
+      "baseline": "lloyd_wopa_area",
+      "bytes": 16380637,
+      "baseline_bytes": 16216069,
+      "size_ratio": 0.010148452131031327,
+      "size_ok": false,
+      "PSNR": 25.444547653198242,
+      "baseline_PSNR": 25.35771369934082,
+      "dPSNR": 0.08683395385742188,
+      "negative": true,
+      "dominates": false
+    },
+    {
+      "scene": "bicycle",
+      "seed": 1,
+      "config": "gn_vq",
+      "baseline": "lloyd_wopa_area",
+      "bytes": 16412866,
+      "baseline_bytes": 16253928,
+      "size_ratio": 0.009778436326283613,
+      "size_ok": false,
+      "PSNR": 25.45200538635254,
+      "baseline_PSNR": 25.36181640625,
+      "dPSNR": 0.09018898010253906,
+      "negative": true,
+      "dominates": false
+    },
+    {
+      "scene": "bicycle",
+      "seed": 2,
+      "config": "gn_vq",
+      "baseline": "lloyd_wopa_area",
+      "bytes": 16402556,
+      "baseline_bytes": 16242429,
+      "size_ratio": 0.009858562410831606,
+      "size_ok": false,
+      "PSNR": 25.448808670043945,
+      "baseline_PSNR": 25.357975006103516,
+      "dPSNR": 0.09083366394042969,
+      "negative": true,
+      "dominates": false
+    }
+  ],
+  "verdict": "fail",
+  "secondary": {
+    "lloyd_trace": {
+      "rule": "PREREG_GN.md G1 with Amendment 5 b: GN-VQ vs lloyd_wopa_area at K = 65,536, seeds 0-2. A seed whose raw bytes are at most 0.5% above the baseline's compares test PSNR directly (smaller earns no credit); a seed more than 0.5% larger counts as negative. G1 passes when the mean test PSNR difference is at least +0.05 dB and no seed is negative, on both scenes",
+      "config": "gn_vq",
+      "baseline": "lloyd_trace",
+      "k": 65536,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "size_tol": 0.005,
+      "psnr_gain": 0.05,
+      "missing": [],
+      "complete": true,
+      "per_scene": {
+        "garden": {
+          "mean_dPSNR": 0.15185165405273438,
+          "n_negative_seeds": 3,
+          "n_size_violations": 3,
+          "n_dominating_seeds": 0,
+          "mean_gain_ok": true,
+          "passes": false,
+          "seeds": [
+            {
+              "scene": "garden",
+              "seed": 0,
+              "config": "gn_vq",
+              "baseline": "lloyd_trace",
+              "bytes": 16793118,
+              "baseline_bytes": 16418410,
+              "size_ratio": 0.02282242921208577,
+              "size_ok": false,
+              "PSNR": 27.16421127319336,
+              "baseline_PSNR": 27.015243530273438,
+              "dPSNR": 0.14896774291992188,
+              "negative": true,
+              "dominates": false
+            },
+            {
+              "scene": "garden",
+              "seed": 1,
+              "config": "gn_vq",
+              "baseline": "lloyd_trace",
+              "bytes": 16794029,
+              "baseline_bytes": 16391175,
+              "size_ratio": 0.0245774936818135,
+              "size_ok": false,
+              "PSNR": 27.161800384521484,
+              "baseline_PSNR": 27.0106201171875,
+              "dPSNR": 0.15118026733398438,
+              "negative": true,
+              "dominates": false
+            },
+            {
+              "scene": "garden",
+              "seed": 2,
+              "config": "gn_vq",
+              "baseline": "lloyd_trace",
+              "bytes": 16794112,
+              "baseline_bytes": 16398714,
+              "size_ratio": 0.024111524842740817,
+              "size_ok": false,
+              "PSNR": 27.16197967529297,
+              "baseline_PSNR": 27.006572723388672,
+              "dPSNR": 0.15540695190429688,
+              "negative": true,
+              "dominates": false
+            }
+          ]
+        },
+        "bicycle": {
+          "mean_dPSNR": 0.0520025889078776,
+          "n_negative_seeds": 3,
+          "n_size_violations": 3,
+          "n_dominating_seeds": 0,
+          "mean_gain_ok": true,
+          "passes": false,
+          "seeds": [
+            {
+              "scene": "bicycle",
+              "seed": 0,
+              "config": "gn_vq",
+              "baseline": "lloyd_trace",
+              "bytes": 16380637,
+              "baseline_bytes": 16228475,
+              "size_ratio": 0.009376235290130541,
+              "size_ok": false,
+              "PSNR": 25.444547653198242,
+              "baseline_PSNR": 25.395883560180664,
+              "dPSNR": 0.048664093017578125,
+              "negative": true,
+              "dominates": false
+            },
+            {
+              "scene": "bicycle",
+              "seed": 1,
+              "config": "gn_vq",
+              "baseline": "lloyd_trace",
+              "bytes": 16412866,
+              "baseline_bytes": 16246526,
+              "size_ratio": 0.010238496525349472,
+              "size_ok": false,
+              "PSNR": 25.45200538635254,
+              "baseline_PSNR": 25.39817237854004,
+              "dPSNR": 0.0538330078125,
+              "negative": true,
+              "dominates": false
+            },
+            {
+              "scene": "bicycle",
+              "seed": 2,
+              "config": "gn_vq",
+              "baseline": "lloyd_trace",
+              "bytes": 16402556,
+              "baseline_bytes": 16230610,
+              "size_ratio": 0.01059393331489078,
+              "size_ok": false,
+              "PSNR": 25.448808670043945,
+              "baseline_PSNR": 25.39529800415039,
+              "dPSNR": 0.05351066589355469,
+              "negative": true,
+              "dominates": false
+            }
+          ]
+        }
+      },
+      "seeds_compared": [
+        {
+          "scene": "garden",
+          "seed": 0,
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 16793118,
+          "baseline_bytes": 16418410,
+          "size_ratio": 0.02282242921208577,
+          "size_ok": false,
+          "PSNR": 27.16421127319336,
+          "baseline_PSNR": 27.015243530273438,
+          "dPSNR": 0.14896774291992188,
+          "negative": true,
+          "dominates": false
+        },
+        {
+          "scene": "garden",
+          "seed": 1,
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 16794029,
+          "baseline_bytes": 16391175,
+          "size_ratio": 0.0245774936818135,
+          "size_ok": false,
+          "PSNR": 27.161800384521484,
+          "baseline_PSNR": 27.0106201171875,
+          "dPSNR": 0.15118026733398438,
+          "negative": true,
+          "dominates": false
+        },
+        {
+          "scene": "garden",
+          "seed": 2,
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 16794112,
+          "baseline_bytes": 16398714,
+          "size_ratio": 0.024111524842740817,
+          "size_ok": false,
+          "PSNR": 27.16197967529297,
+          "baseline_PSNR": 27.006572723388672,
+          "dPSNR": 0.15540695190429688,
+          "negative": true,
+          "dominates": false
+        },
+        {
+          "scene": "bicycle",
+          "seed": 0,
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 16380637,
+          "baseline_bytes": 16228475,
+          "size_ratio": 0.009376235290130541,
+          "size_ok": false,
+          "PSNR": 25.444547653198242,
+          "baseline_PSNR": 25.395883560180664,
+          "dPSNR": 0.048664093017578125,
+          "negative": true,
+          "dominates": false
+        },
+        {
+          "scene": "bicycle",
+          "seed": 1,
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 16412866,
+          "baseline_bytes": 16246526,
+          "size_ratio": 0.010238496525349472,
+          "size_ok": false,
+          "PSNR": 25.45200538635254,
+          "baseline_PSNR": 25.39817237854004,
+          "dPSNR": 0.0538330078125,
+          "negative": true,
+          "dominates": false
+        },
+        {
+          "scene": "bicycle",
+          "seed": 2,
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 16402556,
+          "baseline_bytes": 16230610,
+          "size_ratio": 0.01059393331489078,
+          "size_ok": false,
+          "PSNR": 25.448808670043945,
+          "baseline_PSNR": 25.39529800415039,
+          "dPSNR": 0.05351066589355469,
+          "negative": true,
+          "dominates": false
+        }
+      ],
+      "verdict": "fail"
+    },
+    "lloyd_c3dgs": {
+      "rule": "PREREG_GN.md G1 with Amendment 5 b: GN-VQ vs lloyd_wopa_area at K = 65,536, seeds 0-2. A seed whose raw bytes are at most 0.5% above the baseline's compares test PSNR directly (smaller earns no credit); a seed more than 0.5% larger counts as negative. G1 passes when the mean test PSNR difference is at least +0.05 dB and no seed is negative, on both scenes",
+      "config": "gn_vq",
+      "baseline": "lloyd_c3dgs",
+      "k": 65536,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "size_tol": 0.005,
+      "psnr_gain": 0.05,
+      "missing": [],
+      "complete": true,
+      "per_scene": {
+        "garden": {
+          "mean_dPSNR": 0.16213226318359375,
+          "n_negative_seeds": 3,
+          "n_size_violations": 3,
+          "n_dominating_seeds": 0,
+          "mean_gain_ok": true,
+          "passes": false,
+          "seeds": [
+            {
+              "scene": "garden",
+              "seed": 0,
+              "config": "gn_vq",
+              "baseline": "lloyd_c3dgs",
+              "bytes": 16793118,
+              "baseline_bytes": 16444880,
+              "size_ratio": 0.021176074255330635,
+              "size_ok": false,
+              "PSNR": 27.16421127319336,
+              "baseline_PSNR": 27.005107879638672,
+              "dPSNR": 0.1591033935546875,
+              "negative": true,
+              "dominates": false
+            },
+            {
+              "scene": "garden",
+              "seed": 1,
+              "config": "gn_vq",
+              "baseline": "lloyd_c3dgs",
+              "bytes": 16794029,
+              "baseline_bytes": 16388996,
+              "size_ratio": 0.024713716447304135,
+              "size_ok": false,
+              "PSNR": 27.161800384521484,
+              "baseline_PSNR": 26.998533248901367,
+              "dPSNR": 0.1632671356201172,
+              "negative": true,
+              "dominates": false
+            },
+            {
+              "scene": "garden",
+              "seed": 2,
+              "config": "gn_vq",
+              "baseline": "lloyd_c3dgs",
+              "bytes": 16794112,
+              "baseline_bytes": 16401011,
+              "size_ratio": 0.023968095625324537,
+              "size_ok": false,
+              "PSNR": 27.16197967529297,
+              "baseline_PSNR": 26.997953414916992,
+              "dPSNR": 0.16402626037597656,
+              "negative": true,
+              "dominates": false
+            }
+          ]
+        },
+        "bicycle": {
+          "mean_dPSNR": 0.06132952372233073,
+          "n_negative_seeds": 3,
+          "n_size_violations": 3,
+          "n_dominating_seeds": 0,
+          "mean_gain_ok": true,
+          "passes": false,
+          "seeds": [
+            {
+              "scene": "bicycle",
+              "seed": 0,
+              "config": "gn_vq",
+              "baseline": "lloyd_c3dgs",
+              "bytes": 16380637,
+              "baseline_bytes": 16221355,
+              "size_ratio": 0.009819278352517502,
+              "size_ok": false,
+              "PSNR": 25.444547653198242,
+              "baseline_PSNR": 25.385648727416992,
+              "dPSNR": 0.05889892578125,
+              "negative": true,
+              "dominates": false
+            },
+            {
+              "scene": "bicycle",
+              "seed": 1,
+              "config": "gn_vq",
+              "baseline": "lloyd_c3dgs",
+              "bytes": 16412866,
+              "baseline_bytes": 16244870,
+              "size_ratio": 0.01034148011033631,
+              "size_ok": false,
+              "PSNR": 25.45200538635254,
+              "baseline_PSNR": 25.387598037719727,
+              "dPSNR": 0.0644073486328125,
+              "negative": true,
+              "dominates": false
+            },
+            {
+              "scene": "bicycle",
+              "seed": 2,
+              "config": "gn_vq",
+              "baseline": "lloyd_c3dgs",
+              "bytes": 16402556,
+              "baseline_bytes": 16231493,
+              "size_ratio": 0.010538956582736958,
+              "size_ok": false,
+              "PSNR": 25.448808670043945,
+              "baseline_PSNR": 25.388126373291016,
+              "dPSNR": 0.06068229675292969,
+              "negative": true,
+              "dominates": false
+            }
+          ]
+        }
+      },
+      "seeds_compared": [
+        {
+          "scene": "garden",
+          "seed": 0,
+          "config": "gn_vq",
+          "baseline": "lloyd_c3dgs",
+          "bytes": 16793118,
+          "baseline_bytes": 16444880,
+          "size_ratio": 0.021176074255330635,
+          "size_ok": false,
+          "PSNR": 27.16421127319336,
+          "baseline_PSNR": 27.005107879638672,
+          "dPSNR": 0.1591033935546875,
+          "negative": true,
+          "dominates": false
+        },
+        {
+          "scene": "garden",
+          "seed": 1,
+          "config": "gn_vq",
+          "baseline": "lloyd_c3dgs",
+          "bytes": 16794029,
+          "baseline_bytes": 16388996,
+          "size_ratio": 0.024713716447304135,
+          "size_ok": false,
+          "PSNR": 27.161800384521484,
+          "baseline_PSNR": 26.998533248901367,
+          "dPSNR": 0.1632671356201172,
+          "negative": true,
+          "dominates": false
+        },
+        {
+          "scene": "garden",
+          "seed": 2,
+          "config": "gn_vq",
+          "baseline": "lloyd_c3dgs",
+          "bytes": 16794112,
+          "baseline_bytes": 16401011,
+          "size_ratio": 0.023968095625324537,
+          "size_ok": false,
+          "PSNR": 27.16197967529297,
+          "baseline_PSNR": 26.997953414916992,
+          "dPSNR": 0.16402626037597656,
+          "negative": true,
+          "dominates": false
+        },
+        {
+          "scene": "bicycle",
+          "seed": 0,
+          "config": "gn_vq",
+          "baseline": "lloyd_c3dgs",
+          "bytes": 16380637,
+          "baseline_bytes": 16221355,
+          "size_ratio": 0.009819278352517502,
+          "size_ok": false,
+          "PSNR": 25.444547653198242,
+          "baseline_PSNR": 25.385648727416992,
+          "dPSNR": 0.05889892578125,
+          "negative": true,
+          "dominates": false
+        },
+        {
+          "scene": "bicycle",
+          "seed": 1,
+          "config": "gn_vq",
+          "baseline": "lloyd_c3dgs",
+          "bytes": 16412866,
+          "baseline_bytes": 16244870,
+          "size_ratio": 0.01034148011033631,
+          "size_ok": false,
+          "PSNR": 25.45200538635254,
+          "baseline_PSNR": 25.387598037719727,
+          "dPSNR": 0.0644073486328125,
+          "negative": true,
+          "dominates": false
+        },
+        {
+          "scene": "bicycle",
+          "seed": 2,
+          "config": "gn_vq",
+          "baseline": "lloyd_c3dgs",
+          "bytes": 16402556,
+          "baseline_bytes": 16231493,
+          "size_ratio": 0.010538956582736958,
+          "size_ok": false,
+          "PSNR": 25.448808670043945,
+          "baseline_PSNR": 25.388126373291016,
+          "dPSNR": 0.06068229675292969,
+          "negative": true,
+          "dominates": false
+        }
+      ],
+      "verdict": "fail"
+    }
+  },
+  "rd": {
+    "seed": 0,
+    "k_values": [
+      4096,
+      16384,
+      65536
+    ],
+    "scenes": {
+      "garden": {
+        "points": {
+          "lloyd_wopa_area": [
+            {
+              "K": 4096,
+              "bytes": 14778950,
+              "PSNR": 26.69765281677246
+            },
+            {
+              "K": 16384,
+              "bytes": 15244312,
+              "PSNR": 26.846088409423828
+            },
+            {
+              "K": 65536,
+              "bytes": 16405132,
+              "PSNR": 26.963132858276367
+            }
+          ],
+          "gn_vq": [
+            {
+              "K": 4096,
+              "bytes": 14803113,
+              "PSNR": 27.006521224975586
+            },
+            {
+              "K": 16384,
+              "bytes": 15318406,
+              "PSNR": 27.095945358276367
+            },
+            {
+              "K": 65536,
+              "bytes": 16793118,
+              "PSNR": 27.16421127319336
+            }
+          ]
+        },
+        "bd_rate_vs_lloyd_wopa_area": {
+          "gn_vq": NaN
+        },
+        "complete": true
+      },
+      "bicycle": {
+        "points": {
+          "lloyd_wopa_area": [
+            {
+              "K": 4096,
+              "bytes": 14396171,
+              "PSNR": 25.14873504638672
+            },
+            {
+              "K": 16384,
+              "bytes": 14909318,
+              "PSNR": 25.27816390991211
+            },
+            {
+              "K": 65536,
+              "bytes": 16216069,
+              "PSNR": 25.35771369934082
+            }
+          ],
+          "gn_vq": [
+            {
+              "K": 4096,
+              "bytes": 14429045,
+              "PSNR": 25.33353042602539
+            },
+            {
+              "K": 16384,
+              "bytes": 14959165,
+              "PSNR": 25.401561737060547
+            },
+            {
+              "K": 65536,
+              "bytes": 16380637,
+              "PSNR": 25.444547653198242
+            }
+          ]
+        },
+        "bd_rate_vs_lloyd_wopa_area": {
+          "gn_vq": -9.8444786849889
+        },
+        "complete": true
+      }
+    }
+  },
+  "dominance": [
+    {
+      "scene": "garden",
+      "seed": 0,
+      "dominates": false,
+      "size_ratio": 0.023650282119034527,
+      "dPSNR": 0.2010784149169922
+    },
+    {
+      "scene": "garden",
+      "seed": 1,
+      "dominates": false,
+      "size_ratio": 0.023665129322682832,
+      "dPSNR": 0.19532394409179688
+    },
+    {
+      "scene": "garden",
+      "seed": 2,
+      "dominates": false,
+      "size_ratio": 0.02368772234536176,
+      "dPSNR": 0.1952533721923828
+    },
+    {
+      "scene": "bicycle",
+      "seed": 0,
+      "dominates": false,
+      "size_ratio": 0.010148452131031327,
+      "dPSNR": 0.08683395385742188
+    },
+    {
+      "scene": "bicycle",
+      "seed": 1,
+      "dominates": false,
+      "size_ratio": 0.009778436326283613,
+      "dPSNR": 0.09018898010253906
+    },
+    {
+      "scene": "bicycle",
+      "seed": 2,
+      "dominates": false,
+      "size_ratio": 0.009858562410831606,
+      "dPSNR": 0.09083366394042969
+    }
+  ]
+}

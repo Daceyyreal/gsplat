@@ -1,0 +1,104 @@
+{
+  "scene": "garden",
+  "timings_s": {
+    "job": 6439.18508397
+  },
+  "ckpt_sha1": "e1ac1e31dde161dac584ff107198217b5e90e1db",
+  "settings": {
+    "packed": false,
+    "rasterize_mode": "classic",
+    "camera_model": "pinhole",
+    "with_ut": false,
+    "with_eval3d": false,
+    "near_plane": 0.01,
+    "far_plane": 10000000000.0,
+    "sh_degree": 3
+  },
+  "train_views": 161,
+  "test_views": 24,
+  "total_train_pixels": 175406280,
+  "n_splats": 1000000,
+  "k_values": [
+    4096,
+    16384,
+    65536
+  ],
+  "default_k": 65536,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "gsplat_commit": "9b6c5babdf24",
+  "gn_vq": {
+    "max_iters": 10,
+    "rel_tol": 0.001,
+    "ridge_eps": 0.0001,
+    "ridge_eps_by_config": {
+      "gn_vq": 0.0001,
+      "gn_vq_noclip": 0.0001,
+      "gn_vq_noqassign": 0.0001,
+      "gn_vq_eps1e3": 0.001,
+      "gn_vq_eps1e2": 0.01
+    },
+    "quantizer_bits": 6
+  },
+  "render_parity": {
+    "max_abs_diff": 0.0,
+    "pass": true,
+    "view_size": [
+      1297,
+      840
+    ]
+  },
+  "gn": {
+    "cache_key": "v1|e1ac1e31dde161dac584ff107198217b5e90e1db|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views161|seed0",
+    "finite_check": {
+      "name": "M_packed",
+      "n_rows": 1000000,
+      "n_nonfinite_rows": 0,
+      "n_nonfinite_entries": 0,
+      "n_nan_entries": 0,
+      "n_inf_entries": 0,
+      "first_nonfinite_rows": [],
+      "max_abs": 18842.880859375,
+      "finite": true
+    },
+    "n_views": 161,
+    "total_pixels": 175406280,
+    "splats_zero_trace": 1397
+  },
+  "lifted_check": {
+    "criterion_version": 2,
+    "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+    "tol_rel": 0.0001,
+    "n_sample": 10000,
+    "n_zero_trace_in_sample": 11,
+    "n": 9989,
+    "sum_excess_over_sum_dmin": 4.067021488359379e-13,
+    "max_excess_over_scale": 1.9893415596431397e-12,
+    "n_excess_over_tol_scale": 0,
+    "aggregate_pass": true,
+    "per_splat_pass": true,
+    "pass": true,
+    "n_dmin_below_1e-3_scale": 8197,
+    "n_dmin_zero": 61,
+    "max_excess_over_dmin": 0.19658062562897835,
+    "same_index_fraction": 0.9994994493943338,
+    "max_codebook_sq_dist_from_mean": 5.758791554846727,
+    "time_s": 27.658358692000093
+  },
+  "linalg": {
+    "max_batch": 32768,
+    "op_max_batch": {
+      "linalg_eigvalsh": 8192,
+      "linalg_eigh": 8192
+    },
+    "working_batches": {
+      "linalg_inv_ex": 1,
+      "linalg_solve": 4096
+    },
+    "fallbacks": []
+  },
+  "done": true
+}
