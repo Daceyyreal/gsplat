@@ -754,3 +754,79 @@ The CUDA smoke tests, per-scene render parity and the writer-code assertion stop
 scene) as in E1. A failed lifted-assignment check skips that scene's GN-VQ rows, which leaves the
 scene, and so G2a and H2b, `incomplete`. G2 has no validity dict, for the reason G1 has none: its
 checks stop the run instead of qualifying the verdict.
+
+## Amendment 8 (2026-09-21, before any E2 data existed and before the code change it describes)
+
+E2 has not run: no E2 row, bundle or log exists anywhere. This amendment changes one clause of G2a
+(Amendment 7 f), the mean condition, so that the mean is always defined, and it adds exploratory rows
+on the development scenes. Everything else in Amendment 7 stands as written: the variant, the scenes
+and pinned checkpoints, the configs, the per-scene win rule with its BD-PSNR fallback and its loss
+case, the count of at least 8 wins out of 9, the -5% threshold, H2b's rule, the reported extras and
+the stopping checks. G0, G1 and Amendments 1-7 are unchanged.
+
+### a. G2a's mean condition (replaces the mean clause of Amendment 7 f)
+
+Amendment 7 f read: "the mean BD-rate, over the held-out scenes where it is defined, is at most -5%.
+If no held-out scene has a defined BD-rate, the mean does not exist and that condition is not met."
+That clause is replaced by:
+
+**The mean is taken over all 9 held-out scenes.** Each scene enters with one term:
+
+- a scene **with a defined BD-rate** (GN-VQ against `lloyd_wopa_area`, as Amendment 7 f defines it)
+  enters with that BD-rate;
+- a scene **without one** enters with a substitute. A BD-rate is undefined when the two curves share
+  no PSNR range, that is, when one curve lies entirely above the other; a non-finite BD-rate is treated
+  the same way. The substitute is the first of these that applies:
+  - **a.** if some `gn_vq` point has PSNR >= the baseline's best PSNR at fewer bytes than the
+    baseline's best point: **-(1 - bytes_gn / bytes_base) x 100%**, with `bytes_base` the bytes of the
+    baseline's best point and `bytes_gn` the bytes of the cheapest such `gn_vq` point;
+  - **b.** if some baseline point has PSNR >= `gn_vq`'s best PSNR at fewer bytes than `gn_vq`'s best
+    point: **+(bytes_gn / bytes_base - 1) x 100%**, with `bytes_gn` the bytes of `gn_vq`'s best point
+    and `bytes_base` the bytes of the cheapest such baseline point;
+  - **c.** otherwise: **0%**.
+
+Definitions: a curve's **best point** is its point with the highest PSNR (a tie, not expected with
+measured PSNRs, goes to the point with fewer bytes); "fewer bytes" is strict; the **cheapest** point
+is the one with the fewest bytes. Points are the four `(size_bytes, PSNR)` rows at K = 1,024, 4,096,
+16,384 and 65,536, seed 0, as in Amendment 7 f.
+
+**G2a passes if at least 8 of the 9 held-out scenes win AND this mean is at most -5%.** The win rule
+is unchanged: a scene's outcome still comes from its BD-rate, else its BD-PSNR, else it is a loss. The
+substitutes feed only the mean. As before, a missing row makes its scene incomplete and the verdict
+`incomplete`; no mean is computed then.
+
+**Why:**
+
+- As Amendment 7 had it, a held-out set on which every scene looked like garden in E1 would have
+  failed G2a with 9 of 9 wins: no scene would have had a defined BD-rate, so the mean condition could
+  not be met.
+- Neither substitute extrapolates. Each compares two measured points, the lower curve's best point and
+  the cheapest point of the higher curve that reaches its PSNR, and is the smallest magnitude of rate
+  difference those points guarantee at that quality: in a, `gn_vq` is measured to reach the
+  baseline's best PSNR at `bytes_gn`, where the baseline needed `bytes_base`; in b, the reverse. No
+  curve is fitted or extended.
+- With E1's garden points (`kaggle/gn_e1/gn1/gn1_g1.json`), substitute a gives **-9.77%**: `gn_vq` at
+  K = 4,096 (14,803,113 bytes, 27.0065 dB) reaches `lloyd_wopa_area`'s best (K = 65,536, 16,405,132
+  bytes, 26.9631 dB). E1's bicycle points have a defined BD-rate (-9.84%) and would enter with it.
+
+**Same construction elsewhere.** H2b's verdict has no mean condition and is unchanged, but its
+reported mean BD-rate (GN-VQ against `lloyd_trace` over the 9 held-out scenes) uses the same terms and
+substitutes. The `upstream_l1` comparison is reported per scene and has no mean; its per-scene
+substitute is reported next to its BD-rate and BD-PSNR, and nothing aggregates it.
+
+### b. Exploratory rows on the development scenes, not judged
+
+Amendment 7 c chose eps = 1e-2 from single points at K = 65,536. To give that choice a curve on the
+development scenes:
+
+- **`gn_vq_eps1e4`:** E2's GN-VQ variant (Amendment 7 c) with ridge eps = 1e-4, E1's pre-registered
+  value, and everything else identical: `max_iters` = 20, warm start from `lloyd_wopa_area` at the same
+  K, seed 0, the clip, the final quantized assignment and the writer check;
+- at K = 1,024, 4,096, 16,384 and 65,536, **on garden and bicycle only**: 8 rows;
+- **queued after everything else:** they run in a final phase of the notebook, after every E2 scene
+  job has finished, under the same start cutoff; they never delay a pre-registered row.
+
+They are **not judged**: G2a and H2b never read them, and neither does any reported comparison of the
+held-out scenes. Reported only, for garden and bicycle: their curve against `lloyd_wopa_area`, and
+`gn_vq` (eps 1e-2) against them, each with BD-rate, BD-PSNR and the substitute above. Nothing learned
+from them can change E2's variant or verdicts.
