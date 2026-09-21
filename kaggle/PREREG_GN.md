@@ -571,3 +571,186 @@ min, max and step - the range the codec's quantizer actually uses when that row 
 **alongside the warm-start codebook's** min, max and step, so the two can be read side by side
 without recomputing either. This is a logging addition only; Amendment 5's "Logged for every E1 row"
 list is otherwise unchanged, and nothing reads these fields in a verdict.
+
+## Amendment 7 (2026-09-21, after E1's results and before any E2 code)
+
+E1 has run and its bundle is committed unchanged in `kaggle/gn_e1/gn1/`; its numbers are in
+`kaggle/FINDINGS.md` section 9. This amendment records G1's outcome, states the deviation the project
+takes because of it, and fixes E2 - its variant, scenes, configs and two verdicts - before any E2 code
+exists. G0, G1, the validity checks and Amendments 1-6 are unchanged.
+
+### a. G1 failed as pre-registered
+
+G1 (as originally written, with the size matching of Amendment 5 b) **failed on both scenes, on the size
+rule, on all six seeds** (`gn1_g1.json`, verdict `fail`). At K = 65,536 every GN-VQ seed was more than
+0.5% larger than `lloyd_wopa_area` at the same seed: +2.37% on garden, +0.98% to +1.01% on bicycle.
+Under Amendment 5 b each such seed counts as negative whatever its PSNR, so every seed is negative. The
+test PSNR differences were positive on every seed (+0.195 to +0.201 dB garden, +0.087 to +0.091 dB
+bicycle) and the means cleared +0.05 dB, but that does not change the verdict.
+
+**G1 is not amended.** Its wording, threshold and size rule stay as written, and its verdict stays
+`fail`.
+
+### b. The deviation, stated as one
+
+G1 was the gate for GN-VQ. With G1 failed, the pre-registered plan gives no licence to continue.
+**The project continues anyway, and this is a deviation from that plan, decided after E1's results
+were known.** It rests on the evidence of the rate-distortion secondary that Amendment 5 d
+pre-registered for exactly this case ("so that a seed which trades PSNR for bytes shows up as a
+rate-distortion result, not only as a negative G1 seed"): at seed 0, bicycle's BD-rate of GN-VQ against
+`lloyd_wopa_area` was -9.84%, and on garden every GN-VQ point was above every `lloyd_wopa_area` point in
+PSNR, so no BD-rate exists there and the whole GN-VQ curve lies above the baseline's (FINDINGS section
+9).
+
+That evidence is weaker than a gate: it is one seed, three points per curve, and two scenes that
+GN-VQ was designed and tuned on. So from here on:
+
+- **garden and bicycle are development scenes.** Everything learned on them, including this
+  amendment's choice of variant, is development, and no verdict below counts them;
+- **confirmation moves to held-out scenes** that played no part in designing or tuning GN-VQ.
+
+### c. The E2 variant
+
+**E1's GN-VQ (Amendment 5 a) with ridge `eps` = 1e-2 and `max_iters` = 20; everything else exactly as
+in Amendment 5 a:** warm start from `lloyd_wopa_area` at the same K and k-means seed; the lifted exact
+assignment with its guard; the ridge update `q = (sum M + mu I)^-1 sum M c` with
+`mu = eps * tr(sum M_k) / 15` per cluster; the clip to the warm-start codebook's global range with
+per-cluster acceptance; the stopping rule (relative drop below 1e-3, or `max_iters`); the codec's
+quantizer, the final exact assignment against the dequantized codebook, and the unchanged library
+writer with the re-quantization assertion.
+
+Reasons, from E1's files:
+
+- **eps = 1e-2 had the best development trade-off of E1's GN-VQ rows.** The ridge rows are single
+  points at K = 65,536 and seed 0, not curves, so this is a comparison of points. Against the
+  pre-registered eps = 1e-4 at the same seed, eps = 1e-2 was 1.77% smaller on garden at -0.0061 dB
+  and 1.02% smaller on bicycle at +0.0033 dB, the smallest clipped GN-VQ row at K = 65,536 on both
+  scenes; on
+  bicycle it was also smaller than `lloyd_wopa_area` (-0.01%) at +0.0901 dB. On garden it was still
+  +0.55% larger than `lloyd_wopa_area`. The un-clipped ablation was smaller still but gave up
+  0.0987 / 0.0341 dB against the clipped variant, and it is not chosen.
+- **K <= 16,384 hit the 10-iteration cap:** GN-VQ at K = 4,096 and 16,384 stopped on `max_iters` on
+  both scenes, while every K = 65,536 row stopped on the relative-drop rule at iteration 9 or 10. E2's
+  grid adds K = 1,024. The relative-drop rule is unchanged, so a curve point that converges earlier
+  still stops earlier.
+- Not measured: eps = 1e-2 below K = 65,536. E1 ran it only at K = 65,536.
+
+Because this variant was chosen on garden and bicycle after seeing their results, it is judged only
+on the held-out scenes.
+
+### d. Scenes and inputs
+
+**Gate set, 9 held-out scenes:** the 7 MipNeRF360 scenes of `mcmc.sh` other than garden and bicycle
+(stump, bonsai, counter, kitchen, room, treehill, flowers) and the 2 Tanks & Temples scenes of
+`mcmc_tt.sh` (train, truck).
+
+**Development scenes, garden and bicycle:** they also run, queued after all 9 held-out scenes. Their
+rows and comparisons are reported and **excluded from every verdict**.
+
+Each scene uses the MCMC 1M checkpoint that runs 4-5 measured, and no other. The E2 job computes the
+checkpoint's sha1 and refuses to run on a mismatch. The expected values are the `ckpt_sha1` of the
+scene's rows in `kaggle/run5/tilequant/run5_results.csv`:
+
+| Scene | Set | Dataset, data factor | Checkpoint sha1 |
+|---|---|---|---|
+| stump | held-out | MipNeRF360, 4 | `52715bdb81d53bf3793b4052e6ed656458d74fb3` |
+| bonsai | held-out | MipNeRF360, 2 | `60868efab7cfd97dada0ea6badcb8a2700c7d7c8` |
+| counter | held-out | MipNeRF360, 2 | `50464c36ef6e1b0c2da3012bc7c8b3feb1a410c2` |
+| kitchen | held-out | MipNeRF360, 2 | `8e5e31d4a8d25f458ac55f95a72f442bde2c0f83` |
+| room | held-out | MipNeRF360, 2 | `843339232b480503676f8cd4e7dd1cea9ad78749` |
+| treehill | held-out | MipNeRF360, 4 | `66fcadcf3298034c06227e69e6381e5a539f6980` |
+| flowers | held-out | MipNeRF360, 4 | `d0ea4a76881fb22b0c2848903cb0cce0001b06d5` |
+| train | held-out | Tanks & Temples, 1 | `15394ef18333d9edd61facf46874238b45e84de7` |
+| truck | held-out | Tanks & Temples, 1 | `4b9c9babe37cf16db99d286be8e6af805a776d6c` |
+| garden | development | MipNeRF360, 4 | `e1ac1e31dde161dac584ff107198217b5e90e1db` |
+| bicycle | development | MipNeRF360, 4 | `122a280de4da86448d1581e9fb27f90ae6f71b8c` |
+
+Data factors are those of `mcmc.sh` and `mcmc_tt.sh`, as in runs 4-5; test views are the runner's
+evaluation split, as in every earlier run. Each scene uses its cached seed-0 PLAS sort order (runs 1-2
+for garden and bicycle, run 4 for the other MipNeRF360 scenes, run 5 for Tanks & Temples); a missing
+order stops the run rather than being rebuilt. The GN metric `M` is computed from each scene's train
+views with E0's code and probe seed 0; garden and bicycle may reuse E0's cache, whose key pins the
+checkpoint, the render settings and the views.
+
+### e. Configs
+
+Per scene, each config at **K in {1,024, 4,096, 16,384, 65,536}, k-means seed 0 only**:
+
+- `upstream_l1`: TorchPQ manhattan k-means, 100 iterations, the upstream default path (E0's config);
+- `lloyd_wopa_area`: the library's weighted Lloyd with opacity x footprint-area weights (runs 3-5,
+  E0, E1);
+- `lloyd_trace`: the library's weighted Lloyd with `tr(M_i)` weights (E1's secondary);
+- `gn_vq`: the variant of c, warm-started from `lloyd_wopa_area` at the same K;
+
+plus one `uncompressed` row: 17 rows per scene. Every codebook is written with the unchanged library
+writer and measured with the full compressed pipeline on the test views, as in E0 and E1.
+
+A clustering at K = 65,536 may come from a run-3 cache (garden, bicycle) or a run-4 cache (the other
+MipNeRF360 scenes) when its key, the checkpoint sha1 with the sort order, matches; otherwise it is
+recomputed with the same code, and every row records its source. Run 5 found the library's Lloyd and
+the benchmark's Lloyd rows identical on all 18 rows it compared. TorchPQ reproduces only to about
+0.002 dB.
+
+**Why seed 0 only:** in E1 the paired G1 difference moved by at most 0.0058 dB across seeds 0-2
+(garden; 0.0040 dB on bicycle). The per-config PSNR spread was larger for some configs: up to
+0.0087 dB for `lloyd_trace` on garden and 0.0075 dB for GN-VQ on bicycle. The verdicts below compare
+whole curves on nine scenes, not single seeds, and the per-scene thresholds are signs, not margins.
+
+### f. G2a (the gate): GN-VQ against `lloyd_wopa_area` on the held-out scenes
+
+**Curves.** Per scene and config, the four points `(size_bytes, PSNR)` at K = 1,024, 4,096, 16,384 and
+65,536, seed 0: raw bytes of the compressed directory and test PSNR of the full compressed pipeline.
+
+**BD-rate** of a curve `new` against a curve `ref` (Bjontegaard): fit `log10(bytes)` of each curve as a
+polynomial of degree 3 in PSNR (with four points, the exact interpolating cubic); integrate both over
+the common PSNR interval `[lo, hi]`, `lo` = the larger of the two lowest PSNRs and `hi` = the smaller of
+the two highest; BD-rate = `(10^((I_new - I_ref) / (hi - lo)) - 1) x 100%`. It is **defined** only if
+`hi > lo` and the result is finite. (This is `g1.bd_rate` at degree 3; E1 reported degree 2 on three
+points, the same exact-interpolation construction.)
+
+**BD-PSNR** of `new` against `ref`: fit PSNR of each curve as a polynomial of degree 3 in
+`log10(bytes)`; integrate both over the common `log10(bytes)` interval; BD-PSNR =
+`(J_new - J_ref) / (hi - lo)` in dB. It is **defined** only if that interval has positive length and
+the result is finite.
+
+**Per scene,** GN-VQ against `lloyd_wopa_area`:
+
+1. if any of the scene's 8 rows (4 K x 2 configs) is missing, the scene is **incomplete**;
+2. else, if the BD-rate is defined, the scene **wins** if the BD-rate is below 0;
+3. else (no PSNR overlap), if the BD-PSNR over the overlapping byte range is defined, the scene
+   **wins** if the BD-PSNR is above 0;
+4. else (neither defined), the scene counts as a **loss**.
+
+**G2a passes if at least 8 of the 9 held-out scenes win AND the mean BD-rate, over the held-out scenes
+where it is defined, is at most -5%.** If no held-out scene has a defined BD-rate, the mean does not
+exist and that condition is **not met**. The verdict is `incomplete` if any held-out scene is
+incomplete; otherwise `pass` or `fail`. Garden and bicycle are never read.
+
+### g. H2b (reported, with its own verdict, not gating): the matrix against the scalar
+
+The same per-scene rule, with the same fallbacks, for GN-VQ against `lloyd_trace`: **H2b holds if the
+scene wins on at least 7 of the 9 held-out scenes.** It has no mean condition. Its verdict is
+`incomplete`, `pass` or `fail`, reported next to G2a's; it does not affect G2a. This is the claim that
+the per-splat matrix `M_i` does better than the scalar `tr(M_i)` weight alone, which E1 left open: a
+post-hoc look at E1 (FINDINGS section 9) had `lloyd_trace` beating `lloyd_wopa_area` at about equal
+bytes on all six seeds.
+
+### h. Also reported, never part of a verdict
+
+- BD-rate and BD-PSNR of GN-VQ against `upstream_l1`, and against each baseline even where the verdict
+  did not need BD-PSNR;
+- at every K, GN-VQ's PSNR difference and byte ratio against each of the three baselines, and the
+  dominance flag (bytes `<=` and PSNR `>=`);
+- every comparison above for garden and bicycle, labelled as development;
+- per row, the same logging as E1 (Amendments 5 and 6): `P` and measured `D` on train and test views,
+  the written codebook's quantizer range and step and the warm start's, the fraction of coordinates
+  outside the warm range, the objective before and after quantization and per iteration, the
+  iterations and the stopping reason, clusters rejected by the clip, bytes total and per `shN.npz`
+  member, test PSNR / SSIM / LPIPS and train PSNR.
+
+### i. Checks that stop or skip, as in E1
+
+The CUDA smoke tests, per-scene render parity and the writer-code assertion stop the run (or the
+scene) as in E1. A failed lifted-assignment check skips that scene's GN-VQ rows, which leaves the
+scene, and so G2a and H2b, `incomplete`. G2 has no validity dict, for the reason G1 has none: its
+checks stop the run instead of qualifying the verdict.
