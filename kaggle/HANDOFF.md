@@ -1077,6 +1077,15 @@ what they leave out. All of these were made before any E2 data existed.
   centring, which leaves about 1e-7 percentage points of rounding in a cubic fit (the G2 tests allow
   1e-6 for that, and say so). That is far below both thresholds (0 and -5%), and the function produced
   E1's reported BD-rate, so it is not changed; `g2` wraps it instead.
+  **Correction (2026-09-22), measured on E2's curves:** "about 1e-7 percentage points" held for the
+  tests' synthetic curves, not for real ones. On E2's 39 comparisons, against the exact interpolating
+  cubic in 50-digit arithmetic, the bundle's BD-rates (computed on Kaggle) are off by up to 6.09e-4 pp
+  and this machine's recomputation by up to 1.16e-3 pp, both at H2b treehill, whose two curves lie
+  within a few hundredths of a dB of each other; BD-PSNR is off by up to 1.46e-7 dB (bundle) and
+  1.13e-7 dB (here). Recomputing on another machine therefore differs from the bundle by up to
+  1.77e-3 pp and 1.60e-7 dB: E2's values reproduce within a tolerance, not bit for bit
+  (`bench/gn/bd_sensitivity.py`, `kaggle/gn_e2/bd_sensitivity.json`). No sign, win or verdict changes,
+  and the bundle's values stand as the verdict of record.
 
 **Inputs**
 
@@ -1094,14 +1103,30 @@ what they leave out. All of these were made before any E2 data existed.
   not search, so a resume should still attach the run-5 output (the inputs table says so); without it,
   anything that still needs a K = 65,536 cache would be reclustered, with its source recorded.
 
-**Measured E2 runtime per scene: not recorded yet.** The E2 bundle is not committed. A
-`gn2_bundle.zip` exists in `~/Downloads` (558,041 bytes, modified 2026-09-22 15:21, sha256
-`60ab1b1bf2130c8a1ac98cae185cbb1b7977e37f3e7086199712ede76b9ac577`, 91 entries, all under `gn2/`,
-including `timings.json` and `gn2_g2.json`); only its file listing was read, no value in it. Once it
-is committed under `kaggle/gn_e2/gn2/`, fill this entry from its files: per scene, `gn_e2_<scene>_s`
-and `gn_e2_<scene>_eps1e4_s` in `timings.json` (wall time measured at the queue's 15 s poll, so up to
-15 s late) and `timings_s.job` in `gn2_meta_<scene>.json`; per session, `checkpoint_sha1_s`,
-`restore_s`, `install_s` and `selftest_s`.
+**Measured E2 runtime per scene** (`kaggle/gn_e2/gn2/timings.json`, `gn2_meta_<scene>.json`; the
+same numbers are tabulated in FINDINGS section 10):
+
+| Scene | Data factor | Queue wall time `gn_e2_<scene>_s` | `timings_s.job` (meta) | Download | GN pass |
+|---|---|---|---|---|---|
+| train | 1 | 2,985.3 | 2,975.0 | 500.0 | 16.2 |
+| truck | 1 | 2,940.3 | 2,923.0 | 233.2 | 15.8 |
+| stump | 4 | 2,475.3 | 2,458.4 | 38.4 | 8.4 |
+| bonsai | 2 | 3,465.4 | 3,456.8 | 67.6 | 30.5 |
+| counter | 2 | 3,525.3 | 3,506.7 | 53.5 | 31.6 |
+| kitchen | 2 | 3,600.3 | 3,586.9 | 78.1 | 32.8 |
+| room | 2 | 3,780.3 | 3,766.3 | 89.3 | 29.7 |
+| treehill | 4 | 2,325.2 | 2,318.4 | 62.1 | 9.5 |
+| flowers | 4 | 2,580.3 | 2,573.1 | 72.7 | 12.8 |
+| garden | 4 | 2,640.3 (+ 690.1 exploratory) | 3,315.9 (both jobs) | 73.5 | reused cache |
+| bicycle | 4 | 2,190.1 (+ 720.1 exploratory) | 2,877.8 (both jobs) | 63.0 | reused cache |
+
+Seconds. The queue time is measured at the queue's 15 s poll, so up to 15 s late; the meta's job time
+adds up over invocations, so for garden and bicycle it covers the main and the exploratory job. The
+longest job was room; the Tanks & Temples jobs took 2,940.3 s (truck) and 2,985.3 s (train), below the
+MipNeRF360 indoor scenes (data factor 2), although train's download alone took 500.0 s. Per session:
+`checkpoint_sha1_s` 21.4, `restore_s` 24.5, `install_s` 169.3 (the restored run-5 wheel; no
+`gsplat_wheel_build_s`), `selftest_s` 15.7. No job was skipped by the start cutoff, and all 13 exited
+with code 0.
 
 ### Open items (E0, E1: closed; E2: open)
 

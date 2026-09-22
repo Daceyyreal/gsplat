@@ -33,6 +33,12 @@ quantizer step. The pre-registered rate-distortion secondary favours GN-VQ on bo
 BD-rate -9.84%; on garden every GN-VQ point is above every `lloyd_wopa_area` point in PSNR), at seed 0
 on the two scenes GN-VQ was designed on.
 
+**E2 (section 10, branch `bench/gn-vq`): G2a passed.** On 9 held-out scenes, GN-VQ with ridge
+eps = 1e-2 beat `lloyd_wopa_area` in rate-distortion on all 9, with a mean BD-rate of -5.37% against the
+pre-registered -5%. H2b (against the scalar `tr(M)` weighting, reported) holds with 8 of 9 scenes
+counted: treehill's computed win is an artifact of the cubic fit. Post hoc, PCHIP interpolation gives
+8 of 9 and -5.66% for G2a, and the codebook stream alone (`shN.npz`) shows about -31%.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -59,6 +65,14 @@ on the two scenes GN-VQ was designed on.
   output (the garden / bicycle checkpoints, the seed-0 PLAS order, the run-3 `lloyd_wopa_area` caches
   for seeds 0-2) and E0's GN cache. The bundle is unpacked unchanged in `kaggle/gn_e1/gn1/`. A script
   recomputed every number in the section from those files and checked each against the text.
+- Section 10: every number comes from `kaggle/gn_e2/gn2/` (one Kaggle session on 2x T4, rows
+  timestamped 2026-09-21T23:03 to 2026-09-22T03:49, gsplat commit `515ca4a1` on `bench/gn-vq`, the run-5
+  wheel reused) and, for the post-hoc items, from `kaggle/gn_e2/bd_sensitivity.json`, which
+  `bench/gn/bd_sensitivity.py` computes from that bundle alone. The session restored the run-5 output
+  (the 11 checkpoints, their seed-0 PLAS orders, the run-3 / run-4 `lloyd_wopa_area` K = 65,536 caches)
+  and a GN cache for garden and bicycle from an earlier output. The bundle is unpacked unchanged in
+  `kaggle/gn_e2/gn2/`. A script recomputed every number in the section from those two sources and
+  checked each against the text.
 - Section 4: every number comes from `kaggle/run3/tilequant/` (one Kaggle session, gsplat commit
   `f9b61526`). That session restored the run-2 output (training #2 checkpoints, seed-0 PLAS sort,
   run-1 / run-2 rows, gsplat wheel) and ran only the run-3 configs, so run-3 rows pair with the
@@ -1236,3 +1250,270 @@ The two jobs ran in parallel, one T4 each. Inside them:
 - **Exploratory, one seed:** without the clip GN-VQ dominated `lloyd_wopa_area` on both scenes, and at
   eps = 1e-2 on bicycle; a scalar `tr(M)` weight beat `lloyd_wopa_area` at about equal bytes on all six
   seeds (post hoc).
+
+## 10. E2: GN-VQ against `lloyd_wopa_area` on 9 held-out scenes (`bench/gn-vq`) — G2a passed
+
+**G2a passed.** E2's GN-VQ (ridge eps = 1e-2, at most 20 iterations) won on all 9 held-out scenes, and
+its mean BD-rate against `lloyd_wopa_area` over the 9 is **-5.37%**, inside the pre-registered -5%.
+Every scene had a defined BD-rate, so no Amendment 8 substitute entered the mean. The margins are
+thin: the mean clears the threshold by 0.37 percentage points, and treehill wins at -1.20%.
+
+**H2b (reported, its own verdict) passed as computed, 9 of 9 against `lloyd_trace`, but treehill's
+win is an artifact of the cubic fit, so any claim uses 8 of 9**, which still meets H2b's 7.
+
+The rules were fixed before any E2 code or data: the variant, the scenes, the configs, G2a and H2b in
+Amendment 7 (`3e074edd`); G2a's mean over all 9 scenes with substitutes, and the exploratory
+eps = 1e-4 rows, in Amendment 8 (`3061cd6f`). The verdicts below are `bench/gn/g2.py`'s, written by
+the notebook into `gn2_g2.json`; nothing here re-judges them. Items marked **post hoc** were computed
+after the results, by `bench/gn/bd_sensitivity.py` (`kaggle/gn_e2/bd_sensitivity.json`) or from the
+result CSVs.
+
+### Verdicts (`gn2_g2.json`)
+
+Degree-3 Bjontegaard over the four points per curve (K = 1,024, 4,096, 16,384 and 65,536, seed 0):
+raw bytes of the compressed directory against test PSNR of the full compressed pipeline. A negative
+BD-rate and a positive BD-PSNR favour GN-VQ.
+
+| | G2a (gate): GN-VQ vs `lloyd_wopa_area` | H2b (reported): GN-VQ vs `lloyd_trace` |
+|---|---|---|
+| Verdict | **pass** | pass as computed; 8 of 9 counted (below) |
+| Wins | 9 of 9 (needs 8) | 9 of 9 (needs 7) |
+| Mean BD-rate over the 9 held-out scenes | **-5.37%** (needs at most -5%) | -6.64% (reported; no condition) |
+| Scenes with a defined BD-rate / substituted | 9 / 0 | 9 / 0 |
+
+| Scene | G2a BD-rate | G2a BD-PSNR (dB) | G2a | H2b BD-rate | H2b BD-PSNR (dB) | H2b |
+|---|---|---|---|---|---|---|
+| stump | -7.32% | +0.2014 | win | -5.61% | +0.1272 | win |
+| bonsai | -5.79% | +0.4485 | win | -5.53% | +0.3752 | win |
+| counter | -4.06% | +0.2660 | win | -3.10% | +0.1921 | win |
+| kitchen | -5.60% | +0.3837 | win | -4.88% | +0.2971 | win |
+| room | -7.76% | +0.3038 | win | -6.61% | +0.2348 | win |
+| treehill | -1.20% | +0.0320 | win | -24.04% | -0.0303 | win |
+| flowers | -5.26% | +0.0767 | win | -3.46% | +0.0393 | win |
+| train | -4.92% | +0.1130 | win | -2.35% | +0.0446 | win |
+| truck | -6.45% | +0.1479 | win | -4.19% | +0.0797 | win |
+
+Every scene was decided by its BD-rate; the BD-PSNR is reported alongside, as Amendment 7 h asks.
+
+### Treehill against `lloyd_trace`: a fit artifact, so H2b counts 8 of 9
+
+- **GN-VQ's treehill curve is not monotone:** its test PSNR is 23.2453 dB at K = 16,384
+  (14,701,250 B) and 23.2302 dB at K = 65,536 (15,843,536 B). It is the only one of E2's 46 curves
+  whose PSNR does not rise with K (`bd_sensitivity.json`, `monotonicity`).
+- **The cubic's two measures disagree:** BD-rate -24.04% says GN-VQ needs fewer bytes, BD-PSNR
+  -0.0303 dB says it has the lower PSNR. This is the only one of the 39 comparisons in `gn2_g2.json`
+  where BD-rate and BD-PSNR name different curves as the better one (`sign_disagreement`).
+- **At equal K, `lloyd_trace` has the higher PSNR at all four K** (by 0.0489, 0.0477, 0.0279 and
+  0.0444 dB), **but fewer bytes at only three:** at K = 65,536 it has 0.42% more bytes than GN-VQ, so
+  it does not dominate there.
+- With PCHIP instead of the cubic (post hoc, below) treehill is a loss on both measures: +9.34% and
+  -0.0371 dB.
+
+So treehill is not counted as a win: **H2b holds with 8 of 9 scenes**, and the mean BD-rate over the
+other 8 is -4.47% (post hoc, the bundle's values; `held_out_without_flagged_scenes_post_hoc`). G2a has
+no such case: none of its 9 comparisons is flagged under the cubic.
+
+### The numbers of record, and how exactly they reproduce
+
+`bd_sensitivity.py` recomputes every value in `gn2_g2.json` from the committed CSVs with `g2`'s own
+functions. All 39 comparisons reproduce every outcome, deciding measure, win, mean-term source, sign,
+count and verdict; the values agree within 1.77e-3 percentage points (BD-rate, at H2b treehill) and
+1.60e-7 dB (BD-PSNR), inside the tolerances of 2e-3 pp and 1e-6 dB. They do not agree bit for bit,
+because `g2`'s cubic is `np.polyfit` on uncentred PSNR (and on uncentred log10 bytes), whose last digits
+depend on the machine's LAPACK. Against the exact interpolating cubic in 50-digit arithmetic, the
+bundle's values are within 6.09e-4 pp and 1.46e-7 dB, and this machine's within 1.16e-3 pp and
+1.13e-7 dB. **The bundle's values are the numbers of record**, and they are the ones quoted here; at the
+precision quoted (0.01 pp, 0.0001 dB) the exact cubic gives the same figures.
+
+### PCHIP instead of the cubic (post hoc)
+
+The same BD-rate and BD-PSNR with a monotone piecewise-cubic interpolant (`scipy`'s
+`PchipInterpolator` on the same axes, integrated exactly), and the same per-scene rule and Amendment 8
+substitute:
+
+| Scene | G2a cubic | G2a PCHIP | G2a PCHIP BD-PSNR (dB) | H2b cubic | H2b PCHIP | H2b PCHIP BD-PSNR (dB) |
+|---|---|---|---|---|---|---|
+| stump | -7.32% | -7.61% | +0.1632 | -5.61% | -5.90% | +0.1199 |
+| bonsai | -5.79% | -6.39% | +0.4031 | -5.53% | -5.92% | +0.3440 |
+| counter | -4.06% | -4.35% | +0.2606 | -3.10% | -3.39% | +0.1865 |
+| kitchen | -5.60% | -6.00% | +0.3547 | -4.88% | -5.26% | +0.2942 |
+| room | -7.76% | -9.00% | +0.2757 | -6.61% | -7.54% | +0.2207 |
+| treehill | -1.20% | +0.51% | +0.0156 | -24.04% | +9.34% | -0.0371 |
+| flowers | -5.26% | -5.46% | +0.0710 | -3.46% | -3.64% | +0.0427 |
+| train | -4.92% | -5.89% | +0.0996 | -2.35% | -3.57% | +0.0488 |
+| truck | -6.45% | -6.74% | +0.1357 | -4.19% | -4.49% | +0.0757 |
+| **Wins / mean** | 9 / -5.37% | **8 / -5.66%** | | 9 / -6.64% | 8 / -3.38% | |
+
+- **G2a with PCHIP: 8 of 9 wins, mean -5.66%**, which would still meet both of G2a's thresholds.
+  Treehill's BD-rate becomes +0.51% while its BD-PSNR stays positive (+0.0156 dB); that is the only
+  comparison PCHIP's two measures disagree on.
+- H2b with PCHIP: 8 of 9 (treehill is the loss), mean -3.38%.
+- On the other 8 held-out scenes PCHIP's BD-rate is more negative than the cubic's, in both
+  comparisons.
+
+### The shN stream alone (post hoc)
+
+At equal K, a GN-VQ row and the `lloyd_wopa_area` row differ only in `shN.npz` (the codebook codes and
+the labels); the PNG files have identical sizes, and `meta.json` differs by at most 2 bytes
+(`file_bytes`). The `shN_bytes` column is **10.0-22.9% of `size_bytes`** across the 184 compressed rows
+(mean 15.0%). BD-rate of GN-VQ against `lloyd_wopa_area` with `shN_bytes` as the rate:
+
+| Scene | Cubic (`g2.bd_rate`) | PCHIP |
+|---|---|---|
+| stump | -39.23% | -40.02% |
+| bonsai | -33.56% | -35.43% |
+| counter | -24.55% | -25.56% |
+| kitchen | -32.02% | -33.19% |
+| room | -42.30% | -46.22% |
+| treehill | -8.35% | +0.70% |
+| flowers | -30.88% | -31.39% |
+| train | -30.60% | -33.90% |
+| truck | -36.19% | -37.26% |
+| **Mean of the 9** | -30.85% | -31.37% |
+
+- **Cubic:** -24.5% to -42.3% on the 8 scenes other than treehill; treehill -8.35%.
+- **PCHIP:** -25.6% to -46.2% on those 8; treehill +0.70%.
+- The mean is about -31% either way. The whole-file BD-rates above are smaller in magnitude because the
+  other 77-90% of each file's bytes (the PNG files and `meta.json`) have the same size for both configs.
+
+### Equal K (Amendment 7 h, reported)
+
+PSNR difference of GN-VQ against the baseline at the same K, then GN-VQ's bytes against the
+baseline's; "dominates" means bytes `<=` and PSNR `>=` (`gn2_g2.json`, `reported.equal_k`).
+
+Against `lloyd_wopa_area`:
+
+| Scene | K = 1,024 | K = 4,096 | K = 16,384 | K = 65,536 |
+|---|---|---|---|---|
+| stump | +0.4459 / +0.52% | +0.2120 / +0.14% | +0.1590 / +0.16% | +0.1221 / +0.07% |
+| bonsai | +1.0013 / +0.55% | +0.5797 / +0.26% | +0.4062 / +0.12% | +0.2696 / +0.17% |
+| counter | +0.6757 / +0.32% | +0.4305 / +0.12% | +0.2572 / +0.15% | +0.1439 / +0.29% |
+| kitchen | +0.8855 / +0.51% | +0.5112 / +0.16% | +0.3466 / +0.07% | +0.2408 / +0.23% |
+| room | +0.6782 / +0.59% | +0.4078 / +0.29% | +0.2819 / +0.03% | +0.1526 / -0.09% (dominates) |
+| treehill | +0.0617 / +0.44% | +0.0192 / +0.20% | +0.0284 / +0.17% | -0.0083 / -0.04% |
+| flowers | +0.1372 / +0.31% | +0.0900 / +0.13% | +0.0701 / +0.14% | +0.0600 / +0.18% |
+| train | +0.4414 / +0.85% | +0.1859 / +0.42% | +0.0798 / +0.14% | +0.0513 / +0.10% |
+| truck | +0.4314 / +0.55% | +0.2355 / +0.21% | +0.1270 / +0.08% | +0.0632 / -0.15% (dominates) |
+| garden (dev) | +0.4074 / +0.33% | +0.2982 / +0.10% | +0.2363 / +0.16% | +0.1949 / +0.55% |
+| bicycle (dev) | +0.3642 / +0.56% | +0.1835 / +0.20% | +0.1235 / +0.15% | +0.0897 / -0.01% (dominates) |
+
+Against `lloyd_trace`:
+
+| Scene | K = 1,024 | K = 4,096 | K = 16,384 | K = 65,536 |
+|---|---|---|---|---|
+| stump | +0.2005 / +0.25% | +0.1522 / +0.26% | +0.1266 / +0.41% | +0.1013 / +0.56% |
+| bonsai | +0.7387 / +0.40% | +0.5130 / +0.23% | +0.3817 / +0.12% | +0.1788 / +0.24% |
+| counter | +0.4395 / +0.27% | +0.2950 / +0.14% | +0.1953 / +0.20% | +0.1124 / +0.38% |
+| kitchen | +0.5534 / +0.17% | +0.4117 / +0.08% | +0.2983 / +0.13% | +0.2045 / +0.15% |
+| room | +0.5106 / +0.45% | +0.3379 / +0.26% | +0.2253 / +0.02% | +0.1156 / -0.08% (dominates) |
+| treehill | -0.0489 / +0.33% | -0.0477 / +0.16% | -0.0279 / +0.08% | -0.0444 / -0.42% |
+| flowers | +0.0723 / +0.27% | +0.0613 / +0.17% | +0.0444 / +0.18% | +0.0334 / +0.21% |
+| train | +0.1322 / +0.49% | +0.0876 / +0.33% | +0.0424 / +0.18% | +0.0312 / +0.11% |
+| truck | +0.2009 / +0.47% | +0.1250 / +0.24% | +0.0765 / +0.15% | +0.0412 / +0.14% |
+| garden (dev) | +0.3092 / +0.23% | +0.2445 / +0.12% | +0.1936 / +0.23% | +0.1428 / +0.47% |
+| bicycle (dev) | +0.1640 / +0.45% | +0.1096 / +0.27% | +0.0730 / +0.21% | +0.0516 / -0.09% (dominates) |
+
+- Against `lloyd_wopa_area`, GN-VQ has the higher PSNR in every cell except treehill at K = 65,536
+  (-0.0083 dB), and the gain falls as K grows on every scene except treehill. Its byte premium is
+  largest at K = 1,024 (+0.31% to +0.85% on the held-out scenes) and between -0.15% and +0.29% at
+  K = 65,536; it dominates in two held-out cells (room and truck at K = 65,536).
+- Against `lloyd_trace`, GN-VQ has the higher PSNR in every cell except the four of treehill.
+
+### Train and test views against `lloyd_trace` (post hoc)
+
+At K = 65,536, GN-VQ's PSNR gain over `lloyd_trace` on the test views and on the train views (`PSNR`
+and `train_PSNR` columns), and their ratio:
+
+| Scene | Train views | Data factor | Test PSNR gain (dB) | Train PSNR gain (dB) | Test / train |
+|---|---|---|---|---|---|
+| stump | 109 | 4 | +0.1013 | +0.1933 | 0.52 |
+| bonsai | 255 | 2 | +0.1788 | +0.2300 | 0.78 |
+| counter | 210 | 2 | +0.1124 | +0.1555 | 0.72 |
+| kitchen | 244 | 2 | +0.2045 | +0.2396 | 0.85 |
+| room | 272 | 2 | +0.1156 | +0.1894 | 0.61 |
+| treehill | 123 | 4 | -0.0444 | +0.0420 | -1.06 |
+| flowers | 151 | 4 | +0.0334 | +0.1049 | 0.32 |
+| train | 263 | 1 | +0.0312 | +0.0669 | 0.47 |
+| truck | 219 | 1 | +0.0412 | +0.0739 | 0.56 |
+| garden (dev) | 161 | 4 | +0.1428 | +0.1975 | 0.72 |
+| bicycle (dev) | 169 | 4 | +0.0516 | +0.0574 | 0.90 |
+
+The test gain is below the train gain on all 11 scenes. **The three lowest ratios are treehill
+(-1.06), flowers (0.32) and train (0.47)**; the other eight are 0.52-0.90. On treehill GN-VQ gains on
+the train views (+0.0420 dB) and loses on the test views (-0.0444 dB). `M` is accumulated over the train
+views, so this is the out-of-sample gap E1 saw on bicycle, here measured against the scalar weighting
+built from the same `M`.
+
+### Reported extras (Amendments 7 h and 8 b)
+
+- **Against `upstream_l1`:** BD-rate -3.93% (treehill) to -10.48% (kitchen) on 8 held-out scenes.
+  Room's curves share no PSNR range, so its BD-rate is undefined; its BD-PSNR is +0.3691 dB and its
+  substitute (a, GN-VQ reaching `upstream_l1`'s best PSNR for fewer bytes) is -11.40%. Garden -11.74%,
+  bicycle -6.54%.
+- **Development scenes:** garden -7.95% against `lloyd_wopa_area` and -6.44% against `lloyd_trace`;
+  bicycle -5.55% and -3.37%; all wins, never read by a verdict.
+- **Exploratory eps = 1e-4 (Amendment 8 b):** against `lloyd_wopa_area`, -8.17% on garden and -5.53% on
+  bicycle. E2's variant (eps = 1e-2) against it: +0.22% on garden (BD-PSNR -0.0042 dB) and -0.18% on
+  bicycle (+0.0075 dB). On the development curves the ridge moved the BD-rate by less than a quarter of
+  a percentage point.
+
+### GN-VQ iterations (`gn2_gn_vq_k<K>_s0_<scene>.json`, results CSVs)
+
+- K = 65,536: 9-10 iterations, every row stopped on the 1e-3 relative-drop rule. K = 16,384: 12-15,
+  all on the relative drop.
+- K = 4,096: 15-20; train, garden and bicycle stopped on the 20-iteration cap. K = 1,024: 20 on every
+  scene, on the cap everywhere except room, whose 20th iteration met the relative drop.
+- Time per GN-VQ row: 109.6-112.5 s at K = 1,024, 92.9-120.7 s at 4,096, 94.3-115.4 s at 16,384 and
+  134.6-161.6 s at 65,536.
+- The clip held: every GN-VQ row's quantizer range (`quant_mins`, `quant_maxs`) lies inside its warm
+  start's (`warm_quant_*`).
+
+### Validity and engineering checks
+
+| Check | Result |
+|---|---|
+| CUDA smoke tests (`gn2_selftest.json`) | pass: `sh_basis` 6.50e-06, toy check 2.87%, end-to-end `pass`, `linalg_scale` pass |
+| Checkpoints | all 11 sha1s equal Amendment 7's pins, checked before any install (21.4 s) and in every job |
+| Render parity, 11 scenes | max abs difference 0.0 |
+| GN metric | computed on the 9 held-out scenes (8.4-32.8 s per pass); garden and bicycle reused a restored cache; `M` finite |
+| Lifted check (10,000 splats), 11 scenes | pass; sum excess / sum d_min at most 1.32e-08, worst excess / scale at most 9.56e-09, no splat over the tolerance |
+| Rows | 195 (17 per scene, plus 8 exploratory); `writer_codes_equal` True on all 184 compressed rows, `valid` True on all 195 |
+| Completeness | every meta's `missing_rows` empty; `missing_exploratory` empty on garden and bicycle |
+| Jobs | all 13 (11 scene jobs, 2 exploratory) exit code 0; none skipped by the start cutoff |
+| Warm starts | `lloyd_wopa_area` K = 65,536 from the run-3 / run-4 caches on the 9 MipNeRF360 scenes, reclustered on train and truck; K = 1,024-16,384 clustered in the job |
+| Batched linalg | no fallbacks in any job |
+| Install | the run-5 wheel reused (169.3 s, no wheel build); `gsplat_commit` `515ca4a1ed01` |
+
+### Timings (`timings.json`, `gn2_meta_<scene>.json`)
+
+| Scene | Data factor | Download | GN pass | Job (`timings.json`, queue) | Job (meta) |
+|---|---|---|---|---|---|
+| stump | 4 | 38.4 | 8.4 | 2,475.3 | 2,458.4 |
+| bonsai | 2 | 67.6 | 30.5 | 3,465.4 | 3,456.8 |
+| counter | 2 | 53.5 | 31.6 | 3,525.3 | 3,506.7 |
+| kitchen | 2 | 78.1 | 32.8 | 3,600.3 | 3,586.9 |
+| room | 2 | 89.3 | 29.7 | 3,780.3 | 3,766.3 |
+| treehill | 4 | 62.1 | 9.5 | 2,325.2 | 2,318.4 |
+| flowers | 4 | 72.7 | 12.8 | 2,580.3 | 2,573.1 |
+| train | 1 | 500.0 | 16.2 | 2,985.3 | 2,975.0 |
+| truck | 1 | 233.2 | 15.8 | 2,940.3 | 2,923.0 |
+| garden | 4 | 73.5 | reused | 2,640.3 | 3,315.9 |
+| bicycle | 4 | 63.0 | reused | 2,190.1 | 2,877.8 |
+
+Seconds. The queue timing is wall time at the queue's 15 s poll, so up to 15 s late. The meta's job time
+adds up over invocations, so for garden and bicycle it includes the exploratory job too (690.1 s and
+720.1 s in `timings.json`). Session steps: checkpoint sha1s 21.4 s, restore 24.5 s, install 169.3 s,
+smoke tests 15.7 s. The longest job was room.
+
+### What E2 settles, and what it does not
+
+- **G2a passed, as pre-registered, on 9 scenes GN-VQ was not designed or tuned on.** This is the gate
+  Amendment 7 moved to held-out scenes after G1 failed.
+- **The margins are thin.** The mean clears -5% by 0.37 pp, and treehill's -1.20% turns into +0.51%
+  under PCHIP (post hoc), which would still leave 8 of 9 wins and a mean of -5.66%.
+- **H2b: the per-splat matrix beats the scalar `tr(M)` weighting on 8 of 9 held-out scenes.** Treehill is
+  not one of them, whatever the cubic's BD-rate says.
+- **The gain is in the codebook stream:** about -31% BD-rate on `shN.npz` alone (post hoc), diluted to
+  the whole-file figures by the 77-90% of each file whose size does not change.
+- **Limits:** k-means seed 0 only, four points per curve, and the train-to-test transfer against
+  `lloyd_trace` is weakest on treehill, flowers and train (post hoc).
