@@ -2,7 +2,7 @@
 
 For a fresh session. Results live in `kaggle/FINDINGS.md`; this file covers how the work is organized.
 Runs 1-5 are on `bench/tilequant`. E0 (a Gauss-Newton metric for shN), E1 (GN-VQ, G1 failed) and E2
-(GN-VQ on held-out scenes, built, not run) are on `bench/gn-vq`: see the E0, E1 and E2 notebook sections
+(GN-VQ on held-out scenes; run on Kaggle, bundle not yet committed) are on `bench/gn-vq`: see the E0, E1 and E2 notebook sections
 below and `kaggle/PREREG_GN.md`.
 
 ## Context and rules
@@ -34,7 +34,7 @@ Upstream main at the time of this work: `28e794c`.
 | `feat/png-tile-quantization` (`3ff67e8`) | `PngCompression(tile_size=, bits=)` | benchmark said no PR; leave alone |
 | `feat/png-weighted-kmeans` (`61cd1baf`) | `gsplat/compression/kmeans.py` + `kmeans_backend` / `kmeans_weighting` / `kmeans_chunk_size`, off upstream main `28e794c`; `tests/test_kmeans.py`. Commits `9348e32` (backend + options), `a4c31082` (`kmeans_chunk_size`), `61cd1baf` (default flip, droppable) | **upstream PR [#1063](https://github.com/nerfstudio-project/gsplat/pull/1063), open** (opened 2026-09-18), measured by run 5. Keep this branch clean: library only (3 files). Upstream main had not moved on 2026-09-18. |
 | `bench/tilequant` | both feat branches merged + benchmark code and results; never goes upstream | runs 1-5 done; head = `git log -1 fork/bench/tilequant`. The blog post links its FINDINGS, so keep those numbers stable. |
-| `bench/gn-vq` | off `bench/tilequant` (`12f912eb`): the E0 / E1 / E2 pre-registration (Amendments 1-7), `bench/gn/` (GN metric, diagnostics, G0 / G1 / G2 rules, GN-VQ, smoke tests, scene fixtures), the E0, E1 and E2 jobs and notebooks, and E0's and E1's results; never goes upstream | **E0 done: G0 passed** (2026-09-20, `kaggle/gn_e0/gn/`, FINDINGS section 8). **E1 done: G1 failed** on the size rule (`kaggle/gn_e1/gn1/`, FINDINGS section 9). **E2 is built, not run** (Amendment 7). `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
+| `bench/gn-vq` | off `bench/tilequant` (`12f912eb`): the E0 / E1 / E2 pre-registration (Amendments 1-8), `bench/gn/` (GN metric, diagnostics, G0 / G1 / G2 rules, GN-VQ, smoke tests, scene fixtures), the E0, E1 and E2 jobs and notebooks, and E0's and E1's results; never goes upstream | **E0 done: G0 passed** (2026-09-20, `kaggle/gn_e0/gn/`, FINDINGS section 8). **E1 done: G1 failed** on the size rule (`kaggle/gn_e1/gn1/`, FINDINGS section 9). **E2 was run on Kaggle; its bundle is not yet committed** (Amendments 7-8; see the open items). `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
 
 Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): `PR_DRAFT_weighted_kmeans.md`,
 `PR_DRAFT_empty_tensor.md`, `ISSUE_566_COMMENT.md`, `ISSUE_787_COMMENT.md`.
@@ -981,6 +981,128 @@ bundle or log existed; the amendment says so and was committed before the code.
   is now tested both ways (it failed with 9 of 9 wins under Amendment 7; it passes under Amendment 8,
   and its mirror image fails).
 
+### E2 build and Amendment 8: decision index (2026-09-22)
+
+Every decision from the E2 build and the Amendment 8 session, each with its reason and where it is
+recorded. Where the two subsections above already give the reason, the entry says so and adds only
+what they leave out. All of these were made before any E2 data existed.
+
+**Scheduling**
+
+- **The exploratory rows run in a second queue** (`run_gpu_queue(explore_jobs, ...)`, called only
+  after `run_gpu_queue(jobs, ...)` has returned). Recorded: PREREG Amendment 8 b ("queued after
+  everything else ... they never delay a pre-registered row"), the builder's jobs-cell comment, and
+  "Amendment 8 session" above (why not rows inside the dev jobs, why not a concurrent job).
+- **Why exploratory work cannot delay a gate row:** the 9 held-out jobs are the first 9 entries of the
+  first queue, which starts jobs strictly in list order on the first free GPU; the exploratory jobs are
+  not in that queue at all; and the second queue is only called once the first has returned, which
+  `run_gpu_queue` does only when every one of its jobs has exited or been skipped by the cutoff. So an
+  exploratory job never holds a GPU while a pre-registered row of this session is still pending.
+  Inside one invocation the job also writes exploratory rows after every pre-registered row
+  (`todo_x` after `todo` and `uncompressed` in `gn_e2_scene.main`). What they can still do is extend
+  the session's wall time after the gate work; the start cutoff bounds that, next item.
+- **The 9.5 h start cutoff** (`START_CUTOFF_S`, builder config cell, with its comment; the reason, that
+  a Kaggle run killed at 12 h may not keep its output, is in "E1 results and E2 build"). Why 9.5 h: it
+  leaves 2.5 h (9,000 s) for a job that starts just before it, against E1's longest measured job,
+  garden at 6,450.4 s (21 rows including six ~650 s clusterings, FINDINGS section 9). E2's Tanks &
+  Temples jobs at data factor 1 are not measured, which is the residual risk; the cutoff applies to
+  both queues, so the exploratory jobs (4 GN-VQ runs and 4 evaluations per scene; E1 measured single
+  GN-VQ runs at 61.8-156.7 s) cannot start late either.
+- **Garden and bicycle keep their data until the exploratory jobs finish** (`--keep_data` on their
+  main jobs; the exploratory jobs run without it and delete it). Recorded: the builder's jobs-cell
+  comment, "Amendment 8 session" above. Reasons it is right and safe: it avoids a second download of
+  each (run 5 measured 141.1 s for garden and 69.0 s for bicycle); nothing else touches those
+  directories, because the exploratory jobs start only after the main queue has returned; the extra
+  `/tmp` use is at most the two dev scenes plus the one scene still running on the other GPU, and
+  run 4's downloader checks for 1.5x the download's size in free space before every download
+  (`r4.MIN_FREE_FACTOR`), so a shortage fails loudly rather than filling `/tmp`; and if the cutoff skips
+  the exploratory phase, the kept data simply dies with the session.
+- **A cutoff skip is not a failure; a crash is.** `JOB_SKIPPED` is printed with a resume hint and the
+  notebook ends normally, because a skip is the planned way to split E2 across sessions; `JOB_FAILED`
+  makes the bundle cell raise, last, after the bundle is written, so the failure is visible and nothing
+  is lost. **This includes an exploratory job:** its failure also ends the notebook in an error, on
+  purpose (a silent exploratory failure would hide a bug), and it cannot affect a gate row, which ran
+  first. Recorded: the builder's bundle cell; not written elsewhere until now.
+- **Each log tail records `skipped_by_cutoff`** (`write_log_tails`). Both a job the cutoff never
+  started and a job still running when the notebook itself stopped have `exit_code: null`; the flag
+  tells them apart. A job that crashed has its exit code.
+- **A job whose rows all exist returns before downloading anything** (`gn_e2_scene.main`), so a
+  resumed session does not re-download finished scenes (run 5 measured 508.4 s for train's download).
+
+**Guards and completeness**
+
+- **The job refuses exploratory configs on a held-out scene** (`ValueError`, before the checkpoint is
+  hashed or anything is downloaded) and **`g2.check_rows` refuses an exploratory row on a held-out
+  scene.** Recorded: the job's module docstring and `EXPLORATORY` comment, `g2.py`'s docstring,
+  PREREG Amendment 8 b ("on garden and bicycle only"). Reasons: Amendment 8 b restricts them to the
+  development scenes, and a row of a dev-tuned variant sitting next to a gate result invites exactly
+  the post-hoc comparison the held-out design exists to prevent; refusing in the job means a wrong
+  `--configs` costs no GPU time; refusing in `g2` means the verdict's input is checked however the rows
+  got there (a hand-edited CSV, another notebook version), as `g1.check_rows` does for E1.
+- **Completeness is counted over the pre-registered rows only, whatever `--configs` asked for**
+  (`done`, `missing_rows` in `gn2_meta_<scene>.json`; `missing_exploratory` separately on garden and
+  bicycle). Recorded: the code comment above that block, "Amendment 8 session" above. Reason: `g2`
+  derives completeness from the rows, not from the meta, so this is about the reader. "After the run"
+  tells the next session to check `missing_rows` before quoting a row, and an exploratory-only run that
+  judged completeness by its own configs would have written `done: true` on a scene with gate rows
+  missing.
+
+**Comparison rules**
+
+- **Degree 3 for BD-rate and BD-PSNR.** Recorded: PREREG Amendment 7 f, `g2.py`'s module docstring,
+  and the reason in "E1 results and E2 build" (the classic Bjontegaard cubic, exact on four points;
+  E1's degree 2 on three points was the same exact construction; `g2.bd_rate` is `g1.bd_rate` at
+  degree 3, so E1's function is reused).
+- **BD-PSNR's definition** (PSNR as a cubic in `log10(bytes)`, averaged over the common byte range).
+  Recorded: PREREG Amendment 7 f, `g2.bd_psnr`'s docstring. Reason, not written before: it is BD-rate's
+  Bjontegaard dual, the same construction with the axes swapped, so the fallback measures the same gap
+  in the other direction. It suits the fallback because curves that share no PSNR range, one lying
+  entirely above the other, usually still share a byte range when both come from the same K grid:
+  garden's did in E1 (14,778,950-16,405,132 B against 14,803,113-16,793,118 B). Where they do not,
+  the scene is a loss (Amendment 7 f). Degree 3 for symmetry with BD-rate.
+- **The tie rule** (a curve's best point is the highest PSNR, a tie going to fewer bytes). Recorded:
+  PREREG Amendment 8 a ("Definitions"), `g2._best`'s docstring. Reason: the substitute needs exactly one
+  best point, and a deterministic one; ties are not expected with measured float PSNRs. It is **not**
+  uniformly conservative, and should not be read as a conservatism argument: for substitute a it picks
+  the cheaper baseline point (a smaller claimed saving); for b it picks the cheaper `gn_vq` point (a
+  smaller penalty). One simple rule was preferred over two because the case should not occur.
+- **"PSNR >=" inclusive, "fewer bytes" strict.** Recorded: PREREG Amendment 8 a (Dace's wording, made
+  explicit), `g2.mean_substitute`. Reasons: the substitute's claim is "reaches at least the other
+  curve's best quality", which equality satisfies; strictness on bytes never changes a substitute's
+  value when the curves share no PSNR range, the case the substitute is for (an equal-bytes point would
+  give 0%, as c does); it only makes a and b mean an actual byte difference and labels that case c.
+- **A non-finite BD-rate takes a substitute, like an undefined one.** Recorded: PREREG Amendment 8 a.
+  Reason: the mean has to exist for every complete scene, and a non-finite value cannot be averaged.
+- **`g1.bd_rate`'s numerical noise is left alone.** It fits on raw PSNR (about 25 dB) without
+  centring, which leaves about 1e-7 percentage points of rounding in a cubic fit (the G2 tests allow
+  1e-6 for that, and say so). That is far below both thresholds (0 and -5%), and the function produced
+  E1's reported BD-rate, so it is not changed; `g2` wraps it instead.
+
+**Inputs**
+
+- **The checkpoint sha1 check runs before any install, and again in each job.** Recorded: PREREG
+  Amendment 7 d (the pins, and the job's refusal), the builder's restore-cell comment, the job's
+  docstring, and why checkpoints are pinned at all in "E1 results and E2 build". Why before install:
+  the install step can include a wheel build (4,404 s in run 5) and precedes the smoke tests, so a
+  wrong or missing checkpoint found afterwards wastes the session, while found before it costs only the
+  hashing (recorded as `checkpoint_sha1_s` in `timings.json`). Why again in the job: a resumed session
+  or a hand-launched job need not go through the notebook's restore cell. Both raise with the found and
+  the pinned sha1; the job writes both into its meta first, so a mismatch is readable in the bundle.
+- **Checkpoints, sort caches and the wheel are copied into `/kaggle/working`,** as in E1, rather than
+  read in place from `/kaggle/input`, so that E2's own output carries them into a resumed session. The
+  run-3 / run-4 cluster files are copied to `tilequant/e2_kmeans/<scene>/`, a path the restore cell does
+  not search, so a resume should still attach the run-5 output (the inputs table says so); without it,
+  anything that still needs a K = 65,536 cache would be reclustered, with its source recorded.
+
+**Measured E2 runtime per scene: not recorded yet.** The E2 bundle is not committed. A
+`gn2_bundle.zip` exists in `~/Downloads` (558,041 bytes, modified 2026-09-22 15:21, sha256
+`60ab1b1bf2130c8a1ac98cae185cbb1b7977e37f3e7086199712ede76b9ac577`, 91 entries, all under `gn2/`,
+including `timings.json` and `gn2_g2.json`); only its file listing was read, no value in it. Once it
+is committed under `kaggle/gn_e2/gn2/`, fill this entry from its files: per scene, `gn_e2_<scene>_s`
+and `gn_e2_<scene>_eps1e4_s` in `timings.json` (wall time measured at the queue's 15 s poll, so up to
+15 s late) and `timings_s.job` in `gn2_meta_<scene>.json`; per session, `checkpoint_sha1_s`,
+`restore_s`, `install_s` and `selftest_s`.
+
 ### Open items (E0, E1: closed; E2: open)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
@@ -988,21 +1110,33 @@ bundle or log existed; the amendment says so and was committed before the code.
   about 41 minutes of timed steps with the two jobs in parallel.
 - ~~**Run E1 on Kaggle.**~~ **Done: G1 failed** on the size rule, all six seeds (FINDINGS section 9,
   `kaggle/gn_e1/gn1/`). Not amended (Amendment 7 a).
-- **Run E2 on Kaggle** (Dace). `kaggle/gn_e2_bench.ipynb`, attaching the run-5 output (required) and,
-  optionally, the E0 or E1 output (for garden's and bicycle's `gn_cache/` only); see "E2 notebook"
-  above. The mean question Amendment 7 left open is settled by Amendment 8 (the mean over all 9 with
-  substitutes). Nothing about the rules is open before the run.
-- **E2 unknowns the run will settle:** whether all 11 checkpoints and sort caches are in the run-5
-  output (the restore cell checks before any install); the cost at K = 1,024 and at data factor 1; how
-  many iterations eps = 1e-2 takes below K = 65,536.
-- **Amendment 6's two rows cost little.** They are two more GN-VQ runs per scene at seed 0 and
+- ~~**Run E2 on Kaggle.**~~ **Run; the bundle is not committed yet.** It is `~/Downloads/gn2_bundle.zip`
+  (details in the decision index above), **not** in the repo root. Next, in this order:
+  1. unpack it into `kaggle/gn_e2/` (arcname `gn2/`), check every file against its zip entry (text
+     CR-insensitively), and make a data-only commit;
+  2. read `gn2_g2.json` first (`g2a.verdict`, then `h2b.verdict`), then check `writer_codes_equal`,
+     `valid`, every meta's `missing_rows`, and `missing_exploratory` on garden and bicycle, and each log
+     tail's `exit_code` / `skipped_by_cutoff`, before quoting any row;
+  3. write FINDINGS section 10 from the files, checked mechanically as sections 8 and 9 were;
+  4. fill in the measured runtime per scene in the decision index above;
+  5. if the zip is copied into the repo root to unpack it, add `/gn2_bundle.zip` to the root
+     `.gitignore`, anchored, as for E0's and E1's; unpacked straight from `~/Downloads`, nothing needs
+     ignoring.
+- **E2 questions the committed bundle will answer:** whether all 11 checkpoints and sort caches were in
+  the run-5 output (the restore cell checked before any install); whether the start cutoff skipped any
+  job, including the exploratory phase; the cost at K = 1,024 and at data factor 1; how many iterations
+  eps = 1e-2 took below K = 65,536; whether the run-5 wheel's key still matched (`install_s`, and no
+  `gsplat_wheel_build_s`).
+- ~~**Amendment 6's two rows cost little.**~~ **E1 done;** the measured costs are in FINDINGS
+  section 9. Kept for the record: They are two more GN-VQ runs per scene at seed 0 and
   K = 65,536, warm-started from a `lloyd_wopa_area` cache that is already on disk, so they add no
   clustering. E0's refines measured the same loop at K = 65,536
   (`gn_e0/gn/gn_refine_<variant>_<scene>.json`): 9.36-9.51 s per assignment and 1.31-1.32 s per
   update, and 72.1-73.6 s for a whole three-iteration variant including the iteration-1 top-64
   diagnostic. GN-VQ runs at most 10 iterations and stops at a relative drop below 1e-3, so each row
   is a few minutes plus one evaluation. The secondary clusterings below still dominate.
-- **The secondary clusterings dominate E1's runtime.** `lloyd_trace` and `lloyd_c3dgs` are six fresh
+- ~~**The secondary clusterings dominate E1's runtime.**~~ **E1 done:** they took 60.9% of garden's
+  job and 44.9% of bicycle's (FINDINGS section 9). Kept for the record: `lloyd_trace` and `lloyd_c3dgs` are six fresh
   library-Lloyd runs per scene (two weightings x three seeds) at K = 65,536, and E0 measured that
   clustering at 281-642 s per run, so they are roughly half an hour to an hour per scene against about
   12 s for the GN pass and a few minutes for all the GN-VQ iterations. They are reported, not gating
@@ -1038,18 +1172,18 @@ bundle or log existed; the amendment says so and was committed before the code.
   `toy_noise.py` simulated. Dace treated it as a correction. `toy_scene` now draws on the CPU, and
   because a CPU draw is not bitwise reproducible across CPU dispatch and platforms, both checks render
   committed fixtures whose hashes are asserted before rendering (see "Amendment 4 session" above).
-- **Assumptions the run will confirm:**
-  - the run-5 output contains the run-3 clustering caches; otherwise the configs are re-clustered, with
-    a warning;
-  - the run-5 wheel key matches the current Kaggle image; otherwise a build of about 73 min, as in run
-    5.
+- ~~**Assumptions the run will confirm.**~~ **Confirmed by E0 and E1:** the run-5 output held the run-3
+  clustering caches (every E1 K = 65,536 `lloyd_wopa_area` row came from them), and the run-5 wheel's
+  key matched (E1's install took 170.5 s, with no wheel build). E2 repeats both assumptions and adds the
+  run-4 caches; its committed bundle will show.
 - **If the 10k lifted check fails in E2** on a scene, that scene's GN-VQ rows are skipped and G2a / H2b
   are `incomplete`. In E1 it passed on both scenes (sum excess / sum d_min 4.07e-13 and 2.82e-09).
 - ~~**After the E1 run.**~~ **Done:** bundle in `kaggle/gn_e1/gn1/`, FINDINGS section 9. After the E2
   run: see "E2 notebook", "After the run".
 - ~~**E1: write down the GN-VQ variant and its size matching before any E1 run.**~~ **Done:**
   PREREG_GN.md Amendment 5, committed before any E1 code.
-- **What E1 will settle, and what it will not:** G1 is only GN-VQ against `lloyd_wopa_area` at
+- ~~**What E1 will settle, and what it will not.**~~ **Settled: G1 failed** (FINDINGS section 9). Kept for
+  the record: G1 is only GN-VQ against `lloyd_wopa_area` at
   K = 65,536 over seeds 0-2. The secondary weightings, the dominance flags and the rate-distortion
   curves with BD-rate are reported and cannot pass or fail it. If G1 fails, FINDINGS section 8's
   hypothesis about the quantizer's range is the first thing to check: the clip is what tests it, and
@@ -1060,12 +1194,12 @@ bundle or log existed; the amendment says so and was committed before the code.
 - **The 64 flat bundle files in `kaggle/`** are ignored, not deleted. Delete them by hand whenever
   convenient; the committed copy is `kaggle/run5/tilequant/`.
 - ~~**`gn_bundle (1).zip` sits untracked in the repo root.**~~ **Ignored (2026-09-21), not
-  deleted.** `gn1_bundle.zip` (E1's) is ignored the same way. The root `.gitignore` now has `/gn_bundle (1).zip`, anchored, matching that one name, so
-  `git status` is clean while the file stays where it is. Its contents are committed unpacked in
-  `kaggle/gn_e0/gn/`, and no bundle zip is ever committed. Delete it or move it to `~/Downloads`
-  whenever convenient. **E1's bundle will arrive the same way:** unpack `gn1_bundle.zip` into
-  `kaggle/gn_e1/`, check the files against the zip, and add its download name to `.gitignore` the same
-  way (or remove the zip).
+  deleted.** `gn1_bundle.zip` (E1's) is ignored the same way. The root `.gitignore` has
+  `/gn_bundle (1).zip` and `/gn1_bundle.zip`, anchored, so `git status` is clean while both files stay in
+  the repo root (still there on 2026-09-22). Their contents are committed unpacked in `kaggle/gn_e0/gn/`
+  and `kaggle/gn_e1/gn1/`, and no bundle zip is ever committed; delete them or move them to
+  `~/Downloads` whenever convenient. **E2's bundle is not in the repo root:** it is in `~/Downloads`
+  (see the E2 item above for what to do with it).
 
 ## Conventions and gotchas
 
@@ -1171,7 +1305,7 @@ bundle or log existed; the amendment says so and was committed before the code.
 | 5 | the same change as library code (`feat/png-weighted-kmeans`): parity gate, MipNeRF360, Tanks & Temples, cost, CPU-only smoke test | **passed.** Parity exact (and all 18 library rows = the run-4 rows); Tanks & Temples +0.052 dB mean PSNR at +0.08% size, both scenes better; k-means 510 s vs 405 s (MipNeRF360), 328 s vs 416 s (T&T); peak GPU memory 3.37-3.62 GB vs 1.03-1.26 GB; CPU smoke test passed; torchpq baseline reproduced to ~0.002 dB. |
 | E0 (`bench/gn-vq`) | does a Gauss-Newton metric on shN predict the shN-only render error (G0, `PREREG_GN.md`)? | **G0 passed** (2026-09-20, second attempt; the first crashed in cuSOLVER). 34 non-tied pairs of 36, none misordered, every codebook calibrated within 0.5-2x. The two exploratory refines cut the GN objective 3.7-4.0x and still lost 0.04-0.53 dB after the codec's centroid quantizer. Details in FINDINGS section 8. |
 | E1 (`bench/gn-vq`) | does GN-VQ beat `lloyd_wopa_area` at equal size (G1, `PREREG_GN.md` with Amendments 5 and 6)? | **G1 failed** (run 2026-09-20), on the size rule, on all six seeds: GN-VQ was +2.37% (garden) and +0.98% to +1.01% (bicycle) larger, beyond 0.5%, while gaining +0.195 to +0.201 / +0.087 to +0.091 dB. The rate-distortion secondary favours GN-VQ (bicycle BD-rate -9.84%; garden entirely above). Details in FINDINGS section 9. |
-| E2 (`bench/gn-vq`) | does GN-VQ (eps 1e-2) beat `lloyd_wopa_area` in rate-distortion on 9 held-out scenes (G2a, `PREREG_GN.md` Amendments 7 and 8)? | **built, not run**: `kaggle/gn_e2_bench.ipynb`, 17 rows per scene over 11 scenes plus 8 exploratory rows on garden and bicycle, 71 CPU tests and a dry run pass. |
+| E2 (`bench/gn-vq`) | does GN-VQ (eps 1e-2) beat `lloyd_wopa_area` in rate-distortion on 9 held-out scenes (G2a, `PREREG_GN.md` Amendments 7 and 8)? | **run on Kaggle; bundle not yet committed** (`~/Downloads/gn2_bundle.zip`, 2026-09-22). No E2 result is quoted anywhere until it is. Built as `kaggle/gn_e2_bench.ipynb`: 17 rows per scene over 11 scenes plus 8 exploratory rows on garden and bicycle; 71 CPU tests and a dry run pass. |
 
 ## PR plan (`feat/png-weighted-kmeans`)
 
@@ -1194,5 +1328,5 @@ bundle or log existed; the amendment says so and was committed before the code.
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
 - **E0 / E1 / E2:** see "Open items (E0, E1: closed; E2: open)". E0 is done and G0 passed
   (`kaggle/gn_e0/gn/`, FINDINGS section 8); E1 is done and G1 failed (`kaggle/gn_e1/gn1/`, FINDINGS
-  section 9); E2 is built and waiting for a Kaggle run (`kaggle/gn_e2_bench.ipynb`, "E2 notebook"
-  above).
+  section 9); E2 was run on Kaggle and its bundle, `~/Downloads/gn2_bundle.zip`, is not yet committed
+  (see that item for the next steps).
