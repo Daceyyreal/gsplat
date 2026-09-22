@@ -830,3 +830,137 @@ They are **not judged**: G2a and H2b never read them, and neither does any repor
 held-out scenes. Reported only, for garden and bicycle: their curve against `lloyd_wopa_area`, and
 `gn_vq` (eps 1e-2) against them, each with BD-rate, BD-PSNR and the substitute above. Nothing learned
 from them can change E2's variant or verdicts.
+
+## Amendment 9 (2026-09-22, after E2's results and before any E2b code)
+
+E2 has run. Its bundle is committed unchanged in `kaggle/gn_e2/gn2/` (`9287eb47`), a post-hoc
+sensitivity analysis of its BD measures in `kaggle/gn_e2/bd_sensitivity.json` (`4d143c4b`), and its
+numbers are in `kaggle/FINDINGS.md` section 10 (`09bb2f69`). **G2a passed as pre-registered and is not
+amended.** H2b passed as computed; FINDINGS section 10 counts it as 8 of 9, because treehill's win is an
+artifact of the cubic fit. This amendment changes how BD measures are computed from now on (a), and
+fixes E2b (b), an exploratory run with a pre-stated success criterion and no gate. G0, G1, G2a, H2b, the
+validity checks and Amendments 1-8 are unchanged.
+
+### a. BD-rate and BD-PSNR from E2b on: the same quantity, computed better conditioned
+
+- **The pre-registered quantity is unchanged:** Amendment 7 f's BD-rate and BD-PSNR, the degree-3
+  polynomial through each curve's four points (degree n - 1 for n < 4 points), integrated over the
+  common interval.
+- **Only its computation changes.** `g2.bd_rate` / `g2.bd_psnr` fit with `np.polyfit` on the uncentred
+  axes (E2's PSNRs are 21.59-32.31 dB, its log10 bytes 7.13-7.23), which is badly conditioned: on E2's
+  39 comparisons the bundle's BD-rates are up to 6.09e-4 percentage points from the exact interpolating cubic
+  (computed in 50-digit arithmetic), a recomputation on another machine up to 1.16e-3 pp, and the two
+  differ by up to 1.77e-3 pp (`bd_sensitivity.json`). From E2b on, every BD-rate and BD-PSNR is
+  computed with the domain-scaled fit, `numpy.polynomial.Polynomial.fit`, which maps the abscissa onto
+  [-1, 1] before fitting; in code, `g2.bd_rate_scaled` and `g2.bd_psnr_scaled`. A test checks both
+  against the 50-digit exact cubic on all of E2's curves to 1e-8.
+- **E2's recorded values stand.** `gn2_g2.json` is the verdict of record; `g2.bd_rate`, `g2.bd_psnr` and
+  `g2.judge_e2` are not changed.
+- E2b's curves have two K each and its criterion uses no BD measure, so this applies to any BD value
+  computed later, including any re-analysis.
+
+### b. E2b: an isotropic floor on the GN metric (exploratory, not gated)
+
+**Why.** E2's ridge regularizes only the centroid update: `mu = eps * tr(sum M_k) / 15` pulls a solved
+centroid toward 0 in the directions its cluster's summed metric does not constrain. The assignment uses
+the pure `M_i`. A direction in the null space of `M_i` costs nothing there, so a splat can be assigned a
+centroid whose shN differs arbitrarily in directions its training cameras do not cover, and test cameras
+can see those directions. The symptom in E2 is a train-view gain that does not transfer to test views:
+at K = 65,536, GN-VQ's test PSNR gain over `lloyd_trace` divided by its train PSNR gain is lowest on
+**treehill (-1.06), flowers (0.32) and train (0.47)**, against 0.52-0.90 on the other eight scenes
+(FINDINGS section 10, post hoc). `lloyd_trace` uses the same `M`, reduced to its trace, so this compares
+the full matrix with its scalar part on the same views. A floor `rho * tr(M_i) / 15 * I` (`tr(M_i) / 15`
+is the mean eigenvalue of `M_i`) makes every direction cost at least `rho` times that mean, in the
+assignment as well as the update.
+
+**Scenes.** Treehill, flowers and train, the three lowest ratios above; **garden is the control**, a
+development scene where GN-VQ's test gain transferred (ratio 0.72). Stump is not used. **From this
+amendment on, treehill, flowers and train are development scenes**, like garden and bicycle: E2's
+verdicts, which counted them as held out, stand, and no later held-out claim may use them. Each scene
+uses its Amendment 7 checkpoint (sha1 pinned there; the job refuses any other), its data factor (4 for
+treehill, flowers and garden; 1 for train) and its seed-0 PLAS order.
+
+**b.a. Variant.** E2's GN-VQ (Amendment 7 c: ridge eps = 1e-2, at most 20 iterations, the 1e-3
+relative-drop stopping rule, the clip to the warm-start range with per-cluster acceptance, the codec's
+quantizer, the final exact assignment against the dequantized codebook, the writer-code assertion), with
+`M_i` replaced everywhere inside GN-VQ by the floored metric
+
+    M'_i = M_i + rho * tr(M_i) / 15 * I
+
+- in the assignment (the lifted argmin and its guard) **and** in the update, whose ridge then uses
+  `tr(sum M'_k) = (1 + rho) tr(sum M_k)`; also in the clip's per-cluster acceptance, the stopping rule's
+  objective and the final quantized assignment. Splats with `tr(M_i) = 0` keep a zero metric and take
+  their L2-nearest centroid, as before;
+- `rho` in {0, 1e-3, 1e-2, 1e-1}. At `rho = 0` the floored metric is `M_i` exactly, and the variant is
+  E2's `gn_vq`;
+- warm start: `lloyd_wopa_area` at the same K and seed 0, the codebook E2 used, restored from **E2's
+  notebook output**: `gn2_work/<scene>/clusters/lloyd_wopa_area_k<K>_s0.pt`, and for K = 65,536 on
+  treehill, flowers and garden the run-3 / run-4 cache E2 copied to `tilequant/e2_kmeans/<scene>/`.
+  Fallbacks, in order: the run-3 / run-4 cache in the run-5 output (K = 65,536, MipNeRF360 scenes);
+  otherwise reclustered with E2's code and seed. Every row records its warm start's source;
+- also logged for every row: the GN objective on the unfloored `M_i` (in the units of `P`) before and
+  after quantization, next to the floored objective GN-VQ minimizes.
+
+**b.b. Training-view cross-validation (selects `rho`).**
+
+- The train views are E2's: the runner's train split, in the order E0's `camera_views` lists them,
+  indexed 0, 1, 2, ... **`M_even`** is E0's GN pass (probe seed 0) over the even-indexed train views
+  only (0, 2, 4, ...), with those views' pixels as the objective's total pixels.
+- For each `rho`, GN-VQ with the floored metric built from `M_even`, from the warm start above. The
+  codebook is written and decoded with the unchanged library writer, and **scored by the
+  render-vs-render dMSE of the decoded shN on the odd-indexed train views** (1, 3, 5, ...): only shN
+  swapped, clamped renders, E0's `measure_dmse`, as E2's measured `D`.
+- **`rho_cv`** (per scene and K) is the `rho` with the lowest score; an exact tie goes to the smaller
+  `rho`. **No test view is used for the selection.**
+- Reported for these codebooks and not used by the selection: the same dMSE on the test views, bytes,
+  and `P` on `M_even`.
+
+**b.c. The full-`M` check.** For each `rho` > 0, GN-VQ with the floored metric built from E2's
+full-train-view `M` (`gn_cache/<scene>.pt` from E2's notebook output, used only if its cache key
+matches; otherwise recomputed with E0's code, which the row records), then written, decoded and
+evaluated as E2's rows: `P`, measured `D` on train and test views, test PSNR / SSIM / LPIPS of the full
+compressed pipeline, train PSNR, bytes. **The `rho = 0` full-`M` codebook is E2's `gn_vq` row itself**,
+read from `kaggle/gn_e2/gn2/` and not recomputed. **`rho_cv`'s codebook** is the full-`M` codebook at
+`rho_cv` (E2's `gn_vq` row when `rho_cv = 0`).
+
+**b.d. Grid.** K in {4,096, 65,536}, k-means seed 0, the four scenes: per scene and K, 4
+cross-validation codebooks and 3 full-`M` codebooks, 14 GN-VQ rows per scene. The comparators are E2's
+committed `lloyd_wopa_area`, `lloyd_trace` and `gn_vq` rows at the same scene and K; nothing E2 measured
+is measured again.
+
+**b.e. Success criteria, stated in advance.** Test PSNR is the full compressed pipeline's (E2's `PSNR`
+column). **The floor works if both hold:**
+
+1. on **treehill**, at K = 4,096 **and** at K = 65,536, `rho_cv`'s codebook has a higher test PSNR than
+   E2's `lloyd_trace` row at the same K; **and**
+2. on **garden**, at K = 4,096 **and** at K = 65,536, `rho_cv`'s codebook's test PSNR is at least E2's
+   `gn_vq` (`rho = 0`) test PSNR at the same K minus 0.02 dB.
+
+Differences are rounded to 9 decimals before they are compared, as in run 4. The result is `works`,
+`does not work`, or `incomplete` if a row either condition needs is missing. Flowers and train are
+reported with the same quantities and enter neither condition. This is E2b's own criterion: it is not a
+gate, and it changes nothing about G2a, H2b or any E2 row.
+
+For reference, what the criterion is up against, from E2's rows: on treehill, `lloyd_trace` has 23.2465
+dB at K = 4,096 and 23.2746 dB at K = 65,536, against E2's `gn_vq` at 23.1988 and 23.2302 dB. One caveat
+known before E2b: the selection scores dMSE against the uncompressed render, while the criterion is PSNR
+against the ground truth, and the two can disagree. On treehill at K = 4,096, E2's `gn_vq` has the lower
+test dMSE (1.8965e-4 against `lloyd_trace`'s 2.2533e-4) and the lower test PSNR.
+
+**b.f. Reported, never part of the criterion.**
+
+- Per scene and K, the **Spearman rank correlation across the four `rho` values between the
+  cross-validation codebooks' odd-train-view dMSE and the full-`M` codebooks' test dMSE** (at `rho = 0`,
+  E2's `gn_vq` row's `measured_test_clamped`), with average ranks for ties (`diagnostics.spearman`).
+  With four values it takes only a few values; no threshold is attached.
+- The same Spearman with the cross-validation codebooks' own test dMSE.
+- Per scene, K and `rho`: bytes, test PSNR, dMSE, iterations, stopping reason, clip rejections and both
+  objectives; `rho_cv` and its codebook's test PSNR and bytes against E2's `lloyd_wopa_area`,
+  `lloyd_trace` and `gn_vq` rows.
+
+**b.g. Checks, as in E2.** The checkpoint sha1 pins before any install and again in each job; the CUDA
+smoke tests; render parity per scene; the writer-code assertion on every row. The lifted-assignment
+check (Amendment 3's criterion, 10,000 splats, on the K = 65,536 warm start) runs once per scene for
+every metric the scene's GN-VQ rows use: the floored `M_even` at each `rho`, and the floored full `M` at
+each `rho` > 0 (E2 checked the unfloored full `M`). A failed check skips the rows using that metric,
+which leaves them missing. E2b writes its own files (`gn2b/`) and never E2's.
