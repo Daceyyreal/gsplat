@@ -1,0 +1,102 @@
+{
+  "scene": "truck",
+  "timings_s": {
+    "download": 233.1742241382599,
+    "gn_pass": 15.756079361000047,
+    "job": 2922.956661734
+  },
+  "ckpt_sha1": "4b9c9babe37cf16db99d286be8e6af805a776d6c",
+  "expected_sha1": "4b9c9babe37cf16db99d286be8e6af805a776d6c",
+  "dataset": "tandt",
+  "scene_set": "held_out",
+  "data_factor": 1,
+  "settings": {
+    "packed": false,
+    "rasterize_mode": "classic",
+    "camera_model": "pinhole",
+    "with_ut": false,
+    "with_eval3d": false,
+    "near_plane": 0.01,
+    "far_plane": 10000000000.0,
+    "sh_degree": 3
+  },
+  "train_views": 219,
+  "test_views": 32,
+  "total_train_pixels": 117062946,
+  "n_splats": 1000000,
+  "k_values": [
+    1024,
+    4096,
+    16384,
+    65536
+  ],
+  "seed": 0,
+  "gsplat_commit": "515ca4a1ed01",
+  "gn_vq": {
+    "max_iters": 20,
+    "rel_tol": 0.001,
+    "ridge_eps": 0.01,
+    "quantizer_bits": 6,
+    "exploratory": {}
+  },
+  "render_parity": {
+    "max_abs_diff": 0.0,
+    "pass": true,
+    "view_size": [
+      979,
+      546
+    ]
+  },
+  "gn": {
+    "cache_key": "v1|4b9c9babe37cf16db99d286be8e6af805a776d6c|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views219|seed0",
+    "finite_check": {
+      "name": "M_packed",
+      "n_rows": 1000000,
+      "n_nonfinite_rows": 0,
+      "n_nonfinite_entries": 0,
+      "n_nan_entries": 0,
+      "n_inf_entries": 0,
+      "first_nonfinite_rows": [],
+      "max_abs": 15359.126953125,
+      "finite": true
+    },
+    "n_views": 219,
+    "total_pixels": 117062946,
+    "splats_zero_trace": 45355
+  },
+  "lifted_check": {
+    "criterion_version": 2,
+    "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+    "tol_rel": 0.0001,
+    "n_sample": 10000,
+    "n_zero_trace_in_sample": 433,
+    "n": 9567,
+    "sum_excess_over_sum_dmin": 3.69344563845441e-11,
+    "max_excess_over_scale": 6.570928224068815e-12,
+    "n_excess_over_tol_scale": 0,
+    "aggregate_pass": true,
+    "per_splat_pass": true,
+    "pass": true,
+    "n_dmin_below_1e-3_scale": 9447,
+    "n_dmin_zero": 51,
+    "max_excess_over_dmin": 10964.348981662395,
+    "same_index_fraction": 0.993414863593603,
+    "max_codebook_sq_dist_from_mean": 9.838650651008972,
+    "time_s": 28.542031368999915
+  },
+  "linalg": {
+    "max_batch": 32768,
+    "op_max_batch": {
+      "linalg_eigvalsh": 8192,
+      "linalg_eigh": 8192
+    },
+    "working_batches": {
+      "linalg_inv_ex": 1,
+      "linalg_solve": 1024
+    },
+    "fallbacks": []
+  },
+  "missing_rows": [],
+  "done": true,
+  "data_deleted": true
+}

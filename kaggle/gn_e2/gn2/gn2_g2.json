@@ -1,0 +1,4171 @@
+{
+  "verdict": "pass",
+  "g2a": {
+    "rule": "PREREG_GN.md Amendment 7 f with Amendment 8 a: per held-out scene, BD-rate of gn_vq vs lloyd_wopa_area over the 4-point curves (K 1,024-65,536, seed 0); win if < 0; if undefined, BD-PSNR over the overlapping byte range, win if > 0; if both undefined, a loss. Pass if >= 8 of the 9 held-out scenes win and the mean over all 9 is <= -5%, each scene entering with its BD-rate or, where that is undefined, Amendment 8's substitute (a: gn_vq reaches the baseline's best PSNR for fewer bytes; b: the reverse; c: 0%)",
+    "config": "gn_vq",
+    "baseline": "lloyd_wopa_area",
+    "scenes": [
+      "stump",
+      "bonsai",
+      "counter",
+      "kitchen",
+      "room",
+      "treehill",
+      "flowers",
+      "train",
+      "truck"
+    ],
+    "k_values": [
+      1024,
+      4096,
+      16384,
+      65536
+    ],
+    "seed": 0,
+    "min_wins": 8,
+    "n_wins": 9,
+    "n_scenes": 9,
+    "missing": [],
+    "complete": true,
+    "mean_bd_rate": -5.3747517683356865,
+    "mean_over": "all scenes, BD-rate or Amendment 8 substitute",
+    "n_bd_rate_defined": 9,
+    "n_substituted": {
+      "substitute_a": 0,
+      "substitute_b": 0,
+      "substitute_c": 0
+    },
+    "per_scene": {
+      "stump": {
+        "scene": "stump",
+        "config": "gn_vq",
+        "baseline": "lloyd_wopa_area",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13757202,
+              "PSNR": 26.60077667236328
+            },
+            {
+              "K": 4096,
+              "bytes": 14035146,
+              "PSNR": 26.688861846923828
+            },
+            {
+              "K": 16384,
+              "bytes": 14511481,
+              "PSNR": 26.75824546813965
+            },
+            {
+              "K": 65536,
+              "bytes": 15747513,
+              "PSNR": 26.81488609313965
+            }
+          ],
+          "lloyd_wopa_area": [
+            {
+              "K": 1024,
+              "bytes": 13686312,
+              "PSNR": 26.15489959716797
+            },
+            {
+              "K": 4096,
+              "bytes": 14016036,
+              "PSNR": 26.47684097290039
+            },
+            {
+              "K": 16384,
+              "bytes": 14488269,
+              "PSNR": 26.5992431640625
+            },
+            {
+              "K": 65536,
+              "bytes": 15736366,
+              "PSNR": 26.69283103942871
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -7.323057195382843,
+        "bd_psnr": 0.20141418298558023,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -7.323057195382843,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "bonsai": {
+        "scene": "bonsai",
+        "config": "gn_vq",
+        "baseline": "lloyd_wopa_area",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13857252,
+              "PSNR": 31.674406051635742
+            },
+            {
+              "K": 4096,
+              "bytes": 14150385,
+              "PSNR": 31.963716506958008
+            },
+            {
+              "K": 16384,
+              "bytes": 14647213,
+              "PSNR": 32.178741455078125
+            },
+            {
+              "K": 65536,
+              "bytes": 15883118,
+              "PSNR": 32.310508728027344
+            }
+          ],
+          "lloyd_wopa_area": [
+            {
+              "K": 1024,
+              "bytes": 13780986,
+              "PSNR": 30.673126220703125
+            },
+            {
+              "K": 4096,
+              "bytes": 14113670,
+              "PSNR": 31.38401985168457
+            },
+            {
+              "K": 16384,
+              "bytes": 14629503,
+              "PSNR": 31.772573471069336
+            },
+            {
+              "K": 65536,
+              "bytes": 15855879,
+              "PSNR": 32.04087829589844
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -5.792587821218231,
+        "bd_psnr": 0.4485437649858781,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -5.792587821218231,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "counter": {
+        "scene": "counter",
+        "config": "gn_vq",
+        "baseline": "lloyd_wopa_area",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 14043534,
+              "PSNR": 28.62471580505371
+            },
+            {
+              "K": 4096,
+              "bytes": 14321752,
+              "PSNR": 28.89079475402832
+            },
+            {
+              "K": 16384,
+              "bytes": 14818023,
+              "PSNR": 29.109127044677734
+            },
+            {
+              "K": 65536,
+              "bytes": 16077227,
+              "PSNR": 29.260786056518555
+            }
+          ],
+          "lloyd_wopa_area": [
+            {
+              "K": 1024,
+              "bytes": 13998342,
+              "PSNR": 27.948972702026367
+            },
+            {
+              "K": 4096,
+              "bytes": 14304170,
+              "PSNR": 28.46033477783203
+            },
+            {
+              "K": 16384,
+              "bytes": 14796507,
+              "PSNR": 28.851943969726562
+            },
+            {
+              "K": 65536,
+              "bytes": 16030470,
+              "PSNR": 29.116920471191406
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -4.063285381901749,
+        "bd_psnr": 0.2659605616380034,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -4.063285381901749,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "kitchen": {
+        "scene": "kitchen",
+        "config": "gn_vq",
+        "baseline": "lloyd_wopa_area",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13635951,
+              "PSNR": 30.74171257019043
+            },
+            {
+              "K": 4096,
+              "bytes": 13921437,
+              "PSNR": 31.01436996459961
+            },
+            {
+              "K": 16384,
+              "bytes": 14412143,
+              "PSNR": 31.21419906616211
+            },
+            {
+              "K": 65536,
+              "bytes": 15669824,
+              "PSNR": 31.360301971435547
+            }
+          ],
+          "lloyd_wopa_area": [
+            {
+              "K": 1024,
+              "bytes": 13566735,
+              "PSNR": 29.85621452331543
+            },
+            {
+              "K": 4096,
+              "bytes": 13898929,
+              "PSNR": 30.503122329711914
+            },
+            {
+              "K": 16384,
+              "bytes": 14402193,
+              "PSNR": 30.86757469177246
+            },
+            {
+              "K": 65536,
+              "bytes": 15634260,
+              "PSNR": 31.119476318359375
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -5.603288657176497,
+        "bd_psnr": 0.38373256161600366,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -5.603288657176497,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "room": {
+        "scene": "room",
+        "config": "gn_vq",
+        "baseline": "lloyd_wopa_area",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13934128,
+              "PSNR": 31.99641990661621
+            },
+            {
+              "K": 4096,
+              "bytes": 14214972,
+              "PSNR": 32.09666061401367
+            },
+            {
+              "K": 16384,
+              "bytes": 14643915,
+              "PSNR": 32.183773040771484
+            },
+            {
+              "K": 65536,
+              "bytes": 15680033,
+              "PSNR": 32.22181701660156
+            }
+          ],
+          "lloyd_wopa_area": [
+            {
+              "K": 1024,
+              "bytes": 13852590,
+              "PSNR": 31.318227767944336
+            },
+            {
+              "K": 4096,
+              "bytes": 14173773,
+              "PSNR": 31.68885612487793
+            },
+            {
+              "K": 16384,
+              "bytes": 14638887,
+              "PSNR": 31.90186882019043
+            },
+            {
+              "K": 65536,
+              "bytes": 15694196,
+              "PSNR": 32.06923294067383
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -7.764165940123135,
+        "bd_psnr": 0.30380101557920014,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -7.764165940123135,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "treehill": {
+        "scene": "treehill",
+        "config": "gn_vq",
+        "baseline": "lloyd_wopa_area",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13966940,
+              "PSNR": 23.15808868408203
+            },
+            {
+              "K": 4096,
+              "bytes": 14244007,
+              "PSNR": 23.19876480102539
+            },
+            {
+              "K": 16384,
+              "bytes": 14701250,
+              "PSNR": 23.24529457092285
+            },
+            {
+              "K": 65536,
+              "bytes": 15843536,
+              "PSNR": 23.23018455505371
+            }
+          ],
+          "lloyd_wopa_area": [
+            {
+              "K": 1024,
+              "bytes": 13905460,
+              "PSNR": 23.096412658691406
+            },
+            {
+              "K": 4096,
+              "bytes": 14216027,
+              "PSNR": 23.179569244384766
+            },
+            {
+              "K": 16384,
+              "bytes": 14675702,
+              "PSNR": 23.216867446899414
+            },
+            {
+              "K": 65536,
+              "bytes": 15850599,
+              "PSNR": 23.238508224487305
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -1.1955134422367286,
+        "bd_psnr": 0.032013994353000896,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -1.1955134422367286,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "flowers": {
+        "scene": "flowers",
+        "config": "gn_vq",
+        "baseline": "lloyd_wopa_area",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 14334935,
+              "PSNR": 21.750022888183594
+            },
+            {
+              "K": 4096,
+              "bytes": 14618485,
+              "PSNR": 21.808034896850586
+            },
+            {
+              "K": 16384,
+              "bytes": 15124327,
+              "PSNR": 21.853147506713867
+            },
+            {
+              "K": 65536,
+              "bytes": 16473607,
+              "PSNR": 21.89583969116211
+            }
+          ],
+          "lloyd_wopa_area": [
+            {
+              "K": 1024,
+              "bytes": 14289941,
+              "PSNR": 21.612823486328125
+            },
+            {
+              "K": 4096,
+              "bytes": 14598801,
+              "PSNR": 21.71805191040039
+            },
+            {
+              "K": 16384,
+              "bytes": 15103556,
+              "PSNR": 21.78302764892578
+            },
+            {
+              "K": 65536,
+              "bytes": 16444351,
+              "PSNR": 21.835824966430664
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -5.260243546824784,
+        "bd_psnr": 0.07669997610086199,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -5.260243546824784,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "train": {
+        "scene": "train",
+        "config": "gn_vq",
+        "baseline": "lloyd_wopa_area",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 14028563,
+              "PSNR": 22.31535530090332
+            },
+            {
+              "K": 4096,
+              "bytes": 14324766,
+              "PSNR": 22.37835121154785
+            },
+            {
+              "K": 16384,
+              "bytes": 14809316,
+              "PSNR": 22.420652389526367
+            },
+            {
+              "K": 65536,
+              "bytes": 15930533,
+              "PSNR": 22.443185806274414
+            }
+          ],
+          "lloyd_wopa_area": [
+            {
+              "K": 1024,
+              "bytes": 13909854,
+              "PSNR": 21.873933792114258
+            },
+            {
+              "K": 4096,
+              "bytes": 14265356,
+              "PSNR": 22.192440032958984
+            },
+            {
+              "K": 16384,
+              "bytes": 14788508,
+              "PSNR": 22.34087371826172
+            },
+            {
+              "K": 65536,
+              "bytes": 15914568,
+              "PSNR": 22.391849517822266
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -4.9202593248576125,
+        "bd_psnr": 0.11301316235997305,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -4.9202593248576125,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "truck": {
+        "scene": "truck",
+        "config": "gn_vq",
+        "baseline": "lloyd_wopa_area",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 14383306,
+              "PSNR": 25.76947021484375
+            },
+            {
+              "K": 4096,
+              "bytes": 14663980,
+              "PSNR": 25.836959838867188
+            },
+            {
+              "K": 16384,
+              "bytes": 15132521,
+              "PSNR": 25.895170211791992
+            },
+            {
+              "K": 65536,
+              "bytes": 16290117,
+              "PSNR": 25.928251266479492
+            }
+          ],
+          "lloyd_wopa_area": [
+            {
+              "K": 1024,
+              "bytes": 14305152,
+              "PSNR": 25.338029861450195
+            },
+            {
+              "K": 4096,
+              "bytes": 14633336,
+              "PSNR": 25.60150718688965
+            },
+            {
+              "K": 16384,
+              "bytes": 15120674,
+              "PSNR": 25.768178939819336
+            },
+            {
+              "K": 65536,
+              "bytes": 16313832,
+              "PSNR": 25.865009307861328
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -6.450364605299597,
+        "bd_psnr": 0.1478548958210304,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -6.450364605299597,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      }
+    },
+    "wins_ok": true,
+    "max_mean_bd_rate": -5.0,
+    "mean_ok": true,
+    "verdict": "pass"
+  },
+  "h2b": {
+    "rule": "PREREG_GN.md Amendment 7 g: the same per-scene rule for gn_vq vs lloyd_trace; holds if >= 7 of the 9 held-out scenes win. Reported, not gating",
+    "config": "gn_vq",
+    "baseline": "lloyd_trace",
+    "scenes": [
+      "stump",
+      "bonsai",
+      "counter",
+      "kitchen",
+      "room",
+      "treehill",
+      "flowers",
+      "train",
+      "truck"
+    ],
+    "k_values": [
+      1024,
+      4096,
+      16384,
+      65536
+    ],
+    "seed": 0,
+    "min_wins": 7,
+    "n_wins": 9,
+    "n_scenes": 9,
+    "missing": [],
+    "complete": true,
+    "mean_bd_rate": -6.642262611742227,
+    "mean_over": "all scenes, BD-rate or Amendment 8 substitute",
+    "n_bd_rate_defined": 9,
+    "n_substituted": {
+      "substitute_a": 0,
+      "substitute_b": 0,
+      "substitute_c": 0
+    },
+    "per_scene": {
+      "stump": {
+        "scene": "stump",
+        "config": "gn_vq",
+        "baseline": "lloyd_trace",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13757202,
+              "PSNR": 26.60077667236328
+            },
+            {
+              "K": 4096,
+              "bytes": 14035146,
+              "PSNR": 26.688861846923828
+            },
+            {
+              "K": 16384,
+              "bytes": 14511481,
+              "PSNR": 26.75824546813965
+            },
+            {
+              "K": 65536,
+              "bytes": 15747513,
+              "PSNR": 26.81488609313965
+            }
+          ],
+          "lloyd_trace": [
+            {
+              "K": 1024,
+              "bytes": 13722873,
+              "PSNR": 26.400230407714844
+            },
+            {
+              "K": 4096,
+              "bytes": 13998853,
+              "PSNR": 26.536643981933594
+            },
+            {
+              "K": 16384,
+              "bytes": 14451977,
+              "PSNR": 26.631622314453125
+            },
+            {
+              "K": 65536,
+              "bytes": 15659603,
+              "PSNR": 26.713607788085938
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -5.61249743766119,
+        "bd_psnr": 0.12716912551661608,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -5.61249743766119,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "bonsai": {
+        "scene": "bonsai",
+        "config": "gn_vq",
+        "baseline": "lloyd_trace",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13857252,
+              "PSNR": 31.674406051635742
+            },
+            {
+              "K": 4096,
+              "bytes": 14150385,
+              "PSNR": 31.963716506958008
+            },
+            {
+              "K": 16384,
+              "bytes": 14647213,
+              "PSNR": 32.178741455078125
+            },
+            {
+              "K": 65536,
+              "bytes": 15883118,
+              "PSNR": 32.310508728027344
+            }
+          ],
+          "lloyd_trace": [
+            {
+              "K": 1024,
+              "bytes": 13802691,
+              "PSNR": 30.935680389404297
+            },
+            {
+              "K": 4096,
+              "bytes": 14118181,
+              "PSNR": 31.450763702392578
+            },
+            {
+              "K": 16384,
+              "bytes": 14628952,
+              "PSNR": 31.797014236450195
+            },
+            {
+              "K": 65536,
+              "bytes": 15844438,
+              "PSNR": 32.13172149658203
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -5.531959981735457,
+        "bd_psnr": 0.3752204075695005,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -5.531959981735457,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "counter": {
+        "scene": "counter",
+        "config": "gn_vq",
+        "baseline": "lloyd_trace",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 14043534,
+              "PSNR": 28.62471580505371
+            },
+            {
+              "K": 4096,
+              "bytes": 14321752,
+              "PSNR": 28.89079475402832
+            },
+            {
+              "K": 16384,
+              "bytes": 14818023,
+              "PSNR": 29.109127044677734
+            },
+            {
+              "K": 65536,
+              "bytes": 16077227,
+              "PSNR": 29.260786056518555
+            }
+          ],
+          "lloyd_trace": [
+            {
+              "K": 1024,
+              "bytes": 14005192,
+              "PSNR": 28.185226440429688
+            },
+            {
+              "K": 4096,
+              "bytes": 14301675,
+              "PSNR": 28.595823287963867
+            },
+            {
+              "K": 16384,
+              "bytes": 14788887,
+              "PSNR": 28.91380500793457
+            },
+            {
+              "K": 65536,
+              "bytes": 16015787,
+              "PSNR": 29.148351669311523
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -3.103330420934869,
+        "bd_psnr": 0.19205084799409988,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -3.103330420934869,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "kitchen": {
+        "scene": "kitchen",
+        "config": "gn_vq",
+        "baseline": "lloyd_trace",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13635951,
+              "PSNR": 30.74171257019043
+            },
+            {
+              "K": 4096,
+              "bytes": 13921437,
+              "PSNR": 31.01436996459961
+            },
+            {
+              "K": 16384,
+              "bytes": 14412143,
+              "PSNR": 31.21419906616211
+            },
+            {
+              "K": 65536,
+              "bytes": 15669824,
+              "PSNR": 31.360301971435547
+            }
+          ],
+          "lloyd_trace": [
+            {
+              "K": 1024,
+              "bytes": 13612165,
+              "PSNR": 30.188270568847656
+            },
+            {
+              "K": 4096,
+              "bytes": 13910950,
+              "PSNR": 30.60265350341797
+            },
+            {
+              "K": 16384,
+              "bytes": 14393484,
+              "PSNR": 30.915935516357422
+            },
+            {
+              "K": 65536,
+              "bytes": 15647089,
+              "PSNR": 31.15584945678711
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -4.884998607213175,
+        "bd_psnr": 0.2970729070509961,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -4.884998607213175,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "room": {
+        "scene": "room",
+        "config": "gn_vq",
+        "baseline": "lloyd_trace",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13934128,
+              "PSNR": 31.99641990661621
+            },
+            {
+              "K": 4096,
+              "bytes": 14214972,
+              "PSNR": 32.09666061401367
+            },
+            {
+              "K": 16384,
+              "bytes": 14643915,
+              "PSNR": 32.183773040771484
+            },
+            {
+              "K": 65536,
+              "bytes": 15680033,
+              "PSNR": 32.22181701660156
+            }
+          ],
+          "lloyd_trace": [
+            {
+              "K": 1024,
+              "bytes": 13871139,
+              "PSNR": 31.485820770263672
+            },
+            {
+              "K": 4096,
+              "bytes": 14178019,
+              "PSNR": 31.75873374938965
+            },
+            {
+              "K": 16384,
+              "bytes": 14641144,
+              "PSNR": 31.958471298217773
+            },
+            {
+              "K": 65536,
+              "bytes": 15693195,
+              "PSNR": 32.10620880126953
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -6.609015875867352,
+        "bd_psnr": 0.2347988013939002,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -6.609015875867352,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "treehill": {
+        "scene": "treehill",
+        "config": "gn_vq",
+        "baseline": "lloyd_trace",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13966940,
+              "PSNR": 23.15808868408203
+            },
+            {
+              "K": 4096,
+              "bytes": 14244007,
+              "PSNR": 23.19876480102539
+            },
+            {
+              "K": 16384,
+              "bytes": 14701250,
+              "PSNR": 23.24529457092285
+            },
+            {
+              "K": 65536,
+              "bytes": 15843536,
+              "PSNR": 23.23018455505371
+            }
+          ],
+          "lloyd_trace": [
+            {
+              "K": 1024,
+              "bytes": 13921569,
+              "PSNR": 23.20695686340332
+            },
+            {
+              "K": 4096,
+              "bytes": 14221580,
+              "PSNR": 23.24648666381836
+            },
+            {
+              "K": 16384,
+              "bytes": 14689046,
+              "PSNR": 23.2731876373291
+            },
+            {
+              "K": 65536,
+              "bytes": 15910516,
+              "PSNR": 23.274553298950195
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -24.041833792739087,
+        "bd_psnr": -0.030267436468609077,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -24.041833792739087,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "flowers": {
+        "scene": "flowers",
+        "config": "gn_vq",
+        "baseline": "lloyd_trace",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 14334935,
+              "PSNR": 21.750022888183594
+            },
+            {
+              "K": 4096,
+              "bytes": 14618485,
+              "PSNR": 21.808034896850586
+            },
+            {
+              "K": 16384,
+              "bytes": 15124327,
+              "PSNR": 21.853147506713867
+            },
+            {
+              "K": 65536,
+              "bytes": 16473607,
+              "PSNR": 21.89583969116211
+            }
+          ],
+          "lloyd_trace": [
+            {
+              "K": 1024,
+              "bytes": 14296747,
+              "PSNR": 21.67770767211914
+            },
+            {
+              "K": 4096,
+              "bytes": 14593869,
+              "PSNR": 21.746723175048828
+            },
+            {
+              "K": 16384,
+              "bytes": 15097904,
+              "PSNR": 21.8087100982666
+            },
+            {
+              "K": 65536,
+              "bytes": 16439217,
+              "PSNR": 21.862436294555664
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -3.4641195398559255,
+        "bd_psnr": 0.03926012551370661,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -3.4641195398559255,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "train": {
+        "scene": "train",
+        "config": "gn_vq",
+        "baseline": "lloyd_trace",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 14028563,
+              "PSNR": 22.31535530090332
+            },
+            {
+              "K": 4096,
+              "bytes": 14324766,
+              "PSNR": 22.37835121154785
+            },
+            {
+              "K": 16384,
+              "bytes": 14809316,
+              "PSNR": 22.420652389526367
+            },
+            {
+              "K": 65536,
+              "bytes": 15930533,
+              "PSNR": 22.443185806274414
+            }
+          ],
+          "lloyd_trace": [
+            {
+              "K": 1024,
+              "bytes": 13960593,
+              "PSNR": 22.18317985534668
+            },
+            {
+              "K": 4096,
+              "bytes": 14277516,
+              "PSNR": 22.29079818725586
+            },
+            {
+              "K": 16384,
+              "bytes": 14782466,
+              "PSNR": 22.378246307373047
+            },
+            {
+              "K": 65536,
+              "bytes": 15912858,
+              "PSNR": 22.411956787109375
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -2.346870418692304,
+        "bd_psnr": 0.044579055872169704,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -2.346870418692304,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "truck": {
+        "scene": "truck",
+        "config": "gn_vq",
+        "baseline": "lloyd_trace",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 14383306,
+              "PSNR": 25.76947021484375
+            },
+            {
+              "K": 4096,
+              "bytes": 14663980,
+              "PSNR": 25.836959838867188
+            },
+            {
+              "K": 16384,
+              "bytes": 15132521,
+              "PSNR": 25.895170211791992
+            },
+            {
+              "K": 65536,
+              "bytes": 16290117,
+              "PSNR": 25.928251266479492
+            }
+          ],
+          "lloyd_trace": [
+            {
+              "K": 1024,
+              "bytes": 14316555,
+              "PSNR": 25.56854820251465
+            },
+            {
+              "K": 4096,
+              "bytes": 14628573,
+              "PSNR": 25.711992263793945
+            },
+            {
+              "K": 16384,
+              "bytes": 15110463,
+              "PSNR": 25.818635940551758
+            },
+            {
+              "K": 65536,
+              "bytes": 16267375,
+              "PSNR": 25.887014389038086
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -4.185737430980685,
+        "bd_psnr": 0.0796922502071098,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -4.185737430980685,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      }
+    },
+    "wins_ok": true,
+    "verdict": "pass"
+  },
+  "reported": {
+    "vs_upstream_l1": {
+      "stump": {
+        "scene": "stump",
+        "config": "gn_vq",
+        "baseline": "upstream_l1",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13757202,
+              "PSNR": 26.60077667236328
+            },
+            {
+              "K": 4096,
+              "bytes": 14035146,
+              "PSNR": 26.688861846923828
+            },
+            {
+              "K": 16384,
+              "bytes": 14511481,
+              "PSNR": 26.75824546813965
+            },
+            {
+              "K": 65536,
+              "bytes": 15747513,
+              "PSNR": 26.81488609313965
+            }
+          ],
+          "upstream_l1": [
+            {
+              "K": 1024,
+              "bytes": 13709416,
+              "PSNR": 26.34992218017578
+            },
+            {
+              "K": 4096,
+              "bytes": 13990346,
+              "PSNR": 26.455196380615234
+            },
+            {
+              "K": 16384,
+              "bytes": 14463471,
+              "PSNR": 26.56214714050293
+            },
+            {
+              "K": 65536,
+              "bytes": 15727518,
+              "PSNR": 26.644691467285156
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -9.295008140520444,
+        "bd_psnr": 0.18349308736857495,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -9.295008140520444,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "bonsai": {
+        "scene": "bonsai",
+        "config": "gn_vq",
+        "baseline": "upstream_l1",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13857252,
+              "PSNR": 31.674406051635742
+            },
+            {
+              "K": 4096,
+              "bytes": 14150385,
+              "PSNR": 31.963716506958008
+            },
+            {
+              "K": 16384,
+              "bytes": 14647213,
+              "PSNR": 32.178741455078125
+            },
+            {
+              "K": 65536,
+              "bytes": 15883118,
+              "PSNR": 32.310508728027344
+            }
+          ],
+          "upstream_l1": [
+            {
+              "K": 1024,
+              "bytes": 13768285,
+              "PSNR": 30.52545738220215
+            },
+            {
+              "K": 4096,
+              "bytes": 14098638,
+              "PSNR": 31.05020523071289
+            },
+            {
+              "K": 16384,
+              "bytes": 14612378,
+              "PSNR": 31.487733840942383
+            },
+            {
+              "K": 65536,
+              "bytes": 15903973,
+              "PSNR": 31.768815994262695
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -10.320234684312757,
+        "bd_psnr": 0.6707169719898616,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -10.320234684312757,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "counter": {
+        "scene": "counter",
+        "config": "gn_vq",
+        "baseline": "upstream_l1",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 14043534,
+              "PSNR": 28.62471580505371
+            },
+            {
+              "K": 4096,
+              "bytes": 14321752,
+              "PSNR": 28.89079475402832
+            },
+            {
+              "K": 16384,
+              "bytes": 14818023,
+              "PSNR": 29.109127044677734
+            },
+            {
+              "K": 65536,
+              "bytes": 16077227,
+              "PSNR": 29.260786056518555
+            }
+          ],
+          "upstream_l1": [
+            {
+              "K": 1024,
+              "bytes": 13967451,
+              "PSNR": 28.00225067138672
+            },
+            {
+              "K": 4096,
+              "bytes": 14279261,
+              "PSNR": 28.371091842651367
+            },
+            {
+              "K": 16384,
+              "bytes": 14772995,
+              "PSNR": 28.669891357421875
+            },
+            {
+              "K": 65536,
+              "bytes": 15991192,
+              "PSNR": 28.928382873535156
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -6.293612803725934,
+        "bd_psnr": 0.4071895559806613,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -6.293612803725934,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "kitchen": {
+        "scene": "kitchen",
+        "config": "gn_vq",
+        "baseline": "upstream_l1",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13635951,
+              "PSNR": 30.74171257019043
+            },
+            {
+              "K": 4096,
+              "bytes": 13921437,
+              "PSNR": 31.01436996459961
+            },
+            {
+              "K": 16384,
+              "bytes": 14412143,
+              "PSNR": 31.21419906616211
+            },
+            {
+              "K": 65536,
+              "bytes": 15669824,
+              "PSNR": 31.360301971435547
+            }
+          ],
+          "upstream_l1": [
+            {
+              "K": 1024,
+              "bytes": 13598968,
+              "PSNR": 29.700653076171875
+            },
+            {
+              "K": 4096,
+              "bytes": 13902632,
+              "PSNR": 30.18010711669922
+            },
+            {
+              "K": 16384,
+              "bytes": 14405788,
+              "PSNR": 30.524742126464844
+            },
+            {
+              "K": 65536,
+              "bytes": 15708313,
+              "PSNR": 30.87204933166504
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -10.479054848904557,
+        "bd_psnr": 0.6906843074357916,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -10.479054848904557,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "room": {
+        "scene": "room",
+        "config": "gn_vq",
+        "baseline": "upstream_l1",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13934128,
+              "PSNR": 31.99641990661621
+            },
+            {
+              "K": 4096,
+              "bytes": 14214972,
+              "PSNR": 32.09666061401367
+            },
+            {
+              "K": 16384,
+              "bytes": 14643915,
+              "PSNR": 32.183773040771484
+            },
+            {
+              "K": 65536,
+              "bytes": 15680033,
+              "PSNR": 32.22181701660156
+            }
+          ],
+          "upstream_l1": [
+            {
+              "K": 1024,
+              "bytes": 13839191,
+              "PSNR": 31.232603073120117
+            },
+            {
+              "K": 4096,
+              "bytes": 14152639,
+              "PSNR": 31.597450256347656
+            },
+            {
+              "K": 16384,
+              "bytes": 14620192,
+              "PSNR": 31.835668563842773
+            },
+            {
+              "K": 65536,
+              "bytes": 15727712,
+              "PSNR": 31.98463249206543
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": NaN,
+        "bd_psnr": 0.36912716415914204,
+        "decided_by": "bd_psnr",
+        "win": true,
+        "mean_term": -11.403972809268126,
+        "mean_term_source": "substitute_a",
+        "outcome": "win",
+        "substitute": {
+          "value": -11.403972809268126,
+          "source": "substitute_a",
+          "new_point": {
+            "K": 1024,
+            "bytes": 13934128,
+            "PSNR": 31.99641990661621
+          },
+          "ref_point": {
+            "K": 65536,
+            "bytes": 15727712,
+            "PSNR": 31.98463249206543
+          }
+        }
+      },
+      "treehill": {
+        "scene": "treehill",
+        "config": "gn_vq",
+        "baseline": "upstream_l1",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 13966940,
+              "PSNR": 23.15808868408203
+            },
+            {
+              "K": 4096,
+              "bytes": 14244007,
+              "PSNR": 23.19876480102539
+            },
+            {
+              "K": 16384,
+              "bytes": 14701250,
+              "PSNR": 23.24529457092285
+            },
+            {
+              "K": 65536,
+              "bytes": 15843536,
+              "PSNR": 23.23018455505371
+            }
+          ],
+          "upstream_l1": [
+            {
+              "K": 1024,
+              "bytes": 13904681,
+              "PSNR": 23.05591583251953
+            },
+            {
+              "K": 4096,
+              "bytes": 14210208,
+              "PSNR": 23.132888793945312
+            },
+            {
+              "K": 16384,
+              "bytes": 14684563,
+              "PSNR": 23.19083023071289
+            },
+            {
+              "K": 65536,
+              "bytes": 15873857,
+              "PSNR": 23.23360252380371
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -3.932803430114473,
+        "bd_psnr": 0.050145747703368215,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -3.932803430114473,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "flowers": {
+        "scene": "flowers",
+        "config": "gn_vq",
+        "baseline": "upstream_l1",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 14334935,
+              "PSNR": 21.750022888183594
+            },
+            {
+              "K": 4096,
+              "bytes": 14618485,
+              "PSNR": 21.808034896850586
+            },
+            {
+              "K": 16384,
+              "bytes": 15124327,
+              "PSNR": 21.853147506713867
+            },
+            {
+              "K": 65536,
+              "bytes": 16473607,
+              "PSNR": 21.89583969116211
+            }
+          ],
+          "upstream_l1": [
+            {
+              "K": 1024,
+              "bytes": 14278203,
+              "PSNR": 21.59355354309082
+            },
+            {
+              "K": 4096,
+              "bytes": 14590875,
+              "PSNR": 21.6717586517334
+            },
+            {
+              "K": 16384,
+              "bytes": 15109337,
+              "PSNR": 21.741466522216797
+            },
+            {
+              "K": 65536,
+              "bytes": 16400657,
+              "PSNR": 21.79166030883789
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -8.28214909914129,
+        "bd_psnr": 0.10790279205066966,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -8.28214909914129,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "train": {
+        "scene": "train",
+        "config": "gn_vq",
+        "baseline": "upstream_l1",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 14028563,
+              "PSNR": 22.31535530090332
+            },
+            {
+              "K": 4096,
+              "bytes": 14324766,
+              "PSNR": 22.37835121154785
+            },
+            {
+              "K": 16384,
+              "bytes": 14809316,
+              "PSNR": 22.420652389526367
+            },
+            {
+              "K": 65536,
+              "bytes": 15930533,
+              "PSNR": 22.443185806274414
+            }
+          ],
+          "upstream_l1": [
+            {
+              "K": 1024,
+              "bytes": 13942933,
+              "PSNR": 21.864580154418945
+            },
+            {
+              "K": 4096,
+              "bytes": 14248903,
+              "PSNR": 22.093006134033203
+            },
+            {
+              "K": 16384,
+              "bytes": 14741777,
+              "PSNR": 22.230985641479492
+            },
+            {
+              "K": 65536,
+              "bytes": 15914416,
+              "PSNR": 22.330970764160156
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -10.144515038976266,
+        "bd_psnr": 0.20204332429500482,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -10.144515038976266,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "truck": {
+        "scene": "truck",
+        "config": "gn_vq",
+        "baseline": "upstream_l1",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 14383306,
+              "PSNR": 25.76947021484375
+            },
+            {
+              "K": 4096,
+              "bytes": 14663980,
+              "PSNR": 25.836959838867188
+            },
+            {
+              "K": 16384,
+              "bytes": 15132521,
+              "PSNR": 25.895170211791992
+            },
+            {
+              "K": 65536,
+              "bytes": 16290117,
+              "PSNR": 25.928251266479492
+            }
+          ],
+          "upstream_l1": [
+            {
+              "K": 1024,
+              "bytes": 14301185,
+              "PSNR": 25.456985473632812
+            },
+            {
+              "K": 4096,
+              "bytes": 14621118,
+              "PSNR": 25.631114959716797
+            },
+            {
+              "K": 16384,
+              "bytes": 15108560,
+              "PSNR": 25.717113494873047
+            },
+            {
+              "K": 65536,
+              "bytes": 16288902,
+              "PSNR": 25.8209285736084
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -8.402523632328174,
+        "bd_psnr": 0.183591100096681,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -8.402523632328174,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "garden": {
+        "scene": "garden",
+        "config": "gn_vq",
+        "baseline": "upstream_l1",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 14511663,
+              "PSNR": 26.88092803955078
+            },
+            {
+              "K": 4096,
+              "bytes": 14793110,
+              "PSNR": 26.99587059020996
+            },
+            {
+              "K": 16384,
+              "bytes": 15268751,
+              "PSNR": 27.082393646240234
+            },
+            {
+              "K": 65536,
+              "bytes": 16495702,
+              "PSNR": 27.15804100036621
+            }
+          ],
+          "upstream_l1": [
+            {
+              "K": 1024,
+              "bytes": 14479304,
+              "PSNR": 26.35188102722168
+            },
+            {
+              "K": 4096,
+              "bytes": 14786210,
+              "PSNR": 26.570905685424805
+            },
+            {
+              "K": 16384,
+              "bytes": 15251732,
+              "PSNR": 26.75142478942871
+            },
+            {
+              "K": 65536,
+              "bytes": 16445885,
+              "PSNR": 26.881277084350586
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -11.743617014853147,
+        "bd_psnr": 0.33046744192299826,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -11.743617014853147,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      },
+      "bicycle": {
+        "scene": "bicycle",
+        "config": "gn_vq",
+        "baseline": "upstream_l1",
+        "points": {
+          "gn_vq": [
+            {
+              "K": 1024,
+              "bytes": 14139306,
+              "PSNR": 25.238534927368164
+            },
+            {
+              "K": 4096,
+              "bytes": 14425520,
+              "PSNR": 25.332275390625
+            },
+            {
+              "K": 16384,
+              "bytes": 14931080,
+              "PSNR": 25.401676177978516
+            },
+            {
+              "K": 65536,
+              "bytes": 16213673,
+              "PSNR": 25.447444915771484
+            }
+          ],
+          "upstream_l1": [
+            {
+              "K": 1024,
+              "bytes": 14078321,
+              "PSNR": 24.96843719482422
+            },
+            {
+              "K": 4096,
+              "bytes": 14385436,
+              "PSNR": 25.13020896911621
+            },
+            {
+              "K": 16384,
+              "bytes": 14891479,
+              "PSNR": 25.25277328491211
+            },
+            {
+              "K": 65536,
+              "bytes": 16238295,
+              "PSNR": 25.331127166748047
+            }
+          ]
+        },
+        "missing": [],
+        "bd_rate": -6.535226145085771,
+        "bd_psnr": 0.14932860241507484,
+        "decided_by": "bd_rate",
+        "win": true,
+        "mean_term": -6.535226145085771,
+        "mean_term_source": "bd_rate",
+        "outcome": "win"
+      }
+    },
+    "equal_k": {
+      "stump": [
+        {
+          "scene": "stump",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 13757202,
+          "baseline_bytes": 13709416,
+          "size_ratio": 0.0034856335237036795,
+          "PSNR": 26.60077667236328,
+          "baseline_PSNR": 26.34992218017578,
+          "dPSNR": 0.2508544921875,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "stump",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 13757202,
+          "baseline_bytes": 13686312,
+          "size_ratio": 0.005179627645489848,
+          "PSNR": 26.60077667236328,
+          "baseline_PSNR": 26.15489959716797,
+          "dPSNR": 0.4458770751953125,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "stump",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 13757202,
+          "baseline_bytes": 13722873,
+          "size_ratio": 0.0025015898638718337,
+          "PSNR": 26.60077667236328,
+          "baseline_PSNR": 26.400230407714844,
+          "dPSNR": 0.2005462646484375,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "stump",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14035146,
+          "baseline_bytes": 13990346,
+          "size_ratio": 0.003202208151249497,
+          "PSNR": 26.688861846923828,
+          "baseline_PSNR": 26.455196380615234,
+          "dPSNR": 0.23366546630859375,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "stump",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14035146,
+          "baseline_bytes": 14016036,
+          "size_ratio": 0.0013634382788401123,
+          "PSNR": 26.688861846923828,
+          "baseline_PSNR": 26.47684097290039,
+          "dPSNR": 0.2120208740234375,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "stump",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14035146,
+          "baseline_bytes": 13998853,
+          "size_ratio": 0.002592569548376611,
+          "PSNR": 26.688861846923828,
+          "baseline_PSNR": 26.536643981933594,
+          "dPSNR": 0.15221786499023438,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "stump",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14511481,
+          "baseline_bytes": 14463471,
+          "size_ratio": 0.003319396844644107,
+          "PSNR": 26.75824546813965,
+          "baseline_PSNR": 26.56214714050293,
+          "dPSNR": 0.19609832763671875,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "stump",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14511481,
+          "baseline_bytes": 14488269,
+          "size_ratio": 0.0016021237595740256,
+          "PSNR": 26.75824546813965,
+          "baseline_PSNR": 26.5992431640625,
+          "dPSNR": 0.15900230407714844,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "stump",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14511481,
+          "baseline_bytes": 14451977,
+          "size_ratio": 0.004117360552123861,
+          "PSNR": 26.75824546813965,
+          "baseline_PSNR": 26.631622314453125,
+          "dPSNR": 0.12662315368652344,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "stump",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 15747513,
+          "baseline_bytes": 15727518,
+          "size_ratio": 0.0012713385545004563,
+          "PSNR": 26.81488609313965,
+          "baseline_PSNR": 26.644691467285156,
+          "dPSNR": 0.1701946258544922,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "stump",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 15747513,
+          "baseline_bytes": 15736366,
+          "size_ratio": 0.000708359223470012,
+          "PSNR": 26.81488609313965,
+          "baseline_PSNR": 26.69283103942871,
+          "dPSNR": 0.1220550537109375,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "stump",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 15747513,
+          "baseline_bytes": 15659603,
+          "size_ratio": 0.0056138077063638825,
+          "PSNR": 26.81488609313965,
+          "baseline_PSNR": 26.713607788085938,
+          "dPSNR": 0.10127830505371094,
+          "dominates": false,
+          "K": 65536
+        }
+      ],
+      "bonsai": [
+        {
+          "scene": "bonsai",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 13857252,
+          "baseline_bytes": 13768285,
+          "size_ratio": 0.006461734340914571,
+          "PSNR": 31.674406051635742,
+          "baseline_PSNR": 30.52545738220215,
+          "dPSNR": 1.1489486694335938,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "bonsai",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 13857252,
+          "baseline_bytes": 13780986,
+          "size_ratio": 0.005534146831003284,
+          "PSNR": 31.674406051635742,
+          "baseline_PSNR": 30.673126220703125,
+          "dPSNR": 1.0012798309326172,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "bonsai",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 13857252,
+          "baseline_bytes": 13802691,
+          "size_ratio": 0.003952924831831739,
+          "PSNR": 31.674406051635742,
+          "baseline_PSNR": 30.935680389404297,
+          "dPSNR": 0.7387256622314453,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "bonsai",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14150385,
+          "baseline_bytes": 14098638,
+          "size_ratio": 0.0036703545406300275,
+          "PSNR": 31.963716506958008,
+          "baseline_PSNR": 31.05020523071289,
+          "dPSNR": 0.9135112762451172,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "bonsai",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14150385,
+          "baseline_bytes": 14113670,
+          "size_ratio": 0.002601378663380949,
+          "PSNR": 31.963716506958008,
+          "baseline_PSNR": 31.38401985168457,
+          "dPSNR": 0.5796966552734375,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "bonsai",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14150385,
+          "baseline_bytes": 14118181,
+          "size_ratio": 0.002281030396196204,
+          "PSNR": 31.963716506958008,
+          "baseline_PSNR": 31.450763702392578,
+          "dPSNR": 0.5129528045654297,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "bonsai",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14647213,
+          "baseline_bytes": 14612378,
+          "size_ratio": 0.0023839377820640273,
+          "PSNR": 32.178741455078125,
+          "baseline_PSNR": 31.487733840942383,
+          "dPSNR": 0.6910076141357422,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "bonsai",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14647213,
+          "baseline_bytes": 14629503,
+          "size_ratio": 0.0012105674403293243,
+          "PSNR": 32.178741455078125,
+          "baseline_PSNR": 31.772573471069336,
+          "dPSNR": 0.40616798400878906,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "bonsai",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14647213,
+          "baseline_bytes": 14628952,
+          "size_ratio": 0.001248278072140785,
+          "PSNR": 32.178741455078125,
+          "baseline_PSNR": 31.797014236450195,
+          "dPSNR": 0.3817272186279297,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "bonsai",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 15883118,
+          "baseline_bytes": 15903973,
+          "size_ratio": -0.0013113075581805411,
+          "PSNR": 32.310508728027344,
+          "baseline_PSNR": 31.768815994262695,
+          "dPSNR": 0.5416927337646484,
+          "dominates": true,
+          "K": 65536
+        },
+        {
+          "scene": "bonsai",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 15883118,
+          "baseline_bytes": 15855879,
+          "size_ratio": 0.0017179116969801012,
+          "PSNR": 32.310508728027344,
+          "baseline_PSNR": 32.04087829589844,
+          "dPSNR": 0.26963043212890625,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "bonsai",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 15883118,
+          "baseline_bytes": 15844438,
+          "size_ratio": 0.0024412352145275484,
+          "PSNR": 32.310508728027344,
+          "baseline_PSNR": 32.13172149658203,
+          "dPSNR": 0.1787872314453125,
+          "dominates": false,
+          "K": 65536
+        }
+      ],
+      "counter": [
+        {
+          "scene": "counter",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14043534,
+          "baseline_bytes": 13967451,
+          "size_ratio": 0.005447164267839533,
+          "PSNR": 28.62471580505371,
+          "baseline_PSNR": 28.00225067138672,
+          "dPSNR": 0.6224651336669922,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "counter",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14043534,
+          "baseline_bytes": 13998342,
+          "size_ratio": 0.0032283823327077243,
+          "PSNR": 28.62471580505371,
+          "baseline_PSNR": 27.948972702026367,
+          "dPSNR": 0.6757431030273438,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "counter",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14043534,
+          "baseline_bytes": 14005192,
+          "size_ratio": 0.0027376989904885907,
+          "PSNR": 28.62471580505371,
+          "baseline_PSNR": 28.185226440429688,
+          "dPSNR": 0.43948936462402344,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "counter",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14321752,
+          "baseline_bytes": 14279261,
+          "size_ratio": 0.002975714219384251,
+          "PSNR": 28.89079475402832,
+          "baseline_PSNR": 28.371091842651367,
+          "dPSNR": 0.5197029113769531,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "counter",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14321752,
+          "baseline_bytes": 14304170,
+          "size_ratio": 0.0012291520584557514,
+          "PSNR": 28.89079475402832,
+          "baseline_PSNR": 28.46033477783203,
+          "dPSNR": 0.43045997619628906,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "counter",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14321752,
+          "baseline_bytes": 14301675,
+          "size_ratio": 0.0014038215803393594,
+          "PSNR": 28.89079475402832,
+          "baseline_PSNR": 28.595823287963867,
+          "dPSNR": 0.2949714660644531,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "counter",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14818023,
+          "baseline_bytes": 14772995,
+          "size_ratio": 0.003047993991739606,
+          "PSNR": 29.109127044677734,
+          "baseline_PSNR": 28.669891357421875,
+          "dPSNR": 0.4392356872558594,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "counter",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14818023,
+          "baseline_bytes": 14796507,
+          "size_ratio": 0.0014541269774008825,
+          "PSNR": 29.109127044677734,
+          "baseline_PSNR": 28.851943969726562,
+          "dPSNR": 0.2571830749511719,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "counter",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14818023,
+          "baseline_bytes": 14788887,
+          "size_ratio": 0.0019701279751478395,
+          "PSNR": 29.109127044677734,
+          "baseline_PSNR": 28.91380500793457,
+          "dPSNR": 0.19532203674316406,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "counter",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 16077227,
+          "baseline_bytes": 15991192,
+          "size_ratio": 0.005380149272174339,
+          "PSNR": 29.260786056518555,
+          "baseline_PSNR": 28.928382873535156,
+          "dPSNR": 0.33240318298339844,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "counter",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 16077227,
+          "baseline_bytes": 16030470,
+          "size_ratio": 0.0029167578991757814,
+          "PSNR": 29.260786056518555,
+          "baseline_PSNR": 29.116920471191406,
+          "dPSNR": 0.14386558532714844,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "counter",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 16077227,
+          "baseline_bytes": 16015787,
+          "size_ratio": 0.003836214854755493,
+          "PSNR": 29.260786056518555,
+          "baseline_PSNR": 29.148351669311523,
+          "dPSNR": 0.11243438720703125,
+          "dominates": false,
+          "K": 65536
+        }
+      ],
+      "kitchen": [
+        {
+          "scene": "kitchen",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 13635951,
+          "baseline_bytes": 13598968,
+          "size_ratio": 0.0027195446007373114,
+          "PSNR": 30.74171257019043,
+          "baseline_PSNR": 29.700653076171875,
+          "dPSNR": 1.0410594940185547,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "kitchen",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 13635951,
+          "baseline_bytes": 13566735,
+          "size_ratio": 0.0051018907644322375,
+          "PSNR": 30.74171257019043,
+          "baseline_PSNR": 29.85621452331543,
+          "dPSNR": 0.885498046875,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "kitchen",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 13635951,
+          "baseline_bytes": 13612165,
+          "size_ratio": 0.0017474075578718384,
+          "PSNR": 30.74171257019043,
+          "baseline_PSNR": 30.188270568847656,
+          "dPSNR": 0.5534420013427734,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "kitchen",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 13921437,
+          "baseline_bytes": 13902632,
+          "size_ratio": 0.0013526215755406135,
+          "PSNR": 31.01436996459961,
+          "baseline_PSNR": 30.18010711669922,
+          "dPSNR": 0.8342628479003906,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "kitchen",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 13921437,
+          "baseline_bytes": 13898929,
+          "size_ratio": 0.0016194053513043372,
+          "PSNR": 31.01436996459961,
+          "baseline_PSNR": 30.503122329711914,
+          "dPSNR": 0.5112476348876953,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "kitchen",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 13921437,
+          "baseline_bytes": 13910950,
+          "size_ratio": 0.000753866558358629,
+          "PSNR": 31.01436996459961,
+          "baseline_PSNR": 30.60265350341797,
+          "dPSNR": 0.4117164611816406,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "kitchen",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14412143,
+          "baseline_bytes": 14405788,
+          "size_ratio": 0.0004411421298160523,
+          "PSNR": 31.21419906616211,
+          "baseline_PSNR": 30.524742126464844,
+          "dPSNR": 0.6894569396972656,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "kitchen",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14412143,
+          "baseline_bytes": 14402193,
+          "size_ratio": 0.0006908670089340596,
+          "PSNR": 31.21419906616211,
+          "baseline_PSNR": 30.86757469177246,
+          "dPSNR": 0.34662437438964844,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "kitchen",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14412143,
+          "baseline_bytes": 14393484,
+          "size_ratio": 0.0012963504874845544,
+          "PSNR": 31.21419906616211,
+          "baseline_PSNR": 30.915935516357422,
+          "dPSNR": 0.2982635498046875,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "kitchen",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 15669824,
+          "baseline_bytes": 15708313,
+          "size_ratio": -0.0024502312883630806,
+          "PSNR": 31.360301971435547,
+          "baseline_PSNR": 30.87204933166504,
+          "dPSNR": 0.4882526397705078,
+          "dominates": true,
+          "K": 65536
+        },
+        {
+          "scene": "kitchen",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 15669824,
+          "baseline_bytes": 15634260,
+          "size_ratio": 0.002274747893408424,
+          "PSNR": 31.360301971435547,
+          "baseline_PSNR": 31.119476318359375,
+          "dPSNR": 0.24082565307617188,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "kitchen",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 15669824,
+          "baseline_bytes": 15647089,
+          "size_ratio": 0.001452985919617289,
+          "PSNR": 31.360301971435547,
+          "baseline_PSNR": 31.15584945678711,
+          "dPSNR": 0.2044525146484375,
+          "dominates": false,
+          "K": 65536
+        }
+      ],
+      "room": [
+        {
+          "scene": "room",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 13934128,
+          "baseline_bytes": 13839191,
+          "size_ratio": 0.006860010819996543,
+          "PSNR": 31.99641990661621,
+          "baseline_PSNR": 31.232603073120117,
+          "dPSNR": 0.7638168334960938,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "room",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 13934128,
+          "baseline_bytes": 13852590,
+          "size_ratio": 0.005886119491012254,
+          "PSNR": 31.99641990661621,
+          "baseline_PSNR": 31.318227767944336,
+          "dPSNR": 0.678192138671875,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "room",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 13934128,
+          "baseline_bytes": 13871139,
+          "size_ratio": 0.0045410113762107684,
+          "PSNR": 31.99641990661621,
+          "baseline_PSNR": 31.485820770263672,
+          "dPSNR": 0.5105991363525391,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "room",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14214972,
+          "baseline_bytes": 14152639,
+          "size_ratio": 0.004404337593857832,
+          "PSNR": 32.09666061401367,
+          "baseline_PSNR": 31.597450256347656,
+          "dPSNR": 0.4992103576660156,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "room",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14214972,
+          "baseline_bytes": 14173773,
+          "size_ratio": 0.0029067066334418357,
+          "PSNR": 32.09666061401367,
+          "baseline_PSNR": 31.68885612487793,
+          "dPSNR": 0.4078044891357422,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "room",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14214972,
+          "baseline_bytes": 14178019,
+          "size_ratio": 0.002606358476455739,
+          "PSNR": 32.09666061401367,
+          "baseline_PSNR": 31.75873374938965,
+          "dPSNR": 0.33792686462402344,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "room",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14643915,
+          "baseline_bytes": 14620192,
+          "size_ratio": 0.0016226189095192023,
+          "PSNR": 32.183773040771484,
+          "baseline_PSNR": 31.835668563842773,
+          "dPSNR": 0.34810447692871094,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "room",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14643915,
+          "baseline_bytes": 14638887,
+          "size_ratio": 0.00034346873502055786,
+          "PSNR": 32.183773040771484,
+          "baseline_PSNR": 31.90186882019043,
+          "dPSNR": 0.2819042205810547,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "room",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14643915,
+          "baseline_bytes": 14641144,
+          "size_ratio": 0.00018926116702355777,
+          "PSNR": 32.183773040771484,
+          "baseline_PSNR": 31.958471298217773,
+          "dPSNR": 0.22530174255371094,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "room",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 15680033,
+          "baseline_bytes": 15727712,
+          "size_ratio": -0.0030315280442572146,
+          "PSNR": 32.22181701660156,
+          "baseline_PSNR": 31.98463249206543,
+          "dPSNR": 0.2371845245361328,
+          "dominates": true,
+          "K": 65536
+        },
+        {
+          "scene": "room",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 15680033,
+          "baseline_bytes": 15694196,
+          "size_ratio": -0.0009024355245722537,
+          "PSNR": 32.22181701660156,
+          "baseline_PSNR": 32.06923294067383,
+          "dPSNR": 0.15258407592773438,
+          "dominates": true,
+          "K": 65536
+        },
+        {
+          "scene": "room",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 15680033,
+          "baseline_bytes": 15693195,
+          "size_ratio": -0.0008387074779864223,
+          "PSNR": 32.22181701660156,
+          "baseline_PSNR": 32.10620880126953,
+          "dPSNR": 0.11560821533203125,
+          "dominates": true,
+          "K": 65536
+        }
+      ],
+      "treehill": [
+        {
+          "scene": "treehill",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 13966940,
+          "baseline_bytes": 13904681,
+          "size_ratio": 0.004477556874551869,
+          "PSNR": 23.15808868408203,
+          "baseline_PSNR": 23.05591583251953,
+          "dPSNR": 0.1021728515625,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "treehill",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 13966940,
+          "baseline_bytes": 13905460,
+          "size_ratio": 0.004421284876588105,
+          "PSNR": 23.15808868408203,
+          "baseline_PSNR": 23.096412658691406,
+          "dPSNR": 0.061676025390625,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "treehill",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 13966940,
+          "baseline_bytes": 13921569,
+          "size_ratio": 0.003259043574757925,
+          "PSNR": 23.15808868408203,
+          "baseline_PSNR": 23.20695686340332,
+          "dPSNR": -0.04886817932128906,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "treehill",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14244007,
+          "baseline_bytes": 14210208,
+          "size_ratio": 0.0023785014265800264,
+          "PSNR": 23.19876480102539,
+          "baseline_PSNR": 23.132888793945312,
+          "dPSNR": 0.06587600708007812,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "treehill",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14244007,
+          "baseline_bytes": 14216027,
+          "size_ratio": 0.00196820110147522,
+          "PSNR": 23.19876480102539,
+          "baseline_PSNR": 23.179569244384766,
+          "dPSNR": 0.019195556640625,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "treehill",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14244007,
+          "baseline_bytes": 14221580,
+          "size_ratio": 0.0015769696475356199,
+          "PSNR": 23.19876480102539,
+          "baseline_PSNR": 23.24648666381836,
+          "dPSNR": -0.04772186279296875,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "treehill",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14701250,
+          "baseline_bytes": 14684563,
+          "size_ratio": 0.0011363634042089732,
+          "PSNR": 23.24529457092285,
+          "baseline_PSNR": 23.19083023071289,
+          "dPSNR": 0.05446434020996094,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "treehill",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14701250,
+          "baseline_bytes": 14675702,
+          "size_ratio": 0.0017408366563997912,
+          "PSNR": 23.24529457092285,
+          "baseline_PSNR": 23.216867446899414,
+          "dPSNR": 0.0284271240234375,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "treehill",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14701250,
+          "baseline_bytes": 14689046,
+          "size_ratio": 0.000830823186202867,
+          "PSNR": 23.24529457092285,
+          "baseline_PSNR": 23.2731876373291,
+          "dPSNR": -0.02789306640625,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "treehill",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 15843536,
+          "baseline_bytes": 15873857,
+          "size_ratio": -0.0019101217807366844,
+          "PSNR": 23.23018455505371,
+          "baseline_PSNR": 23.23360252380371,
+          "dPSNR": -0.00341796875,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "treehill",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 15843536,
+          "baseline_bytes": 15850599,
+          "size_ratio": -0.00044559830199475403,
+          "PSNR": 23.23018455505371,
+          "baseline_PSNR": 23.238508224487305,
+          "dPSNR": -0.00832366943359375,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "treehill",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 15843536,
+          "baseline_bytes": 15910516,
+          "size_ratio": -0.0042097943272235705,
+          "PSNR": 23.23018455505371,
+          "baseline_PSNR": 23.274553298950195,
+          "dPSNR": -0.044368743896484375,
+          "dominates": false,
+          "K": 65536
+        }
+      ],
+      "flowers": [
+        {
+          "scene": "flowers",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14334935,
+          "baseline_bytes": 14278203,
+          "size_ratio": 0.0039733291367267665,
+          "PSNR": 21.750022888183594,
+          "baseline_PSNR": 21.59355354309082,
+          "dPSNR": 0.15646934509277344,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "flowers",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14334935,
+          "baseline_bytes": 14289941,
+          "size_ratio": 0.003148648409395216,
+          "PSNR": 21.750022888183594,
+          "baseline_PSNR": 21.612823486328125,
+          "dPSNR": 0.13719940185546875,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "flowers",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14334935,
+          "baseline_bytes": 14296747,
+          "size_ratio": 0.0026710971383909765,
+          "PSNR": 21.750022888183594,
+          "baseline_PSNR": 21.67770767211914,
+          "dPSNR": 0.07231521606445312,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "flowers",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14618485,
+          "baseline_bytes": 14590875,
+          "size_ratio": 0.001892278564513683,
+          "PSNR": 21.808034896850586,
+          "baseline_PSNR": 21.6717586517334,
+          "dPSNR": 0.1362762451171875,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "flowers",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14618485,
+          "baseline_bytes": 14598801,
+          "size_ratio": 0.0013483299073671073,
+          "PSNR": 21.808034896850586,
+          "baseline_PSNR": 21.71805191040039,
+          "dPSNR": 0.08998298645019531,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "flowers",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14618485,
+          "baseline_bytes": 14593869,
+          "size_ratio": 0.0016867357107288594,
+          "PSNR": 21.808034896850586,
+          "baseline_PSNR": 21.746723175048828,
+          "dPSNR": 0.06131172180175781,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "flowers",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 15124327,
+          "baseline_bytes": 15109337,
+          "size_ratio": 0.0009921017712424263,
+          "PSNR": 21.853147506713867,
+          "baseline_PSNR": 21.741466522216797,
+          "dPSNR": 0.11168098449707031,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "flowers",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 15124327,
+          "baseline_bytes": 15103556,
+          "size_ratio": 0.0013752390496648559,
+          "PSNR": 21.853147506713867,
+          "baseline_PSNR": 21.78302764892578,
+          "dPSNR": 0.07011985778808594,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "flowers",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 15124327,
+          "baseline_bytes": 15097904,
+          "size_ratio": 0.001750110478911493,
+          "PSNR": 21.853147506713867,
+          "baseline_PSNR": 21.8087100982666,
+          "dPSNR": 0.044437408447265625,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "flowers",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 16473607,
+          "baseline_bytes": 16400657,
+          "size_ratio": 0.004447992540786538,
+          "PSNR": 21.89583969116211,
+          "baseline_PSNR": 21.79166030883789,
+          "dPSNR": 0.10417938232421875,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "flowers",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 16473607,
+          "baseline_bytes": 16444351,
+          "size_ratio": 0.0017790911906465645,
+          "PSNR": 21.89583969116211,
+          "baseline_PSNR": 21.835824966430664,
+          "dPSNR": 0.06001472473144531,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "flowers",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 16473607,
+          "baseline_bytes": 16439217,
+          "size_ratio": 0.0020919487832053996,
+          "PSNR": 21.89583969116211,
+          "baseline_PSNR": 21.862436294555664,
+          "dPSNR": 0.03340339660644531,
+          "dominates": false,
+          "K": 65536
+        }
+      ],
+      "train": [
+        {
+          "scene": "train",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14028563,
+          "baseline_bytes": 13942933,
+          "size_ratio": 0.006141462488559624,
+          "PSNR": 22.31535530090332,
+          "baseline_PSNR": 21.864580154418945,
+          "dPSNR": 0.450775146484375,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "train",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14028563,
+          "baseline_bytes": 13909854,
+          "size_ratio": 0.008534165779166436,
+          "PSNR": 22.31535530090332,
+          "baseline_PSNR": 21.873933792114258,
+          "dPSNR": 0.4414215087890625,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "train",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14028563,
+          "baseline_bytes": 13960593,
+          "size_ratio": 0.004868704359478171,
+          "PSNR": 22.31535530090332,
+          "baseline_PSNR": 22.18317985534668,
+          "dPSNR": 0.13217544555664062,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "train",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14324766,
+          "baseline_bytes": 14248903,
+          "size_ratio": 0.0053241291627854626,
+          "PSNR": 22.37835121154785,
+          "baseline_PSNR": 22.093006134033203,
+          "dPSNR": 0.28534507751464844,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "train",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14324766,
+          "baseline_bytes": 14265356,
+          "size_ratio": 0.004164634937957379,
+          "PSNR": 22.37835121154785,
+          "baseline_PSNR": 22.192440032958984,
+          "dPSNR": 0.1859111785888672,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "train",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14324766,
+          "baseline_bytes": 14277516,
+          "size_ratio": 0.0033093991980117643,
+          "PSNR": 22.37835121154785,
+          "baseline_PSNR": 22.29079818725586,
+          "dPSNR": 0.08755302429199219,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "train",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14809316,
+          "baseline_bytes": 14741777,
+          "size_ratio": 0.00458146938459314,
+          "PSNR": 22.420652389526367,
+          "baseline_PSNR": 22.230985641479492,
+          "dPSNR": 0.189666748046875,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "train",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14809316,
+          "baseline_bytes": 14788508,
+          "size_ratio": 0.0014070384923212664,
+          "PSNR": 22.420652389526367,
+          "baseline_PSNR": 22.34087371826172,
+          "dPSNR": 0.07977867126464844,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "train",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14809316,
+          "baseline_bytes": 14782466,
+          "size_ratio": 0.0018163410624452148,
+          "PSNR": 22.420652389526367,
+          "baseline_PSNR": 22.378246307373047,
+          "dPSNR": 0.04240608215332031,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "train",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 15930533,
+          "baseline_bytes": 15914416,
+          "size_ratio": 0.0010127295905799638,
+          "PSNR": 22.443185806274414,
+          "baseline_PSNR": 22.330970764160156,
+          "dPSNR": 0.11221504211425781,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "train",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 15930533,
+          "baseline_bytes": 15914568,
+          "size_ratio": 0.0010031689204508254,
+          "PSNR": 22.443185806274414,
+          "baseline_PSNR": 22.391849517822266,
+          "dPSNR": 0.05133628845214844,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "train",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 15930533,
+          "baseline_bytes": 15912858,
+          "size_ratio": 0.001110736990174832,
+          "PSNR": 22.443185806274414,
+          "baseline_PSNR": 22.411956787109375,
+          "dPSNR": 0.031229019165039062,
+          "dominates": false,
+          "K": 65536
+        }
+      ],
+      "truck": [
+        {
+          "scene": "truck",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14383306,
+          "baseline_bytes": 14301185,
+          "size_ratio": 0.005742251428815237,
+          "PSNR": 25.76947021484375,
+          "baseline_PSNR": 25.456985473632812,
+          "dPSNR": 0.3124847412109375,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "truck",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14383306,
+          "baseline_bytes": 14305152,
+          "size_ratio": 0.005463346352418963,
+          "PSNR": 25.76947021484375,
+          "baseline_PSNR": 25.338029861450195,
+          "dPSNR": 0.4314403533935547,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "truck",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14383306,
+          "baseline_bytes": 14316555,
+          "size_ratio": 0.004662504352478614,
+          "PSNR": 25.76947021484375,
+          "baseline_PSNR": 25.56854820251465,
+          "dPSNR": 0.20092201232910156,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "truck",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14663980,
+          "baseline_bytes": 14621118,
+          "size_ratio": 0.0029315131715645926,
+          "PSNR": 25.836959838867188,
+          "baseline_PSNR": 25.631114959716797,
+          "dPSNR": 0.20584487915039062,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "truck",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14663980,
+          "baseline_bytes": 14633336,
+          "size_ratio": 0.00209412262521691,
+          "PSNR": 25.836959838867188,
+          "baseline_PSNR": 25.60150718688965,
+          "dPSNR": 0.23545265197753906,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "truck",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14663980,
+          "baseline_bytes": 14628573,
+          "size_ratio": 0.0024204001306211698,
+          "PSNR": 25.836959838867188,
+          "baseline_PSNR": 25.711992263793945,
+          "dPSNR": 0.12496757507324219,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "truck",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 15132521,
+          "baseline_bytes": 15108560,
+          "size_ratio": 0.0015859221527398937,
+          "PSNR": 25.895170211791992,
+          "baseline_PSNR": 25.717113494873047,
+          "dPSNR": 0.1780567169189453,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "truck",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 15132521,
+          "baseline_bytes": 15120674,
+          "size_ratio": 0.000783496820313756,
+          "PSNR": 25.895170211791992,
+          "baseline_PSNR": 25.768178939819336,
+          "dPSNR": 0.12699127197265625,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "truck",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 15132521,
+          "baseline_bytes": 15110463,
+          "size_ratio": 0.001459783197907294,
+          "PSNR": 25.895170211791992,
+          "baseline_PSNR": 25.818635940551758,
+          "dPSNR": 0.07653427124023438,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "truck",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 16290117,
+          "baseline_bytes": 16288902,
+          "size_ratio": 7.459066301707118e-05,
+          "PSNR": 25.928251266479492,
+          "baseline_PSNR": 25.8209285736084,
+          "dPSNR": 0.10732269287109375,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "truck",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 16290117,
+          "baseline_bytes": 16313832,
+          "size_ratio": -0.0014536744034142624,
+          "PSNR": 25.928251266479492,
+          "baseline_PSNR": 25.865009307861328,
+          "dPSNR": 0.06324195861816406,
+          "dominates": true,
+          "K": 65536
+        },
+        {
+          "scene": "truck",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 16290117,
+          "baseline_bytes": 16267375,
+          "size_ratio": 0.0013980128939057312,
+          "PSNR": 25.928251266479492,
+          "baseline_PSNR": 25.887014389038086,
+          "dPSNR": 0.04123687744140625,
+          "dominates": false,
+          "K": 65536
+        }
+      ],
+      "garden": [
+        {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14511663,
+          "baseline_bytes": 14479304,
+          "size_ratio": 0.002234844989786877,
+          "PSNR": 26.88092803955078,
+          "baseline_PSNR": 26.35188102722168,
+          "dPSNR": 0.5290470123291016,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14511663,
+          "baseline_bytes": 14463807,
+          "size_ratio": 0.0033086724677673374,
+          "PSNR": 26.88092803955078,
+          "baseline_PSNR": 26.4735107421875,
+          "dPSNR": 0.40741729736328125,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14511663,
+          "baseline_bytes": 14478770,
+          "size_ratio": 0.002271809000350178,
+          "PSNR": 26.88092803955078,
+          "baseline_PSNR": 26.57168197631836,
+          "dPSNR": 0.3092460632324219,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14793110,
+          "baseline_bytes": 14786210,
+          "size_ratio": 0.00046665102145859727,
+          "PSNR": 26.99587059020996,
+          "baseline_PSNR": 26.570905685424805,
+          "dPSNR": 0.42496490478515625,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14793110,
+          "baseline_bytes": 14778950,
+          "size_ratio": 0.0009581194875143417,
+          "PSNR": 26.99587059020996,
+          "baseline_PSNR": 26.69765281677246,
+          "dPSNR": 0.2982177734375,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14793110,
+          "baseline_bytes": 14775967,
+          "size_ratio": 0.001160194794695979,
+          "PSNR": 26.99587059020996,
+          "baseline_PSNR": 26.751323699951172,
+          "dPSNR": 0.24454689025878906,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 15268751,
+          "baseline_bytes": 15251732,
+          "size_ratio": 0.001115873266065881,
+          "PSNR": 27.082393646240234,
+          "baseline_PSNR": 26.75142478942871,
+          "dPSNR": 0.33096885681152344,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 15268751,
+          "baseline_bytes": 15244312,
+          "size_ratio": 0.0016031553277051636,
+          "PSNR": 27.082393646240234,
+          "baseline_PSNR": 26.846088409423828,
+          "dPSNR": 0.23630523681640625,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 15268751,
+          "baseline_bytes": 15233171,
+          "size_ratio": 0.002335692286261404,
+          "PSNR": 27.082393646240234,
+          "baseline_PSNR": 26.888792037963867,
+          "dPSNR": 0.1936016082763672,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 16495702,
+          "baseline_bytes": 16445885,
+          "size_ratio": 0.0030291468048087022,
+          "PSNR": 27.15804100036621,
+          "baseline_PSNR": 26.881277084350586,
+          "dPSNR": 0.276763916015625,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 16495702,
+          "baseline_bytes": 16405132,
+          "size_ratio": 0.005520833358731991,
+          "PSNR": 27.15804100036621,
+          "baseline_PSNR": 26.963132858276367,
+          "dPSNR": 0.19490814208984375,
+          "dominates": false,
+          "K": 65536
+        },
+        {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 16495702,
+          "baseline_bytes": 16418411,
+          "size_ratio": 0.0047075810198684565,
+          "PSNR": 27.15804100036621,
+          "baseline_PSNR": 27.015243530273438,
+          "dPSNR": 0.14279747009277344,
+          "dominates": false,
+          "K": 65536
+        }
+      ],
+      "bicycle": [
+        {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14139306,
+          "baseline_bytes": 14078321,
+          "size_ratio": 0.004331837582052467,
+          "PSNR": 25.238534927368164,
+          "baseline_PSNR": 24.96843719482422,
+          "dPSNR": 0.2700977325439453,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14139306,
+          "baseline_bytes": 14060077,
+          "size_ratio": 0.005635033150956481,
+          "PSNR": 25.238534927368164,
+          "baseline_PSNR": 24.874296188354492,
+          "dPSNR": 0.3642387390136719,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14139306,
+          "baseline_bytes": 14075285,
+          "size_ratio": 0.004548469178421666,
+          "PSNR": 25.238534927368164,
+          "baseline_PSNR": 25.07454490661621,
+          "dPSNR": 0.16399002075195312,
+          "dominates": false,
+          "K": 1024
+        },
+        {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14425520,
+          "baseline_bytes": 14385436,
+          "size_ratio": 0.002786429274719282,
+          "PSNR": 25.332275390625,
+          "baseline_PSNR": 25.13020896911621,
+          "dPSNR": 0.20206642150878906,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14425520,
+          "baseline_bytes": 14396171,
+          "size_ratio": 0.0020386670872414303,
+          "PSNR": 25.332275390625,
+          "baseline_PSNR": 25.14873504638672,
+          "dPSNR": 0.18354034423828125,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14425520,
+          "baseline_bytes": 14386267,
+          "size_ratio": 0.00272850489984644,
+          "PSNR": 25.332275390625,
+          "baseline_PSNR": 25.22265625,
+          "dPSNR": 0.109619140625,
+          "dominates": false,
+          "K": 4096
+        },
+        {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 14931080,
+          "baseline_bytes": 14891479,
+          "size_ratio": 0.0026593060366939536,
+          "PSNR": 25.401676177978516,
+          "baseline_PSNR": 25.25277328491211,
+          "dPSNR": 0.14890289306640625,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 14931080,
+          "baseline_bytes": 14909318,
+          "size_ratio": 0.001459624108896218,
+          "PSNR": 25.401676177978516,
+          "baseline_PSNR": 25.27816390991211,
+          "dPSNR": 0.12351226806640625,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 14931080,
+          "baseline_bytes": 14899202,
+          "size_ratio": 0.00213957767671058,
+          "PSNR": 25.401676177978516,
+          "baseline_PSNR": 25.328670501708984,
+          "dPSNR": 0.07300567626953125,
+          "dominates": false,
+          "K": 16384
+        },
+        {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "bytes": 16213673,
+          "baseline_bytes": 16238295,
+          "size_ratio": -0.0015162921969332777,
+          "PSNR": 25.447444915771484,
+          "baseline_PSNR": 25.331127166748047,
+          "dPSNR": 0.1163177490234375,
+          "dominates": true,
+          "K": 65536
+        },
+        {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "bytes": 16213673,
+          "baseline_bytes": 16216069,
+          "size_ratio": -0.00014775467469951842,
+          "PSNR": 25.447444915771484,
+          "baseline_PSNR": 25.35771369934082,
+          "dPSNR": 0.08973121643066406,
+          "dominates": true,
+          "K": 65536
+        },
+        {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "bytes": 16213673,
+          "baseline_bytes": 16228475,
+          "size_ratio": -0.0009121004900337626,
+          "PSNR": 25.447444915771484,
+          "baseline_PSNR": 25.395883560180664,
+          "dPSNR": 0.05156135559082031,
+          "dominates": true,
+          "K": 65536
+        }
+      ]
+    },
+    "development": {
+      "garden": {
+        "lloyd_wopa_area": {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "points": {
+            "gn_vq": [
+              {
+                "K": 1024,
+                "bytes": 14511663,
+                "PSNR": 26.88092803955078
+              },
+              {
+                "K": 4096,
+                "bytes": 14793110,
+                "PSNR": 26.99587059020996
+              },
+              {
+                "K": 16384,
+                "bytes": 15268751,
+                "PSNR": 27.082393646240234
+              },
+              {
+                "K": 65536,
+                "bytes": 16495702,
+                "PSNR": 27.15804100036621
+              }
+            ],
+            "lloyd_wopa_area": [
+              {
+                "K": 1024,
+                "bytes": 14463807,
+                "PSNR": 26.4735107421875
+              },
+              {
+                "K": 4096,
+                "bytes": 14778950,
+                "PSNR": 26.69765281677246
+              },
+              {
+                "K": 16384,
+                "bytes": 15244312,
+                "PSNR": 26.846088409423828
+              },
+              {
+                "K": 65536,
+                "bytes": 16405132,
+                "PSNR": 26.963132858276367
+              }
+            ]
+          },
+          "missing": [],
+          "bd_rate": -7.946091420115375,
+          "bd_psnr": 0.24039985346351145,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -7.946091420115375,
+          "mean_term_source": "bd_rate",
+          "outcome": "win"
+        },
+        "lloyd_trace": {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "points": {
+            "gn_vq": [
+              {
+                "K": 1024,
+                "bytes": 14511663,
+                "PSNR": 26.88092803955078
+              },
+              {
+                "K": 4096,
+                "bytes": 14793110,
+                "PSNR": 26.99587059020996
+              },
+              {
+                "K": 16384,
+                "bytes": 15268751,
+                "PSNR": 27.082393646240234
+              },
+              {
+                "K": 65536,
+                "bytes": 16495702,
+                "PSNR": 27.15804100036621
+              }
+            ],
+            "lloyd_trace": [
+              {
+                "K": 1024,
+                "bytes": 14478770,
+                "PSNR": 26.57168197631836
+              },
+              {
+                "K": 4096,
+                "bytes": 14775967,
+                "PSNR": 26.751323699951172
+              },
+              {
+                "K": 16384,
+                "bytes": 15233171,
+                "PSNR": 26.888792037963867
+              },
+              {
+                "K": 65536,
+                "bytes": 16418411,
+                "PSNR": 27.015243530273438
+              }
+            ]
+          },
+          "missing": [],
+          "bd_rate": -6.441661659958175,
+          "bd_psnr": 0.1871122280164137,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -6.441661659958175,
+          "mean_term_source": "bd_rate",
+          "outcome": "win"
+        },
+        "upstream_l1": {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "points": {
+            "gn_vq": [
+              {
+                "K": 1024,
+                "bytes": 14511663,
+                "PSNR": 26.88092803955078
+              },
+              {
+                "K": 4096,
+                "bytes": 14793110,
+                "PSNR": 26.99587059020996
+              },
+              {
+                "K": 16384,
+                "bytes": 15268751,
+                "PSNR": 27.082393646240234
+              },
+              {
+                "K": 65536,
+                "bytes": 16495702,
+                "PSNR": 27.15804100036621
+              }
+            ],
+            "upstream_l1": [
+              {
+                "K": 1024,
+                "bytes": 14479304,
+                "PSNR": 26.35188102722168
+              },
+              {
+                "K": 4096,
+                "bytes": 14786210,
+                "PSNR": 26.570905685424805
+              },
+              {
+                "K": 16384,
+                "bytes": 15251732,
+                "PSNR": 26.75142478942871
+              },
+              {
+                "K": 65536,
+                "bytes": 16445885,
+                "PSNR": 26.881277084350586
+              }
+            ]
+          },
+          "missing": [],
+          "bd_rate": -11.743617014853147,
+          "bd_psnr": 0.33046744192299826,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -11.743617014853147,
+          "mean_term_source": "bd_rate",
+          "outcome": "win"
+        }
+      },
+      "bicycle": {
+        "lloyd_wopa_area": {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "lloyd_wopa_area",
+          "points": {
+            "gn_vq": [
+              {
+                "K": 1024,
+                "bytes": 14139306,
+                "PSNR": 25.238534927368164
+              },
+              {
+                "K": 4096,
+                "bytes": 14425520,
+                "PSNR": 25.332275390625
+              },
+              {
+                "K": 16384,
+                "bytes": 14931080,
+                "PSNR": 25.401676177978516
+              },
+              {
+                "K": 65536,
+                "bytes": 16213673,
+                "PSNR": 25.447444915771484
+              }
+            ],
+            "lloyd_wopa_area": [
+              {
+                "K": 1024,
+                "bytes": 14060077,
+                "PSNR": 24.874296188354492
+              },
+              {
+                "K": 4096,
+                "bytes": 14396171,
+                "PSNR": 25.14873504638672
+              },
+              {
+                "K": 16384,
+                "bytes": 14909318,
+                "PSNR": 25.27816390991211
+              },
+              {
+                "K": 65536,
+                "bytes": 16216069,
+                "PSNR": 25.35771369934082
+              }
+            ]
+          },
+          "missing": [],
+          "bd_rate": -5.546759016893576,
+          "bd_psnr": 0.15114989049054728,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -5.546759016893576,
+          "mean_term_source": "bd_rate",
+          "outcome": "win"
+        },
+        "lloyd_trace": {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "lloyd_trace",
+          "points": {
+            "gn_vq": [
+              {
+                "K": 1024,
+                "bytes": 14139306,
+                "PSNR": 25.238534927368164
+              },
+              {
+                "K": 4096,
+                "bytes": 14425520,
+                "PSNR": 25.332275390625
+              },
+              {
+                "K": 16384,
+                "bytes": 14931080,
+                "PSNR": 25.401676177978516
+              },
+              {
+                "K": 65536,
+                "bytes": 16213673,
+                "PSNR": 25.447444915771484
+              }
+            ],
+            "lloyd_trace": [
+              {
+                "K": 1024,
+                "bytes": 14075285,
+                "PSNR": 25.07454490661621
+              },
+              {
+                "K": 4096,
+                "bytes": 14386267,
+                "PSNR": 25.22265625
+              },
+              {
+                "K": 16384,
+                "bytes": 14899202,
+                "PSNR": 25.328670501708984
+              },
+              {
+                "K": 65536,
+                "bytes": 16228475,
+                "PSNR": 25.395883560180664
+              }
+            ]
+          },
+          "missing": [],
+          "bd_rate": -3.3723831655271486,
+          "bd_psnr": 0.07408522554116814,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -3.3723831655271486,
+          "mean_term_source": "bd_rate",
+          "outcome": "win"
+        },
+        "upstream_l1": {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "upstream_l1",
+          "points": {
+            "gn_vq": [
+              {
+                "K": 1024,
+                "bytes": 14139306,
+                "PSNR": 25.238534927368164
+              },
+              {
+                "K": 4096,
+                "bytes": 14425520,
+                "PSNR": 25.332275390625
+              },
+              {
+                "K": 16384,
+                "bytes": 14931080,
+                "PSNR": 25.401676177978516
+              },
+              {
+                "K": 65536,
+                "bytes": 16213673,
+                "PSNR": 25.447444915771484
+              }
+            ],
+            "upstream_l1": [
+              {
+                "K": 1024,
+                "bytes": 14078321,
+                "PSNR": 24.96843719482422
+              },
+              {
+                "K": 4096,
+                "bytes": 14385436,
+                "PSNR": 25.13020896911621
+              },
+              {
+                "K": 16384,
+                "bytes": 14891479,
+                "PSNR": 25.25277328491211
+              },
+              {
+                "K": 65536,
+                "bytes": 16238295,
+                "PSNR": 25.331127166748047
+              }
+            ]
+          },
+          "missing": [],
+          "bd_rate": -6.535226145085771,
+          "bd_psnr": 0.14932860241507484,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -6.535226145085771,
+          "mean_term_source": "bd_rate",
+          "outcome": "win"
+        }
+      }
+    },
+    "exploratory": {
+      "garden": {
+        "gn_vq_eps1e4_vs_lloyd_wopa_area": {
+          "scene": "garden",
+          "config": "gn_vq_eps1e4",
+          "baseline": "lloyd_wopa_area",
+          "points": {
+            "gn_vq_eps1e4": [
+              {
+                "K": 1024,
+                "bytes": 14514937,
+                "PSNR": 26.89532470703125
+              },
+              {
+                "K": 4096,
+                "bytes": 14804483,
+                "PSNR": 27.009063720703125
+              },
+              {
+                "K": 16384,
+                "bytes": 15319053,
+                "PSNR": 27.097219467163086
+              },
+              {
+                "K": 65536,
+                "bytes": 16793147,
+                "PSNR": 27.16461181640625
+              }
+            ],
+            "lloyd_wopa_area": [
+              {
+                "K": 1024,
+                "bytes": 14463807,
+                "PSNR": 26.4735107421875
+              },
+              {
+                "K": 4096,
+                "bytes": 14778950,
+                "PSNR": 26.69765281677246
+              },
+              {
+                "K": 16384,
+                "bytes": 15244312,
+                "PSNR": 26.846088409423828
+              },
+              {
+                "K": 65536,
+                "bytes": 16405132,
+                "PSNR": 26.963132858276367
+              }
+            ]
+          },
+          "missing": [],
+          "bd_rate": -8.172945667017872,
+          "bd_psnr": 0.2457064193484264,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -8.172945667017872,
+          "mean_term_source": "bd_rate",
+          "outcome": "win"
+        },
+        "gn_vq_vs_gn_vq_eps1e4": {
+          "scene": "garden",
+          "config": "gn_vq",
+          "baseline": "gn_vq_eps1e4",
+          "points": {
+            "gn_vq": [
+              {
+                "K": 1024,
+                "bytes": 14511663,
+                "PSNR": 26.88092803955078
+              },
+              {
+                "K": 4096,
+                "bytes": 14793110,
+                "PSNR": 26.99587059020996
+              },
+              {
+                "K": 16384,
+                "bytes": 15268751,
+                "PSNR": 27.082393646240234
+              },
+              {
+                "K": 65536,
+                "bytes": 16495702,
+                "PSNR": 27.15804100036621
+              }
+            ],
+            "gn_vq_eps1e4": [
+              {
+                "K": 1024,
+                "bytes": 14514937,
+                "PSNR": 26.89532470703125
+              },
+              {
+                "K": 4096,
+                "bytes": 14804483,
+                "PSNR": 27.009063720703125
+              },
+              {
+                "K": 16384,
+                "bytes": 15319053,
+                "PSNR": 27.097219467163086
+              },
+              {
+                "K": 65536,
+                "bytes": 16793147,
+                "PSNR": 27.16461181640625
+              }
+            ]
+          },
+          "missing": [],
+          "bd_rate": 0.221406050269235,
+          "bd_psnr": -0.004150854098181611,
+          "decided_by": "bd_rate",
+          "win": false,
+          "mean_term": 0.221406050269235,
+          "mean_term_source": "bd_rate",
+          "outcome": "loss"
+        }
+      },
+      "bicycle": {
+        "gn_vq_eps1e4_vs_lloyd_wopa_area": {
+          "scene": "bicycle",
+          "config": "gn_vq_eps1e4",
+          "baseline": "lloyd_wopa_area",
+          "points": {
+            "gn_vq_eps1e4": [
+              {
+                "K": 1024,
+                "bytes": 14141820,
+                "PSNR": 25.24260139465332
+              },
+              {
+                "K": 4096,
+                "bytes": 14430209,
+                "PSNR": 25.33980369567871
+              },
+              {
+                "K": 16384,
+                "bytes": 14958948,
+                "PSNR": 25.4027042388916
+              },
+              {
+                "K": 65536,
+                "bytes": 16380799,
+                "PSNR": 25.444852828979492
+              }
+            ],
+            "lloyd_wopa_area": [
+              {
+                "K": 1024,
+                "bytes": 14060077,
+                "PSNR": 24.874296188354492
+              },
+              {
+                "K": 4096,
+                "bytes": 14396171,
+                "PSNR": 25.14873504638672
+              },
+              {
+                "K": 16384,
+                "bytes": 14909318,
+                "PSNR": 25.27816390991211
+              },
+              {
+                "K": 65536,
+                "bytes": 16216069,
+                "PSNR": 25.35771369934082
+              }
+            ]
+          },
+          "missing": [],
+          "bd_rate": -5.529099457311104,
+          "bd_psnr": 0.1433774100751002,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -5.529099457311104,
+          "mean_term_source": "bd_rate",
+          "outcome": "win"
+        },
+        "gn_vq_vs_gn_vq_eps1e4": {
+          "scene": "bicycle",
+          "config": "gn_vq",
+          "baseline": "gn_vq_eps1e4",
+          "points": {
+            "gn_vq": [
+              {
+                "K": 1024,
+                "bytes": 14139306,
+                "PSNR": 25.238534927368164
+              },
+              {
+                "K": 4096,
+                "bytes": 14425520,
+                "PSNR": 25.332275390625
+              },
+              {
+                "K": 16384,
+                "bytes": 14931080,
+                "PSNR": 25.401676177978516
+              },
+              {
+                "K": 65536,
+                "bytes": 16213673,
+                "PSNR": 25.447444915771484
+              }
+            ],
+            "gn_vq_eps1e4": [
+              {
+                "K": 1024,
+                "bytes": 14141820,
+                "PSNR": 25.24260139465332
+              },
+              {
+                "K": 4096,
+                "bytes": 14430209,
+                "PSNR": 25.33980369567871
+              },
+              {
+                "K": 16384,
+                "bytes": 14958948,
+                "PSNR": 25.4027042388916
+              },
+              {
+                "K": 65536,
+                "bytes": 16380799,
+                "PSNR": 25.444852828979492
+              }
+            ]
+          },
+          "missing": [],
+          "bd_rate": -0.18287846057228885,
+          "bd_psnr": 0.007516727384544453,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -0.18287846057228885,
+          "mean_term_source": "bd_rate",
+          "outcome": "win"
+        }
+      }
+    }
+  },
+  "held_out": [
+    "stump",
+    "bonsai",
+    "counter",
+    "kitchen",
+    "room",
+    "treehill",
+    "flowers",
+    "train",
+    "truck"
+  ],
+  "development": [
+    "garden",
+    "bicycle"
+  ]
+}

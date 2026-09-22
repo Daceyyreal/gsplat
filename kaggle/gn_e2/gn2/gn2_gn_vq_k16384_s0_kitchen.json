@@ -1,0 +1,277 @@
+{
+  "variant": "gn_vq",
+  "clip": true,
+  "final_quantized_assignment": true,
+  "max_iters": 20,
+  "rel_tol": 0.001,
+  "ridge_eps": 0.01,
+  "iterations": 14,
+  "stopped_because": "rel_tol",
+  "warm_start": {
+    "range": [
+      -0.704920768737793,
+      0.7081910967826843
+    ],
+    "quantizer": {
+      "mins": -0.7049197554588318,
+      "maxs": 0.7081910967826843,
+      "step": 0.022430332377552986,
+      "bits": 6,
+      "levels": 63
+    },
+    "objective": 7.856968105784392e-05,
+    "n_clusters": 16384
+  },
+  "quantizer": {
+    "mins": -0.7049197554588318,
+    "maxs": 0.7029783129692078,
+    "step": 0.02234758995473385,
+    "bits": 6,
+    "levels": 63
+  },
+  "fraction_outside_warm_range_final": 0.0,
+  "clusters_rejected_by_clip_total": 69984,
+  "final_assignment_labels_changed_fraction": 0.215505,
+  "objective_before_quantization": 3.117380459003053e-05,
+  "objective_after_quantization": 3.451724495666614e-05,
+  "history": [
+    {
+      "iter": 0,
+      "step": "start",
+      "objective": 7.856968105784392e-05
+    },
+    {
+      "iter": 1,
+      "step": "assign",
+      "objective": 4.511006563452121e-05,
+      "kept_current_by_guard": 5572,
+      "zero_trace": 12893,
+      "share_all": 0.7234849999999999,
+      "share_trace_gt_0": 0.7198733268024641,
+      "topk": 64
+    },
+    {
+      "iter": 1,
+      "step": "update",
+      "objective": 3.681547901021493e-05,
+      "fraction_outside_warm_range": 2.7126736111111112e-06,
+      "clusters_rejected_by_clip": 35,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.5314289365243707
+    },
+    {
+      "iter": 2,
+      "step": "assign",
+      "objective": 3.538487983865066e-05,
+      "kept_current_by_guard": 4792,
+      "zero_trace": 12893
+    },
+    {
+      "iter": 2,
+      "step": "update",
+      "objective": 3.387157731251179e-05,
+      "fraction_outside_warm_range": 2.7126736111111112e-06,
+      "clusters_rejected_by_clip": 226,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0799636939909519
+    },
+    {
+      "iter": 3,
+      "step": "assign",
+      "objective": 3.345440660961436e-05,
+      "kept_current_by_guard": 4400,
+      "zero_trace": 12893
+    },
+    {
+      "iter": 3,
+      "step": "update",
+      "objective": 3.279133752556169e-05,
+      "fraction_outside_warm_range": 2.7126736111111112e-06,
+      "clusters_rejected_by_clip": 555,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.03189221975060104
+    },
+    {
+      "iter": 4,
+      "step": "assign",
+      "objective": 3.260779751172375e-05,
+      "kept_current_by_guard": 4160,
+      "zero_trace": 12893
+    },
+    {
+      "iter": 4,
+      "step": "update",
+      "objective": 3.2243524564446794e-05,
+      "fraction_outside_warm_range": 4.069010416666667e-06,
+      "clusters_rejected_by_clip": 1225,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.016706026726962947
+    },
+    {
+      "iter": 5,
+      "step": "assign",
+      "objective": 3.2141774680379696e-05,
+      "kept_current_by_guard": 3936,
+      "zero_trace": 12893
+    },
+    {
+      "iter": 5,
+      "step": "update",
+      "objective": 3.1916304318127464e-05,
+      "fraction_outside_warm_range": 4.069010416666667e-06,
+      "clusters_rejected_by_clip": 2012,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.010148401911375964
+    },
+    {
+      "iter": 6,
+      "step": "assign",
+      "objective": 3.1853091683871705e-05,
+      "kept_current_by_guard": 3785,
+      "zero_trace": 12893
+    },
+    {
+      "iter": 6,
+      "step": "update",
+      "objective": 3.1697979175955045e-05,
+      "fraction_outside_warm_range": 4.069010416666667e-06,
+      "clusters_rejected_by_clip": 3089,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.006840552088871319
+    },
+    {
+      "iter": 7,
+      "step": "assign",
+      "objective": 3.165654957861939e-05,
+      "kept_current_by_guard": 3653,
+      "zero_trace": 12893
+    },
+    {
+      "iter": 7,
+      "step": "update",
+      "objective": 3.154544626367466e-05,
+      "fraction_outside_warm_range": 4.069010416666667e-06,
+      "clusters_rejected_by_clip": 4281,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0048120705560969115
+    },
+    {
+      "iter": 8,
+      "step": "assign",
+      "objective": 3.1517372657809555e-05,
+      "kept_current_by_guard": 3595,
+      "zero_trace": 12893
+    },
+    {
+      "iter": 8,
+      "step": "update",
+      "objective": 3.144258431519476e-05,
+      "fraction_outside_warm_range": 4.069010416666667e-06,
+      "clusters_rejected_by_clip": 5436,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.00326075426608704
+    },
+    {
+      "iter": 9,
+      "step": "assign",
+      "objective": 3.142326015249942e-05,
+      "kept_current_by_guard": 3508,
+      "zero_trace": 12893
+    },
+    {
+      "iter": 9,
+      "step": "update",
+      "objective": 3.136844708430856e-05,
+      "fraction_outside_warm_range": 2.7126736111111112e-06,
+      "clusters_rejected_by_clip": 6480,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0023578606053184076
+    },
+    {
+      "iter": 10,
+      "step": "assign",
+      "objective": 3.135506602525467e-05,
+      "kept_current_by_guard": 3300,
+      "zero_trace": 12893
+    },
+    {
+      "iter": 10,
+      "step": "update",
+      "objective": 3.131354443554187e-05,
+      "fraction_outside_warm_range": 2.7126736111111112e-06,
+      "clusters_rejected_by_clip": 7589,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0017502507733050269
+    },
+    {
+      "iter": 11,
+      "step": "assign",
+      "objective": 3.1302439815066636e-05,
+      "kept_current_by_guard": 3437,
+      "zero_trace": 12893
+    },
+    {
+      "iter": 11,
+      "step": "update",
+      "objective": 3.126729251647706e-05,
+      "fraction_outside_warm_range": 2.7126736111111112e-06,
+      "clusters_rejected_by_clip": 8625,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0014770579280802784
+    },
+    {
+      "iter": 12,
+      "step": "assign",
+      "objective": 3.1257464641555275e-05,
+      "kept_current_by_guard": 3309,
+      "zero_trace": 12893
+    },
+    {
+      "iter": 12,
+      "step": "update",
+      "objective": 3.122842978460753e-05,
+      "fraction_outside_warm_range": 2.7126736111111112e-06,
+      "clusters_rejected_by_clip": 9409,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0012429196371593382
+    },
+    {
+      "iter": 13,
+      "step": "assign",
+      "objective": 3.122125940517882e-05,
+      "kept_current_by_guard": 3192,
+      "zero_trace": 12893
+    },
+    {
+      "iter": 13,
+      "step": "update",
+      "objective": 3.1197078643878884e-05,
+      "fraction_outside_warm_range": 2.7126736111111112e-06,
+      "clusters_rejected_by_clip": 10206,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0010039294625084133
+    },
+    {
+      "iter": 14,
+      "step": "assign",
+      "objective": 3.1191505851298295e-05,
+      "kept_current_by_guard": 3193,
+      "zero_trace": 12893
+    },
+    {
+      "iter": 14,
+      "step": "update",
+      "objective": 3.117380459003053e-05,
+      "fraction_outside_warm_range": 2.7126736111111112e-06,
+      "clusters_rejected_by_clip": 10816,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0007460331178452658
+    }
+  ],
+  "config": "gn_vq",
+  "scene": "kitchen",
+  "n_clusters": 16384,
+  "seed": 0,
+  "warm_start_source": "recomputed",
+  "vq_time_s": 107.00456080000004
+}
