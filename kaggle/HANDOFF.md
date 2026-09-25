@@ -56,12 +56,12 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `FINDINGS.md` | results write-up, every number from the committed bundles |
 | `HANDOFF.md` | this file |
 | `run2/tilequant/` ... `run5/tilequant/` | results bundles (`results_bundle.zip` contents); each session restores the previous one, so files repeat (git stores them once). In `run5/`, `run5_tt_table.csv` and `rd_run5.png` were regenerated locally after the label fix `1b4d40f8` (see FINDINGS sources); the downloaded original is `~/Downloads/results_bundle (3).zip` |
-| `PREREG_GN.md` | E0 / E1 pre-registration (`bench/gn-vq`): G0 rule, validity checks, exploratory scope, G1 for E1. Amendment 1: the toy check. Amendment 2: G0 over 9 codebooks per scene with tie-exempt pairs, and exact-assignment refines instead of the shortlist one. Amendment 3: the G0 verdict is the ranking alone (the ratio is reported as calibration), the end-to-end exactness check, the lifted-check criterion v2, and a proximal rise invalidating that variant instead of stopping. Amendment 4: the toy and end-to-end scenes are committed fixtures with pinned hashes (a correction: the CUDA toy check would have drawn a different scene from the simulated one), end-to-end preconditions read from gsplat's render, and a report-only probe-noise diagnostic. Amendment 5 (after G0 passed, before any E1 code): E1's GN-VQ variant, the one-sided size matching that G1's last sentence delegates, the reported secondaries and the exploratory ablations. Amendment 6 (2026-09-21, before any E1 run): two more exploratory rows, GN-VQ at ridge `eps` = 1e-3 and 1e-2, seed 0 at K = 65,536 on both scenes, not judged by anything; and the final codebook's own quantizer range logged beside the warm start's. Amendment 7 (2026-09-21, after E1's results, before any E2 code): G1 failed as pre-registered and is not amended; the project's deviation, stated as one (it continues on Amendment 5 d's rate-distortion evidence; garden and bicycle become development scenes); E2's variant (eps = 1e-2, 20 iterations), 9 held-out scenes, 4 configs x 4 K, G2a (gate) and H2b (reported). Amendment 8 (2026-09-21, before any E2 data): G2a's mean is over all 9 held-out scenes, a scene without a defined BD-rate entering with a substitute (a: `gn_vq` reaches the baseline's best PSNR for fewer bytes; b: the reverse; c: 0%), so it is always defined; exploratory `gn_vq_eps1e4` rows on garden and bicycle, not judged. Amendment 9 (2026-09-22, after E2's results, before any E2b code): from E2b on, BD measures are computed with the domain-scaled fit (`g2.bd_rate_scaled` / `bd_psnr_scaled`; the pre-registered quantity is unchanged, E2's values stand); E2b, exploratory with a pre-stated criterion: E2's GN-VQ with `M_i + rho tr(M_i)/15 I` in assignment and update, rho chosen by train-view cross-validation, on treehill, flowers and train with garden as the control (those three become development scenes). **Never edit a rule after results exist**; add a dated amendment instead. |
+| `PREREG_GN.md` | E0 / E1 pre-registration (`bench/gn-vq`): G0 rule, validity checks, exploratory scope, G1 for E1. Amendment 1: the toy check. Amendment 2: G0 over 9 codebooks per scene with tie-exempt pairs, and exact-assignment refines instead of the shortlist one. Amendment 3: the G0 verdict is the ranking alone (the ratio is reported as calibration), the end-to-end exactness check, the lifted-check criterion v2, and a proximal rise invalidating that variant instead of stopping. Amendment 4: the toy and end-to-end scenes are committed fixtures with pinned hashes (a correction: the CUDA toy check would have drawn a different scene from the simulated one), end-to-end preconditions read from gsplat's render, and a report-only probe-noise diagnostic. Amendment 5 (after G0 passed, before any E1 code): E1's GN-VQ variant, the one-sided size matching that G1's last sentence delegates, the reported secondaries and the exploratory ablations. Amendment 6 (2026-09-21, before any E1 run): two more exploratory rows, GN-VQ at ridge `eps` = 1e-3 and 1e-2, seed 0 at K = 65,536 on both scenes, not judged by anything; and the final codebook's own quantizer range logged beside the warm start's. Amendment 7 (2026-09-21, after E1's results, before any E2 code): G1 failed as pre-registered and is not amended; the project's deviation, stated as one (it continues on Amendment 5 d's rate-distortion evidence; garden and bicycle become development scenes); E2's variant (eps = 1e-2, 20 iterations), 9 held-out scenes, 4 configs x 4 K, G2a (gate) and H2b (reported). Amendment 8 (2026-09-21, before any E2 data): G2a's mean is over all 9 held-out scenes, a scene without a defined BD-rate entering with a substitute (a: `gn_vq` reaches the baseline's best PSNR for fewer bytes; b: the reverse; c: 0%), so it is always defined; exploratory `gn_vq_eps1e4` rows on garden and bicycle, not judged. Amendment 9 (2026-09-22, after E2's results, before any E2b code): from E2b on, BD measures are computed with the domain-scaled fit (`g2.bd_rate_scaled` / `bd_psnr_scaled`; the pre-registered quantity is unchanged, E2's values stand); E2b, exploratory with a pre-stated criterion: E2's GN-VQ with `M_i + rho tr(M_i)/15 I` in assignment and update, rho chosen by train-view cross-validation, on treehill, flowers and train with garden as the control (those three become development scenes). Amendment 10 (2026-09-25, before any E2b data): E2b's scenes become treehill, flowers and stump (the largest train-to-test growth of the gn_vq / `lloyd_trace` dMSE ratio; Amendment 9's PSNR ratio mixed in the cross term with the model's own error), train dropped (it stays a development scene); E2b also runs its own rho = 0 full-`M` rows, checked against E2's `gn_vq` rows; a fidelity criterion on test dMSE (R below its own rho = 0 in >= 5 of 6 cells, treehill's R at K = 65,536 below 1; garden within 5%); Amendment 9's PSNR criteria reported alongside with the cross-term caveat; neither gates. **Never edit a rule after results exist**; add a dated amendment instead. |
 | `gn_e0/gn/` | the E0 results bundle, unpacked as downloaded (22 files); FINDINGS section 8 quotes it |
 | `gn_e1/gn1/` | the E1 results bundle, unpacked as downloaded (28 files); FINDINGS section 9 quotes it |
 | `gn_e2/gn2/` | the E2 results bundle, unpacked as downloaded (91 files); FINDINGS section 10 quotes it. E2b's analysis cell reads its comparator rows from here |
 | `gn_e2/bd_sensitivity.json` | post-hoc sensitivity of E2's BD measures (`bench/gn/bd_sensitivity.py`, from the bundle only): the reproduction within tolerance, the exact cubic, PCHIP, the shN stream alone, monotonicity and sign-disagreement flags |
-| `gn_e2b_scene.py` | E2b, one scene per process (Amendment 9 b): per K, `gn_vq_floor_cv` at the four rho (floored `M` from the even-indexed train views, scored by dMSE on the odd-indexed ones), then `gn_vq_floor` at rho > 0 (floored full `M`, evaluated like E2's rows); warm starts and `M` from E2's caches with recorded fallbacks; imports E0-E2's modules unchanged; resumable per (config, K, rho) |
+| `gn_e2b_scene.py` | E2b, one scene per process (Amendments 9 b and 10): per K, `gn_vq_floor_cv` at the four rho (floored `M` from the even-indexed train views, scored by dMSE on the odd-indexed ones), then `gn_vq_floor` at the four rho (floored full `M`, evaluated like E2's rows; rho = 0 reproduces E2's `gn_vq`); warm starts and `M` from E2's caches with recorded fallbacks; imports E0-E2's modules unchanged; resumable per (config, K, rho) |
 | `build_gn_e2b_bench.py` / `gn_e2b_bench.ipynb` | E2b notebook (build output; edit the builder, never the JSON). E0's, E1's and E2's notebooks are left exactly as they ran |
 | `gn_e2_scene.py` | E2, one scene per process (Amendment 7): `upstream_l1`, `lloyd_wopa_area`, `lloyd_trace` and `gn_vq` (eps 1e-2, 20 iterations) at K = 1,024-65,536, seed 0, plus `uncompressed`; `--configs gn_vq_eps1e4` adds Amendment 8's exploratory rows (garden and bicycle only). Checks the checkpoint's pinned sha1 first, downloads and later deletes its own scene, reuses E0's / E1's modules unchanged; resumable per (config, K) |
 | `build_gn_e2_bench.py` / `gn_e2_bench.ipynb` | E2 notebook (build output; edit the builder, never the JSON). E0's and E1's notebooks are left exactly as they ran |
@@ -69,7 +69,7 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `build_gn_e1_bench.py` / `gn_e1_bench.ipynb` | E1 notebook (build output; edit the builder, never the JSON). E0's notebook is left exactly as it ran |
 | `gn_e0_scene.py` | E0, one scene per process: render parity, GN pass (`gn_cache/<scene>.pt`), spectrum, Spearman, the 9 G0 codebooks (predicted vs measured, test and train GT metrics, reproduction fields at K = 65,536), the lifted-assignment check (gates only the refines), the ridge / proximal refines (a proximal rise marks that row invalid). Resumable per (scene, config, K, seed). |
 | `build_gn_bench.py` / `gn_bench.ipynb` | E0 notebook (build output; edit the builder, never the JSON) |
-| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` / `g1.py` / `g2.py` (the G0, G1 and G2a / H2b rules as code), `gn_vq.py` (E1's variant and the codec's quantizer; `report_metrics` adds reporting only), `e2b.py` (E2b's floored metric, selection, criterion and Spearman), `bd_sensitivity.py` (E2's BD measures reproduced, the 50-digit exact cubic, PCHIP, the shN stream), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (80 CPU tests), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1, E2 and E2b dry runs and the writer-parity check; not collected by pytest) |
+| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` / `g1.py` / `g2.py` (the G0, G1 and G2a / H2b rules as code), `gn_vq.py` (E1's variant and the codec's quantizer; `report_metrics` adds reporting only), `e2b.py` (E2b's floored metric, selection, the fidelity and PSNR criteria, the rho = 0 reproduction check and the Spearman), `bd_sensitivity.py` (E2's BD measures reproduced, the 50-digit exact cubic, PCHIP, the shN stream), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (82 CPU tests), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1, E2 and E2b dry runs and the writer-parity check; not collected by pytest) |
 | `.gitignore` | ignores only the 64 run-5 bundle files that were unpacked flat into `kaggle/` by hand (anchored names; nothing deleted; the committed copy is `run5/tilequant/`) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
@@ -541,20 +541,28 @@ files.
 
 ## E2b notebook (`bench/gn-vq`, `kaggle/gn_e2b_bench.ipynb`)
 
-E2b is **pre-registered in `PREREG_GN.md` Amendment 9** (after E2's results, before any E2b code). It is
-exploratory: its criterion is stated in advance but it is not a gate, and nothing about E2's verdicts
-changes. **Built and dry-run, not run on Kaggle.**
+E2b is **pre-registered in `PREREG_GN.md` Amendments 9 and 10** (after E2's results, before any E2b code
+or data). It is exploratory: its criteria are stated in advance but neither is a gate, and nothing about
+E2's verdicts changes. **Built and dry-run, not run on Kaggle.**
 
 - **Variant:** E2's GN-VQ (ridge eps 1e-2, at most 20 iterations) with `M_i` replaced everywhere inside
   GN-VQ by `M_i + rho * tr(M_i) / 15 * I`, rho in {0, 1e-3, 1e-2, 1e-1}.
 - **Selection:** `M_even` from the even-indexed train views; each codebook scored by its render-vs-render
   dMSE on the odd-indexed train views; `rho_cv` is the minimizer (ties to the smaller rho). No test view.
-- **Check:** every rho > 0 also run with E2's full `M` and evaluated on the test views like E2's rows;
-  rho = 0 is E2's `gn_vq` row, read from `kaggle/gn_e2/gn2/`, not recomputed.
-- **Scenes:** treehill, flowers and train (the three lowest test/train gain ratios against `lloyd_trace`
-  at K = 65,536 in E2) and garden (the control); K = 4,096 and 65,536; seed 0. Stump is not used.
-- **Criterion:** the floor works if `rho_cv`'s codebook beats E2's `lloyd_trace` in test PSNR on treehill
-  at both K, and on garden costs at most 0.02 dB against E2's `gn_vq` at both K.
+- **Full-`M` rows:** every rho, 0 included (Amendment 10 c), run with E2's full `M` and evaluated on the
+  test views like E2's rows. The rho = 0 row is checked against E2's `gn_vq` row: `identical`,
+  `within_tolerance` (|dPSNR| <= 1e-3 dB and relative test-dMSE difference <= 1e-3), `not_reproduced`
+  (**flagged**), or `inputs_differ` when that row did not use E2's `M` and warm start.
+- **Scenes (Amendment 10 b):** treehill, flowers and stump, the three held-out scenes whose dMSE ratio of
+  GN-VQ to `lloyd_trace` grows most from train to test views in E2, and garden, the control; K = 4,096
+  and 65,536; seed 0. Train is not used (Amendment 9 had chosen it by a PSNR ratio).
+- **Fidelity criterion (Amendment 10 d), on test dMSE:** R = test dMSE of the full-`M` codebook at
+  `rho_cv` / test dMSE of E2's `lloyd_trace` row. The floor works if R is below E2b's own rho = 0 R in
+  at least 5 of the 6 cells of treehill, flowers and stump, and treehill's R at K = 65,536 is below 1.
+  Garden control, reported with it: test dMSE at `rho_cv` at most 5% above garden's own rho = 0.
+- **PSNR criteria (Amendment 9 b.e), reported alongside with the cross-term caveat:** treehill beats
+  E2's `lloyd_trace` at both K; garden within 0.02 dB of E2's `gn_vq`. Computed as Amendment 9 wrote them,
+  with E2's `gn_vq` row as the rho = 0 codebook; Amendment 10's items use E2b's own rho = 0 row.
 
 **Kaggle steps:**
 
@@ -568,8 +576,8 @@ changes. **Built and dry-run, not run on Kaggle.**
 
 | Attach | Required | What E2b takes from it, and why |
 |---|---|---|
-| **E2's notebook output** (the session that produced `gn2_bundle.zip`) | yes | `gn_cache/<scene>.pt` for treehill, flowers, train and garden: E2's full `M`, so the rho > 0 full-`M` rows use the same `M` as E2's rho = 0 row. E2's warm starts: `gn2_work/<scene>/clusters/lloyd_wopa_area_k4096_s0.pt` (all four scenes) and `lloyd_wopa_area_k65536_s0.pt` (train, which E2 reclustered), and `tilequant/e2_kmeans/<scene>/lloyd_wopa_area_s0.pt` (treehill, flowers, garden at K = 65,536). It also holds copies of the checkpoints, sort caches and the wheel. **Nothing in its `gn2/` is read:** E2's comparator rows come from the committed `kaggle/gn_e2/gn2/` in the cloned repo |
-| the **run-5 notebook output** | yes | the checkpoints (`results/benchmark_mcmc_1M_png_compression/<scene>/ckpts/` for treehill, flowers, garden; `results/benchmark_tt_mcmc_1M_png_compression/train/ckpts/`), the seed-0 sort caches (`tilequant/sweep/<scene>/cache`), the run-3 / run-4 K = 65,536 `lloyd_wopa_area` caches (the warm-start fallback) and the gsplat wheel |
+| **E2's notebook output** (the session that produced `gn2_bundle.zip`) | yes | `gn_cache/<scene>.pt` for treehill, flowers, stump and garden: E2's full `M`, so the full-`M` rows use the same `M` as E2's rows and the rho = 0 reproduction check applies. E2's warm starts: `gn2_work/<scene>/clusters/lloyd_wopa_area_k4096_s0.pt` and `tilequant/e2_kmeans/<scene>/lloyd_wopa_area_s0.pt` (K = 65,536, the run-3 / run-4 cache E2 copied), for all four scenes. It also holds copies of the checkpoints, sort caches and the wheel. **Nothing in its `gn2/` is read:** E2's comparator rows come from the committed `kaggle/gn_e2/gn2/` in the cloned repo |
+| the **run-5 notebook output** | yes | the four checkpoints (`results/benchmark_mcmc_1M_png_compression/<scene>/ckpts/`), their seed-0 sort caches (`tilequant/sweep/<scene>/cache`), the run-3 / run-4 K = 65,536 `lloyd_wopa_area` caches (`tilequant/run4/<scene>/kmeans` for treehill, flowers, stump; `tilequant/run3/garden/kmeans`; the warm-start fallback) and the gsplat wheel |
 | this notebook's own earlier output | only to resume | `gn2b/` (rows, reports, metas), `gn2b_work/` (logs, any reclustered warm start) and `gn_cache_even/` (`M_even`); every (config, K, rho) row resumes on its own |
 
 The restore cell raises **before any install** if a checkpoint or a sort cache is missing, a checkpoint's
@@ -577,14 +585,14 @@ sha1 is not Amendment 7's pin, E2's `M` or warm starts are missing, or no run-5 
 two have override flags in the config cell, `ALLOW_WITHOUT_E2_OUTPUT` and `ALLOW_WITHOUT_RUN5_OUTPUT`,
 both False; set one only to run without that input on purpose. Without E2's output the full `M` is
 recomputed (a new realization of the probe noise, not E2's `M`) and the warm starts come from the
-run-5 caches or a reclustering; every row records its `m_source` and `warm_start_source` either way.
-Whether Kaggle still keeps E2's notebook output could not be checked from here (no Kaggle credentials);
-E2's working directory held about 11 checkpoints, 11 GN caches of 480 MB and the clustering caches, so
-it should be within Kaggle's output limit.
+run-5 caches or a reclustering; every row records its `m_source` and `warm_start_source`, and the
+reproduction check then reports `inputs_differ`. Whether Kaggle still keeps E2's notebook output could
+not be checked from here (no Kaggle credentials); E2's working directory held about 11 checkpoints,
+11 GN caches of 480 MB and the clustering caches, so it should be within Kaggle's output limit.
 
 **What it does:** restore, install (the restored run-5 wheel; no TorchPQ, E2b clusters nothing with it),
-the CUDA smoke tests, one job per scene on the first free GPU in the order train (the longest),
-treehill, garden, flowers, with the 9.5 h start cutoff; then the E2b cell and the bundle cell. Each job
+the CUDA smoke tests, one job per scene on the first free GPU in the order treehill, garden, flowers,
+stump, with the 9.5 h start cutoff; then the E2b cell and the bundle cell. Each job
 (`kaggle/gn_e2b_scene.py`):
 
 - refuses a scene that is not E2b's, a wrong sha1, a missing sort cache or a results CSV that is not
@@ -592,43 +600,49 @@ treehill, garden, flowers, with the 9.5 h start cutoff; then the E2b cell and th
 - downloads its scene and deletes it at the end; checks render parity;
 - loads E2's full `M` (key-checked, and compared with the key in E2's committed meta) or recomputes it;
   computes `M_even` with E0's GN pass over the even-indexed train views (cached in `gn_cache_even/`);
-- runs the lifted-assignment check once per floored metric the pending rows use: `M_even` at the four
-  rho and the full `M` at the three rho > 0, 7 per scene (E2 checked the unfloored full `M`);
-- writes per K the four CV rows, then the three full-`M` rows (`gn2b_results_<scene>.csv`, 14 rows).
-  CV rows carry the odd-view dMSE (`measured_odd_*`, the selection), the test-view dMSE (reported),
-  `P` on `M_even` and the bytes; full-`M` rows carry E2's whole measurement (`P`, `D` on train and test
-  views, test PSNR / SSIM / LPIPS, train PSNR, bytes). Every row also has the floored objective GN-VQ
-  minimized and the unfloored one (`objective_M_*`), and its warm start's and `M`'s sources.
+- runs the lifted-assignment check once per metric the pending rows use: `M_even` at the four rho and the
+  full `M` at the four rho, 8 per scene;
+- writes per K the four CV rows, then the four full-`M` rows (`gn2b_results_<scene>.csv`, 16 rows). CV
+  rows carry the odd-view dMSE (`measured_odd_*`, the selection), the test-view dMSE (reported), `P` on
+  `M_even` and the bytes; full-`M` rows carry E2's whole measurement (`P`, `D` on train and test views,
+  test PSNR / SSIM / LPIPS, train PSNR, bytes). Every row also has the floored objective GN-VQ minimized
+  and the unfloored one (`objective_M_*`), and its warm start's and `M`'s sources.
 
-**E2b cell** (`bench/gn/e2b.py` -> `gn2b_e2b.json`, `gn2b_rho.png`): `rho_cv` per scene and K, the
-criterion's verdict (`works` / `does not work` / `incomplete`), and the two Spearman correlations.
-`e2b.check_rows` and `g2.check_rows` refuse any row that is not E2b's or E2's own.
+**E2b cell** (`bench/gn/e2b.py` -> `gn2b_e2b.json`, `gn2b_rho.png`): `rho_cv` per scene and K;
+`verdicts` = `{fidelity, garden_control, psnr}` (`fidelity` and `psnr` are `works` / `does not work` /
+`incomplete`); `criterion_fidelity` (R per cell, the count, treehill's R); `criterion_psnr` (with the
+cross-term caveat); `reproduction_rho0` (the status per scene and K, and the `flagged` cells); the
+Spearman correlations. The plot shows R and test PSNR against rho. `e2b.check_rows` and `g2.check_rows`
+refuse any row that is not E2b's or E2's own.
 
 **Outputs** (`gn2b_bundle.zip`, arcname `gn2b/`): `gn2b_results_<scene>.csv`, `gn2b_meta_<scene>.json`
 (sources, lifted checks, `gn_full` / `gn_even`, `missing_rows`, timings), one
-`gn2b_<config>_rho<rho>_k<K>_s0_<scene>.json` per row (56), `gn2b_e2b.json`, `gn2b_rho.png`,
+`gn2b_<config>_rho<rho>_k<K>_s0_<scene>.json` per row (64), `gn2b_e2b.json`, `gn2b_rho.png`,
 `gn2b_selftest.json`, `gn_e2b_<scene>_log_tail.json`, `timings.json`.
 
-**Cost, an estimate from E2's measured parts, not a measurement:** per scene, 14 GN-VQ runs (E2 measured
-112.6-120.0 s at K = 4,096 and 134.6-155.2 s at K = 65,536 on these four scenes, about 1,730-1,930 s for
-7 of each; the floor may change the iteration counts), 7 lifted checks (27.0-27.8 s each in E2), 14
+**Cost, an estimate from E2's measured parts, not a measurement:** per scene, 16 GN-VQ runs (E2 measured
+112.6-120.7 s at K = 4,096 and 134.6-155.2 s at K = 65,536 on these four scenes, about 1,980-2,210 s for
+8 of each; the floor may change the iteration counts), 8 lifted checks (27.0-28.2 s each in E2), 16
 evaluations (E2's job time not spent on clustering, GN-VQ, the lifted check, the download or the GN pass
-came to 35.6-51.2 s per row on these scenes; CV rows skip the full-pipeline evaluation), a GN pass over
-half the train views (E2's full pass took 9.5-16.2 s) and the download (62.1-500.0 s). That is roughly
-2,500-3,400 s per scene, so the four jobs should take about 1.5-2 h on two GPUs.
+came to 37.2-51.2 s per row on these scenes; CV rows skip the full-pipeline evaluation), a GN pass over
+half the train views (E2's full pass took 8.4-12.8 s on the three scenes that ran one) and the download
+(38.4-73.5 s). That is roughly 2,800-3,300 s per scene, so the four jobs, two rounds of two, should take
+about 1.6-1.9 h on two GPUs.
 
-**Local checks:** `pytest bench/gn/test_gn.py` (80 tests) and `python bench/gn/dryrun/dryrun_gn_e2b.py`
+**Local checks:** `pytest bench/gn/test_gn.py` (82 tests) and `python bench/gn/dryrun/dryrun_gn_e2b.py`
 (8 stages: the notebook's structure and pins; E2 on the toy for the four scenes; the restore cell on a
-fake `/kaggle/input` with an E2 and a run-5 output, including both refusals and their flags; all 14 rows
-on 4 scenes with the fallbacks on flowers; resume; rho = 0 reproducing E2's toy GN-VQ report exactly;
-refusals before GPU work; the E2b and bundle cells). Rebuild the notebook with
-`python kaggle/build_gn_e2b_bench.py` first.
+fake `/kaggle/input` with an E2 and a run-5 output, including both refusals and their flags; all 16 rows
+on 4 scenes with the fallbacks on flowers; resume; rho = 0 reproducing E2's toy GN-VQ report exactly and
+E2b's own rho = 0 rows equal to E2's toy rows; refusals before GPU work; the E2b and bundle cells).
+Rebuild the notebook with `python kaggle/build_gn_e2b_bench.py` first.
 
 **After the run:** unpack `gn2b_bundle.zip` into `kaggle/gn_e2b/` (arcname `gn2b/`), check every file
-against its zip entry, and make a data-only commit. Read `gn2b_e2b.json` first (`verdict`, then
-`criterion`), then each meta's `missing_rows`, `lifted_checks`, `gn_full.source` and `warm_starts`, every
-row's `writer_codes_equal`, and each log tail's `exit_code` / `skipped_by_cutoff`, before quoting a row.
-Then FINDINGS section 11 from the files, checked mechanically, post-hoc items labelled.
+against its zip entry, and make a data-only commit. Read `gn2b_e2b.json` first: `reproduction_rho0`
+(anything `flagged`, or `inputs_differ`, qualifies every comparison with E2), then `verdicts`, then
+`criterion_fidelity` and `criterion_psnr`; then each meta's `missing_rows`, `lifted_checks`,
+`gn_full.source` and `warm_starts`, every row's `writer_codes_equal`, and each log tail's `exit_code` /
+`skipped_by_cutoff`, before quoting a row. Then FINDINGS section 11 from the files, checked
+mechanically, post-hoc items labelled.
 
 ## Session decisions (E0, 2026-09-19)
 
@@ -1265,7 +1279,7 @@ one.
 - **FINDINGS section 10 was checked mechanically,** as sections 8 and 9 were. The check caught one wrong
   figure before commit: `meta.json` differs by up to 2 bytes between a GN-VQ row and `lloyd_wopa_area`,
   not 1.
-- **E2b's scenes, and the four readings of Amendment 9, are Dace's** (treehill, flowers and train with
+- **E2b's scenes (superseded by Amendment 10, below), and the four readings of Amendment 9, are Dace's** (treehill, flowers and train with
   garden as the control; `rho_cv`'s codebook is the full-`M` codebook; the Spearman pairs the CV
   codebooks' odd-view dMSE with the full-`M` codebooks' test dMSE; warm starts from E2's notebook output;
   the full `M` from E2's `gn_cache`). The caveat in Amendment 9 b.e (dMSE and PSNR can disagree; E2's
@@ -1297,6 +1311,41 @@ one.
   download in E2), and the two criterion scenes come next so that a short session still has them.
 - **Commit split as for E2:** the builder with the code, the rebuilt notebook with the docs.
 
+### Amendment 10 session (2026-09-25, before any E2b data)
+
+Dace re-derived E2b's scene choice from fidelity (dMSE) instead of PSNR and added a fidelity criterion and
+a reproduction check. No E2b row, bundle or log existed; the amendment was committed before the code.
+
+- **Dace's numbers were checked against E2's rows before writing the amendment,** and all held. Two
+  things came out that the amendment records rather than hides: the selection measure is the difference
+  (test ratio minus train ratio), because with the quotient room (1.624) ranks above flowers (1.596) at
+  K = 65,536; and "outdoor 360-degree scenes" is not a clean separation (room, indoor, grows 0.3150 ->
+  0.5115 at K = 65,536, and garden, outdoor, barely moves), so the amendment names the scenes by the
+  measure only.
+- **Train stays a development scene** although E2b no longer uses it: Amendment 9 declared it one after
+  E2's results were seen, and dropping it from E2b does not make it unseen. This is the conservative
+  reading of a case the request left open.
+- **E2b now runs its own rho = 0 full-`M` rows,** which Amendment 9 b.c had excluded ("not recomputed").
+  Both the reproduction check and "E2b's own rho = 0 value" need them. Amendment 9's items keep E2's
+  `gn_vq` row as their rho = 0 codebook (the PSNR criteria and the Spearman as written); Amendment 10's
+  items use E2b's own row, which shares the run and the realization of `M` with the other E2b rows. The
+  Spearman is reported both ways.
+- **The reproduction tolerances (1e-3 dB, 1e-3 relative test dMSE) are this session's choice**, stated
+  in Amendment 10 c before any data: GN-VQ's update uses float64 `index_add_` on the GPU, whose atomic
+  order is not fixed, so a bit-for-bit match is not guaranteed; 1e-3 dB is well under every gain E2
+  measured at these K and half of TorchPQ's cross-session spread. `identical` is reported separately, and
+  `inputs_differ` keeps a comparison with a recomputed `M` or warm start from being read as a failure.
+- **The garden control is reported with the fidelity verdict, not part of it** (Amendment 10 d's
+  wording), so a missing garden row leaves the fidelity verdict alone; a test pins that.
+- **"At rho_cv = 0 a cell is not below its own rho = 0 value"** follows from R being the same number; it
+  is written into the amendment so the case is not argued later.
+- **Queue order treehill, garden, flowers, stump:** all four are MipNeRF360 at data factor 4 with similar
+  E2 job times, so no longest-first reason remains; treehill and garden come first because both criteria
+  need them.
+- **One more lifted check per scene** (8): the rho = 0 full-`M` rows use the unfloored full `M`, which
+  E2 checked, but E2b checks every metric it uses in its own session rather than rely on E2's record,
+  which would not cover a recomputed `M`.
+
 ### Open items (E0, E1, E2: closed; E2b: open)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
@@ -1312,7 +1361,7 @@ one.
   exploratory phase included; the Tanks & Temples jobs at data factor 1 took 2,940.3 s (truck) and
   2,985.3 s (train); eps = 1e-2 took 20 iterations at K = 1,024, 15-20 at 4,096, 12-15 at 16,384 and 9-10
   at 65,536 (FINDINGS section 10); the run-5 wheel's key still matched (install 169.3 s, no build).
-- **Run E2b on Kaggle.** Built and dry-run (Amendment 9; see "E2b notebook" for the steps and the two
+- **Run E2b on Kaggle.** Built and dry-run (Amendments 9 and 10; see "E2b notebook" for the steps and the two
   required inputs). Then unpack `gn2b_bundle.zip` into `kaggle/gn_e2b/`, commit it as data only, and
   write FINDINGS section 11 from it.
 - ~~**Amendment 6's two rows cost little.**~~ **E1 done;** the measured costs are in FINDINGS
@@ -1495,7 +1544,7 @@ one.
 | E0 (`bench/gn-vq`) | does a Gauss-Newton metric on shN predict the shN-only render error (G0, `PREREG_GN.md`)? | **G0 passed** (2026-09-20, second attempt; the first crashed in cuSOLVER). 34 non-tied pairs of 36, none misordered, every codebook calibrated within 0.5-2x. The two exploratory refines cut the GN objective 3.7-4.0x and still lost 0.04-0.53 dB after the codec's centroid quantizer. Details in FINDINGS section 8. |
 | E1 (`bench/gn-vq`) | does GN-VQ beat `lloyd_wopa_area` at equal size (G1, `PREREG_GN.md` with Amendments 5 and 6)? | **G1 failed** (run 2026-09-20), on the size rule, on all six seeds: GN-VQ was +2.37% (garden) and +0.98% to +1.01% (bicycle) larger, beyond 0.5%, while gaining +0.195 to +0.201 / +0.087 to +0.091 dB. The rate-distortion secondary favours GN-VQ (bicycle BD-rate -9.84%; garden entirely above). Details in FINDINGS section 9. |
 | E2 (`bench/gn-vq`) | does GN-VQ (eps 1e-2) beat `lloyd_wopa_area` in rate-distortion on 9 held-out scenes (G2a, `PREREG_GN.md` Amendments 7 and 8)? | **G2a passed** (run 2026-09-21/22): 9 of 9 held-out wins, mean BD-rate -5.37% against -5%. H2b (against `lloyd_trace`) holds with 8 of 9 counted; treehill's computed win is a cubic-fit artifact. Post hoc: PCHIP gives 8 of 9 and -5.66%; the shN stream alone about -31%. Details in FINDINGS section 10. |
-| E2b (`bench/gn-vq`) | does an isotropic floor on the metric, selected by train-view cross-validation, fix GN-VQ's weak train-to-test transfer on treehill without costing garden (`PREREG_GN.md` Amendment 9, exploratory)? | **built, not run** (`kaggle/gn_e2b_bench.ipynb`); 80 CPU tests and the E2b dry run pass. |
+| E2b (`bench/gn-vq`) | does an isotropic floor on the metric, selected by train-view cross-validation, improve GN-VQ's fidelity on the test views of treehill, flowers and stump without costing garden (`PREREG_GN.md` Amendments 9 and 10, exploratory)? | **built, not run** (`kaggle/gn_e2b_bench.ipynb`); 82 CPU tests and the E2b dry run pass. |
 
 ## PR plan (`feat/png-weighted-kmeans`)
 
@@ -1518,5 +1567,5 @@ one.
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
 - **E0 / E1 / E2 / E2b:** see "Open items (E0, E1, E2: closed; E2b: open)". E0 is done and G0 passed
   (`kaggle/gn_e0/gn/`, FINDINGS section 8); E1 is done and G1 failed (`kaggle/gn_e1/gn1/`, FINDINGS
-  section 9); E2 is done and G2a passed (`kaggle/gn_e2/gn2/`, FINDINGS section 10); E2b (Amendment 9) is
+  section 9); E2 is done and G2a passed (`kaggle/gn_e2/gn2/`, FINDINGS section 10); E2b (Amendments 9 and 10) is
   built and waits for a Kaggle run with E2's and run 5's notebook outputs attached.

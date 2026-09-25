@@ -1519,6 +1519,8 @@ smoke tests 15.7 s. The longest job was room.
   `lloyd_trace` is weakest on treehill, flowers and train (post hoc).
 
 Next: `PREREG_GN.md` Amendment 9 (`1ae0c05b`, written after these results) pre-registers E2b, an
-exploratory run on treehill, flowers and train with garden as the control, which adds an isotropic
-floor to the metric in the assignment as well as the update and selects its strength by train-view
-cross-validation. From that amendment on, treehill, flowers and train are development scenes.
+exploratory run that adds an isotropic floor to the metric in the assignment as well as the update and
+selects its strength by train-view cross-validation. Amendment 10 (`e580b731`, before any E2b data) moves
+it to treehill, flowers and stump, the held-out scenes whose GN-VQ-to-`lloyd_trace` ratio of measured
+dMSE grows most from train to test views, with garden as the control, and judges it on test dMSE. From
+those amendments on, treehill, flowers, stump and train are development scenes.
