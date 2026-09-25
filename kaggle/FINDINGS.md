@@ -1517,3 +1517,8 @@ smoke tests 15.7 s. The longest job was room.
   the whole-file figures by the 77-90% of each file whose size does not change.
 - **Limits:** k-means seed 0 only, four points per curve, and the train-to-test transfer against
   `lloyd_trace` is weakest on treehill, flowers and train (post hoc).
+
+Next: `PREREG_GN.md` Amendment 9 (`1ae0c05b`, written after these results) pre-registers E2b, an
+exploratory run on treehill, flowers and train with garden as the control, which adds an isotropic
+floor to the metric in the assignment as well as the update and selects its strength by train-view
+cross-validation. From that amendment on, treehill, flowers and train are development scenes.
