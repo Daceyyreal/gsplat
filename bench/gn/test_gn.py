@@ -1979,85 +1979,171 @@ def test_e2b_views_labels_and_selection():
     assert e2b.select_rho_cv({0.0: 1.0, 1e-3: float("nan"), 1e-2: 2.0, 1e-1: 1.0}) is None
 
 
-def _e2b_fixture(treehill_psnr=None, garden_psnr=None, odd=None):
+def _e2b_fixture(treehill_psnr=None, garden_psnr=None, odd=None, full_dmse=None, rho0=None, drop=()):
     """E2 rows (lloyd_wopa_area, lloyd_trace, gn_vq) and E2b rows for the four scenes at both K.
-    E2's lloyd_trace sits at 23.30 dB, E2's gn_vq at 23.20 dB; the full-M codebooks at rho > 0 take
-    PSNR from `treehill_psnr` / `garden_psnr` (rho -> PSNR), default 23.25. `odd` maps rho -> odd-view
-    dMSE (default: rho 1e-2 lowest)."""
+
+    E2: lloyd_trace at 23.30 dB with test dMSE 2e-4, gn_vq at 23.20 dB with test dMSE 1e-4 and
+    15,000,000 B. E2b's own rho = 0 full-M row reproduces E2's gn_vq exactly unless `rho0(scene, k)`
+    returns overrides. Full-M rows at rho > 0: PSNR from `treehill_psnr` / `garden_psnr` (rho -> PSNR,
+    default 23.25), test dMSE from `full_dmse(scene, k, rho)` (default 1.2 x the odd score). `odd` maps
+    rho -> odd-view dMSE (default: rho 1e-2 lowest). `drop` removes (scene, config, K, rho) rows."""
     odd = odd or {0.0: 4e-4, 1e-3: 3e-4, 1e-2: 2e-4, 1e-1: 5e-4}
     e2_rows, rows = [], []
     for s in e2b.SCENES:
         for k in e2b.K_VALUES:
-            for c, p in ((g2.BASELINE, 23.10), (g2.SCALAR, 23.30), (g2.GNVQ, 23.20)):
-                e2_rows.append({**_g1_row(s, c, 0, str(p), "15000000", k), "measured_test_clamped": "1e-4"})
+            for c, p, d in ((g2.BASELINE, 23.10, 3e-4), (g2.SCALAR, 23.30, 2e-4), (g2.GNVQ, 23.20, 1e-4)):
+                e2_rows.append({**_g1_row(s, c, 0, repr(p), "15000000", k), "measured_test_clamped": repr(d)})
             for rho in e2b.RHOS:
-                rows.append({"scene": s, "config": e2b.CV, "n_clusters": str(k), "seed": "0", "rho": repr(rho),
-                             "measured_odd_clamped": repr(odd[rho]), "measured_test_clamped": repr(odd[rho] * 1.1),
-                             "size_bytes": "15000000"})
-                if rho > 0:
+                common = {"scene": s, "n_clusters": str(k), "seed": "0", "rho": repr(rho),
+                          "m_source": "restored_cache", "warm_start_source": "e2_work_cache"}
+                rows.append({**common, "config": e2b.CV, "measured_odd_clamped": repr(odd[rho]),
+                             "measured_test_clamped": repr(odd[rho] * 1.1), "size_bytes": "15000000"})
+                if rho == 0:
+                    full = {"PSNR": repr(23.2), "size_bytes": "15000000", "measured_test_clamped": repr(1e-4)}
+                    full.update((rho0 or (lambda s_, k_: {}))(s, k))
+                else:
                     table = {"treehill": treehill_psnr, "garden": garden_psnr}.get(s) or {}
-                    rows.append({"scene": s, "config": e2b.FULL, "n_clusters": str(k), "seed": "0",
-                                 "rho": repr(rho), "PSNR": repr(table.get(rho, 23.25)), "size_bytes": "15010000",
-                                 "measured_test_clamped": repr(odd[rho] * 1.2), "train_PSNR": "24.0"})
+                    d = (full_dmse or (lambda s_, k_, r_: None))(s, k, rho)
+                    full = {"PSNR": repr(table.get(rho, 23.25)), "size_bytes": "15010000",
+                            "measured_test_clamped": repr(d if d is not None else odd[rho] * 1.2)}
+                rows.append({**common, "config": e2b.FULL, "train_PSNR": "24.0", **full})
+    rows = [r for r in rows if (r["scene"], r["config"], int(r["n_clusters"]), float(r["rho"])) not in set(drop)]
     return e2_rows, rows
 
 
-def test_e2b_criterion_every_path():
-    """Amendment 9 b.e: treehill must beat E2's lloyd_trace at both K (strictly), garden must stay within
-    0.02 dB of E2's gn_vq at both K (inclusive); rho_cv = 0 uses E2's gn_vq row; a missing row is
-    incomplete."""
-    # works: treehill's rho_cv (1e-2) codebook at 23.31 > 23.30; garden's at 23.19 >= 23.20 - 0.02
+def test_e2b_psnr_criterion_every_path():
+    """Amendment 9 b.e, as Amendment 10 e keeps it (reported): treehill must beat E2's lloyd_trace at both
+    K (strictly), garden must stay within 0.02 dB of E2's gn_vq at both K (inclusive); at rho_cv = 0 the
+    codebook is E2's gn_vq row; a missing row is incomplete."""
     e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.31}, garden_psnr={1e-2: 23.19})
     res = e2b.judge_e2b(rows, e2_rows)
-    assert res["verdict"] == "works" and res["criterion"]["treehill_ok"] and res["criterion"]["garden_ok"]
+    c = res["criterion_psnr"]
+    assert res["verdicts"]["psnr"] == "works" and c["treehill_ok"] and c["garden_ok"]
+    assert c["caveat"] == e2b.CROSS_TERM_CAVEAT
     v = res["per_scene"]["treehill"]["65536"]
     assert v["rho_cv"] == 1e-2 and v["rho_cv_label"] == "1e-2" and v["missing"] == []
     assert v["rho_cv_vs_e2"][g2.SCALAR]["dPSNR"] == round(23.31 - 23.30, 9)
-    # treehill equal to lloyd_trace is not "higher": does not work
+    # equal to lloyd_trace is not "higher"
     e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.30}, garden_psnr={1e-2: 23.19})
-    res = e2b.judge_e2b(rows, e2_rows)
-    assert res["verdict"] == "does not work" and not res["criterion"]["treehill_ok"] and res["criterion"]["garden_ok"]
+    c = e2b.judge_e2b(rows, e2_rows)["criterion_psnr"]
+    assert c["verdict"] == "does not work" and not c["treehill_ok"] and c["garden_ok"]
     # garden exactly 0.02 dB below E2's gn_vq passes; a hair more fails
     e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.31}, garden_psnr={1e-2: 23.18})
-    assert e2b.judge_e2b(rows, e2_rows)["criterion"]["garden_ok"]
+    assert e2b.judge_e2b(rows, e2_rows)["criterion_psnr"]["garden_ok"]
     e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.31}, garden_psnr={1e-2: 23.1799999})
-    res = e2b.judge_e2b(rows, e2_rows)
-    assert not res["criterion"]["garden_ok"] and res["verdict"] == "does not work"
-    # rho_cv = 0: the codebook is E2's gn_vq row (23.20 < 23.30 on treehill, cost 0 on garden)
-    e2_rows, rows = _e2b_fixture(odd={0.0: 1e-4, 1e-3: 3e-4, 1e-2: 2e-4, 1e-1: 5e-4})
-    res = e2b.judge_e2b(rows, e2_rows)
-    t = res["per_scene"]["treehill"]["4096"]
+    assert not e2b.judge_e2b(rows, e2_rows)["criterion_psnr"]["garden_ok"]
+    # rho_cv = 0: Amendment 9's codebook is E2's gn_vq row, even when E2b's own rho = 0 row differs
+    e2_rows, rows = _e2b_fixture(odd={0.0: 1e-4, 1e-3: 3e-4, 1e-2: 2e-4, 1e-1: 5e-4},
+                                 rho0=lambda s, k: {"PSNR": repr(23.5)})
+    t = e2b.judge_e2b(rows, e2_rows)["per_scene"]["treehill"]["4096"]
     assert t["rho_cv"] == 0.0 and t["rho_cv_codebook"]["source"] == "e2_gn_vq_row"
     assert t["rho_cv_codebook"]["PSNR"] == 23.20
-    assert res["criterion"]["garden_ok"] and not res["criterion"]["treehill_ok"]
-    # one CV row missing on treehill: no rho_cv there, incomplete
-    e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.31})
-    rows = [r for r in rows if not (r["scene"] == "treehill" and r["config"] == e2b.CV
-                                    and r["n_clusters"] == "4096" and r["rho"] == repr(1e-3))]
+    # a missing CV row: no rho_cv, incomplete
+    e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.31}, drop=[("treehill", e2b.CV, 4096, 1e-3)])
     res = e2b.judge_e2b(rows, e2_rows)
-    assert res["verdict"] == "incomplete" and res["per_scene"]["treehill"]["4096"]["rho_cv"] is None
-    assert any("treehill gn_vq_floor_cv K=4096 rho=1e-3" in m for m in res["criterion"]["missing"])
-    # flowers and train never enter the criterion; E2's lloyd_trace missing on treehill is incomplete
-    e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.31}, garden_psnr={1e-2: 23.19})
-    assert e2b.judge_e2b(rows, [r for r in e2_rows if r["scene"] != "flowers"])["verdict"] == "works"
-    no_trace = [r for r in e2_rows if not (r["scene"] == "treehill" and r["config"] == g2.SCALAR)]
-    assert e2b.judge_e2b(rows, no_trace)["verdict"] == "incomplete"
+    assert res["verdicts"]["psnr"] == "incomplete" and res["per_scene"]["treehill"]["4096"]["rho_cv"] is None
+    assert any("treehill gn_vq_floor_cv K=4096 rho=1e-3" in m for m in res["criterion_psnr"]["missing"])
+
+
+def test_e2b_fidelity_criterion_every_path():
+    """Amendment 10 d: R = test dMSE at rho_cv / E2's lloyd_trace; works if R is below E2b's own rho = 0
+    R in >= 5 of the 6 cells of treehill, flowers and stump, and treehill's R at K = 65,536 is below 1.
+    Garden control (reported): test dMSE at rho_cv at most 5% above its own rho = 0."""
+    better = lambda s, k, r: 0.8e-4 if r == 1e-2 else None  # below own rho = 0 (1e-4) everywhere
+    e2_rows, rows = _e2b_fixture(full_dmse=better)
+    res = e2b.judge_e2b(rows, e2_rows)
+    f = res["criterion_fidelity"]
+    assert res["verdicts"]["fidelity"] == "works" and f["n_cells_below_own_rho0"] == 6 and f["n_cells"] == 6
+    assert f["treehill_R_at_max_K"] == pytest.approx(0.4) and f["treehill_R_below_1"]
+    assert f["cells"]["stump/4096"] == {"rho_cv": 1e-2, "R_rho_cv": pytest.approx(0.4), "R_rho0": pytest.approx(0.5),
+                                        "below_own_rho0": True}
+    assert "train/4096" not in f["cells"] and set(e2b.FIDELITY_SCENES) == {"treehill", "flowers", "stump"}
+    assert res["verdicts"]["garden_control"] is True
+    assert f["garden_control"]["65536"]["test_dmse_rho_cv_over_rho0"] == pytest.approx(0.8)
+    # the default fixture: R at rho_cv is 1.2, above own rho = 0 (0.5) everywhere and above 1 on treehill
+    e2_rows, rows = _e2b_fixture()
+    f = e2b.judge_e2b(rows, e2_rows)["criterion_fidelity"]
+    assert f["verdict"] == "does not work" and f["n_cells_below_own_rho0"] == 0 and not f["treehill_R_below_1"]
+    assert f["garden_control_ok"] is False  # 2.4e-4 is 140% above 1e-4
+    # 4 of 6 cells: flowers' two cells no better than its own rho = 0
+    e2_rows, rows = _e2b_fixture(full_dmse=lambda s, k, r: (1e-4 if s == "flowers" else 0.8e-4) if r == 1e-2 else None)
+    f = e2b.judge_e2b(rows, e2_rows)["criterion_fidelity"]
+    assert f["n_cells_below_own_rho0"] == 4 and f["verdict"] == "does not work"
+    # 5 of 6 is enough
+    e2_rows, rows = _e2b_fixture(full_dmse=lambda s, k, r: (1e-4 if (s, k) == ("flowers", 4096) else 0.8e-4)
+                                 if r == 1e-2 else None)
+    assert e2b.judge_e2b(rows, e2_rows)["criterion_fidelity"]["verdict"] == "works"
+    # 6 of 6 below own rho = 0, but treehill's R at K = 65,536 is not below 1: own rho = 0 at 3e-4 there
+    e2_rows, rows = _e2b_fixture(
+        full_dmse=lambda s, k, r: (2e-4 if (s, k) == ("treehill", 65536) else 0.8e-4) if r == 1e-2 else None,
+        rho0=lambda s, k: {"measured_test_clamped": repr(3e-4)} if (s, k) == ("treehill", 65536) else {})
+    f = e2b.judge_e2b(rows, e2_rows)["criterion_fidelity"]
+    assert f["n_cells_below_own_rho0"] == 6 and f["treehill_R_at_max_K"] == pytest.approx(1.0)
+    assert not f["treehill_R_below_1"] and f["verdict"] == "does not work"
+    # rho_cv = 0: R equals its own rho = 0 value, which is not below it; garden then costs 0%
+    e2_rows, rows = _e2b_fixture(odd={0.0: 1e-4, 1e-3: 3e-4, 1e-2: 2e-4, 1e-1: 5e-4})
+    f = e2b.judge_e2b(rows, e2_rows)["criterion_fidelity"]
+    assert f["n_cells_below_own_rho0"] == 0 and f["verdict"] == "does not work" and f["garden_control_ok"]
+    # garden control: exactly 5% above passes, a hair more fails; neither changes the fidelity verdict
+    for d, ok in ((1.05e-4, True), (1.0500001e-4, False)):
+        e2_rows, rows = _e2b_fixture(
+            full_dmse=lambda s, k, r, d=d: (d if s == "garden" else 0.8e-4) if r == 1e-2 else None)
+        res = e2b.judge_e2b(rows, e2_rows)
+        assert res["verdicts"]["garden_control"] is ok and res["verdicts"]["fidelity"] == "works"
+    # E2b's own rho = 0 row missing on stump: incomplete; a missing garden row leaves the verdict alone
+    e2_rows, rows = _e2b_fixture(full_dmse=better, drop=[("stump", e2b.FULL, 65536, 0.0)])
+    assert e2b.judge_e2b(rows, e2_rows)["verdicts"]["fidelity"] == "incomplete"
+    e2_rows, rows = _e2b_fixture(full_dmse=better, drop=[("garden", e2b.FULL, 65536, 0.0)])
+    res = e2b.judge_e2b(rows, e2_rows)
+    assert res["verdicts"]["fidelity"] == "works" and res["verdicts"]["garden_control"] is None
+
+
+def test_e2b_reproduction_check():
+    """Amendment 10 c: E2b's own rho = 0 full-M row against E2's gn_vq row."""
+    e2_rows, rows = _e2b_fixture()
+    rep = e2b.judge_e2b(rows, e2_rows)["reproduction_rho0"]
+    assert set(rep["cells"]) == {f"{s}/{k}" for s in e2b.SCENES for k in e2b.K_VALUES}
+    assert all(v["status"] == "identical" for v in rep["cells"].values()) and rep["flagged"] == []
+    cases = {
+        ("treehill", 4096): ({"PSNR": repr(23.2005)}, "within_tolerance"),  # 5e-4 dB
+        ("treehill", 65536): ({"measured_test_clamped": repr(1.0005e-4)}, "within_tolerance"),
+        ("flowers", 4096): ({"PSNR": repr(23.21)}, "not_reproduced"),  # 0.01 dB
+        ("flowers", 65536): ({"measured_test_clamped": repr(1.01e-4)}, "not_reproduced"),  # 1% dMSE
+        ("stump", 4096): ({"size_bytes": "15000001"}, "within_tolerance"),  # bytes alone
+        ("stump", 65536): ({"PSNR": repr(23.3), "m_source": "recomputed"}, "inputs_differ"),
+        ("garden", 4096): ({"warm_start_source": "recomputed"}, "inputs_differ"),
+    }
+    e2_rows, rows = _e2b_fixture()
+    for r in rows:
+        key = (r["scene"], int(r["n_clusters"]))
+        if r["config"] == e2b.FULL and float(r["rho"]) == 0 and key in cases:
+            r.update(cases[key][0])
+    rep = e2b.judge_e2b(rows, e2_rows)["reproduction_rho0"]
+    for (s, k), (_over, status) in cases.items():
+        assert rep["cells"][f"{s}/{k}"]["status"] == status, (s, k, rep["cells"][f"{s}/{k}"])
+    assert rep["cells"]["garden/65536"]["status"] == "identical"
+    assert rep["flagged"] == ["flowers/4096", "flowers/65536"]
+    assert rep["cells"]["stump/65536"]["dPSNR"] == pytest.approx(0.1)  # still reported
+    assert rep["tolerance"] == {"PSNR_db": 1e-3, "test_dmse_rel": 1e-3}
 
 
 def test_e2b_spearman_is_reported_not_judged():
-    e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.31}, garden_psnr={1e-2: 23.19})
+    e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.31}, garden_psnr={1e-2: 23.19},
+                                 rho0=lambda s, k: {"measured_test_clamped": repr(6e-4)})
     v = e2b.judge_e2b(rows, e2_rows)["per_scene"]["flowers"]["4096"]
+    odd = [4e-4, 3e-4, 2e-4, 5e-4]
     # CV test dMSE is 1.1 x the odd-view score: a perfect rank agreement
     assert v["spearman_odd_vs_cv_test"] == pytest.approx(1.0)
-    # the full-M test dMSE: rho 0 from E2's row (1e-4, the lowest), the others 1.2 x their odd score
-    odd = [4e-4, 3e-4, 2e-4, 5e-4]
-    full = [1e-4, 3.6e-4, 2.4e-4, 6e-4]
-    assert v["spearman_odd_vs_full_test"] == pytest.approx(gd.spearman(np.array(odd), np.array(full)))
+    # Amendment 9's version takes E2's gn_vq row (1e-4) at rho = 0; the own-row version E2b's (6e-4)
+    assert v["spearman_odd_vs_full_test"] == pytest.approx(gd.spearman(np.array(odd), np.array([1e-4, 3.6e-4, 2.4e-4, 6e-4])))
+    assert v["spearman_odd_vs_full_test_own_rho0"] == pytest.approx(
+        gd.spearman(np.array(odd), np.array([6e-4, 3.6e-4, 2.4e-4, 6e-4])))
 
 
 def test_e2b_check_rows_and_the_job():
-    """Only E2b's rows reach the criterion (no full-M row at rho = 0, no foreign scene or config); the
-    job's scenes, grid, columns and pins are Amendment 9's, and a foreign CSV is refused."""
+    """Only E2b's rows reach the criteria (its scenes, configs and rho grid, rho = 0 full-M rows included
+    since Amendment 10 c); the job's scenes, grid, columns and pins are Amendment 10's, and a foreign CSV
+    is refused."""
     import csv as _csv
     import re
 
@@ -2065,15 +2151,15 @@ def test_e2b_check_rows_and_the_job():
     import gn_e2b_scene as job
 
     e2_rows, rows = _e2b_fixture()
-    assert e2b.check_rows(rows)["per_scene"]["treehill"] == {e2b.CV: 8, e2b.FULL: 6}
-    for bad in ({**rows[0], "scene": "stump"}, {**rows[0], "config": g2.GNVQ},
-                {**rows[0], "config": e2b.FULL, "rho": "0.0"}, {**rows[0], "rho": "0.5"}):
+    assert e2b.check_rows(rows)["per_scene"]["stump"] == {e2b.CV: 8, e2b.FULL: 8}
+    for bad in ({**rows[0], "scene": "train"}, {**rows[0], "config": g2.GNVQ}, {**rows[0], "rho": "0.5"}):
         with pytest.raises(RuntimeError, match="not E2b rows"):
             e2b.check_rows(rows + [bad])
-    assert set(e2b.SCENES) == {"treehill", "flowers", "train", "garden"} and "stump" not in e2b.SCENES
+    assert e2b.SCENES == ("treehill", "flowers", "stump", "garden") and "train" not in e2b.SCENES
     assert job.K_VALUES == "4096,65536" and job.VQ_EPS == 1e-2 and job.VQ_MAX_ITERS == 20
     assert job.wanted_rows([4096], list(e2b.RHOS)) == [(e2b.CV, 4096, r) for r in e2b.RHOS] + \
-        [(e2b.FULL, 4096, r) for r in e2b.RHOS[1:]]
+        [(e2b.FULL, 4096, r) for r in e2b.RHOS]
+    assert len(job.wanted_rows(list(e2b.K_VALUES), list(e2b.RHOS))) == 16
     assert job.COLUMNS[:6] == ["scene", "config", "n_clusters", "seed", "rho", "metric_views"]
     assert set(e2job.COLUMNS) < set(job.COLUMNS) and "measured_odd_clamped" in job.COLUMNS
     repo = os.path.dirname(os.path.dirname(HERE))
@@ -2081,9 +2167,9 @@ def test_e2b_check_rows_and_the_job():
     pinned = dict(re.findall(r'"(\w+)": \("(?:tandt|mipnerf360)", "\w+", "([0-9a-f]{40})"\)', builder))
     run5 = {r["scene"]: r["ckpt_sha1"] for r in _csv.DictReader(
         open(os.path.join(repo, "kaggle", "run5", "tilequant", "run5_results.csv"), newline=""))}
-    assert pinned == {s: run5[s] for s in e2b.SCENES} and list(pinned)[0] == "train"
+    assert pinned == {s: run5[s] for s in e2b.SCENES} and list(pinned)[:2] == ["treehill", "garden"]
     with pytest.raises(ValueError, match="not an E2b scene"):
-        job.main(["--scene", "stump", "--dataset", "mipnerf360", "--benchmark_sh", "x", "--data_root", "x",
+        job.main(["--scene", "train", "--dataset", "tandt", "--benchmark_sh", "x", "--data_root", "x",
                   "--ckpt", "x", "--expected_sha1", "x", "--sort_cache_dir", "x", "--warm_dir", "x",
                   "--gn_cache", "x", "--gn_cache_even", "x", "--work_dir", "x", "--runs_dir", "x",
                   "--out_dir", "x", "--examples_dir", "x"])

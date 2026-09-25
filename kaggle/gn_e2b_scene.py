@@ -1,6 +1,6 @@
-"""E2b for one scene (kaggle/PREREG_GN.md Amendment 9 b): E2's GN-VQ with an isotropic floor on the GN
-metric, ``M_i + rho * tr(M_i) / 15 * I``, rho in {0, 1e-3, 1e-2, 1e-1}, K in {4,096, 65,536}, seed 0.
-Exploratory, not gated.
+"""E2b for one scene (kaggle/PREREG_GN.md Amendments 9 b and 10): E2's GN-VQ with an isotropic floor on
+the GN metric, ``M_i + rho * tr(M_i) / 15 * I``, rho in {0, 1e-3, 1e-2, 1e-1}, K in {4,096, 65,536}, seed
+0, on treehill, flowers, stump and garden. Exploratory, not gated.
 
     python kaggle/gn_e2b_scene.py --scene treehill --dataset mipnerf360 \
         --benchmark_sh examples/benchmarks/compression/mcmc.sh --data_root /tmp/data \
@@ -10,14 +10,15 @@ Exploratory, not gated.
         --e2_meta gsplat/kaggle/gn_e2/gn2/gn2_meta_treehill.json --work_dir .../gn2b_work/treehill \
         --runs_dir /tmp/gn2b_runs/treehill --out_dir /kaggle/working/gn2b --examples_dir gsplat/examples
 
-Rows per scene (``gn2b_results_<scene>.csv``, 14), per K:
+Rows per scene (``gn2b_results_<scene>.csv``, 16), per K:
 
 - ``gn_vq_floor_cv`` at each of the four rho: GN-VQ on the floored metric built from the **even-indexed**
   train views (``M_even``, E0's GN pass over those views only), written and decoded, scored by the
   render-vs-render dMSE on the **odd-indexed** train views (``measured_odd_clamped``; the selection) and,
   reported only, on the test views;
-- ``gn_vq_floor`` at rho = 1e-3, 1e-2 and 1e-1: GN-VQ on the floored full-train-view ``M`` (E2's metric),
-  evaluated exactly as E2's rows. The rho = 0 full-``M`` codebook is E2's ``gn_vq`` row and is not run.
+- ``gn_vq_floor`` at each of the four rho: GN-VQ on the floored full-train-view ``M`` (E2's metric),
+  evaluated exactly as E2's rows. The rho = 0 row is E2's ``gn_vq`` run again (Amendment 10 c): the
+  fidelity criterion uses it, and ``bench/gn/e2b.py`` checks it reproduces E2's row.
 
 The CV rows of a K come before its full-``M`` rows. The selection, the criterion and the Spearman
 correlations are ``bench/gn/e2b.py``'s, applied in the notebook with E2's committed rows.
@@ -36,7 +37,8 @@ Inputs, recorded per row:
 
 Before any GPU work it refuses a scene that is not E2b's, a checkpoint whose sha1 is not Amendment 7's
 pin, a missing sort cache and a results CSV that is not E2b's own. The lifted-assignment check runs once
-per scene for each floored metric the pending rows use (Amendment 9 b.g); a failure skips those rows.
+per scene for each metric the pending rows use (Amendment 9 b.g; 8 with Amendment 10 c's rho = 0 rows);
+a failure skips those rows.
 Everything else is E0's, E1's and E2's code, imported unchanged.
 """
 
@@ -129,11 +131,11 @@ def read_done(csv_path: str, scene: str) -> set:
 
 
 def wanted_rows(k_values: List[int], rhos: List[float]) -> List[tuple]:
-    """Per K, the four CV rows, then the full-M rows at rho > 0 (b.d)."""
+    """Per K, the four CV rows, then the four full-M rows, rho = 0 included (Amendment 10 c)."""
     out = []
     for k in k_values:
         out += [(e2b.CV, k, rho) for rho in rhos]
-        out += [(e2b.FULL, k, rho) for rho in rhos if rho > 0]
+        out += [(e2b.FULL, k, rho) for rho in rhos]
     return out
 
 
@@ -195,7 +197,7 @@ def main(argv=None):
     args = p.parse_args(argv)
     scene = args.scene
     if scene not in e2b.SCENES:
-        raise ValueError(f"{scene} is not an E2b scene (Amendment 9 b): {list(e2b.SCENES)}")
+        raise ValueError(f"{scene} is not an E2b scene (Amendment 10 b): {list(e2b.SCENES)}")
     k_values = [int(k) for k in args.k_values.split(",") if k]
     rhos = list(e2b.RHOS)  # fixed by Amendment 9 b.a
     parsed = r5a.parse_benchmark_sh(open(args.benchmark_sh).read())
@@ -212,7 +214,7 @@ def main(argv=None):
     meta = json.load(open(meta_path)) if os.path.exists(meta_path) else {"scene": scene, "timings_s": {}}
     t_job = time.perf_counter()
 
-    # Amendment 7's checkpoint and no other (Amendment 9 b, "Scenes"), before any download.
+    # Amendment 7's checkpoint and no other (Amendment 10 b), before any download.
     ckpt_sha1 = ts.file_sha1(args.ckpt)
     meta.update(ckpt_sha1=ckpt_sha1, expected_sha1=args.expected_sha1)
     if ckpt_sha1 != args.expected_sha1:
@@ -379,7 +381,8 @@ def main(argv=None):
         return row
 
     def evaluate_full(name, k, rho, C, labels, extra) -> Dict:
-        """b.c: E2's per-row measurement (the closure in gn_e2_scene.main), unchanged in substance."""
+        """Amendment 9 b.c / 10 c: E2's per-row measurement (the closure in gn_e2_scene.main), unchanged
+        in substance."""
         out_dir = os.path.join(args.runs_dir, f"k{k}_s{args.seed}", f"{name}_rho{e2b.rho_label(rho)}")
         wd, shn_q = decoded_shn(out_dir, C, labels)
         dec = wd["decoded"]

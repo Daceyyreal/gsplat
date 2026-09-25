@@ -26,19 +26,24 @@ md(
     r"""
 # E2b: an isotropic floor on the GN metric (`bench/gn-vq`), exploratory
 
-E2 passed G2a (FINDINGS section 10). Its GN-VQ transferred least from train to test views on treehill,
-flowers and train. `kaggle/PREREG_GN.md` **Amendment 9**, committed before any E2b code, fixes this run:
+E2 passed G2a (FINDINGS section 10). Measured as fidelity to the uncompressed model (render-vs-render
+dMSE), its GN-VQ generalized least from train to test views on treehill, stump and flowers.
+`kaggle/PREREG_GN.md` **Amendments 9 and 10**, committed before any E2b code or data, fix this run:
 
 - **Variant:** E2's GN-VQ (eps 1e-2, 20 iterations) with `M_i` replaced by
   `M_i + rho * tr(M_i) / 15 * I` in the assignment and the update, `rho` in {0, 1e-3, 1e-2, 1e-1}.
 - **Selection by training-view cross-validation:** `M` from the even-indexed train views only; each
   codebook scored by the dMSE on the odd-indexed train views; `rho_cv` is the minimizer. No test view.
-- **Check:** each `rho` > 0 also run with E2's full `M` and evaluated on the test views like E2's rows
-  (`rho = 0` is E2's `gn_vq` row, not recomputed).
-- **Scenes:** treehill, flowers, train, with garden as the control; K = 4,096 and 65,536, seed 0.
-- **Success criterion, stated in advance:** `rho_cv`'s codebook beats E2's `lloyd_trace` in test PSNR on
-  treehill at both K, AND costs at most 0.02 dB against E2's `gn_vq` on garden at both K.
-  Exploratory: no gate, and nothing about E2's verdicts changes.
+- **Check:** every `rho`, 0 included, also run with E2's full `M` and evaluated on the test views like
+  E2's rows; the `rho = 0` row is checked against E2's `gn_vq` row (reproduction, flagged if not).
+- **Scenes:** treehill, flowers, stump, with garden as the control; K = 4,096 and 65,536, seed 0.
+- **Fidelity criterion (Amendment 10), on test dMSE:** R = test dMSE at `rho_cv` / E2's `lloyd_trace`;
+  works if R is below E2b's own `rho = 0` R in at least 5 of the 6 cells of treehill, flowers and stump,
+  and treehill's R at K = 65,536 is below 1. Garden control: test dMSE at `rho_cv` at most 5% above its
+  own `rho = 0`.
+- **PSNR criteria (Amendment 9), reported alongside with the cross-term caveat:** treehill beats E2's
+  `lloyd_trace` at both K; garden within 0.02 dB of E2's `gn_vq`. Exploratory: neither gates anything,
+  and nothing about E2's verdicts changes.
 
 **Kaggle settings:** accelerator *GPU T4 x2*, Internet *on*.
 
@@ -46,7 +51,7 @@ flowers and train. `kaggle/PREREG_GN.md` **Amendment 9**, committed before any E
 
 | Attach | What E2b takes from it |
 |---|---|
-| **E2's notebook output** | `gn_cache/<scene>.pt` (E2's full `M`) and E2's warm-start codebooks: `gn2_work/<scene>/clusters/lloyd_wopa_area_k<K>_s0.pt` and `tilequant/e2_kmeans/<scene>/lloyd_wopa_area_s0.pt`; also carries copies of the checkpoints, sort caches and wheel |
+| **E2's notebook output** | `gn_cache/<scene>.pt` (E2's full `M`) and E2's warm-start codebooks: `gn2_work/<scene>/clusters/lloyd_wopa_area_k4096_s0.pt` and `tilequant/e2_kmeans/<scene>/lloyd_wopa_area_s0.pt` (K = 65,536); also carries copies of the checkpoints, sort caches and wheel |
 | the **run-5 notebook output** | the 4 checkpoints (sha1 pinned by Amendment 7), their seed-0 sort caches, the run-3 / run-4 K = 65,536 `lloyd_wopa_area` caches (the warm-start fallback) and the gsplat wheel |
 | this notebook's own earlier output | only to resume: `gn2b/`, `gn2b_work/`, `gn_cache_even/` |
 
@@ -56,8 +61,8 @@ flowers and train. `kaggle/PREREG_GN.md` **Amendment 9**, committed before any E
 | 2 | find and check the inputs (4 checkpoints with their sha1s, sort caches, E2's `M` and warm starts, run-5 caches, wheel), before any install |
 | 3 | install gsplat (restored wheel) and the example dependencies |
 | 4 | **CUDA smoke tests** (`bench/gn/selftest.py`), as in E0-E2 |
-| 5 | E2b jobs (`kaggle/gn_e2b_scene.py`), train first (the longest), then treehill, garden, flowers; 14 GN-VQ rows each. No job starts after 9.5 h |
-| 6 | the criterion, `rho_cv`, the Spearman correlations (`bench/gn/e2b.py` -> `gn2b_e2b.json`) and `gn2b_rho.png` |
+| 5 | E2b jobs (`kaggle/gn_e2b_scene.py`): treehill, garden, flowers, stump; 16 GN-VQ rows each. No job starts after 9.5 h |
+| 6 | the two criteria, `rho_cv`, the reproduction check, the Spearman correlations (`bench/gn/e2b.py` -> `gn2b_e2b.json`) and `gn2b_rho.png` |
 | 7 | `gn2b_bundle.zip` (top-level csv / json / png of `gn2b/`); raises last if a job failed |
 """
 )
@@ -75,13 +80,14 @@ import time
 
 FORK_URL = "https://github.com/Daceyyreal/gsplat.git"
 BRANCH = "bench/gn-vq"
-# Amendment 9 b: the E2b scenes in queue order (train first: data factor 1, the longest job), each with its
-# dataset, benchmark result directory and the checkpoint sha1 Amendment 7 pins.
+# Amendment 10 b: the E2b scenes in queue order (treehill and the garden control first, so a short
+# session has both criteria's anchors), each with its dataset, benchmark result directory and the
+# checkpoint sha1 Amendment 7 pins.
 SCENE_INFO = {
-    "train": ("tandt", "benchmark_tt_mcmc_1M_png_compression", "15394ef18333d9edd61facf46874238b45e84de7"),
     "treehill": ("mipnerf360", "benchmark_mcmc_1M_png_compression", "66fcadcf3298034c06227e69e6381e5a539f6980"),
     "garden": ("mipnerf360", "benchmark_mcmc_1M_png_compression", "e1ac1e31dde161dac584ff107198217b5e90e1db"),
     "flowers": ("mipnerf360", "benchmark_mcmc_1M_png_compression", "d0ea4a76881fb22b0c2848903cb0cce0001b06d5"),
+    "stump": ("mipnerf360", "benchmark_mcmc_1M_png_compression", "52715bdb81d53bf3793b4052e6ed656458d74fb3"),
 }
 SCENES = list(SCENE_INFO)
 BENCHMARK_SH = {"mipnerf360": "mcmc.sh", "tandt": "mcmc_tt.sh"}
@@ -476,7 +482,7 @@ record_timing("selftest_s", time.time() - t0)
 code(
     r"""
 # E2b jobs, one per scene, each on the first free GPU in SCENES order. Each job downloads its scene,
-# writes its 14 rows (resumable per config, K and rho) and deletes the data. A failed job does not stop
+# writes its 16 rows (resumable per config, K and rho) and deletes the data. A failed job does not stop
 # the others; the bundle cell raises at the very end if one failed.
 
 
@@ -510,7 +516,9 @@ print("exit codes:", JOB_EXITS, "\nfailed:", JOB_FAILED, "\nnot started (cutoff)
 
 code(
     r"""
-# Amendment 9 b.e-f: rho_cv, the pre-stated criterion and the Spearman correlations (bench/gn/e2b.py).
+# Amendments 9 b.e-f and 10: rho_cv, the fidelity criterion (Amendment 10 d), the PSNR criteria (Amendment 9,
+# reported with the cross-term caveat), the rho = 0 reproduction check and the Spearman correlations
+# (bench/gn/e2b.py). Neither criterion gates anything.
 # The comparators are E2's committed rows (kaggle/gn_e2/gn2 in the cloned repo); nothing E2 measured is
 # measured again. e2b.check_rows and g2.check_rows refuse anything that is not E2b's or E2's own.
 import csv
@@ -535,8 +543,13 @@ g2.check_rows(e2_rows)
 result = e2b.judge_e2b(rows, e2_rows)
 json.dump(result, open(f"{GN2B_OUT}/gn2b_e2b.json", "w"), indent=2)
 summary = {
-    "verdict (exploratory, not a gate)": result["verdict"],
-    "criterion": result["criterion"],
+    "verdicts (exploratory, not gates)": result["verdicts"],
+    "fidelity (Amendment 10 d)": {k: result["criterion_fidelity"][k] for k in (
+        "n_cells_below_own_rho0", "min_cells", "treehill_R_at_max_K", "treehill_R_below_1", "cells",
+        "garden_control", "missing")},
+    "PSNR (Amendment 9 b.e; caveat: cross term)": {k: result["criterion_psnr"][k] for k in (
+        "treehill", "garden", "missing")},
+    "reproduction of E2's gn_vq by E2b's rho = 0 row": result["reproduction_rho0"],
     "rho_cv": {s: {k: v["rho_cv_label"] for k, v in d.items()} for s, d in result["per_scene"].items()},
     "spearman odd-view dMSE vs full-M test dMSE": {
         s: {k: v["spearman_odd_vs_full_test"] for k, v in d.items()} for s, d in result["per_scene"].items()},
@@ -547,26 +560,32 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+# per K two rows: R (test dMSE over E2's lloyd_trace; the fidelity criterion) and test PSNR, against rho
 ks = [str(k) for k in e2b.K_VALUES]
-fig, axes = plt.subplots(len(ks), len(SCENES), figsize=(4.5 * len(SCENES), 3.6 * len(ks)), squeeze=False)
+fig, axes = plt.subplots(2 * len(ks), len(SCENES), figsize=(4.5 * len(SCENES), 3.3 * 2 * len(ks)), squeeze=False)
 xs = list(range(len(e2b.RHOS)))
 labels = [e2b.rho_label(r) for r in e2b.RHOS]
 for j, scene in enumerate(SCENES):
     for i, k in enumerate(ks):
-        ax, v = axes[i][j], result["per_scene"][scene][k]
-        psnr = [v["full"][l]["PSNR"] for l in labels]
-        ax.plot([x for x, p in zip(xs, psnr) if p is not None], [p for p in psnr if p is not None], "o-",
-                label="full-M codebook (rho 0 = E2 gn_vq)")
-        for c, style in ((g2.SCALAR, "--"), (g2.BASELINE, ":")):
-            if v["e2"][c]["PSNR"] is not None:
-                ax.axhline(v["e2"][c]["PSNR"], ls=style, color="k", lw=0.8, label=f"E2 {c}")
-        if v["rho_cv"] is not None and v["full"][v["rho_cv_label"]]["PSNR"] is not None:
-            ax.plot([labels.index(v["rho_cv_label"])], [v["full"][v["rho_cv_label"]]["PSNR"]], "r*", ms=12, label="rho_cv")
-        ax.set_xticks(xs, labels)
-        ax.set_title(f"{scene}, K = {k}", fontsize=9)
-        ax.set_xlabel("rho", fontsize=8); ax.set_ylabel("test PSNR (dB)", fontsize=8)
-        ax.tick_params(labelsize=7); ax.legend(frameon=False, fontsize=6)
-fig.suptitle(f"E2b (exploratory): the floor {result['verdict']}")
+        v = result["per_scene"][scene][k]
+        for row, (key, ylabel) in enumerate((("R", "test dMSE / E2 lloyd_trace"), ("PSNR", "test PSNR (dB)"))):
+            ax = axes[2 * i + row][j]
+            ys = [v["full"][l][key] for l in labels]
+            ax.plot([x for x, y in zip(xs, ys) if y is not None], [y for y in ys if y is not None], "o-",
+                    label="E2b full-M codebook")
+            if key == "R":
+                ax.axhline(1.0, ls="--", color="k", lw=0.8, label="E2 lloyd_trace")
+            else:
+                for c, style in ((g2.SCALAR, "--"), (g2.GNVQ, ":")):
+                    if v["e2"][c]["PSNR"] is not None:
+                        ax.axhline(v["e2"][c]["PSNR"], ls=style, color="k", lw=0.8, label=f"E2 {c}")
+            if v["rho_cv"] is not None and v["full"][v["rho_cv_label"]][key] is not None:
+                ax.plot([labels.index(v["rho_cv_label"])], [v["full"][v["rho_cv_label"]][key]], "r*", ms=12, label="rho_cv")
+            ax.set_xticks(xs, labels)
+            ax.set_title(f"{scene}, K = {k}", fontsize=9)
+            ax.set_xlabel("rho", fontsize=8); ax.set_ylabel(ylabel, fontsize=8)
+            ax.tick_params(labelsize=7); ax.legend(frameon=False, fontsize=6)
+fig.suptitle(f"E2b (exploratory): fidelity {result['verdicts']['fidelity']}, PSNR {result['verdicts']['psnr']}")
 fig.tight_layout()
 fig.savefig(f"{GN2B_OUT}/gn2b_rho.png", dpi=110)
 display(Image(f"{GN2B_OUT}/gn2b_rho.png"))
