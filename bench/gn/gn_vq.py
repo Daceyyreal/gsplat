@@ -157,12 +157,18 @@ def gn_vq(
     topk_at_iter: int = 1,
     topk: int = 64,
     log: Optional[Callable[[str], None]] = print,
+    report_metrics: Optional[Dict[str, Tuple[Tensor, int]]] = None,
 ) -> Tuple[Tensor, Tensor, Dict]:
     """GN-VQ (Amendment 5). Returns (float centroids for the writer, labels, report).
 
     ``clip=False`` and ``final_quantized_assignment=False`` are the two exploratory ablations of
     Amendment 5 e. The top-64 shortlist diagnostic runs at iteration ``topk_at_iter`` only: in E0 it
-    cost more than the assignment it checks."""
+    cost more than the assignment it checks.
+
+    ``report_metrics`` (name -> (packed metric, total pixels)) only adds reporting: the objective under
+    each of those metrics, with the same centroids and labels as ``objective_before_quantization`` and
+    ``objective_after_quantization``, goes to ``report["objectives_under"]``. E2b (Amendment 9 b) runs
+    GN-VQ on a floored metric and reports the unfloored one this way. Nothing else changes."""
     lo, hi = float(C0.detach().float().min()), float(C0.detach().float().max())
     C, labels = C0.clone(), labels0.clone()
     obj = gd.gn_objective(x, C, labels, M_packed, total_pixels)
@@ -218,6 +224,9 @@ def gn_vq(
             stopped = "rel_tol"
             break
     obj_before = gd.gn_objective(x, C, labels, M_packed, total_pixels)
+    before_under = {
+        name: gd.gn_objective(x, C, labels, m, px) for name, (m, px) in (report_metrics or {}).items()
+    }
     Cq, codes, rng = quantized_codebook(C)
     changed = 0.0
     if final_quantized_assignment:
@@ -243,6 +252,14 @@ def gn_vq(
         "objective_after_quantization": obj_after,
         "history": history,
     }
+    if report_metrics:
+        report["objectives_under"] = {
+            name: {
+                "objective_before_quantization": before_under[name],
+                "objective_after_quantization": gd.gn_objective(x, Cq, labels, m, px),
+            }
+            for name, (m, px) in report_metrics.items()
+        }
     if log is not None:
         log(
             f"GN-VQ done after {iters} iterations ({stopped}): objective {obj_before:.6g} "

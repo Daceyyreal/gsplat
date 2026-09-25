@@ -96,6 +96,47 @@ def bd_psnr(ref_bytes, ref_psnr, new_bytes, new_psnr, degree: int = DEGREE) -> f
     return _finite_or_nan(float(avg2 - avg1))
 
 
+def _bd_scaled_avg_diff(x_ref, y_ref, x_new, y_new, degree: int) -> Optional[tuple]:
+    """``(avg_new - avg_ref, lo, hi)``: each curve's y fitted as a polynomial in x with
+    ``numpy.polynomial.Polynomial.fit`` (which maps x onto [-1, 1] before fitting) and averaged over the
+    common x interval; None if the curves share no x range or have too few points."""
+    import numpy as np
+
+    x1, y1 = np.asarray(x_ref, dtype=float), np.asarray(y_ref, dtype=float)
+    x2, y2 = np.asarray(x_new, dtype=float), np.asarray(y_new, dtype=float)
+    lo, hi = max(x1.min(), x2.min()), min(x1.max(), x2.max())
+    if not hi > lo:
+        return None
+    deg = int(min(degree, len(x1) - 1, len(x2) - 1))
+    if deg < 1:
+        return None
+    i1 = np.polynomial.Polynomial.fit(x1, y1, deg).integ()
+    i2 = np.polynomial.Polynomial.fit(x2, y2, deg).integ()
+    return ((i2(hi) - i2(lo)) - (i1(hi) - i1(lo))) / (hi - lo), lo, hi
+
+
+def bd_rate_scaled(ref_bytes, ref_psnr, new_bytes, new_psnr, degree: int = DEGREE) -> float:
+    """BD-rate of ``new`` against ``ref`` in percent: the quantity ``bd_rate`` computes (Amendment 7 f),
+    with the domain-scaled fit Amendment 9 a uses from E2b on. ``bd_rate`` fits with ``np.polyfit`` on
+    uncentred PSNR, whose last digits depend on the machine (up to 1.2e-3 percentage points on E2's
+    curves); this matches the exact interpolating cubic to 1e-8 on them. NaN if undefined."""
+    import numpy as np
+
+    d = _bd_scaled_avg_diff(ref_psnr, np.log10(np.asarray(ref_bytes, dtype=float)),
+                            new_psnr, np.log10(np.asarray(new_bytes, dtype=float)), degree)
+    return math.nan if d is None else _finite_or_nan(float((10.0 ** d[0] - 1.0) * 100.0))
+
+
+def bd_psnr_scaled(ref_bytes, ref_psnr, new_bytes, new_psnr, degree: int = DEGREE) -> float:
+    """BD-PSNR of ``new`` against ``ref`` in dB: the quantity ``bd_psnr`` computes, with the
+    domain-scaled fit of Amendment 9 a. NaN if the curves share no byte range."""
+    import numpy as np
+
+    d = _bd_scaled_avg_diff(np.log10(np.asarray(ref_bytes, dtype=float)), ref_psnr,
+                            np.log10(np.asarray(new_bytes, dtype=float)), new_psnr, degree)
+    return math.nan if d is None else _finite_or_nan(float(d[0]))
+
+
 def _best(points: List[Dict]) -> Dict:
     """A curve's best point: the highest PSNR; a tie goes to fewer bytes (Amendment 8 a)."""
     return max(points, key=lambda p: (p["PSNR"], -p["bytes"]))

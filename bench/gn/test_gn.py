@@ -1848,3 +1848,245 @@ def test_e2_pinned_checkpoints_match_run5_and_amendment_7():
     # the queue: the held-out scenes first, garden and bicycle last
     order = list(pinned)
     assert set(order[:9]) == set(g2.HELD_OUT) and order[9:] == list(g2.DEV)
+
+
+# ---------------------------------------------------------------- E2b (Amendment 9) and the BD computation
+
+import bd_sensitivity as bds  # noqa: E402
+import e2b  # noqa: E402
+
+
+def test_bd_scaled_matches_the_exact_cubic_on_all_of_e2s_curves():
+    """Amendment 9 a: g2.bd_rate_scaled / g2.bd_psnr_scaled (numpy.polynomial.Polynomial.fit) against
+    the 50-digit exact interpolating cubic, on every ordered pair of E2's curves within a scene, to 1e-8
+    (percentage points and dB). g2.bd_rate / g2.bd_psnr, which produced E2's recorded values, stay as they
+    were: at H2b treehill they are further off, in a machine-dependent way."""
+    import itertools
+
+    rows = bds.load_rows()
+    n = 0
+    for s in g2.SCENES:
+        cfgs = list(g2.CONFIGS) + (list(g2.EXPLORATORY) if s in g2.DEV else [])
+        for a, b in itertools.permutations(cfgs, 2):
+            ref, new = bds.points(rows, s, a), bds.points(rows, s, b)
+            args = (ref[0], ref[1], new[0], new[1])
+            for fn, exact in ((g2.bd_rate_scaled, bds.exact_bd_rate), (g2.bd_psnr_scaled, bds.exact_bd_psnr)):
+                got, want = fn(*args), exact(*args)
+                assert math.isnan(got) == math.isnan(want), (s, a, b, fn.__name__)
+                if not math.isnan(want):
+                    assert abs(got - want) <= 1e-8, (s, a, b, fn.__name__, got, want)
+            n += 1
+    assert n == 9 * 12 + 2 * 20  # 4 configs on 11 scenes, plus the eps = 1e-4 curve on garden and bicycle
+    # undefined exactly where the old functions are, and exact on exact shifts
+    b, p = _G2_BASE_BYTES, _G2_BASE_PSNR
+    assert math.isnan(g2.bd_rate_scaled(b, p, b, [x + 1.0 for x in p]))
+    assert math.isnan(g2.bd_psnr_scaled(b, p, [x * 10 for x in b], p))
+    assert abs(g2.bd_rate_scaled(b, p, [x * 0.9 for x in b], p) + 10.0) < 1e-10
+    assert abs(g2.bd_psnr_scaled(b, p, b, [x + 0.5 for x in p]) - 0.5) < 1e-12
+
+
+def test_bd_sensitivity_reproduces_e2_within_tolerance_and_refuses_beyond_it():
+    """bench/gn/bd_sensitivity.py: E2's gn2_g2.json reproduces with g2's own code (every categorical field
+    identical, values within 2e-3 pp and 1e-6 dB); a value moved beyond the tolerance, or a changed
+    outcome, raises. The committed output agrees with a fresh run on everything that is not rounding."""
+    import copy
+
+    rows = bds.load_rows()
+    bundle = json.load(open(os.path.join(bds.BUNDLE, "gn2_g2.json")))
+    out = bds.analyse(rows, bundle)
+    assert out["reproduction"]["ok"] and out["reproduction"]["n_comparisons"] == 39
+    assert out["sign_disagreement"]["flagged"]["cubic_bundle"] == ["h2b/treehill"]
+    assert out["pchip"]["g2a"]["n_wins"] == 8
+    assert out["held_out_without_flagged_scenes_post_hoc"]["h2b"]["n_wins"] == 8
+    committed = json.load(open(bds.OUT))
+    for key in ("sign_disagreement", "held_out_without_flagged_scenes_post_hoc", "pchip", "monotonicity"):
+        assert json.dumps(committed[key], sort_keys=True) == json.dumps(out[key], sort_keys=True), key
+    for path, delta in ((("h2b", "per_scene", "treehill", "bd_rate"), -0.003),
+                        (("g2a", "per_scene", "stump", "bd_psnr"), 2e-6), (("g2a", "mean_bd_rate"), 0.01)):
+        t = copy.deepcopy(bundle)
+        d = t
+        for k in path[:-1]:
+            d = d[k]
+        d[path[-1]] += delta
+        with pytest.raises(AssertionError, match="do not reproduce"):
+            bds.analyse(rows, t)
+    t = copy.deepcopy(bundle)
+    t["g2a"]["per_scene"]["room"]["outcome"] = "loss"
+    with pytest.raises(AssertionError, match="outcome"):
+        bds.analyse(rows, t)
+
+
+def test_e2b_floored_metric():
+    """M_i + rho tr(M_i) / 15 I: the input itself at rho = 0; otherwise only the diagonal moves, the
+    trace scales by 1 + rho, zero-trace splats stay zero, and every eigenvalue rises by rho tr / 15."""
+    _, M, _ = _problem(n=300, k=8)
+    assert e2b.floored_metric(M, 0.0) is M
+    off = gm.TRIU_I != gm.TRIU_J
+    for rho in (1e-3, 1e-2, 1e-1):
+        F = e2b.floored_metric(M, rho)
+        assert F.dtype == M.dtype and F.shape == M.shape and not torch.equal(F, M)
+        assert torch.equal(F[:, off], M[:, off])
+        tr, trf = gm.trace_packed(M.double()), gm.trace_packed(F.double())
+        assert torch.allclose(trf, (1 + rho) * tr, rtol=1e-6, atol=0)
+        zero = tr == 0
+        assert bool(zero.any()) and torch.equal(F[zero], M[zero])
+        lam = torch.linalg.eigvalsh(gm.unpack(M.double()))
+        lamf = torch.linalg.eigvalsh(gm.unpack(F.double()))
+        assert torch.allclose(lamf - lam, (rho * tr / 15)[:, None].expand_as(lam), rtol=1e-4, atol=1e-5)
+    with pytest.raises(ValueError):
+        e2b.floored_metric(M, -1e-3)
+
+
+def test_e2b_floored_metric_goes_through_the_lifted_assignment_exactly():
+    """The lifted fp32 assignment on a floored metric achieves the brute-force minimum, and the lifted
+    check passes, as for the pure metric (Amendment 9 b.g runs it per floored metric)."""
+    x, M, C = _problem()
+    F = e2b.floored_metric(M, 1e-1)
+    d = _brute(x, F, C)
+    lab = gd.lifted_argmin(x, F, C, chunk=333)
+    assert torch.all(d.gather(1, lab[:, None])[:, 0] <= d.min(dim=1).values * (1 + 1e-5) + 1e-12)
+    assert gd.lifted_check(x, F, C, n_sample=500, seed=1)["pass"]
+    # the floor changes which centroid is nearest for some splats: it is not a no-op
+    assert not torch.equal(lab, gd.lifted_argmin(x, M, C, chunk=333))
+
+
+def test_e2b_rho_zero_is_gn_vq_and_report_metrics_changes_nothing():
+    x, M, C, labels = _vq_problem()
+    kw = dict(total_pixels=1000, max_iters=3, rel_tol=0.0, eps=1e-2, log=None)
+    Ca, La, ra = vq.gn_vq(x, C, labels, M, **kw)
+    Cb, Lb, rb = vq.gn_vq(x, C, labels, e2b.floored_metric(M, 0.0), report_metrics={"M": (M, 1000)}, **kw)
+    assert torch.equal(Ca, Cb) and torch.equal(La, Lb)
+    assert [h["objective"] for h in ra["history"]] == [h["objective"] for h in rb["history"]]
+    assert "objectives_under" not in ra
+    under = rb["objectives_under"]["M"]
+    assert under["objective_before_quantization"] == rb["objective_before_quantization"]
+    assert under["objective_after_quantization"] == rb["objective_after_quantization"]
+    # a floored run reports the unfloored objective below its own (the floor only adds)
+    F = e2b.floored_metric(M, 1e-1)
+    _, _, rf = vq.gn_vq(x, C, labels, F, report_metrics={"M": (M, 1000)}, **kw)
+    assert rf["objectives_under"]["M"]["objective_after_quantization"] < rf["objective_after_quantization"]
+
+
+def test_e2b_views_labels_and_selection():
+    views = list(range(7))
+    assert e2b.even_odd(views) == ([0, 2, 4, 6], [1, 3, 5])
+    assert [e2b.rho_label(r) for r in e2b.RHOS] == ["0", "1e-3", "1e-2", "1e-1"]
+    assert e2b.RHOS == (0.0, 1e-3, 1e-2, 1e-1) and e2b.K_VALUES == (4096, 65536)
+    assert e2b.select_rho_cv({0.0: 3.0, 1e-3: 2.0, 1e-2: 2.5, 1e-1: 4.0}) == 1e-3
+    assert e2b.select_rho_cv({0.0: 2.0, 1e-3: 2.0, 1e-2: 2.0, 1e-1: 1.0}) == 1e-1
+    assert e2b.select_rho_cv({0.0: 1.0, 1e-3: 1.0, 1e-2: 2.0, 1e-1: 1.0}) == 0.0  # exact tie: the smaller rho
+    assert e2b.select_rho_cv({0.0: 1.0, 1e-3: 1.0, 1e-2: 2.0}) is None
+    assert e2b.select_rho_cv({0.0: 1.0, 1e-3: float("nan"), 1e-2: 2.0, 1e-1: 1.0}) is None
+
+
+def _e2b_fixture(treehill_psnr=None, garden_psnr=None, odd=None):
+    """E2 rows (lloyd_wopa_area, lloyd_trace, gn_vq) and E2b rows for the four scenes at both K.
+    E2's lloyd_trace sits at 23.30 dB, E2's gn_vq at 23.20 dB; the full-M codebooks at rho > 0 take
+    PSNR from `treehill_psnr` / `garden_psnr` (rho -> PSNR), default 23.25. `odd` maps rho -> odd-view
+    dMSE (default: rho 1e-2 lowest)."""
+    odd = odd or {0.0: 4e-4, 1e-3: 3e-4, 1e-2: 2e-4, 1e-1: 5e-4}
+    e2_rows, rows = [], []
+    for s in e2b.SCENES:
+        for k in e2b.K_VALUES:
+            for c, p in ((g2.BASELINE, 23.10), (g2.SCALAR, 23.30), (g2.GNVQ, 23.20)):
+                e2_rows.append({**_g1_row(s, c, 0, str(p), "15000000", k), "measured_test_clamped": "1e-4"})
+            for rho in e2b.RHOS:
+                rows.append({"scene": s, "config": e2b.CV, "n_clusters": str(k), "seed": "0", "rho": repr(rho),
+                             "measured_odd_clamped": repr(odd[rho]), "measured_test_clamped": repr(odd[rho] * 1.1),
+                             "size_bytes": "15000000"})
+                if rho > 0:
+                    table = {"treehill": treehill_psnr, "garden": garden_psnr}.get(s) or {}
+                    rows.append({"scene": s, "config": e2b.FULL, "n_clusters": str(k), "seed": "0",
+                                 "rho": repr(rho), "PSNR": repr(table.get(rho, 23.25)), "size_bytes": "15010000",
+                                 "measured_test_clamped": repr(odd[rho] * 1.2), "train_PSNR": "24.0"})
+    return e2_rows, rows
+
+
+def test_e2b_criterion_every_path():
+    """Amendment 9 b.e: treehill must beat E2's lloyd_trace at both K (strictly), garden must stay within
+    0.02 dB of E2's gn_vq at both K (inclusive); rho_cv = 0 uses E2's gn_vq row; a missing row is
+    incomplete."""
+    # works: treehill's rho_cv (1e-2) codebook at 23.31 > 23.30; garden's at 23.19 >= 23.20 - 0.02
+    e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.31}, garden_psnr={1e-2: 23.19})
+    res = e2b.judge_e2b(rows, e2_rows)
+    assert res["verdict"] == "works" and res["criterion"]["treehill_ok"] and res["criterion"]["garden_ok"]
+    v = res["per_scene"]["treehill"]["65536"]
+    assert v["rho_cv"] == 1e-2 and v["rho_cv_label"] == "1e-2" and v["missing"] == []
+    assert v["rho_cv_vs_e2"][g2.SCALAR]["dPSNR"] == round(23.31 - 23.30, 9)
+    # treehill equal to lloyd_trace is not "higher": does not work
+    e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.30}, garden_psnr={1e-2: 23.19})
+    res = e2b.judge_e2b(rows, e2_rows)
+    assert res["verdict"] == "does not work" and not res["criterion"]["treehill_ok"] and res["criterion"]["garden_ok"]
+    # garden exactly 0.02 dB below E2's gn_vq passes; a hair more fails
+    e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.31}, garden_psnr={1e-2: 23.18})
+    assert e2b.judge_e2b(rows, e2_rows)["criterion"]["garden_ok"]
+    e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.31}, garden_psnr={1e-2: 23.1799999})
+    res = e2b.judge_e2b(rows, e2_rows)
+    assert not res["criterion"]["garden_ok"] and res["verdict"] == "does not work"
+    # rho_cv = 0: the codebook is E2's gn_vq row (23.20 < 23.30 on treehill, cost 0 on garden)
+    e2_rows, rows = _e2b_fixture(odd={0.0: 1e-4, 1e-3: 3e-4, 1e-2: 2e-4, 1e-1: 5e-4})
+    res = e2b.judge_e2b(rows, e2_rows)
+    t = res["per_scene"]["treehill"]["4096"]
+    assert t["rho_cv"] == 0.0 and t["rho_cv_codebook"]["source"] == "e2_gn_vq_row"
+    assert t["rho_cv_codebook"]["PSNR"] == 23.20
+    assert res["criterion"]["garden_ok"] and not res["criterion"]["treehill_ok"]
+    # one CV row missing on treehill: no rho_cv there, incomplete
+    e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.31})
+    rows = [r for r in rows if not (r["scene"] == "treehill" and r["config"] == e2b.CV
+                                    and r["n_clusters"] == "4096" and r["rho"] == repr(1e-3))]
+    res = e2b.judge_e2b(rows, e2_rows)
+    assert res["verdict"] == "incomplete" and res["per_scene"]["treehill"]["4096"]["rho_cv"] is None
+    assert any("treehill gn_vq_floor_cv K=4096 rho=1e-3" in m for m in res["criterion"]["missing"])
+    # flowers and train never enter the criterion; E2's lloyd_trace missing on treehill is incomplete
+    e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.31}, garden_psnr={1e-2: 23.19})
+    assert e2b.judge_e2b(rows, [r for r in e2_rows if r["scene"] != "flowers"])["verdict"] == "works"
+    no_trace = [r for r in e2_rows if not (r["scene"] == "treehill" and r["config"] == g2.SCALAR)]
+    assert e2b.judge_e2b(rows, no_trace)["verdict"] == "incomplete"
+
+
+def test_e2b_spearman_is_reported_not_judged():
+    e2_rows, rows = _e2b_fixture(treehill_psnr={1e-2: 23.31}, garden_psnr={1e-2: 23.19})
+    v = e2b.judge_e2b(rows, e2_rows)["per_scene"]["flowers"]["4096"]
+    # CV test dMSE is 1.1 x the odd-view score: a perfect rank agreement
+    assert v["spearman_odd_vs_cv_test"] == pytest.approx(1.0)
+    # the full-M test dMSE: rho 0 from E2's row (1e-4, the lowest), the others 1.2 x their odd score
+    odd = [4e-4, 3e-4, 2e-4, 5e-4]
+    full = [1e-4, 3.6e-4, 2.4e-4, 6e-4]
+    assert v["spearman_odd_vs_full_test"] == pytest.approx(gd.spearman(np.array(odd), np.array(full)))
+
+
+def test_e2b_check_rows_and_the_job():
+    """Only E2b's rows reach the criterion (no full-M row at rho = 0, no foreign scene or config); the
+    job's scenes, grid, columns and pins are Amendment 9's, and a foreign CSV is refused."""
+    import csv as _csv
+    import re
+
+    import gn_e2_scene as e2job
+    import gn_e2b_scene as job
+
+    e2_rows, rows = _e2b_fixture()
+    assert e2b.check_rows(rows)["per_scene"]["treehill"] == {e2b.CV: 8, e2b.FULL: 6}
+    for bad in ({**rows[0], "scene": "stump"}, {**rows[0], "config": g2.GNVQ},
+                {**rows[0], "config": e2b.FULL, "rho": "0.0"}, {**rows[0], "rho": "0.5"}):
+        with pytest.raises(RuntimeError, match="not E2b rows"):
+            e2b.check_rows(rows + [bad])
+    assert set(e2b.SCENES) == {"treehill", "flowers", "train", "garden"} and "stump" not in e2b.SCENES
+    assert job.K_VALUES == "4096,65536" and job.VQ_EPS == 1e-2 and job.VQ_MAX_ITERS == 20
+    assert job.wanted_rows([4096], list(e2b.RHOS)) == [(e2b.CV, 4096, r) for r in e2b.RHOS] + \
+        [(e2b.FULL, 4096, r) for r in e2b.RHOS[1:]]
+    assert job.COLUMNS[:6] == ["scene", "config", "n_clusters", "seed", "rho", "metric_views"]
+    assert set(e2job.COLUMNS) < set(job.COLUMNS) and "measured_odd_clamped" in job.COLUMNS
+    repo = os.path.dirname(os.path.dirname(HERE))
+    builder = open(os.path.join(repo, "kaggle", "build_gn_e2b_bench.py"), encoding="utf-8").read()
+    pinned = dict(re.findall(r'"(\w+)": \("(?:tandt|mipnerf360)", "\w+", "([0-9a-f]{40})"\)', builder))
+    run5 = {r["scene"]: r["ckpt_sha1"] for r in _csv.DictReader(
+        open(os.path.join(repo, "kaggle", "run5", "tilequant", "run5_results.csv"), newline=""))}
+    assert pinned == {s: run5[s] for s in e2b.SCENES} and list(pinned)[0] == "train"
+    with pytest.raises(ValueError, match="not an E2b scene"):
+        job.main(["--scene", "stump", "--dataset", "mipnerf360", "--benchmark_sh", "x", "--data_root", "x",
+                  "--ckpt", "x", "--expected_sha1", "x", "--sort_cache_dir", "x", "--warm_dir", "x",
+                  "--gn_cache", "x", "--gn_cache_even", "x", "--work_dir", "x", "--runs_dir", "x",
+                  "--out_dir", "x", "--examples_dir", "x"])
+    path = os.path.join(repo, "kaggle", "gn_e2", "gn2", "gn2_results_treehill.csv")
+    with pytest.raises(RuntimeError, match="not an E2b result file"):
+        job.assert_e2b_csv(path)  # E2's own CSV is refused
