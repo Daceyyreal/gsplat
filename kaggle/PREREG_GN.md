@@ -1060,3 +1060,11 @@ Amendment 9 b.e's two conditions (treehill against `lloyd_trace`, garden within 
 exactly as written and reported next to the fidelity criterion, with the cross-term caveat of (a): a
 change in test PSNR mixes fidelity to the model with the model's own error. **Neither criterion gates
 anything**; E2b stays exploratory, and E2's verdicts are unchanged.
+
+### f. Note (2026-09-26, before any E2b data exists)
+
+Added to Amendment 10 before any E2b row, bundle or log exists:
+
+Any claim that the floor works requires both the fidelity criterion and the garden control to hold. The
+verdict fields stay as implemented. This governs how FINDINGS and any write-up describe the result. If
+the garden row is missing, no such claim is made.
