@@ -964,3 +964,99 @@ check (Amendment 3's criterion, 10,000 splats, on the K = 65,536 warm start) run
 every metric the scene's GN-VQ rows use: the floored `M_even` at each `rho`, and the floored full `M` at
 each `rho` > 0 (E2 checked the unfloored full `M`). A failed check skips the rows using that metric,
 which leaves them missing. E2b writes its own files (`gn2b/`) and never E2's.
+
+## Amendment 10 (2026-09-25, before any E2b data exists)
+
+E2b has not run: no E2b row, bundle or log exists anywhere. This amendment changes E2b's scenes, adds a
+fidelity criterion judged on the quantity `rho` is selected on, keeps Amendment 9's PSNR criteria as
+reported items, and makes E2b run its own `rho = 0` full-`M` codebook to check that it reproduces E2's.
+Everything else in Amendment 9 b stands: the variant, the `rho` grid, the cross-validation, the grid of K,
+the warm starts, the lifted checks. Amendment 9 a (the BD computation), G0, G1, G2a, H2b and Amendments
+1-8 are unchanged.
+
+### a. Why: the measure that picked Amendment 9's scenes
+
+Amendment 9 picked its scenes by the ratio of GN-VQ's test to train **PSNR gain** over `lloyd_trace`.
+PSNR is measured against the ground truth, so a change in it also contains the cross term between the
+quantization error and the uncompressed model's own error, `2 <I_q - I_orig, I_orig - I_gt>`, which can
+have either sign. The render-vs-render error against the uncompressed model (the measured shN-only dMSE,
+E2's `measured_*_clamped` columns) leaves that term out: it measures how faithfully a codebook
+reproduces the model, which is what GN-VQ optimizes and what E2b's cross-validation scores.
+
+Measured that way, from E2's rows (`kaggle/gn_e2/gn2/gn2_results_<scene>.csv`), as GN-VQ's clamped dMSE
+divided by `lloyd_trace`'s, train views then test views:
+
+| Scene | K = 4,096 | K = 65,536 |
+|---|---|---|
+| treehill | 0.3559 -> 0.8417 | 0.3684 -> 1.1253 |
+| stump | 0.4575 -> 0.7458 | 0.3810 -> 0.6797 |
+| flowers | 0.4911 -> 0.7058 | 0.4143 -> 0.6611 |
+| room | 0.2919 -> 0.3701 | 0.3150 -> 0.5115 |
+| train | 0.3625 -> 0.4239 | 0.3526 -> 0.4177 |
+| truck | 0.3359 -> 0.3679 | 0.3015 -> 0.3316 |
+| counter | 0.5205 -> 0.5375 | 0.4585 -> 0.4802 |
+| bonsai | 0.3857 -> 0.3958 | 0.3736 -> 0.3859 |
+| kitchen | 0.5228 -> 0.5293 | 0.4857 -> 0.4938 |
+| garden (development) | 0.4445 -> 0.4665 | 0.3828 -> 0.4085 |
+| bicycle (development) | 0.4561 -> 0.6569 | 0.4336 -> 0.6326 |
+
+- On most scenes the test ratio is close to the train ratio. The largest increase from train to test
+  (test ratio minus train ratio) among the held-out scenes is on **treehill, stump and flowers, at both
+  K** (+0.4858, +0.2883, +0.2147 at K = 4,096; +0.7568, +0.2986, +0.2468 at K = 65,536). That difference is
+  the measure this amendment uses. Measured as a quotient (test ratio over train ratio) the same three
+  lead at K = 4,096, but at K = 65,536 room (1.624) ranks above flowers (1.596).
+- Train, which Amendment 9 chose, has a small increase (+0.0614 and +0.0651). **Amendment 9's switch to
+  train was based on the PSNR ratio, which by this analysis is the wrong measure of generalization.**
+- The cross term is visible in E2's rows: on treehill at K = 4,096, GN-VQ's test dMSE is 0.8417 of
+  `lloyd_trace`'s, more faithful to the model, yet its test PSNR is 0.0477 dB lower.
+
+### b. Scenes (replaces Amendment 9 b, "Scenes")
+
+**Treehill, flowers and stump**, the three held-out scenes where the dMSE ratio grows most from train
+to test; **garden stays the control**. **Train is dropped from E2b.** Stump uses its Amendment 7
+checkpoint (`52715bdb81d53bf3793b4052e6ed656458d74fb3`), data factor 4 and seed-0 PLAS order. From this
+amendment on, treehill, flowers and stump are development scenes. Train stays one, as Amendment 9
+declared: that choice was made from E2's results, and dropping train from E2b does not undo it.
+
+### c. E2b runs its own `rho = 0` full-`M` codebook (changes Amendment 9 b.c and b.d)
+
+For every scene and K, E2b also runs GN-VQ at `rho = 0` with E2's full `M` and evaluates it like the other
+full-`M` rows, so each scene has 16 GN-VQ rows (per K, 4 cross-validation and 4 full-`M` codebooks), and
+the lifted check also runs on the unfloored full `M` (8 per scene).
+
+- **Reproduction check.** Per scene and K, this row against E2's committed `gn_vq` row: the difference in
+  test PSNR, the relative difference in test dMSE (`measured_test_clamped`) and the difference in bytes.
+  Status: `identical` if all three are exactly equal; `within_tolerance` if |dPSNR| <= 1e-3 dB and the
+  relative dMSE difference is at most 1e-3; otherwise `not_reproduced`, which is **flagged**. The check
+  applies when the row used E2's `M` (`m_source` = the restored cache) and E2's warm start (E2's own
+  clustering caches); otherwise the status is `inputs_differ`, with the differences still reported.
+  Nothing is gated on it.
+- **Which `rho = 0` row each item uses.** Amendment 9's items stay exactly as Amendment 9 wrote them: its
+  PSNR criteria and its Spearman correlation take E2's `gn_vq` row as the `rho = 0` full-`M` codebook.
+  This amendment's items (d, e) take **E2b's own** `rho = 0` row, which shares the realization of `M`
+  and the run with the other E2b rows. The Spearman correlation is also reported with E2b's own
+  `rho = 0` row.
+
+### d. Fidelity criterion (new), judged on test dMSE, the quantity `rho` is selected on
+
+Per scene and K, **R = test dMSE of the full-`M` codebook at `rho_cv` / test dMSE of E2's committed
+`lloyd_trace` row** (both `measured_test_clamped`). `rho_cv` is Amendment 9 b.b's; at `rho_cv = 0` the
+codebook is E2b's own `rho = 0` row. **The floor works on fidelity if both hold:**
+
+1. R is below E2b's own `rho = 0` value of R in **at least 5 of the 6** (scene, K) cells of treehill,
+   flowers and stump; **and**
+2. **treehill's R at K = 65,536 is below 1.**
+
+**Garden control, reported with it:** at K = 4,096 and at K = 65,536, garden's test dMSE at `rho_cv` is
+at most 5% above its own `rho = 0` row's.
+
+Comparisons are made on differences rounded to 9 decimals ("below" is strict, "at most" inclusive). A
+missing row makes the result `incomplete`. With `rho_cv = 0` a cell is not below its own `rho = 0`
+value.
+
+### e. Amendment 9's PSNR criteria, reported alongside
+
+Amendment 9 b.e's two conditions (treehill against `lloyd_trace`, garden within 0.02 dB) are computed
+exactly as written and reported next to the fidelity criterion, with the cross-term caveat of (a): a
+change in test PSNR mixes fidelity to the model with the model's own error. **Neither criterion gates
+anything**; E2b stays exploratory, and E2's verdicts are unchanged.
