@@ -57,8 +57,10 @@ def section_text(txt: str) -> str:
     start = txt.index("## 11. E2b")
     nxt = txt.find("\n## ", start + 1)
     sec = txt[start:] if nxt < 0 else txt[start:nxt]
-    summ = txt[txt.index("**E2b (section 11"):txt.index("## Sources")]
-    src = txt[txt.index("- Section 11:"):txt.index("- Section 4:")]
+    s0 = txt.index("**E2b (section 11")
+    summ = txt[s0:min(txt.index("## Sources"), txt.find("\n\n", s0) % len(txt))]  # that paragraph alone
+    s1 = txt.index("- Section 11:")
+    src = txt[s1:txt.index("\n- Section", s1) + 1]  # that entry alone
     return re.sub(r"\s+", " ", sec + summ + src)
 
 
