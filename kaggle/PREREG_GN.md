@@ -1068,3 +1068,146 @@ Added to Amendment 10 before any E2b row, bundle or log exists:
 Any claim that the floor works requires both the fidelity criterion and the garden control to hold. The
 verdict fields stay as implemented. This governs how FINDINGS and any write-up describe the result. If
 the garden row is missing, no such claim is made.
+
+## Amendment 11 (2026-09-26, after E2b's results and before any E2c code)
+
+E2b has run. Its bundle is committed unchanged in `kaggle/gn_e2b/gn2b/` (`a3c0099a`), and its numbers are
+in `kaggle/FINDINGS.md` section 11 (`cc2c3b95`, re-checked by `bench/gn/check_s11.py`). Under Amendment
+10 f the floor works in fidelity terms, and not by the PSNR criterion. This amendment pre-registers
+**E2c, a gated run** of the floor with the strength chosen per scene and K by cross-validation, on the
+five scenes no decision has used yet. G0, G1, G2a, H2b, E2b's criteria and Amendments 1-10 are unchanged.
+
+### a. Scenes
+
+**Bonsai, counter, kitchen, room and truck, all five gate scenes.** They are the only scenes with a
+pinned checkpoint that no tuning decision has used: garden and bicycle became development scenes in
+Amendment 7, treehill, flowers and train in Amendment 9, and stump in Amendment 10. Each scene uses its
+Amendment 7 d checkpoint (the job refuses any other sha1), its data factor (2 for the four MipNeRF360
+scenes, 1 for truck) and its cached seed-0 PLAS order.
+
+| Scene | Dataset, data factor | Checkpoint sha1 (Amendment 7 d) |
+|---|---|---|
+| bonsai | MipNeRF360, 2 | `60868efab7cfd97dada0ea6badcb8a2700c7d7c8` |
+| counter | MipNeRF360, 2 | `50464c36ef6e1b0c2da3012bc7c8b3feb1a410c2` |
+| kitchen | MipNeRF360, 2 | `8e5e31d4a8d25f458ac55f95a72f442bde2c0f83` |
+| room | MipNeRF360, 2 | `843339232b480503676f8cd4e7dd1cea9ad78749` |
+| truck | Tanks & Temples, 1 | `4b9c9babe37cf16db99d286be8e6af805a776d6c` |
+
+### b. Method: `gn_vq_cvfloor`
+
+- **The variant:** E2's GN-VQ (Amendment 7 c: ridge eps = 1e-2, at most 20 iterations, the 1e-3
+  relative-drop stopping rule, the clip to the warm-start range with per-cluster acceptance, the codec's
+  quantizer, the final exact assignment against the dequantized codebook, the writer-code assertion),
+  with `M_i` replaced everywhere inside GN-VQ by the floored metric of Amendment 9 b.a,
+
+      M'_i = M_i + rho * tr(M_i) / 15 * I
+
+  in the assignment and in the update (whose ridge then uses `tr(sum M'_k)`), the clip's acceptance, the
+  stopping objective and the final quantized assignment. Splats with `tr(M_i) = 0` keep a zero metric
+  and take their L2-nearest centroid. At `rho = 0` the variant is E2's `gn_vq`.
+- **Selection by training-view cross-validation, as E2b defined it (Amendment 9 b.b):** the train views
+  are the runner's train split in the order E0's `camera_views` lists them. **`M_even`** is E0's GN pass,
+  probe seed 0, over the even-indexed train views only, with its own probe draws (not a sub-sum of E2's
+  `M`) and those views' pixels as the objective's pixels. For each `rho` of the grid, GN-VQ runs with the
+  floored `M_even` from the warm start (c). The codebook is written and decoded with the unchanged library
+  writer and **scored by the render-vs-render dMSE of the decoded shN on the odd-indexed train views**
+  (only shN swapped, clamped renders, E0's `measure_dmse`).
+- **Grid: `rho` in {0, 1e-3, 1e-2, 1e-1, 3e-1, 1, 3}.** **`rho_cv`**, per scene and K, is the `rho` with
+  the lowest odd-view score; an exact tie goes to the smaller `rho`. No test view enters the selection.
+- **The final codebook** (config `gn_vq_cvfloor`, one per scene and K): GN-VQ with the floored metric
+  built from **E2's full-train-view `M`**, restored from E2's `gn_cache` (used only if its cache key
+  matches), at `rho_cv`, from the same warm start. It is written, decoded and evaluated like E2's rows:
+  `P`, measured `D` on train and test views, test PSNR / SSIM / LPIPS of the full compressed pipeline,
+  train PSNR, bytes. It is run at every `rho_cv`, 0 included. When `rho_cv = 0`, it is E2's `gn_vq` run
+  again, and its reproduction of E2's committed row is reported, as in Amendment 10 c: `identical`,
+  `within_tolerance` (|dPSNR| <= 1e-3 dB and relative test-dMSE difference <= 1e-3) or `not_reproduced`,
+  flagged. G2c uses E2c's own row either way.
+- The cross-validation codebooks (config `gn_vq_cvfloor_cv`) get the odd-view dMSE, the render-vs-render
+  test dMSE (reported, never used by the selection), `P` on `M_even` and the bytes, and not the full
+  evaluation.
+
+### c. Grid, comparators and inputs
+
+- **K in {1,024, 4,096, 16,384, 65,536}, k-means seed 0.** Per scene: 7 cross-validation codebooks and
+  1 final codebook per K, 32 GN-VQ runs.
+- **Comparators:** E2's committed rows (`kaggle/gn_e2/gn2/gn2_results_<scene>.csv`) for
+  `lloyd_wopa_area`, `lloyd_trace`, `upstream_l1` and `gn_vq`, at the same K, seed 0 and checkpoints.
+  Nothing E2 measured is measured again.
+- **Warm start:** `lloyd_wopa_area` at the same K, seed 0, the codebook E2 warm-started its `gn_vq` from,
+  restored from **E2's notebook output**: `gn2_work/<scene>/clusters/lloyd_wopa_area_k<K>_s0.pt`, and
+  for K = 65,536 on the four MipNeRF360 scenes the run-4 cache E2 copied to
+  `tilequant/e2_kmeans/<scene>/lloyd_wopa_area_s0.pt` (truck's K = 65,536 codebook was clustered by E2
+  and is in `gn2_work/`). **There is no fallback:** a missing or key-mismatched warm start or `M` stops
+  the scene before any GN-VQ run. The run must have both E2's notebook output and the run-5 notebook
+  output attached, and the notebook stops before any install if either is missing.
+
+### d. G2c (the gate)
+
+All BD measures use the domain-scaled fit of Amendment 9 a (`g2.bd_rate_scaled`, `g2.bd_psnr_scaled`),
+the degree-3 Bjontegaard quantity of Amendment 7 f over the four points per curve (K = 1,024-65,536):
+raw bytes of the compressed directory against test PSNR of the full compressed pipeline.
+
+**G2c passes if all three hold:**
+
+1. **Against `lloyd_trace`, every scene wins:** the BD-rate of `gn_vq_cvfloor` against E2's `lloyd_trace`
+   is below 0 on **all 5 scenes**, by G2a's per-scene rule (Amendment 7 f, steps 2-4): if the BD-rate is
+   undefined, the scene wins if the BD-PSNR is above 0; if both are undefined, it is a loss.
+2. **Against `lloyd_wopa_area`, the mean BD-rate over the 5 scenes is at most -5%**, each scene entering
+   with its BD-rate or, where that is undefined or not finite, Amendment 8 a's substitute (a, b or c).
+3. **No harm against E2's `gn_vq`:** the BD-PSNR of `gn_vq_cvfloor` against E2's committed `gn_vq` curve
+   is at least -0.01 dB **on every scene**. A scene whose BD-PSNR against `gn_vq` is undefined (the
+   curves share no byte range) does not meet this condition.
+
+Differences are rounded to 9 decimals before they are compared, as in run 4 ("below" and "above" strict,
+"at least" and "at most" inclusive). A missing row makes its scene, and so G2c, **`incomplete`**; a
+failed lifted check skips the rows using that metric, which leaves them missing. Verdict order
+`incomplete` > `fail` > `pass`.
+
+### e. Reported, not gating
+
+- `rho_cv` per scene and K, and whether it is at the top of the grid (`rho = 3`); the count of cells
+  with `rho_cv > 0`;
+- per cell, the test dMSE (`measured_test_clamped`) of `gn_vq_cvfloor` over E2's `lloyd_trace` and over
+  E2's `gn_vq`;
+- per cell, the test LPIPS and SSIM of `gn_vq_cvfloor` minus E2's `gn_vq`, and its bytes against E2's
+  `gn_vq`, `lloyd_trace` and `lloyd_wopa_area`;
+- per scene and K, the **Spearman rank correlation across the 7 `rho` between the cross-validation
+  codebooks' odd-view dMSE and their own test dMSE** (average ranks for ties, `diagnostics.spearman`);
+- the three G2c comparisons' BD-rate and BD-PSNR per scene, and against `upstream_l1`; per curve, whether
+  PSNR rises with K; per comparison, whether BD-rate and BD-PSNR name different curves as better (the
+  case that made E2's treehill H2b win a fit artifact, FINDINGS section 10). These flags are reported
+  and change no verdict;
+- the reproduction status of every `rho_cv = 0` cell (b);
+- per row, E2b's logging: both objectives (floored and unfloored), iterations, stopping reason, clip
+  rejections, the quantizer ranges, the warm start's and `M`'s sources.
+
+### f. Why
+
+- **This freezes the method before E3 ports it to other codecs.** E3 is not designed yet; whatever it
+  ports should be one method, fixed here, and tested on scenes it was not tuned on.
+- **E2b showed that the floor closes the fidelity gap on development scenes, and that the strength must
+  be selected per scene.** On treehill, flowers and stump, R at `rho_cv` was below its own `rho = 0` value
+  in all 6 cells (treehill at K = 65,536: 1.1253 to 0.6602). A fixed `rho = 1e-1` would have failed
+  garden's 5% control: garden's test dMSE at `rho = 1e-1` was 1.0704 times its `rho = 0` value at
+  K = 65,536 (FINDINGS section 11).
+- **The grid is extended because `rho_cv` sat at the top of E2b's grid (1e-1) in every gap cell**, with
+  the test dMSE still falling there. As `rho` grows, the floored metric divided by `rho` tends to
+  `tr(M_i) / 15 * I`, the `tr(M_i)`-weighted Euclidean distance that `lloyd_trace` minimizes (FINDINGS
+  section 11, post hoc), so the extended grid runs from the full matrix toward the scalar weighting.
+- **The limit, stated in advance.** In E2 these five scenes generalized well, except room: the ratio of
+  `gn_vq`'s to `lloyd_trace`'s clamped test dMSE exceeded the train ratio by +0.0064 to +0.0320 on
+  bonsai, counter, kitchen and truck at K = 4,096 and 65,536, and by +0.0782 and +0.1966 on room
+  (computed from E2's rows; Amendment 10 a tabulates the ratios to four decimals). And E2's own `gn_vq` rows already meet conditions 1 and 2 on these scenes with
+  the domain-scaled fit: BD-rate -3.10% (counter) to -6.61% (room) against `lloyd_trace`, and a mean of
+  -5.93% against `lloyd_wopa_area`. So G2c would pass with `rho_cv = 0` in every cell if E2's rows
+  reproduce. **E2c mainly tests that the selected floor does no harm and keeps GN-VQ's wins;** the count
+  of cells with `rho_cv > 0` (e) says how much of it the floor is. Whether the floor helps on new,
+  gap-prone data is a question for E3.
+
+### g. Checks, as in E2 and E2b
+
+The checkpoint sha1 pins before any install and again in each job; the CUDA smoke tests; render parity
+per scene; the writer-code assertion on every row; the lifted-assignment check (Amendment 3's criterion,
+10,000 splats, on the K = 65,536 warm start) once per metric used: the floored `M_even` at each of the 7
+`rho`, and the floored full `M` at each distinct `rho_cv`. E2c writes its own files (`gn2c/`) and never
+those of E0, E1, E2 or E2b.
