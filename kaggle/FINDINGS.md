@@ -47,6 +47,13 @@ control, stays within its 5%. Amendment 10 f requires both for the claim. By Ame
 criterion it does not work: treehill stays below `lloyd_trace` at both K (-0.0016 and -0.0120 dB).
 `rho_cv` is 1e-1, the top of the grid, in all six cells.
 
+**E2c (section 12, branch `bench/gn-vq`): G2c passed.** GN-VQ with the cross-validated floor
+(`gn_vq_cvfloor`, frozen in Amendment 11 b) beat `lloyd_trace` on all 5 of the last unused scenes (bonsai,
+counter, kitchen, room, truck). Its mean BD-rate against `lloyd_wopa_area` is -6.17%, and its BD-PSNR
+against E2's `gn_vq` is -0.0013 to +0.0141 dB, above the -0.01 dB no-harm bound. The floor was selected in
+all 20 cells (`rho_cv` 1e-3 to 1e-1). Against E2's GN-VQ it changed little except on room, whose test
+dMSE fell to 0.7603 of `gn_vq`'s at K = 65,536.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -88,6 +95,12 @@ criterion it does not work: treehill stays below `lloyd_trace` at both K (-0.001
   unpacked unchanged in `kaggle/gn_e2b/gn2b/`. `bench/gn/check_s11.py` recomputes every number in the
   section from those two sources and checks each against the text (`python bench/gn/check_s11.py`,
   0 failures).
+- Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
+  timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
+  reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
+  used E2's full `M` and E2's warm starts (`m_source`, `warm_start_source`). The bundle is unpacked
+  unchanged in `kaggle/gn_e2c/gn2c/`. A script recomputed every number in the section from those two
+  sources and checked each against the text.
 - Section 4: every number comes from `kaggle/run3/tilequant/` (one Kaggle session, gsplat commit
   `f9b61526`). That session restored the run-2 output (training #2 checkpoints, seed-0 PLAS sort,
   run-1 / run-2 rows, gsplat wheel) and ran only the run-3 configs, so run-3 rows pair with the
@@ -1753,3 +1766,192 @@ checkpoint sha1s 9.9 s, restore 28.8 s, install 158.4 s, smoke tests 15.3 s. Row
   low, where a large floor would have cost fidelity.
 - **Limits:** exploratory, on four development scenes, k-means seed 0 only, two K per curve (no BD
   measure), and a four-value grid of `rho`.
+
+## 12. E2c: GN-VQ with a cross-validated floor on the last five unused scenes (`bench/gn-vq`) — G2c passed
+
+**G2c passed, all three conditions.** `gn_vq_cvfloor` beat E2's `lloyd_trace` on all 5 scenes, its mean
+BD-rate against E2's `lloyd_wopa_area` is -6.17% (at most -5% needed), and its BD-PSNR against E2's `gn_vq`
+lies between -0.0013 dB (truck) and +0.0141 dB (room), above the -0.01 dB floor on every scene.
+
+**The floor was selected in every cell:** `rho_cv` is above 0 in all 20 (scene, K) cells and never at the top
+of the grid. So this pass is of the method with the floor applied, not of E2's GN-VQ unchanged (the case
+Amendment 11 f warned about).
+
+**Against E2's GN-VQ, the gain is small except on room.** The BD-rate against `gn_vq` is -0.017% (kitchen)
+to -0.528% (room). Room's test dMSE falls to 0.7603 of `gn_vq`'s at K = 65,536; on the other four scenes the
+ratio stays within 0.9754-1.0058.
+
+The rules were fixed before any E2c code or data in Amendment 11 (`14145093`). The verdict is
+`bench/gn/e2c.py`'s, written by the notebook into `gn2c_g2c.json`; nothing here re-judges it. The comparators
+are E2's committed rows (`kaggle/gn_e2/gn2/`). Items marked **post hoc** were read from the result files
+after the fact and were not pre-registered.
+
+### The method, as frozen
+
+**`gn_vq_cvfloor`** (PREREG_GN.md Amendment 11 b has the full definition):
+
+- **Variant:** E2's GN-VQ (Amendment 7 c: ridge eps = 1e-2, at most 20 iterations, the 1e-3 relative-drop
+  stopping rule, the clip to the warm-start range with per-cluster acceptance, the codec's quantizer, the
+  final exact assignment against the dequantized codebook), with every `M_i` inside it replaced by
+  `M_i + rho * tr(M_i) / 15 * I`, in the assignment and the update.
+- **Warm start:** `lloyd_wopa_area` at the same K, seed 0.
+- **Selection:** `rho` is chosen per scene and K by training-view cross-validation over
+  {0, 1e-3, 1e-2, 1e-1, 3e-1, 1, 3}. `M_even` comes from the even-indexed train views; each `rho`'s codebook
+  is scored by its render-vs-render dMSE on the odd-indexed train views, and `rho_cv` is the lowest score,
+  ties going to the smaller `rho`.
+- **Final codebook:** GN-VQ with the full-train-view `M` at `rho_cv`.
+
+### Verdict (`gn2c_g2c.json`)
+
+| Condition (Amendment 11 d) | Result |
+|---|---|
+| 1. BD-rate against E2's `lloyd_trace` below 0 on all 5 scenes (G2a's rule) | **holds**: 5 of 5 wins, every one decided by the BD-rate |
+| 2. Mean BD-rate against E2's `lloyd_wopa_area` at most -5% | **holds**: -6.17%, every scene with a defined BD-rate |
+| 3. BD-PSNR against E2's `gn_vq` at least -0.01 dB on every scene | **holds**: -0.0013 dB (truck) to +0.0141 dB (room) |
+| Verdict | **pass**, nothing missing |
+
+All BD measures use the domain-scaled fit (Amendment 9 a) over the four points per curve (K = 1,024-65,536,
+seed 0), raw bytes against test PSNR of the full compressed pipeline. A negative BD-rate and a positive
+BD-PSNR favour `gn_vq_cvfloor`.
+
+| Scene | vs `lloyd_trace`: BD-rate / BD-PSNR | vs `lloyd_wopa_area`: BD-rate / BD-PSNR | vs E2's `gn_vq`: BD-rate / BD-PSNR | vs `upstream_l1`: BD-rate / BD-PSNR |
+|---|---|---|---|---|
+| bonsai | -5.84% / +0.3762 dB | -6.25% / +0.4495 dB | -0.232% / +0.0013 dB | -11.03% / +0.6720 dB |
+| counter | -3.21% / +0.2023 dB | -4.17% / +0.2766 dB | -0.106% / +0.0097 dB | -6.43% / +0.4173 dB |
+| kitchen | -4.87% / +0.3004 dB | -5.59% / +0.3871 dB | -0.017% / +0.0032 dB | -10.45% / +0.6951 dB |
+| room | -6.95% / +0.2495 dB | -8.19% / +0.3186 dB | -0.528% / +0.0141 dB | undefined / +0.3839 dB |
+| truck | -4.36% / +0.0783 dB | -6.64% / +0.1462 dB | -0.142% / -0.0013 dB | -8.64% / +0.1822 dB |
+
+- The `lloyd_trace` columns are condition 1's own quantities, from the verdict file.
+- Against `upstream_l1` (reported), room's curves share no PSNR range, so its BD-rate is undefined. Its
+  BD-PSNR is +0.3839 dB and its Amendment 8 substitute -11.43% (a).
+- **Reported flags:** every curve's PSNR rises with K. BD-rate and BD-PSNR disagree in sign in one
+  comparison only: truck against E2's `gn_vq` (-0.142% and -0.0013 dB). The two curves are that close.
+- **For reference, E2's own `gn_vq` on these scenes** with the same fit (Amendment 11 f, from
+  `kaggle/gn_e2/gn2/`): -3.10% (counter) to -6.61% (room) against `lloyd_trace`, mean -5.93% against
+  `lloyd_wopa_area`.
+  - **Post hoc:** against `lloyd_trace`, the BD-rate moved by -0.34 percentage points on room, -0.30 on
+    bonsai, -0.17 on truck, -0.11 on counter and +0.01 on kitchen. The mean against `lloyd_wopa_area`
+    moved from -5.93% to -6.17%.
+
+### `rho_cv`
+
+| Scene | K = 1,024 | K = 4,096 | K = 16,384 | K = 65,536 |
+|---|---|---|---|---|
+| bonsai | 1e-2 | 1e-2 | 1e-2 | 1e-2 |
+| counter | 1e-2 | 1e-2 | 1e-2 | 1e-2 |
+| kitchen | 1e-3 | 1e-2 | 1e-3 | 1e-2 |
+| room | 1e-2 | 1e-3 | 1e-1 | 1e-2 |
+| truck | 1e-2 | 1e-2 | 1e-2 | 1e-2 |
+
+`rho_cv` is above 0 in 20 of 20 cells and at the top of the grid (`rho = 3`) in none. Unlike E2b, where every
+gap cell selected the top of its grid (1e-1), the extended grid's upper values (3e-1, 1, 3) were never
+selected.
+
+### Per cell (`gn2c_g2c.json`, `cells`)
+
+The final codebook against E2's rows at the same K: test dMSE (`measured_test_clamped`) over E2's `gn_vq` and
+over E2's `lloyd_trace`, test PSNR and LPIPS minus E2's `gn_vq`, bytes against E2's `gn_vq`, and the Spearman
+correlation across the 7 `rho` of the CV codebooks' odd-view dMSE with their own test dMSE.
+
+| Scene | K | dMSE / `gn_vq` | dMSE / `lloyd_trace` | dPSNR vs `gn_vq` (dB) | dLPIPS vs `gn_vq` | Bytes vs `gn_vq` | Spearman (CV) |
+|---|---|---|---|---|---|---|---|
+| bonsai | 1,024 | 0.9754 | 0.4129 | +0.0206 | -0.00013 | +0.004% | 1.00 |
+| bonsai | 4,096 | 0.9843 | 0.3896 | +0.0119 | +0.00006 | -0.002% | 1.00 |
+| bonsai | 16,384 | 0.9927 | 0.3736 | -0.0032 | +0.00011 | -0.007% | 1.00 |
+| bonsai | 65,536 | 0.9793 | 0.3779 | +0.0156 | +0.00001 | -0.017% | 1.00 |
+| counter | 1,024 | 0.9906 | 0.5383 | +0.0105 | -0.00015 | -0.037% | 1.00 |
+| counter | 4,096 | 0.9929 | 0.5337 | +0.0037 | -0.00014 | -0.006% | 1.00 |
+| counter | 16,384 | 0.9947 | 0.5023 | +0.0037 | -0.00000 | -0.033% | 1.00 |
+| counter | 65,536 | 1.0028 | 0.4816 | +0.0016 | +0.00002 | -0.095% | 0.96 |
+| kitchen | 1,024 | 1.0058 | 0.5396 | -0.0015 | +0.00002 | -0.006% | 0.96 |
+| kitchen | 4,096 | 1.0015 | 0.5301 | -0.0044 | +0.00010 | -0.020% | 1.00 |
+| kitchen | 16,384 | 0.9941 | 0.5067 | +0.0012 | -0.00001 | +0.001% | 0.89 |
+| kitchen | 65,536 | 1.0034 | 0.4954 | +0.0003 | +0.00003 | -0.087% | 0.89 |
+| room | 1,024 | 0.9682 | 0.3544 | +0.0045 | -0.00018 | -0.027% | 0.68 |
+| room | 4,096 | 0.9636 | 0.3566 | -0.0006 | -0.00005 | -0.000% | 0.25 |
+| room | 16,384 | 0.8193 | 0.3356 | +0.0096 | +0.00017 | -0.031% | 0.64 |
+| room | 65,536 | 0.7603 | 0.3889 | +0.0156 | -0.00006 | -0.008% | 0.50 |
+| truck | 1,024 | 0.9887 | 0.3790 | +0.0034 | -0.00002 | +0.006% | 1.00 |
+| truck | 4,096 | 0.9815 | 0.3611 | +0.0063 | -0.00005 | -0.027% | 0.96 |
+| truck | 16,384 | 0.9841 | 0.3482 | +0.0007 | +0.00000 | -0.013% | 1.00 |
+| truck | 65,536 | 0.9892 | 0.3280 | +0.0013 | +0.00003 | +0.036% | 0.86 |
+
+- **Test dMSE against E2's `gn_vq`:** below 1 in 16 of 20 cells.
+  - On bonsai, counter, kitchen and truck it is 0.9754-1.0058; above 1 only in counter at K = 65,536 and
+    kitchen at 1,024, 4,096 and 65,536.
+  - On room it is 0.7603-0.9682: 0.8193 at K = 16,384 and 0.7603 at 65,536.
+- **Test dMSE against E2's `lloyd_trace`:** 0.3280-0.5396 in every cell.
+- **Test PSNR against E2's `gn_vq`:** higher in 16 of 20 cells, by -0.0044 to +0.0206 dB.
+- **LPIPS against E2's `gn_vq`:** moves by -0.00018 to +0.00017. SSIM moves by -0.00006 to +0.00020.
+- **Bytes against E2's `gn_vq`:** -0.095% to +0.036%.
+- **The CV Spearman** is 0.86-1.00 on bonsai, counter, kitchen and truck and 0.25-0.68 on room. **Post hoc:**
+  the one scene where the floor changed test fidelity the most is the one whose odd-view scores track the
+  test views least across the grid.
+
+### Reproduction of E2's `gn_vq` (Amendment 11 b): not applicable
+
+The reproduction check applies only to a final codebook at `rho_cv = 0`, which would be E2's `gn_vq` run
+again. `rho_cv` was above 0 in every cell, so **no `rho = 0` full-`M` row ran**, and all 20 statuses are
+`not_applicable`. The CV rows at `rho = 0` use `M_even` and are not comparable with E2's rows.
+
+E2c therefore has no direct check that its pipeline reproduces E2's rows on these scenes. What it has:
+- the same inputs: E2's `M` (`m_source` `restored_cache`, cache key equal to E2's) and E2's warm starts;
+- E2's K = 65,536 copy equals the run-5 cache on the four MipNeRF360 scenes;
+- the same code path, which reproduced E2's rows `identical` in all 8 cells of E2b (section 11).
+
+### GN-VQ iterations (results CSVs)
+
+- **Final rows:** 20 iterations at K = 1,024 on every scene (the cap), 15-18 at 4,096, 11-13 at 16,384 and 9
+  at 65,536.
+- **All 160 rows:** 13-20 at K = 1,024, 13-19 at 4,096, 10-14 at 16,384 and 8-10 at 65,536.
+- Time per GN-VQ row: 75.9-167.4 s.
+- The clip held: on all 160 rows the quantizer range lies inside the warm start's.
+
+### Validity and engineering checks
+
+| Check | Result |
+|---|---|
+| CUDA smoke tests (`gn2c_selftest.json`) | pass: `sh_basis` 6.50e-06, toy check 2.87%, end-to-end `pass`, `linalg_scale` pass |
+| Checkpoints | all 5 sha1s equal Amendment 7's pins, checked before any install (7.9 s) and in every job |
+| Render parity, 5 scenes | max abs difference 0.0 |
+| Full `M` | E2's cache on all 5 scenes (`m_source` `restored_cache`, key equal to E2's); `M_even` computed (8.0-16.8 s per pass); both finite |
+| Warm starts | E2's own caches: `e2_work_cache` at K = 1,024-16,384 (and at 65,536 on truck), `e2_kmeans_cache` at 65,536 on the four MipNeRF360 scenes, where it equals the run-5 cache |
+| Lifted check (10,000 splats) | 43 checks (8-10 per scene), all pass; sum excess / sum d_min at most 2.80e-08, worst excess / scale at most 5.25e-09, no splat over the tolerance |
+| Rows | 160 (32 per scene); `writer_codes_equal` True and `valid` True on all 160; every final row's `rho` is its CV rows' argmin |
+| Completeness | every meta's `missing_rows` empty; `gn2c_g2c.json` `missing` empty |
+| Jobs | all 5 exit code 0; none skipped by the start cutoff |
+| Batched linalg | no fallbacks in any job |
+| Install | a restored wheel reused (168.5 s, no `gsplat_wheel_build_s`); `gsplat_commit` `7617468e2e8c` |
+
+### Timings (`timings.json`, `gn2c_meta_<scene>.json`)
+
+| Scene | Data factor | Download | GN pass, even views | Job (`timings.json`, queue) | Job (meta) |
+|---|---|---|---|---|---|
+| room | 2 | 458.2 | 15.1 | 5,281.0 | 5,265.2 |
+| bonsai | 2 | 911.2 | 16.2 | 5,821.1 | 5,811.0 |
+| kitchen | 2 | 434.9 | 16.8 | 5,266.1 | 5,246.4 |
+| counter | 2 | 371.7 | 16.2 | 5,161.1 | 5,145.4 |
+| truck | 1 | 36.9 | 8.0 | 4,290.5 | 4,283.8 |
+
+Seconds. The queue timing is wall time at the queue's 15 s poll, so up to 15 s late. Session steps:
+checkpoint sha1s 7.9 s, restore 41.1 s, install 168.5 s, smoke tests 15.6 s. Rows are timestamped
+2026-09-26T17:57 to 21:45. The MipNeRF360 downloads took 371.7-911.2 s, against 53.5-89.3 s for the same
+scenes in E2.
+
+### What E2c settles, and what it does not
+
+- **G2c passed, as pre-registered, on the five scenes no earlier decision had used,** with the floor
+  selected in all 20 cells. The method is frozen as above (Amendment 11 b).
+- **The floor keeps GN-VQ's wins and did no measurable harm** by G2c's bound. It helped fidelity clearly only
+  on room, the one of these scenes whose GN-VQ generalized worst in E2 (Amendment 11 f).
+- **The selection chose small `rho` here** (1e-3 to 1e-1). The extended grid's upper values were never
+  selected, so on these scenes the method stays close to the full matrix.
+- **Limits:** k-means seed 0 only, four points per curve, one session, and no direct reproduction check
+  (above).
+  - **Post hoc:** no seed spread has been measured for the differences from E2's `gn_vq`. For scale, E1
+    measured GN-VQ's test PSNR moving by up to 0.0075 dB across k-means seeds 0-2 on bicycle (Amendment 7 e).
+  - Three of the five BD-PSNRs against `gn_vq` are smaller than that in magnitude (bonsai, kitchen, truck);
+    counter's (+0.0097 dB) and room's (+0.0141 dB) are larger.
+- **All 11 scenes with pinned checkpoints have now informed a decision or a gate.** Any later held-out
+  claim, E3's included, needs new scenes or checkpoints.
