@@ -1290,7 +1290,8 @@ one.
   codebook, separately from whether it tracks the full-`M` codebooks'.
 - **One lifted check per floored metric, 7 per scene.** The floor changes the metric the lifted fp32
   assignment works with, so E2's single check on the unfloored `M` does not cover it; each check costs
-  about 27 s at K = 65,536.
+  about 27 s at K = 65,536. **(Superseded by Amendment 10 c: 8 per scene, the unfloored full `M`
+  included.)**
 - **`gn_vq` gained an optional `report_metrics` argument** (reporting only) rather than E2b recomputing
   the unfloored objective afterwards: the objective before quantization needs the labels from before the
   final quantized assignment, which `gn_vq` does not return. The default path is unchanged; a test and
@@ -1300,7 +1301,8 @@ one.
   fixes it; the K grid stays an argument so the dry run can shrink it.
 - **E2b has its own configs, CSV and `rho` column** (`gn_vq_floor_cv`, `gn_vq_floor`), so `g2`'s
   functions and E2's rows can never pick an E2b row up, and `e2b.check_rows` refuses a full-`M` row at
-  rho = 0 (that codebook is E2's row).
+  rho = 0 (that codebook is E2's row). **(The rho = 0 refusal was removed with Amendment 10 c, which makes
+  E2b run that row; the rest stands.)**
 - **Both inputs are required, each behind a flag rather than silently optional:** without E2's output the
   rho > 0 rows would use a different realization of `M` than E2's rho = 0 row, which the comparison
   should not do by accident. Without the run-5 output nothing breaks if E2's output is complete, but it
@@ -1309,6 +1311,7 @@ one.
   record, not from the attached E2 output, whose `gn2/` the restore cell never reads.
 - **Queue order train, treehill, garden, flowers:** train is the longest job (data factor 1, a 500 s
   download in E2), and the two criterion scenes come next so that a short session still has them.
+  **(Superseded by Amendment 10: train left E2b; see "Amendment 10 session".)**
 - **Commit split as for E2:** the builder with the code, the rebuilt notebook with the docs.
 
 ### Amendment 10 session (2026-09-25, before any E2b data)
@@ -1346,6 +1349,148 @@ a reproduction check. No E2b row, bundle or log existed; the amendment was commi
   E2 checked, but E2b checks every metric it uses in its own session rather than rely on E2's record,
   which would not cover a recomputed `M`.
 
+### Amendments 9-10 and the E2b build: decision index (2026-09-26)
+
+Every decision from the Amendment 9 session, the E2b build and the Amendment 10 session, each with its
+reason and where it is recorded. Where "E2 results and E2b build" or "Amendment 10 session" above
+already gives the reason, the entry says so and adds only what they leave out. All were made before any
+E2b data existed.
+
+**E2's numbers of record and the BD computation**
+
+- **E2's BD values reproduce within a tolerance, not bit for bit** (every sign, win, deciding measure,
+  mean-term source, count and verdict identical; values within 2e-3 pp and 1e-6 dB). Dace's rule.
+  Recorded: "E2 results and E2b build", `bd_sensitivity.py`'s docstring, its `reproduction` block.
+  Measured here: at most 1.77e-3 pp (H2b treehill) and 1.60e-7 dB.
+- **The old cubic's rounding, measured:** against the 50-digit exact cubic, E2's bundle (Kaggle) is off by
+  up to 6.09e-4 pp in BD-rate and 1.46e-7 dB in BD-PSNR, a recomputation on this machine by up to
+  1.16e-3 pp and 1.13e-7 dB, the worst BD-rate at H2b treehill in both; only 4 of `gn2_g2.json`'s 120 BD
+  fields came out bit for bit here. Cause: `np.polyfit` on uncentred PSNR (21.59-32.31 dB) and log10
+  bytes (7.13-7.23). Recorded: `kaggle/gn_e2/bd_sensitivity.json` (`exact_cubic`), PREREG Amendment 9 a,
+  and the correction under "Comparison rules" in the E2 decision index (which had said "about 1e-7 pp").
+- **From E2b on, BD-rate and BD-PSNR use the domain-scaled fit** (`numpy.polynomial.Polynomial.fit`,
+  which maps the abscissa onto [-1, 1]); the pre-registered quantity, the degree-3 polynomial through
+  the four points, is unchanged, and E2's recorded values stand. Recorded: Amendment 9 a;
+  `g2.bd_rate_scaled` / `g2.bd_psnr_scaled` docstrings; `test_bd_scaled_matches_the_exact_cubic_on_all_of_e2s_curves`
+  (all 148 ordered pairs of E2's curves, measured within 5.6e-9 pp and 8.6e-13 dB, allowed 1e-8). Not
+  recorded before: **they are new functions beside the old ones, not replacements,** so neither E2's code
+  path nor any value E2 recorded can change, and the same degree rule (`min(3, n - 1)`) and NaN cases
+  apply, so a later caller swaps one name for the other. E2b itself computes no BD measure (two K per
+  curve).
+- **The exact cubic is a reference, not a replacement** (Lagrange form in `decimal` at 50 digits on the
+  floats' exact binary values). Recorded: "E2 results and E2b build".
+- **`bd_sensitivity.json` sits next to the bundle, not inside `gn2/`** (not recorded before): `gn2/` must
+  stay byte-identical to the zip it was unpacked from.
+- **Its input hashes are of the CR-normalized files** (`_sha256_lf`, not recorded before in prose):
+  `autocrlf` rewrites the CSVs' line endings on checkout, so a raw hash would depend on the machine.
+- **`held_out_without_flagged_scenes_post_hoc`** (not recorded before): the post-hoc count that FINDINGS
+  section 10 quotes for H2b (8 of 9) and its mean over the other 8 (-4.47%) are fields of a committed
+  file, not arithmetic in the text, so the mechanical number check can match them.
+
+**E2b's scenes**
+
+- **Treehill, flowers and stump, with garden as the control; train dropped.** Recorded: Amendment 10 a-b
+  (the dMSE-ratio table, the selection by the difference test ratio minus train ratio, and why
+  Amendment 9's PSNR ratio was the wrong measure); "Amendment 10 session" (the quotient ranks room above
+  flowers at K = 65,536; "outdoor" is not a clean separation).
+- **Train stays a development scene although E2b dropped it.** Recorded: Amendment 10 b; reason in
+  "Amendment 10 session": Amendment 9 declared it one after E2's results had been seen, and removing it
+  from E2b does not make those results unseen, so treating it as held out again could let a later claim
+  use a scene that already shaped a decision. The conservative reading of a case the request left open.
+- **A label quirk to know when reading E2's rows** (not recorded before): E2's `source` column says
+  `run3_cache` for the K = 65,536 `lloyd_wopa_area` codebook on the seven run-4 scenes (stump, treehill,
+  flowers among them), because E2's notebook passes its copy of the run-3 or run-4 cache as
+  `--run3_kmeans_dir` and `gn_e1_scene.get_lloyd` labels any hit there `run3_cache`. In E2 it means "a
+  runs 3-4 cache", not "run 3". E2b's own labels (`e2_kmeans_cache`, `run5_kmeans_cache`) say where the
+  file came from instead.
+
+**E2b's rho = 0 rows and which criteria use them**
+
+- **E2b reruns rho = 0 with E2's full `M`** (Amendment 10 c), which Amendment 9 b.c had excluded: the
+  reproduction check needs a row to compare with E2's, and the fidelity criterion's "E2b's own rho = 0
+  value" needs a codebook from the same run and the same realization of `M` as the rho > 0 rows.
+  Recorded: Amendment 10 c; "Amendment 10 session".
+- **Which row each item uses** (Amendment 10 c; `e2b.py`'s docstring; `judge_scene_k`):
+  - Amendment 9's PSNR criteria: **E2's `gn_vq` row** is the rho = 0 codebook (it is `rho_cv`'s codebook
+    when `rho_cv = 0`) and garden's reference;
+  - Amendment 9's Spearman (odd-view dMSE against full-`M` test dMSE): **E2's row** at rho = 0, as
+    written; also reported with **E2b's own row** (`spearman_odd_vs_full_test_own_rho0`);
+  - Amendment 10's fidelity criterion (R at `rho_cv = 0`, and each cell's own rho = 0 R): **E2b's own row**;
+  - the garden control's denominator: **E2b's own row**;
+  - the reproduction check: E2b's own row against E2's.
+  Reason for the split: Amendment 9's items were pre-registered with E2's row and are kept exactly as
+  written; Amendment 10's items compare codebooks that share one run and one `M`, so a difference between
+  E2's run and E2b's cannot masquerade as an effect of the floor.
+
+**The reproduction check**
+
+- **Tolerances 1e-3 dB in test PSNR and 1e-3 relative in test dMSE**, with `identical` reported
+  separately and only `not_reproduced` flagged. This session's choice, in Amendment 10 c before any data;
+  reason in "Amendment 10 session" (GN-VQ's float64 `index_add_` on the GPU has no fixed atomic order;
+  1e-3 dB is below every gain E2 measured at these K and half of TorchPQ's cross-session spread).
+- **`inputs_differ`** (Amendment 10 c; `e2b.reproduction`): the row did not use E2's `M` (`m_source` is not
+  `restored_cache`) or E2's own warm start (`warm_start_source` is not `e2_work_cache` / `e2_kmeans_cache`).
+  The differences are still reported; the status only stops a comparison with different inputs from being
+  read as a failure to reproduce. Not recorded before:
+  - `run5_kmeans_cache` counts as differing although on these scenes it holds the same clustering E2 used:
+    the status keeps to what the row records rather than inferring provenance; read `warm_start_source`.
+  - The status uses `m_source`, not `m_key_equals_e2`: the cache key encodes the checkpoint, the render
+    settings, the number of views and the probe seed (`gm.cache_key`), so a recomputed `M` has the same key
+    as E2's without being bitwise E2's `M` (the GPU backward accumulates in no fixed order).
+  - `m_source` is `restored_cache` when the cache loaded and the scene's meta has no record of E2b computing
+    it; once E2b recomputes it, the meta says `recomputed` and a resume keeps that (`gn_e2b_scene.py`).
+
+**The two criteria**
+
+- **The garden control is reported beside the fidelity verdict, not inside it** (Amendment 10 d's wording,
+  "reported with it"; `e2b._fidelity_criterion` keeps a missing garden row out of the verdict's `missing`,
+  and `test_e2b_fidelity_criterion_every_path` pins that). The verdict answers Amendment 10 d's two
+  conditions as written; **Amendment 10 f then governs what may be claimed:** that the floor works only if
+  both the fidelity verdict and the garden control hold, and nothing of the kind if the garden row is
+  missing. The fields stay as implemented; see the open item below.
+- **`judge_e2b` returns `verdicts` = {`fidelity`, `garden_control`, `psnr`} and no single `verdict`**
+  (not recorded before): there are two criteria, neither a gate, and a control that Amendment 10 f needs
+  for any claim; one top-level field would suggest a single verdict.
+- **Differences rounded to 9 decimals, "below" strict, "at most" inclusive; at `rho_cv = 0` a cell is not
+  below its own rho = 0.** Recorded: Amendment 10 d; "Amendment 10 session".
+- **The PSNR criteria carry the cross-term caveat** in their output (`CROSS_TERM_CAVEAT`). Recorded:
+  Amendment 10 a and e.
+
+**The build**
+
+- **`M_even` is its own GN pass, with its own probe draws** (not recorded before): `compute_gn` over the
+  even-indexed views starts the seed-0 probe generator afresh, so the even views are probed differently
+  than in E2's full pass and `M_even` is not a sub-sum of E2's `M`. That is Amendment 9 b.b's definition
+  ("E0's GN pass (probe seed 0) over the even-indexed train views only"), it costs a few seconds, and it
+  needs nothing from how E2's pass was ordered.
+- **`M_even`'s cache key has a suffix and its own directory** (`|train_views=even_indexed`,
+  `gn_cache_even/`; not recorded before): `gm.cache_key` records only the number of views, not which, so
+  without them an even-view `M` could be taken for a full `M` of the same view count.
+- **CV rows skip the full-pipeline evaluation** (no test PSNR / SSIM / LPIPS, no train PSNR; not recorded
+  before): the selection uses the odd-view dMSE only and both criteria use full-`M` rows, and LPIPS over
+  the test views plus a pass over the train views is the costliest part of E2's per-row measurement. They
+  keep the test dMSE (the second Spearman), `P` on `M_even` and the bytes.
+- **Eight lifted checks per scene**, one per metric used: `M_even` at the four rho, the full `M` at the four
+  rho. Recorded: Amendment 9 b.g, Amendment 10 c, "Amendment 10 session".
+- **Warm-start order: E2's own caches, then the run-5 cache, then this job's cache, then a reclustering,**
+  each key-checked. Recorded: `gn_e2b_scene.py`'s docstring and `get_warm_start`. Reason: the first is the
+  exact codebook E2 warm-started from, so the rho = 0 row can reproduce E2's.
+- **The restore cell copies only the four scenes' `M`** (about 4 x 480 MB rather than E2's 11 files).
+  Recorded: the builder's restore cell comment.
+- **Both inputs required, each behind an explicit flag; E2's comparator rows from the cloned repo; the rho
+  grid fixed in the job; E2b's own configs and CSV; `report_metrics` in `gn_vq`; the CV codebooks also
+  measured on the test views.** Recorded with reasons: "E2 results and E2b build".
+- **Queue order treehill, garden, flowers, stump.** Recorded: "Amendment 10 session".
+- **The dry run first runs E2's own job on the toy** (not recorded before in prose; the dry run's
+  docstring lists the stages), so the restore cell and the E2b job read a real E2 output layout
+  (`gn_cache/`, `gn2_work/`, `tilequant/e2_kmeans/`) instead of hand-made files, and the reproduction check
+  can compare E2b's rho = 0 rows with real E2 rows (on the CPU they come out `identical`). Stump's toy E2
+  run reclusters its K = 64 codebook into `gn2_work/`, so the restore path for a K = 65,536 file there
+  (which E2's train had) stays covered after train left; flowers deliberately loses E2's warm starts and
+  `M`, to exercise the fallbacks and the `inputs_differ` status.
+- **Bit-identity of rho = 0 is shown on the CPU only** (the dry run's stage 5 and a test). On a GPU the
+  reproduction check decides, with the tolerances above.
+
 ### Open items (E0, E1, E2: closed; E2b: open)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
@@ -1364,6 +1509,12 @@ a reproduction check. No E2b row, bundle or log existed; the amendment was commi
 - **Run E2b on Kaggle.** Built and dry-run (Amendments 9 and 10; see "E2b notebook" for the steps and the two
   required inputs). Then unpack `gn2b_bundle.zip` into `kaggle/gn_e2b/`, commit it as data only, and
   write FINDINGS section 11 from it.
+- **FINDINGS section 11 must follow Amendment 10 f** (`PREREG_GN.md`, committed `0d180360` before any E2b
+  data). It may say that the floor works **only if both the fidelity verdict and the garden control
+  hold** (`verdicts.fidelity` is `works` and `verdicts.garden_control` is true in `gn2b_e2b.json`), and it
+  says nothing of the kind if the garden row is missing (`garden_control` null). The verdict fields stay
+  as implemented; this rule governs the wording of FINDINGS and of any write-up. The PSNR criteria are
+  reported alongside with the cross-term caveat and support no such claim on their own.
 - ~~**Amendment 6's two rows cost little.**~~ **E1 done;** the measured costs are in FINDINGS
   section 9. Kept for the record: They are two more GN-VQ runs per scene at seed 0 and
   K = 65,536, warm-started from a `lloyd_wopa_area` cache that is already on disk, so they add no
