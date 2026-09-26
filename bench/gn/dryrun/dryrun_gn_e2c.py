@@ -88,6 +88,16 @@ def counting_build(args):
 ts.build_runner = counting_build
 
 
+def no_download(*a, **k):
+    raise AssertionError("the dry run tried a real download: call fake_data(scene) before the job")
+
+
+# A job whose data marker is missing would otherwise download the real scene (1.3 GB for 360_v2.zip).
+import tilequant_run5 as r5  # noqa: E402
+
+r4.download_scene = r5.download_tandt_scene = no_download
+
+
 def fake_data(scene):
     d = os.path.join(data_root, scene)
     os.makedirs(d, exist_ok=True)
@@ -314,6 +324,7 @@ with open(room_csv, "w", newline="") as f:
     w = csv.DictWriter(f, fieldnames=job.COLUMNS)
     w.writeheader()
     w.writerows(kept)
+fake_data("room")  # stage (3) deleted the data
 assert job.main(argv("room")) == 0
 after = csv_rows(room_csv)
 assert len(after) == 32 and after[:-1] == kept
@@ -328,6 +339,7 @@ saved = e2c.RHOS
 e2c.RHOS = (0.0,)
 try:
     zero_out = os.path.join(ROOT, "zero")
+    fake_data("bonsai")
     assert job.main(argv("bonsai", **{"--out_dir": zero_out})) == 0
 finally:
     e2c.RHOS = saved
@@ -362,6 +374,7 @@ cache = torch.load(os.path.join(rns["GN_CACHE"], "kitchen.pt"), weights_only=Fal
 cache["key"] = "another checkpoint"
 torch.save(cache, bad_m)
 refuse_m = os.path.join(ROOT, "refuse_m")
+fake_data("kitchen")
 try:
     job.main(argv("kitchen", **{"--out_dir": refuse_m, "--gn_cache": bad_m}))
     raise AssertionError("E2's M with another key was accepted")
