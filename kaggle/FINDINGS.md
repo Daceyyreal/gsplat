@@ -85,8 +85,9 @@ criterion it does not work: treehill stays below `lloyd_trace` at both K (-0.001
   timestamped 2026-09-25T19:02 to 20:28, gsplat commit `0d180360` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows, from `kaggle/gn_e2/gn2/`. Every row used E2's full `M` and E2's
   warm starts, restored from E2's notebook output (`m_source`, `warm_start_source`). The bundle is
-  unpacked unchanged in `kaggle/gn_e2b/gn2b/`. A script recomputed every number in the section from those two
-  sources and checked each against the text.
+  unpacked unchanged in `kaggle/gn_e2b/gn2b/`. `bench/gn/check_s11.py` recomputes every number in the
+  section from those two sources and checks each against the text (`python bench/gn/check_s11.py`,
+  0 failures).
 - Section 4: every number comes from `kaggle/run3/tilequant/` (one Kaggle session, gsplat commit
   `f9b61526`). That session restored the run-2 output (training #2 checkpoints, seed-0 PLAS sort,
   run-1 / run-2 rows, gsplat wheel) and ran only the run-3 configs, so run-3 rows pair with the
