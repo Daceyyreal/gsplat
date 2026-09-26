@@ -39,6 +39,14 @@ pre-registered -5%. H2b (against the scalar `tr(M)` weighting, reported) holds w
 counted: treehill's computed win is an artifact of the cubic fit. Post hoc, PCHIP interpolation gives
 8 of 9 and -5.66% for G2a, and the codebook stream alone (`shN.npz`) shows about -31%.
 
+**E2b (section 11, branch `bench/gn-vq`, exploratory): the floor works in fidelity terms, not by the
+PSNR criterion.** E2's GN-VQ with the floored metric `M_i + rho * tr(M_i) / 15 * I`, `rho` chosen by
+train-view cross-validation, has a lower test dMSE ratio against `lloyd_trace` than without the floor in
+all 6 cells of treehill, flowers and stump (treehill at K = 65,536: 1.1253 to 0.6602), and garden, the
+control, stays within its 5%. Amendment 10 f requires both for the claim. By Amendment 9's PSNR
+criterion it does not work: treehill stays below `lloyd_trace` at both K (-0.0016 and -0.0120 dB).
+`rho_cv` is 1e-1, the top of the grid, in all six cells.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -73,6 +81,12 @@ counted: treehill's computed win is an artifact of the cubic fit. Post hoc, PCHI
   and a GN cache for garden and bicycle from an earlier output. The bundle is unpacked unchanged in
   `kaggle/gn_e2/gn2/`. A script recomputed every number in the section from those two sources and
   checked each against the text.
+- Section 11: every number comes from `kaggle/gn_e2b/gn2b/` (one Kaggle session on 2x T4, rows
+  timestamped 2026-09-25T19:02 to 20:28, gsplat commit `0d180360` on `bench/gn-vq`, a restored wheel
+  reused) and, for E2's comparator rows, from `kaggle/gn_e2/gn2/`. Every row used E2's full `M` and E2's
+  warm starts, restored from E2's notebook output (`m_source`, `warm_start_source`). The bundle is
+  unpacked unchanged in `kaggle/gn_e2b/gn2b/`. A script recomputed every number in the section from those two
+  sources and checked each against the text.
 - Section 4: every number comes from `kaggle/run3/tilequant/` (one Kaggle session, gsplat commit
   `f9b61526`). That session restored the run-2 output (training #2 checkpoints, seed-0 PLAS sort,
   run-1 / run-2 rows, gsplat wheel) and ran only the run-3 configs, so run-3 rows pair with the
@@ -1524,3 +1538,217 @@ selects its strength by train-view cross-validation. Amendment 10 (`e580b731`, b
 it to treehill, flowers and stump, the held-out scenes whose GN-VQ-to-`lloyd_trace` ratio of measured
 dMSE grows most from train to test views, with garden as the control, and judges it on test dMSE. From
 those amendments on, treehill, flowers, stump and train are development scenes.
+
+## 11. E2b: an isotropic floor on the GN metric (`bench/gn-vq`, exploratory) — fidelity criterion met, garden control held; PSNR criterion not met
+
+**In fidelity terms, the floor works.** Amendment 10 f allows that claim only if both the fidelity
+criterion and the garden control hold, and both do (`gn2b_e2b.json`, `verdicts`: `fidelity` =
+`works`, `garden_control` = true). With `rho` chosen by train-view cross-validation, E2's GN-VQ with
+the floored metric `M_i + rho * tr(M_i) / 15 * I` has a lower test dMSE ratio R against `lloyd_trace`
+than without the floor in **all 6** cells of treehill, flowers and stump (5 needed). Treehill at
+K = 65,536 goes from 1.1253 to 0.6602 (below 1 needed). Garden's test dMSE at its `rho_cv` is 0.9998
+and 1 times its own `rho = 0` value, inside the 5% the control allows.
+
+**By Amendment 9's PSNR criterion, it does not work.** On treehill, `rho_cv`'s codebook stays below
+`lloyd_trace` in test PSNR at both K (-0.0016 and -0.0120 dB). Garden's half of that criterion holds.
+
+E2b is exploratory: neither criterion gates anything, and E2's verdicts (section 10) are unchanged. All
+four scenes are development scenes. The rules were fixed before any E2b data: the variant, the
+cross-validation, the grid and the PSNR criteria in Amendment 9 (`1ae0c05b`); the scenes, the
+fidelity criterion, the garden control and E2b's own `rho = 0` rows in Amendment 10 (`e580b731`); and
+the rule for describing the result in Amendment 10 f (`0d180360`). The verdicts below are
+`bench/gn/e2b.py`'s, written by the notebook into `gn2b_e2b.json`; nothing here re-judges them. The
+comparators are E2's committed rows (`kaggle/gn_e2/gn2/`). Items marked **post hoc** were read from the
+result files after the fact and were not pre-registered.
+
+### Verdicts (`gn2b_e2b.json`)
+
+| Criterion | Result |
+|---|---|
+| Fidelity (Amendment 10 d) | **works**: 6 of 6 cells below E2b's own `rho = 0` (needs 5); treehill's R at K = 65,536 is 0.6602 (needs below 1) |
+| Garden control (Amendment 10 d, reported with it) | **holds** at both K |
+| PSNR (Amendment 9 b.e, with the cross-term caveat) | **does not work**: treehill fails at both K; garden holds |
+| Reproduction of E2's `gn_vq` by E2b's `rho = 0` rows (Amendment 10 c) | `identical` in all 8 cells; nothing flagged |
+
+### Fidelity criterion (Amendment 10 d)
+
+R = test dMSE (`measured_test_clamped`) of the full-`M` codebook at `rho_cv`, divided by the test dMSE of
+E2's `lloyd_trace` row at the same scene and K:
+
+| Scene | K | `rho_cv` | R at `rho = 0` (E2b's own row) | R at `rho_cv` | Below |
+|---|---|---|---|---|---|
+| treehill | 4,096 | 1e-1 | 0.8417 | 0.6774 | yes |
+| treehill | 65,536 | 1e-1 | 1.1253 | 0.6602 | yes |
+| flowers | 4,096 | 1e-1 | 0.7058 | 0.6684 | yes |
+| flowers | 65,536 | 1e-1 | 0.6611 | 0.6000 | yes |
+| stump | 4,096 | 1e-1 | 0.7458 | 0.7257 | yes |
+| stump | 65,536 | 1e-1 | 0.6797 | 0.6448 | yes |
+
+The `rho = 0` values are the test ratios in Amendment 10 a's table, because E2b's `rho = 0` rows
+reproduce E2's `gn_vq` rows exactly (below). **Garden control:** test dMSE at `rho_cv` over garden's own
+`rho = 0` row is 0.99975 at K = 4,096 (`rho_cv` = 1e-2) and 1 at K = 65,536 (`rho_cv` = 0, the same
+row); the limit is 1.05.
+
+R for every full-`M` codebook (`gn2b_e2b.json`, `per_scene.<scene>.<K>.full`):
+
+| Scene, K | `rho = 0` | 1e-3 | 1e-2 | 1e-1 |
+|---|---|---|---|---|
+| treehill, 4,096 | 0.8417 | 0.8121 | 0.7372 | **0.6774** |
+| treehill, 65,536 | 1.1253 | 0.9836 | 0.8779 | **0.6602** |
+| flowers, 4,096 | 0.7058 | 0.7053 | 0.6918 | **0.6684** |
+| flowers, 65,536 | 0.6611 | 0.6286 | 0.6132 | **0.6000** |
+| stump, 4,096 | 0.7458 | 0.7417 | 0.7318 | **0.7257** |
+| stump, 65,536 | 0.6797 | 0.6777 | 0.6684 | **0.6448** |
+| garden, 4,096 | 0.4665 | 0.4679 | **0.4664** | 0.4763 |
+| garden, 65,536 | **0.4085** | 0.4080 | 0.4156 | 0.4372 |
+
+Bold marks `rho_cv`.
+
+- **In all six cells of treehill, flowers and stump, `rho_cv` is 1e-1, the top of the grid, and the
+  full-`M` test dMSE falls at every step of `rho`,** so it is lowest at 1e-1. The grid does not show where
+  it stops falling.
+- **Garden's selection stays low: 1e-2 and 0.** At `rho = 1e-1`, garden's test dMSE would have been
+  1.0211 and 1.0704 times its `rho = 0` value; the second is outside the control's 5%. On garden at
+  K = 65,536 the lowest test dMSE is at 1e-3 (R 0.4080), not at `rho_cv` = 0 (R 0.4085).
+
+### Selection: how well the odd-view score tracks the test views (Amendment 9 b.f, reported)
+
+Spearman rank correlation across the four `rho` values of the cross-validation codebooks' odd-train-view
+dMSE with:
+
+| Scene | K | Full-`M` test dMSE, `rho = 0` from E2's row (as Amendment 9 wrote) | The same, `rho = 0` from E2b's own row | The CV codebooks' own test dMSE |
+|---|---|---|---|---|
+| treehill | 4,096 | 1.0 | 1.0 | 1.0 |
+| treehill | 65,536 | 1.0 | 1.0 | 1.0 |
+| flowers | 4,096 | 1.0 | 1.0 | 0.8 |
+| flowers | 65,536 | 1.0 | 1.0 | 1.0 |
+| stump | 4,096 | 1.0 | 1.0 | 1.0 |
+| stump | 65,536 | 1.0 | 1.0 | 1.0 |
+| garden | 4,096 | 0.8 | 0.8 | 1.0 |
+| garden | 65,536 | 0.8 | 0.8 | 1.0 |
+
+The first two columns agree because the two `rho = 0` rows are identical. With four values a Spearman
+correlation can take only a few values, and no threshold is attached (Amendment 9 b.f).
+
+### PSNR criterion (Amendment 9 b.e, reported with the cross-term caveat)
+
+Test PSNR of the full compressed pipeline. The caveat (Amendment 10 a, `criterion_psnr.caveat`): PSNR is
+measured against the ground truth, so a change in it also contains the cross term between the
+quantization error and the uncompressed model's own error, which can have either sign.
+
+| Condition | K = 4,096 | K = 65,536 |
+|---|---|---|
+| treehill: `rho_cv`'s codebook minus E2's `lloyd_trace` (> 0 needed) | **-0.0016 dB** (23.2448 against 23.2465; fails) | **-0.0120 dB** (23.2626 against 23.2746; fails) |
+| for reference, E2's `gn_vq` minus `lloyd_trace` (section 10) | -0.0477 dB | -0.0444 dB |
+| garden: `rho_cv`'s codebook minus E2's `gn_vq` (>= -0.02 dB needed) | -0.0000248 dB (holds) | 0 dB (holds; `rho_cv` = 0) |
+
+Test PSNR of every full-`M` codebook, with E2's `lloyd_trace` row:
+
+| Scene, K | `rho = 0` | 1e-3 | 1e-2 | 1e-1 | E2 `lloyd_trace` |
+|---|---|---|---|---|---|
+| treehill, 4,096 | 23.1988 | 23.1796 | 23.2064 | **23.2448** | 23.2465 |
+| treehill, 65,536 | 23.2302 | 23.2726 | 23.2679 | **23.2626** | 23.2746 |
+| flowers, 4,096 | 21.8080 | 21.8051 | 21.8047 | **21.8199** | 21.7467 |
+| flowers, 65,536 | 21.8958 | 21.8993 | 21.9014 | **21.9070** | 21.8624 |
+| stump, 4,096 | 26.6889 | 26.6935 | 26.6905 | **26.6994** | 26.5366 |
+| stump, 65,536 | 26.8149 | 26.8123 | 26.8144 | **26.8183** | 26.7136 |
+| garden, 4,096 | 26.9959 | 26.9960 | **26.9958** | 26.9972 | 26.7513 |
+| garden, 65,536 | **27.1580** | 27.1554 | 27.1567 | 27.1557 | 27.0152 |
+
+- At `rho_cv`, test PSNR is above E2b's own `rho = 0` in all six cells of treehill, flowers and stump:
+  +0.0461 and +0.0324 dB on treehill, +0.0118 and +0.0111 on flowers, +0.0105 and +0.0034 on stump
+  (K = 4,096, then 65,536).
+- **Post hoc:** on treehill no `rho` in the grid beats `lloyd_trace` at either K. The best is 23.2448 dB
+  at K = 4,096 (`rho = 1e-1`) and 23.2726 dB at K = 65,536 (`rho = 1e-3`), against 23.2465 and
+  23.2746 dB.
+- **Post hoc:** at treehill K = 65,536 the test PSNR is highest at `rho = 1e-3` and the test dMSE lowest
+  at `rho = 1e-1`. This is the disagreement between dMSE and PSNR that the caveat describes.
+
+### Reproduction of E2's `gn_vq` (Amendment 10 c)
+
+In all 8 (scene, K) cells, E2b's `rho = 0` full-`M` row equals E2's committed `gn_vq` row: test PSNR,
+test dMSE and bytes differ by exactly 0 (status `identical`, none `flagged`). Both used E2's own inputs:
+`m_source` = `restored_cache` (E2's `M`, whose cache key equals the key in E2's meta), and the warm start
+from E2's own caches (`e2_work_cache` at K = 4,096, `e2_kmeans_cache` at K = 65,536). So every
+comparison between E2b's rows and E2's is between codebooks built from the same `M` and warm starts.
+
+### What else the floor changed (full-`M` rows, against E2b's own `rho = 0` row)
+
+- **Bytes.** Only `shN.npz` changes: the PNG files have identical sizes within each cell, and `meta.json`
+  differs by at most 1 byte. At `rho_cv` the change is -0.148% to +0.013% on the six cells of treehill,
+  flowers and stump (largest on flowers at K = 65,536), and -0.012% and 0 on garden. Over all 24 rows with
+  `rho` > 0 it is -0.437% (garden, K = 65,536, `rho = 1e-1`) to +0.435% (treehill, K = 65,536,
+  `rho = 1e-3`).
+- **Train PSNR** at `rho_cv` moves by -0.0056 to +0.0057 dB on the six cells, and by -0.0070 to
+  +0.0062 dB over all 24 rows with `rho` > 0.
+- **Train against test views (post hoc):** at `rho_cv` = 1e-1, the train-view dMSE is higher than at
+  `rho = 0` in all six cells (+2.64% to +8.01%), while the test-view dMSE is lower (-2.70% to -41.33%;
+  treehill -19.51% and -41.33%). The unfloored GN objective after quantization, which is what `rho = 0`
+  minimizes, rises by 4.75% to 19.73%. The floor gives up fit on the train views for fit on the test views.
+- **LPIPS** at `rho_cv` is higher than at `rho = 0` in all six cells, by 0.00008 to 0.00067.
+
+### The limit of the floor (post hoc)
+
+As `rho` grows, `M'_i / rho = M_i / rho + tr(M_i) / 15 * I` tends to `tr(M_i) / 15 * I`. So the floored
+distance, divided by `rho`, tends to `tr(M_i) / 15 * |c_i - q|^2`, the `tr(M_i)`-weighted squared
+Euclidean distance that `lloyd_trace` minimizes (its Lloyd weight is `tr(M_i)`), up to a constant
+factor. In that limit a splat's assignment becomes its L2-nearest centroid (a per-splat factor does not
+change its argmin) and the update becomes the `tr(M_i)`-weighted mean. **The floor therefore interpolates
+between the full matrix (`rho = 0`) and the scalar weighting.**
+
+The limit is not E2's `lloyd_trace` row itself. E2's ridge stays, and in the limit it scales the
+weighted mean by 1 / (1 + eps) = 1 / 1.01. GN-VQ also keeps its `lloyd_wopa_area` warm start, the clip,
+the 20-iteration cap and the quantized final assignment. At `rho = 1e-1` (R 0.6000-0.7257 in the six
+cells), R is below both ends: E2b's `rho = 0` rows, and `lloyd_trace`, whose R is 1 by definition.
+
+### GN-VQ iterations (`gn2b_<config>_rho<rho>_k<K>_s0_<scene>.json`, results CSVs)
+
+- K = 4,096: 15-20 iterations; the floor shortens the run (full-`M` rows: 19-20 at `rho = 0`, 16-17 at
+  `rho = 1e-1`). K = 65,536: 9-10 on every row.
+- Time per GN-VQ row: 91.0-119.5 s at K = 4,096 and 136.4-154.7 s at K = 65,536.
+- The clip held: on all 64 rows the quantizer range lies inside the warm start's.
+
+### Validity and engineering checks
+
+| Check | Result |
+|---|---|
+| CUDA smoke tests (`gn2b_selftest.json`) | pass: `sh_basis` 6.50e-06, toy check 2.87%, end-to-end `pass`, `linalg_scale` pass |
+| Checkpoints | all 4 sha1s equal Amendment 7's pins, checked before any install (9.9 s) and in every job |
+| Render parity, 4 scenes | max abs difference 0.0 |
+| Full `M` | E2's cache on all 4 scenes (`m_source` `restored_cache`, key equal to E2's); `M_even` computed (4.3-6.8 s per pass); both finite |
+| Lifted check (10,000 splats), 8 metrics per scene, 32 in all | pass; sum excess / sum d_min at most 2.90e-08, worst excess / scale at most 9.73e-09, no splat over the tolerance |
+| Rows | 64 (16 per scene); `writer_codes_equal` True and `valid` True on all 64 |
+| Completeness | every meta's `missing_rows` empty |
+| Jobs | all 4 exit code 0; none skipped by the start cutoff |
+| Warm starts | E2's own caches everywhere: `e2_work_cache` (K = 4,096), `e2_kmeans_cache` (K = 65,536) |
+| Batched linalg | no fallbacks in any job |
+| Install | a restored wheel reused (158.4 s, no `gsplat_wheel_build_s`); `gsplat_commit` `0d1803606481` (`bench/gn-vq` at Amendment 10 f; the next commit, `25664131`, changed only HANDOFF) |
+
+### Timings (`timings.json`, `gn2b_meta_<scene>.json`)
+
+| Scene | Download | GN pass, even views | Lifted checks (8) | Job (`timings.json`, queue) | Job (meta) |
+|---|---|---|---|---|---|
+| treehill | 85.5 | 4.8 | 27.0-28.1 each | 2,760.5 | 2,750.0 |
+| garden | 164.8 | 5.9 | 27.3-28.8 each | 3,090.5 | 3,073.7 |
+| flowers | 90.6 | 6.8 | 27.4-28.4 each | 2,790.5 | 2,777.4 |
+| stump | 72.6 | 4.3 | 27.3-28.6 each | 2,730.5 | 2,714.5 |
+
+Seconds. The queue timing is wall time at the queue's 15 s poll, so up to 15 s late. Session steps:
+checkpoint sha1s 9.9 s, restore 28.8 s, install 158.4 s, smoke tests 15.3 s. Rows are timestamped
+2026-09-25T19:02 to 20:28.
+
+### What E2b settles, and what it does not
+
+- **In fidelity terms, the floor works, as Amendment 10 f requires the claim to be made:** the fidelity
+  criterion and the garden control both hold. On treehill, flowers and stump the floor made GN-VQ's
+  codebook more faithful to the model on the test views in every cell. On treehill at K = 65,536 it
+  turned GN-VQ from less faithful than `lloyd_trace` (R 1.1253) into more faithful (R 0.6602).
+- **It does not work by the PSNR criterion.** On treehill it closed most of the test-PSNR gap to
+  `lloyd_trace`, from -0.0477 / -0.0444 dB to -0.0016 / -0.0120 dB, but did not close it at either K.
+- **The optimal `rho` is not located.** `rho_cv` is the top of the grid in all six cells, and the test
+  dMSE was still falling there.
+- **The selection behaved as intended on this evidence:** the odd-view score ranked the full-`M`
+  codebooks exactly as the test views did in all six cells (Spearman 1.0), and it kept garden's `rho`
+  low, where a large floor would have cost fidelity.
+- **Limits:** exploratory, on four development scenes, k-means seed 0 only, two K per curve (no BD
+  measure), and a four-value grid of `rho`.
