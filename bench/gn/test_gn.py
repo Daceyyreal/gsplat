@@ -2176,3 +2176,223 @@ def test_e2b_check_rows_and_the_job():
     path = os.path.join(repo, "kaggle", "gn_e2", "gn2", "gn2_results_treehill.csv")
     with pytest.raises(RuntimeError, match="not an E2b result file"):
         job.assert_e2b_csv(path)  # E2's own CSV is refused
+
+
+# --------------------------------------------------------------------------- E2c (Amendment 11)
+
+import e2c  # noqa: E402
+
+_E2C_ODD = {0.0: 5e-4, 1e-3: 4e-4, 1e-2: 2e-4, 1e-1: 3e-4, 3e-1: 3.5e-4, 1.0: 6e-4, 3.0: 7e-4}  # rho_cv = 1e-2
+_E2C_DMSE = {g2.UPSTREAM: 4e-4, g2.BASELINE: 3e-4, g2.SCALAR: 2e-4, g2.GNVQ: 1e-4}
+
+
+def _e2c_fixture(final=None, trace=None, wopa=None, odd=None, final_rho=None, drop=(), final_over=None):
+    """E2 rows for the five scenes and E2c rows on top of them.
+
+    E2: upstream_l1, lloyd_wopa_area and lloyd_trace on the base curve (``_g2_curve_rows``), gn_vq at 10%
+    fewer bytes; ``trace`` / ``wopa`` map a scene to (byte_factor, dpsnr) for those curves. E2c: per K the 7
+    CV rows with odd-view scores ``odd`` (rho -> score, default rho 1e-2 lowest; a callable (scene, k) ->
+    dict also works), then the final row at their argmin (or ``final_rho``), equal to E2's gn_vq row unless
+    ``final[scene]`` = (byte_factor, dpsnr) against the base curve or ``final_over(scene, k)`` overrides
+    fields. ``drop`` removes (scene, config, K, rho) rows, rho None for a final row."""
+    e2_rows, rows = [], []
+    for s in e2c.SCENES:
+        for c in g2.CONFIGS:
+            bf, dp = {g2.SCALAR: (trace or {}).get(s, (1.0, 0.0)), g2.BASELINE: (wopa or {}).get(s, (1.0, 0.0)),
+                      g2.GNVQ: (0.9, 0.0)}.get(c, (1.0, 0.0))
+            for r in _g2_curve_rows(s, c, bf, dp):
+                e2_rows.append({**r, "PSNR": repr(r["PSNR"]), "size_bytes": str(r["size_bytes"]),
+                                "measured_test_clamped": repr(_E2C_DMSE[c]), "SSIM": "0.8", "LPIPS": "0.2"})
+        for k in e2c.K_VALUES:
+            sc = odd(s, k) if callable(odd) else (odd or _E2C_ODD)
+            for rho in e2c.RHOS:
+                rows.append({"scene": s, "config": e2c.CV, "n_clusters": str(k), "seed": "0", "rho": repr(rho),
+                             "measured_odd_clamped": repr(sc[rho]), "measured_test_clamped": repr(sc[rho] * 1.1),
+                             "size_bytes": "15000000"})
+            rho_cv = final_rho if final_rho is not None else min(e2c.RHOS, key=lambda r: (sc[r], r))
+            gv = next(r for r in e2_rows if r["scene"] == s and r["config"] == g2.GNVQ and r["n_clusters"] == str(k))
+            fr = {**gv, "config": e2c.FINAL, "rho": repr(rho_cv), "train_PSNR": "26.0",
+                  "m_source": "restored_cache", "warm_start_source": "e2_work_cache"}
+            if final and s in final:
+                bf, dp = final[s]
+                i = list(e2c.K_VALUES).index(k)
+                fr.update(PSNR=repr(_G2_BASE_PSNR[i] + dp), size_bytes=str(int(round(_G2_BASE_BYTES[i] * bf))))
+            fr.update((final_over or (lambda s_, k_: {}))(s, k))
+            rows.append(fr)
+
+    def key(r):
+        return (r["scene"], r["config"], int(r["n_clusters"]), None if r["config"] == e2c.FINAL else float(r["rho"]))
+
+    return e2_rows, [r for r in rows if key(r) not in set(drop)]
+
+
+def test_e2c_grid_labels_and_selection():
+    assert e2c.RHOS == (0.0, 1e-3, 1e-2, 1e-1, 3e-1, 1.0, 3.0) and e2c.K_VALUES == g2.K_VALUES
+    assert e2c.SCENES == ("bonsai", "counter", "kitchen", "room", "truck")
+    assert not set(e2c.SCENES) & (set(g2.DEV) | set(e2b.SCENES) | {"train"})  # no scene a decision used
+    assert [e2c.rho_label(r) for r in e2c.RHOS] == ["0", "1e-3", "1e-2", "1e-1", "3e-1", "1", "3"]
+    assert e2c.select_rho_cv(_E2C_ODD) == 1e-2
+    assert e2c.select_rho_cv({**_E2C_ODD, 1e-1: 2e-4}) == 1e-2  # exact tie: the smaller rho
+    assert e2c.select_rho_cv({**_E2C_ODD, 3.0: 1e-5}) == 3.0
+    assert e2c.select_rho_cv({r: v for r, v in _E2C_ODD.items() if r != 3.0}) is None
+    assert e2c.select_rho_cv({**_E2C_ODD, 1.0: float("nan")}) is None
+    assert e2c.on_grid(0.30000000000000004) == 0.3 and e2c.on_grid(0.5) is None
+
+
+def test_e2c_g2c_every_path():
+    """Amendment 11 d: (1) all 5 scenes win against lloyd_trace (G2a's rule), (2) mean BD-rate against
+    lloyd_wopa_area <= -5% (Amendment 8's substitutes), (3) BD-PSNR against E2's gn_vq >= -0.01 dB on every
+    scene, undefined failing; domain-scaled fit, 9-decimal rounding; incomplete > fail > pass."""
+    e2_rows, rows = _e2c_fixture()  # the final curve is E2's gn_vq: 10% fewer bytes than both baselines
+    res = e2c.judge_e2c(rows, e2_rows)
+    c = res["conditions"]
+    assert res["verdict"] == "pass" and res["missing"] == []
+    assert c["1_all_win_vs_lloyd_trace"]["n_wins"] == 5 and c["1_all_win_vs_lloyd_trace"]["ok"]
+    assert c["2_mean_bd_rate_vs_lloyd_wopa_area"]["mean"] == pytest.approx(-10.0, abs=1e-6)
+    assert all(b == pytest.approx(0.0, abs=1e-9) for b in c["3_no_harm_vs_gn_vq"]["bd_psnr"].values())
+    v = res["per_scene"]["room"]["vs"][g2.SCALAR]
+    assert v["bd_rate"] == g2.bd_rate_scaled(_G2_BASE_BYTES, _G2_BASE_PSNR,
+                                             [int(round(b * 0.9)) for b in _G2_BASE_BYTES], _G2_BASE_PSNR)
+    assert res["rho_cv"]["truck"] == {str(k): "1e-2" for k in e2c.K_VALUES}
+    assert res["n_cells"] == 20 and res["n_cells_rho_cv_above_0"] == 20 and res["n_cells_rho_cv_at_top_of_grid"] == 0
+    # (1) fails alone: lloyd_trace 15% cheaper than the base on one scene, so gn_vq_cvfloor loses there
+    e2_rows, rows = _e2c_fixture(trace={"counter": (0.85, 0.0)})
+    c = e2c.judge_e2c(rows, e2_rows)["conditions"]
+    assert not c["1_all_win_vs_lloyd_trace"]["ok"] and c["1_all_win_vs_lloyd_trace"]["per_scene"]["counter"] == "loss"
+    assert c["2_mean_bd_rate_vs_lloyd_wopa_area"]["ok"] and c["3_no_harm_vs_gn_vq"]["ok"]
+    # (2) fails alone: lloyd_wopa_area only 3% more expensive than the final curve
+    e2_rows, rows = _e2c_fixture(wopa={s: (0.93, 0.0) for s in e2c.SCENES})
+    res = e2c.judge_e2c(rows, e2_rows)
+    c = res["conditions"]
+    assert res["verdict"] == "fail" and not c["2_mean_bd_rate_vs_lloyd_wopa_area"]["ok"]
+    assert c["1_all_win_vs_lloyd_trace"]["ok"] and c["3_no_harm_vs_gn_vq"]["ok"]
+    # (3): exactly 0.01 dB below E2's gn_vq holds, a hair more does not
+    for dp, ok in ((-0.01, True), (-0.0100001, False)):
+        e2_rows, rows = _e2c_fixture(final={"kitchen": (0.9, dp)})
+        res = e2c.judge_e2c(rows, e2_rows)
+        c3 = res["conditions"]["3_no_harm_vs_gn_vq"]
+        assert c3["per_scene_ok"]["kitchen"] is ok and c3["ok"] is ok and res["verdict"] == ("pass" if ok else "fail")
+    # (3): no shared byte range with E2's gn_vq (half the bytes) -> BD-PSNR undefined -> not met
+    e2_rows, rows = _e2c_fixture(final={"bonsai": (0.5, 0.0)})
+    res = e2c.judge_e2c(rows, e2_rows)
+    assert math.isnan(res["conditions"]["3_no_harm_vs_gn_vq"]["bd_psnr"]["bonsai"])
+    assert not res["conditions"]["3_no_harm_vs_gn_vq"]["per_scene_ok"]["bonsai"] and res["verdict"] == "fail"
+    assert res["conditions"]["1_all_win_vs_lloyd_trace"]["ok"]  # its BD-rate against lloyd_trace is defined
+    # (1) with no PSNR overlap: the BD-PSNR decides; (2) takes Amendment 8's substitute
+    e2_rows, rows = _e2c_fixture(final={"room": (1.0, 1.0)})
+    res = e2c.judge_e2c(rows, e2_rows)
+    v = res["per_scene"]["room"]["vs"]
+    assert math.isnan(v[g2.SCALAR]["bd_rate"]) and v[g2.SCALAR]["decided_by"] == "bd_psnr" and v[g2.SCALAR]["win"]
+    assert v[g2.BASELINE]["mean_term_source"] == "substitute_a"
+    assert v[g2.BASELINE]["mean_term"] == pytest.approx(-(1 - _G2_BASE_BYTES[0] / _G2_BASE_BYTES[-1]) * 100)
+    assert res["conditions"]["2_mean_bd_rate_vs_lloyd_wopa_area"]["terms"]["room"]["source"] == "substitute_a"
+
+
+def test_e2c_incomplete_and_the_final_rows_rho():
+    # a missing final row, a missing CV row, and a final row at a rho its CV rows do not select
+    cases = (
+        ([("truck", e2c.FINAL, 16384, None)], None, "truck gn_vq_cvfloor K=16384"),
+        ([("room", e2c.CV, 4096, 3.0)], None, "room gn_vq_cvfloor_cv K=4096 rho=3"),
+        ((), lambda s, k: {"rho": repr(1e-1)} if (s, k) == ("bonsai", 1024) else {}, "the CV rows select 1e-2"),
+    )
+    for drop, over, text in cases:
+        e2_rows, rows = _e2c_fixture(drop=drop, final_over=over)
+        res = e2c.judge_e2c(rows, e2_rows)
+        assert res["verdict"] == "incomplete" and any(text in m for m in res["missing"]), res["missing"]
+        assert not res["conditions"]["1_all_win_vs_lloyd_trace"]["ok"]
+        assert not res["conditions"]["3_no_harm_vs_gn_vq"]["ok"]
+    # a missing E2 gate comparator is incomplete; a missing upstream_l1 row (reported only) is not
+    e2_rows, rows = _e2c_fixture()
+    no_trace = [r for r in e2_rows
+                if not (r["scene"] == "kitchen" and r["config"] == g2.SCALAR and r["n_clusters"] == "4096")]
+    assert e2c.judge_e2c(rows, no_trace)["verdict"] == "incomplete"
+    no_up = [r for r in e2_rows if not (r["scene"] == "kitchen" and r["config"] == g2.UPSTREAM)]
+    res = e2c.judge_e2c(rows, no_up)
+    assert res["verdict"] == "pass" and g2.UPSTREAM not in res["per_scene"]["kitchen"]["vs"]
+
+
+def test_e2c_reported_items():
+    """Amendment 11 e: rho_cv and the top of the grid, dMSE ratios, LPIPS / SSIM changes, bytes, the CV
+    Spearman, the reproduction at rho_cv = 0, the sign and monotonicity flags; none changes the verdict."""
+    def top(s, k):
+        return {**_E2C_ODD, 3.0: 1e-5} if s == "room" else _E2C_ODD
+
+    e2_rows, rows = _e2c_fixture(odd=top, final_over=lambda s, k: {
+        "measured_test_clamped": repr(0.8e-4), "LPIPS": "0.201", "SSIM": "0.799"})
+    res = e2c.judge_e2c(rows, e2_rows)
+    assert res["verdict"] == "pass" and res["n_cells_rho_cv_at_top_of_grid"] == 4
+    cell = res["cells"]["room"]["65536"]
+    assert cell["rho_cv"] == 3.0 and cell["rho_cv_at_top_of_grid"] and cell["rho_cv_label"] == "3"
+    assert cell["test_dmse_over_gn_vq"] == pytest.approx(0.8) and cell["test_dmse_over_lloyd_trace"] == pytest.approx(0.4)
+    assert cell["dLPIPS_vs_gn_vq"] == pytest.approx(0.001) and cell["dSSIM_vs_gn_vq"] == pytest.approx(-0.001)
+    assert cell["bytes_ratio"][g2.GNVQ] == 0.0 and cell["bytes_ratio"][g2.SCALAR] == pytest.approx(-0.1, abs=1e-6)
+    assert cell["spearman_cv_odd_vs_cv_test"] == pytest.approx(1.0)  # CV test dMSE is 1.1 x the odd score
+    assert cell["reproduction_rho0"]["status"] == "not_applicable"
+    flags = res["per_scene"]["room"]["vs"][g2.SCALAR]
+    assert not flags["sign_disagreement"] and flags["new_rises_with_K"] and flags["ref_rises_with_K"]
+    # rho_cv = 0: the final row is E2's gn_vq run again, identical here; a 0.01 dB change is flagged
+    zero = {**_E2C_ODD, 0.0: 1e-5}
+    e2_rows, rows = _e2c_fixture(odd=zero)
+    res = e2c.judge_e2c(rows, e2_rows)
+    assert res["n_cells_rho_cv_above_0"] == 0 and res["verdict"] == "pass"
+    assert all(v["status"] == "identical" for v in res["reproduction_rho0"]["cells"].values())
+    e2_rows, rows = _e2c_fixture(odd=zero, final_over=lambda s, k: {"PSNR": repr(_G2_BASE_PSNR[0] + 0.01)}
+                                 if (s, k) == ("truck", 1024) else {})
+    rep = e2c.judge_e2c(rows, e2_rows)["reproduction_rho0"]
+    assert rep["cells"]["truck/1024"]["status"] == "not_reproduced" and rep["flagged"] == ["truck/1024"]
+
+
+def test_e2c_check_rows_and_the_job(tmp_path):
+    """Only E2c's rows reach G2c; the job's scenes, grid, columns and pins are Amendment 11's; E2's and
+    E2b's CSVs are refused; E2's inputs are required before any download."""
+    import csv as _csv
+    import re
+
+    import gn_e2b_scene as e2bjob
+    import gn_e2c_scene as job
+
+    e2_rows, rows = _e2c_fixture()
+    assert e2c.check_rows(rows)["per_scene"]["room"] == {e2c.CV: 28, e2c.FINAL: 4}
+    for bad in ({**rows[0], "scene": "garden"}, {**rows[0], "config": e2b.CV}, {**rows[0], "rho": "0.5"},
+                {**rows[0], "rho": ""}):
+        with pytest.raises(RuntimeError, match="not E2c rows"):
+            e2c.check_rows(rows + [bad])
+    assert job.K_VALUES == "1024,4096,16384,65536" and job.VQ_EPS == 1e-2 and job.VQ_MAX_ITERS == 20
+    assert job.wanted_rows([4096], list(e2c.RHOS)) == [(e2c.CV, 4096, r) for r in e2c.RHOS] + [(e2c.FINAL, 4096, None)]
+    assert len(job.wanted_rows(list(e2c.K_VALUES), list(e2c.RHOS))) == 32
+    assert job.COLUMNS[:len(e2bjob.COLUMNS)] == e2bjob.COLUMNS and job.COLUMNS[-2:] == ["rho_cv", "cv_odd_scores"]
+    assert job.row_key({"config": e2c.FINAL, "n_clusters": "4096", "rho": "0.1"}) == (e2c.FINAL, 4096, None)
+    repo = os.path.dirname(os.path.dirname(HERE))
+    builder = open(os.path.join(repo, "kaggle", "build_gn_e2c_bench.py"), encoding="utf-8").read()
+    pinned = dict(re.findall(r'"(\w+)": \("(?:tandt|mipnerf360)", "\w+", "([0-9a-f]{40})"\)', builder))
+    run5 = {r["scene"]: r["ckpt_sha1"] for r in _csv.DictReader(
+        open(os.path.join(repo, "kaggle", "run5", "tilequant", "run5_results.csv"), newline=""))}
+    assert pinned == {s: run5[s] for s in e2c.SCENES} and "ALLOW_WITHOUT" not in builder
+    prereg = open(os.path.join(repo, "kaggle", "PREREG_GN.md"), encoding="utf-8").read()
+    a11 = prereg[prereg.index("## Amendment 11"):]
+    assert dict(re.findall(r"\| (\w+) \| [^|]+ \| `([0-9a-f]{40})` \|", a11)) == pinned
+    with pytest.raises(ValueError, match="not an E2c scene"):
+        job.main(["--scene", "treehill", "--dataset", "mipnerf360", "--benchmark_sh", "x", "--data_root", "x",
+                  "--ckpt", "x", "--expected_sha1", "x", "--sort_cache_dir", "x", "--warm_dir", "x",
+                  "--gn_cache", "x", "--gn_cache_even", "x", "--work_dir", "x", "--runs_dir", "x",
+                  "--out_dir", "x", "--examples_dir", "x"])
+    for path in (os.path.join(repo, "kaggle", "gn_e2", "gn2", "gn2_results_room.csv"),
+                 os.path.join(repo, "kaggle", "gn_e2b", "gn2b", "gn2b_results_garden.csv")):
+        with pytest.raises(RuntimeError, match="not an E2c result file"):
+            job.assert_e2c_csv(path)
+    args = argparse.Namespace(gn_cache=str(tmp_path / "none.pt"), warm_dir=str(tmp_path), n_clusters=65536, seed=0)
+    with pytest.raises(RuntimeError, match="MISSING E2 INPUT"):
+        job.check_inputs_exist(args, [1024, 65536])
+    (tmp_path / "e2_kmeans").mkdir()
+    (tmp_path / "e2_kmeans" / "lloyd_wopa_area_s0.pt").write_bytes(b"")
+    (tmp_path / "none.pt").write_bytes(b"")
+    with pytest.raises(RuntimeError, match="K=1024") as exc:
+        job.check_inputs_exist(args, [1024, 65536])
+    assert "K=65536" not in str(exc.value)  # E2's copied run-4 cache covers K = 65,536
+
+
+def test_findings_section_11_numbers_recheck_from_the_repo():
+    import check_s11
+
+    res = check_s11.run()
+    assert res["fails"] == [] and res["n_numbers"] > 100
