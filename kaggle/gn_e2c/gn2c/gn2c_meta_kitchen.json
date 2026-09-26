@@ -1,0 +1,323 @@
+{
+  "scene": "kitchen",
+  "timings_s": {
+    "download": 434.90284991264343,
+    "gn_pass_even": 16.84384324599978,
+    "job": 5246.386574962001
+  },
+  "ckpt_sha1": "8e5e31d4a8d25f458ac55f95a72f442bde2c0f83",
+  "expected_sha1": "8e5e31d4a8d25f458ac55f95a72f442bde2c0f83",
+  "dataset": "mipnerf360",
+  "scene_set": "gate",
+  "data_factor": 2,
+  "settings": {
+    "packed": false,
+    "rasterize_mode": "classic",
+    "camera_model": "pinhole",
+    "with_ut": false,
+    "with_eval3d": false,
+    "near_plane": 0.01,
+    "far_plane": 10000000000.0,
+    "sh_degree": 3
+  },
+  "train_views": 244,
+  "test_views": 35,
+  "n_even_views": 122,
+  "n_odd_views": 122,
+  "total_train_pixels": 394977928,
+  "even_pixels": 197488964,
+  "n_splats": 1000000,
+  "k_values": [
+    1024,
+    4096,
+    16384,
+    65536
+  ],
+  "rhos": [
+    0.0,
+    0.001,
+    0.01,
+    0.1,
+    0.3,
+    1.0,
+    3.0
+  ],
+  "seed": 0,
+  "gsplat_commit": "7617468e2e8c",
+  "gn_vq": {
+    "max_iters": 20,
+    "rel_tol": 0.001,
+    "ridge_eps": 0.01,
+    "quantizer_bits": 6,
+    "floor": "M_i + rho * tr(M_i) / 15 * I"
+  },
+  "render_parity": {
+    "max_abs_diff": 0.0,
+    "pass": true,
+    "view_size": [
+      1558,
+      1039
+    ]
+  },
+  "gn_full": {
+    "source": "restored_cache",
+    "cache_key": "v1|8e5e31d4a8d25f458ac55f95a72f442bde2c0f83|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views244|seed0",
+    "key_equals_e2": true
+  },
+  "gn_even": {
+    "cache_key": "v1|8e5e31d4a8d25f458ac55f95a72f442bde2c0f83|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views122|seed0|train_views=even_indexed",
+    "n_views": 122,
+    "total_pixels": 197488964,
+    "splats_zero_trace": 12900
+  },
+  "finite_check": {
+    "M": {
+      "name": "M_packed",
+      "n_rows": 1000000,
+      "n_nonfinite_rows": 0,
+      "n_nonfinite_entries": 0,
+      "n_nan_entries": 0,
+      "n_inf_entries": 0,
+      "first_nonfinite_rows": [],
+      "max_abs": 23212.2734375,
+      "finite": true
+    },
+    "M_even": {
+      "name": "M_even",
+      "n_rows": 1000000,
+      "n_nonfinite_rows": 0,
+      "n_nonfinite_entries": 0,
+      "n_nan_entries": 0,
+      "n_inf_entries": 0,
+      "first_nonfinite_rows": [],
+      "max_abs": 13199.9169921875,
+      "finite": true
+    }
+  },
+  "warm_start_equals_run5_cache": true,
+  "lifted_checks": {
+    "even_rho0": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 120,
+      "n": 9880,
+      "sum_excess_over_sum_dmin": 8.508605984349557e-10,
+      "max_excess_over_scale": 2.636340676196007e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 7340,
+      "n_dmin_zero": 87,
+      "max_excess_over_dmin": 6.844356245364337e+39,
+      "same_index_fraction": 0.9888663967611335,
+      "max_codebook_sq_dist_from_mean": 4.227303314467391,
+      "time_s": 27.320083796999825
+    },
+    "even_rho1e-3": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 120,
+      "n": 9880,
+      "sum_excess_over_sum_dmin": 1.2819145592196341e-09,
+      "max_excess_over_scale": 2.7663516916356244e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 7339,
+      "n_dmin_zero": 87,
+      "max_excess_over_dmin": 6.286511904388363e+42,
+      "same_index_fraction": 0.988663967611336,
+      "max_codebook_sq_dist_from_mean": 4.227303314467391,
+      "time_s": 27.722288060999745
+    },
+    "even_rho1e-2": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 120,
+      "n": 9880,
+      "sum_excess_over_sum_dmin": 2.520857226968969e-09,
+      "max_excess_over_scale": 3.642421007529352e-09,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 7310,
+      "n_dmin_zero": 87,
+      "max_excess_over_dmin": 2.0334272051203583e+39,
+      "same_index_fraction": 0.9887651821862348,
+      "max_codebook_sq_dist_from_mean": 4.227303314467391,
+      "time_s": 28.07155828699979
+    },
+    "even_rho1e-1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 120,
+      "n": 9880,
+      "sum_excess_over_sum_dmin": 1.9195610041403387e-09,
+      "max_excess_over_scale": 9.91459961541078e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 7076,
+      "n_dmin_zero": 87,
+      "max_excess_over_dmin": 8.216201301213233e+38,
+      "same_index_fraction": 0.9888663967611335,
+      "max_codebook_sq_dist_from_mean": 4.227303314467391,
+      "time_s": 28.372580457999902
+    },
+    "even_rho3e-1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 120,
+      "n": 9880,
+      "sum_excess_over_sum_dmin": 8.330371468356153e-10,
+      "max_excess_over_scale": 2.9977629517513483e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 6790,
+      "n_dmin_zero": 87,
+      "max_excess_over_dmin": 5.175836269128631e+37,
+      "same_index_fraction": 0.9891700404858299,
+      "max_codebook_sq_dist_from_mean": 4.227303314467391,
+      "time_s": 28.58010627100066
+    },
+    "even_rho1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 120,
+      "n": 9880,
+      "sum_excess_over_sum_dmin": 8.826039192220985e-10,
+      "max_excess_over_scale": 1.344487898349962e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 6518,
+      "n_dmin_zero": 87,
+      "max_excess_over_dmin": 2.9254317083678934e+37,
+      "same_index_fraction": 0.9897773279352227,
+      "max_codebook_sq_dist_from_mean": 4.227303314467391,
+      "time_s": 28.80371542299963
+    },
+    "even_rho3": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 120,
+      "n": 9880,
+      "sum_excess_over_sum_dmin": 3.0397821397177715e-10,
+      "max_excess_over_scale": 1.7231631177394655e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 6619,
+      "n_dmin_zero": 87,
+      "max_excess_over_dmin": 6.619462071524783e+40,
+      "same_index_fraction": 0.9892712550607287,
+      "max_codebook_sq_dist_from_mean": 4.227303314467391,
+      "time_s": 28.939175601999523
+    },
+    "full_rho1e-3": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 120,
+      "n": 9880,
+      "sum_excess_over_sum_dmin": 1.877329626339671e-09,
+      "max_excess_over_scale": 6.26942057509004e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 7339,
+      "n_dmin_zero": 87,
+      "max_excess_over_dmin": 2.8859423298008345e+41,
+      "same_index_fraction": 0.9888663967611335,
+      "max_codebook_sq_dist_from_mean": 4.227303314467391,
+      "time_s": 29.006836427000053
+    },
+    "full_rho1e-2": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 120,
+      "n": 9880,
+      "sum_excess_over_sum_dmin": 6.617091682926593e-10,
+      "max_excess_over_scale": 2.1035015784186272e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 7307,
+      "n_dmin_zero": 87,
+      "max_excess_over_dmin": 6.31530704048512e+42,
+      "same_index_fraction": 0.9891700404858299,
+      "max_codebook_sq_dist_from_mean": 4.227303314467391,
+      "time_s": 29.054644637999445
+    }
+  },
+  "rho_cv": {
+    "1024": 0.001,
+    "4096": 0.01,
+    "16384": 0.001,
+    "65536": 0.01
+  },
+  "warm_starts": {
+    "1024": {
+      "source": "e2_work_cache",
+      "path": "/kaggle/working/e2c_warm/kitchen/e2_work/lloyd_wopa_area_k1024_s0.pt",
+      "origin_source": "recomputed"
+    },
+    "4096": {
+      "source": "e2_work_cache",
+      "path": "/kaggle/working/e2c_warm/kitchen/e2_work/lloyd_wopa_area_k4096_s0.pt",
+      "origin_source": "recomputed"
+    },
+    "16384": {
+      "source": "e2_work_cache",
+      "path": "/kaggle/working/e2c_warm/kitchen/e2_work/lloyd_wopa_area_k16384_s0.pt",
+      "origin_source": "recomputed"
+    },
+    "65536": {
+      "source": "e2_kmeans_cache",
+      "path": "/kaggle/working/e2c_warm/kitchen/e2_kmeans/lloyd_wopa_area_s0.pt",
+      "origin_source": ""
+    }
+  },
+  "linalg": {
+    "max_batch": 32768,
+    "op_max_batch": {
+      "linalg_eigvalsh": 8192,
+      "linalg_eigh": 8192
+    },
+    "working_batches": {
+      "linalg_inv_ex": 1,
+      "linalg_solve": 1024
+    },
+    "fallbacks": []
+  },
+  "missing_rows": [],
+  "done": true,
+  "data_deleted": true
+}

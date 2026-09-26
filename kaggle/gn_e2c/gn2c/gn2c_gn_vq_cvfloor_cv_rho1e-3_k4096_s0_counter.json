@@ -1,0 +1,318 @@
+{
+  "variant": "gn_vq",
+  "clip": true,
+  "final_quantized_assignment": true,
+  "max_iters": 20,
+  "rel_tol": 0.001,
+  "ridge_eps": 0.01,
+  "iterations": 16,
+  "stopped_because": "rel_tol",
+  "warm_start": {
+    "range": [
+      -0.782364010810852,
+      0.6652712821960449
+    ],
+    "quantizer": {
+      "mins": -0.7823629975318909,
+      "maxs": 0.6652712821960449,
+      "step": 0.022978322580456734,
+      "bits": 6,
+      "levels": 63
+    },
+    "objective": 0.00013734241563426175,
+    "n_clusters": 4096
+  },
+  "quantizer": {
+    "mins": -0.7823629975318909,
+    "maxs": 0.6652712821960449,
+    "step": 0.022978322580456734,
+    "bits": 6,
+    "levels": 63
+  },
+  "fraction_outside_warm_range_final": 0.0,
+  "clusters_rejected_by_clip_total": 10313,
+  "final_assignment_labels_changed_fraction": 0.253595,
+  "objective_before_quantization": 5.018715418081441e-05,
+  "objective_after_quantization": 5.321555881047747e-05,
+  "history": [
+    {
+      "iter": 0,
+      "step": "start",
+      "objective": 0.00013734241563426175
+    },
+    {
+      "iter": 1,
+      "step": "assign",
+      "objective": 7.07150698670857e-05,
+      "kept_current_by_guard": 1,
+      "zero_trace": 30339,
+      "share_all": 0.646766,
+      "share_trace_gt_0": 0.6357139247633966,
+      "topk": 64
+    },
+    {
+      "iter": 1,
+      "step": "update",
+      "objective": 6.0830923930842666e-05,
+      "fraction_outside_warm_range": 1.6276041666666666e-05,
+      "clusters_rejected_by_clip": 1,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.5570856705124994
+    },
+    {
+      "iter": 2,
+      "step": "assign",
+      "objective": 5.8204785745127505e-05,
+      "kept_current_by_guard": 1,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 2,
+      "step": "update",
+      "objective": 5.582039946709872e-05,
+      "fraction_outside_warm_range": 1.0850694444444445e-05,
+      "clusters_rejected_by_clip": 7,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.08236804802505221
+    },
+    {
+      "iter": 3,
+      "step": "assign",
+      "objective": 5.493962151984785e-05,
+      "kept_current_by_guard": 3,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 3,
+      "step": "update",
+      "objective": 5.382633917806336e-05,
+      "fraction_outside_warm_range": 1.0850694444444445e-05,
+      "clusters_rejected_by_clip": 28,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.03572278787095903
+    },
+    {
+      "iter": 4,
+      "step": "assign",
+      "objective": 5.340456484394031e-05,
+      "kept_current_by_guard": 5,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 4,
+      "step": "update",
+      "objective": 5.276266753684873e-05,
+      "fraction_outside_warm_range": 1.6276041666666666e-05,
+      "clusters_rejected_by_clip": 65,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.01976117375725457
+    },
+    {
+      "iter": 5,
+      "step": "assign",
+      "objective": 5.251184542780584e-05,
+      "kept_current_by_guard": 4,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 5,
+      "step": "update",
+      "objective": 5.208392093766545e-05,
+      "fraction_outside_warm_range": 2.170138888888889e-05,
+      "clusters_rejected_by_clip": 136,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.012864144874958218
+    },
+    {
+      "iter": 6,
+      "step": "assign",
+      "objective": 5.191964415969974e-05,
+      "kept_current_by_guard": 7,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 6,
+      "step": "update",
+      "objective": 5.160419963652238e-05,
+      "fraction_outside_warm_range": 2.7126736111111113e-05,
+      "clusters_rejected_by_clip": 225,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.009210545068548313
+    },
+    {
+      "iter": 7,
+      "step": "assign",
+      "objective": 5.149350518873773e-05,
+      "kept_current_by_guard": 3,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 7,
+      "step": "update",
+      "objective": 5.126503762987698e-05,
+      "fraction_outside_warm_range": 2.7126736111111113e-05,
+      "clusters_rejected_by_clip": 340,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.006572372191300416
+    },
+    {
+      "iter": 8,
+      "step": "assign",
+      "objective": 5.118804152461444e-05,
+      "kept_current_by_guard": 2,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 8,
+      "step": "update",
+      "objective": 5.100980442919109e-05,
+      "fraction_outside_warm_range": 2.7126736111111113e-05,
+      "clusters_rejected_by_clip": 446,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0049786991775685775
+    },
+    {
+      "iter": 9,
+      "step": "assign",
+      "objective": 5.095220350651673e-05,
+      "kept_current_by_guard": 3,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 9,
+      "step": "update",
+      "objective": 5.0816633881872924e-05,
+      "fraction_outside_warm_range": 3.255208333333333e-05,
+      "clusters_rejected_by_clip": 634,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0037869297771238315
+    },
+    {
+      "iter": 10,
+      "step": "assign",
+      "objective": 5.07723775831414e-05,
+      "kept_current_by_guard": 2,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 10,
+      "step": "update",
+      "objective": 5.066037633968774e-05,
+      "fraction_outside_warm_range": 2.170138888888889e-05,
+      "clusters_rejected_by_clip": 750,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0030749290192738535
+    },
+    {
+      "iter": 11,
+      "step": "assign",
+      "objective": 5.062495488380408e-05,
+      "kept_current_by_guard": 5,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 11,
+      "step": "update",
+      "objective": 5.054385070237658e-05,
+      "fraction_outside_warm_range": 2.7126736111111113e-05,
+      "clusters_rejected_by_clip": 876,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.002300133669158577
+    },
+    {
+      "iter": 12,
+      "step": "assign",
+      "objective": 5.051680594483179e-05,
+      "kept_current_by_guard": 3,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 12,
+      "step": "update",
+      "objective": 5.044310173711249e-05,
+      "fraction_outside_warm_range": 2.7126736111111113e-05,
+      "clusters_rejected_by_clip": 1098,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0019932981730524844
+    },
+    {
+      "iter": 13,
+      "step": "assign",
+      "objective": 5.0420024554101646e-05,
+      "kept_current_by_guard": 3,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 13,
+      "step": "update",
+      "objective": 5.036209408651772e-05,
+      "fraction_outside_warm_range": 2.7126736111111113e-05,
+      "clusters_rejected_by_clip": 1228,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0016059212817036697
+    },
+    {
+      "iter": 14,
+      "step": "assign",
+      "objective": 5.034319803387615e-05,
+      "kept_current_by_guard": 8,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 14,
+      "step": "update",
+      "objective": 5.029232388844195e-05,
+      "fraction_outside_warm_range": 2.7126736111111113e-05,
+      "clusters_rejected_by_clip": 1356,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0013853712666496898
+    },
+    {
+      "iter": 15,
+      "step": "assign",
+      "objective": 5.0275928444401956e-05,
+      "kept_current_by_guard": 5,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 15,
+      "step": "update",
+      "objective": 5.0234493674736955e-05,
+      "fraction_outside_warm_range": 3.255208333333333e-05,
+      "clusters_rejected_by_clip": 1495,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0011498815173718157
+    },
+    {
+      "iter": 16,
+      "step": "assign",
+      "objective": 5.0222644934703686e-05,
+      "kept_current_by_guard": 3,
+      "zero_trace": 30339
+    },
+    {
+      "iter": 16,
+      "step": "update",
+      "objective": 5.018715418081441e-05,
+      "fraction_outside_warm_range": 2.7126736111111113e-05,
+      "clusters_rejected_by_clip": 1628,
+      "clusters_kept_zero_M": 0,
+      "relative_drop": 0.0009423702810475945
+    }
+  ],
+  "objectives_under": {
+    "M": {
+      "objective_before_quantization": 4.988694512526239e-05,
+      "objective_after_quantization": 5.2904939897455466e-05
+    }
+  },
+  "config": "gn_vq_cvfloor_cv",
+  "scene": "counter",
+  "n_clusters": 4096,
+  "seed": 0,
+  "rho": 0.001,
+  "metric_views": "even",
+  "warm_start_source": "e2_work_cache",
+  "warm_start_path": "/kaggle/working/e2c_warm/counter/e2_work/lloyd_wopa_area_k4096_s0.pt",
+  "vq_time_s": 100.56238625500009
+}

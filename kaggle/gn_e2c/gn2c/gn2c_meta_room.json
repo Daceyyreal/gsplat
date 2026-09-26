@@ -1,0 +1,343 @@
+{
+  "scene": "room",
+  "timings_s": {
+    "download": 458.2110273838043,
+    "gn_pass_even": 15.113869037999848,
+    "job": 5265.179218857
+  },
+  "ckpt_sha1": "843339232b480503676f8cd4e7dd1cea9ad78749",
+  "expected_sha1": "843339232b480503676f8cd4e7dd1cea9ad78749",
+  "dataset": "mipnerf360",
+  "scene_set": "gate",
+  "data_factor": 2,
+  "settings": {
+    "packed": false,
+    "rasterize_mode": "classic",
+    "camera_model": "pinhole",
+    "with_ut": false,
+    "with_eval3d": false,
+    "near_plane": 0.01,
+    "far_plane": 10000000000.0,
+    "sh_degree": 3
+  },
+  "train_views": 272,
+  "test_views": 39,
+  "n_even_views": 136,
+  "n_odd_views": 136,
+  "total_train_pixels": 439597152,
+  "even_pixels": 219798576,
+  "n_splats": 1000000,
+  "k_values": [
+    1024,
+    4096,
+    16384,
+    65536
+  ],
+  "rhos": [
+    0.0,
+    0.001,
+    0.01,
+    0.1,
+    0.3,
+    1.0,
+    3.0
+  ],
+  "seed": 0,
+  "gsplat_commit": "7617468e2e8c",
+  "gn_vq": {
+    "max_iters": 20,
+    "rel_tol": 0.001,
+    "ridge_eps": 0.01,
+    "quantizer_bits": 6,
+    "floor": "M_i + rho * tr(M_i) / 15 * I"
+  },
+  "render_parity": {
+    "max_abs_diff": 0.0,
+    "pass": true,
+    "view_size": [
+      1557,
+      1038
+    ]
+  },
+  "gn_full": {
+    "source": "restored_cache",
+    "cache_key": "v1|843339232b480503676f8cd4e7dd1cea9ad78749|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views272|seed0",
+    "key_equals_e2": true
+  },
+  "gn_even": {
+    "cache_key": "v1|843339232b480503676f8cd4e7dd1cea9ad78749|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views136|seed0|train_views=even_indexed",
+    "n_views": 136,
+    "total_pixels": 219798576,
+    "splats_zero_trace": 61424
+  },
+  "finite_check": {
+    "M": {
+      "name": "M_packed",
+      "n_rows": 1000000,
+      "n_nonfinite_rows": 0,
+      "n_nonfinite_entries": 0,
+      "n_nan_entries": 0,
+      "n_inf_entries": 0,
+      "first_nonfinite_rows": [],
+      "max_abs": 52970.63671875,
+      "finite": true
+    },
+    "M_even": {
+      "name": "M_even",
+      "n_rows": 1000000,
+      "n_nonfinite_rows": 0,
+      "n_nonfinite_entries": 0,
+      "n_nan_entries": 0,
+      "n_inf_entries": 0,
+      "first_nonfinite_rows": [],
+      "max_abs": 23590.021484375,
+      "finite": true
+    }
+  },
+  "warm_start_equals_run5_cache": true,
+  "lifted_checks": {
+    "even_rho0": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 642,
+      "n": 9358,
+      "sum_excess_over_sum_dmin": 2.8148891576006654e-09,
+      "max_excess_over_scale": 5.034572165335871e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9337,
+      "n_dmin_zero": 36,
+      "max_excess_over_dmin": 3.0025090691982646e+28,
+      "same_index_fraction": 0.9857875614447531,
+      "max_codebook_sq_dist_from_mean": 14.008187060344099,
+      "time_s": 25.876502697999967
+    },
+    "even_rho1e-3": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 642,
+      "n": 9358,
+      "sum_excess_over_sum_dmin": 3.9721918614573935e-09,
+      "max_excess_over_scale": 7.378790165995775e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9337,
+      "n_dmin_zero": 36,
+      "max_excess_over_dmin": 9.227685497700643e+27,
+      "same_index_fraction": 0.9857875614447531,
+      "max_codebook_sq_dist_from_mean": 14.008187060344099,
+      "time_s": 26.234258804999854
+    },
+    "even_rho1e-2": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 642,
+      "n": 9358,
+      "sum_excess_over_sum_dmin": 2.258680545006645e-09,
+      "max_excess_over_scale": 8.005634815003417e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9337,
+      "n_dmin_zero": 36,
+      "max_excess_over_dmin": 1.238003794059599e+28,
+      "same_index_fraction": 0.985039538362898,
+      "max_codebook_sq_dist_from_mean": 14.008187060344099,
+      "time_s": 26.541298206999954
+    },
+    "even_rho1e-1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 642,
+      "n": 9358,
+      "sum_excess_over_sum_dmin": 8.969472301620236e-10,
+      "max_excess_over_scale": 6.673983585037552e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9333,
+      "n_dmin_zero": 36,
+      "max_excess_over_dmin": 8.277720026120278e+27,
+      "same_index_fraction": 0.9886727933319085,
+      "max_codebook_sq_dist_from_mean": 14.008187060344099,
+      "time_s": 26.84916254199993
+    },
+    "even_rho3e-1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 642,
+      "n": 9358,
+      "sum_excess_over_sum_dmin": 9.123693665442193e-10,
+      "max_excess_over_scale": 9.670729656306679e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9333,
+      "n_dmin_zero": 36,
+      "max_excess_over_dmin": 2.892381240778569e+28,
+      "same_index_fraction": 0.9892070955332336,
+      "max_codebook_sq_dist_from_mean": 14.008187060344099,
+      "time_s": 27.045869854000102
+    },
+    "even_rho1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 642,
+      "n": 9358,
+      "sum_excess_over_sum_dmin": 9.375027239634699e-10,
+      "max_excess_over_scale": 3.996139928609521e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9332,
+      "n_dmin_zero": 36,
+      "max_excess_over_dmin": 8.595460316977981e+25,
+      "same_index_fraction": 0.9891002350929685,
+      "max_codebook_sq_dist_from_mean": 14.008187060344099,
+      "time_s": 27.238795678000088
+    },
+    "even_rho3": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 642,
+      "n": 9358,
+      "sum_excess_over_sum_dmin": 6.57132087391481e-10,
+      "max_excess_over_scale": 2.225543782074288e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9338,
+      "n_dmin_zero": 36,
+      "max_excess_over_dmin": 2.1831162328959143e+24,
+      "same_index_fraction": 0.9893139559734986,
+      "max_codebook_sq_dist_from_mean": 14.008187060344099,
+      "time_s": 27.314485920999914
+    },
+    "full_rho1e-2": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 642,
+      "n": 9358,
+      "sum_excess_over_sum_dmin": 1.7353819769826072e-08,
+      "max_excess_over_scale": 9.701335496574016e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9334,
+      "n_dmin_zero": 36,
+      "max_excess_over_dmin": 5.248779212569441e+26,
+      "same_index_fraction": 0.9855738405642231,
+      "max_codebook_sq_dist_from_mean": 14.008187060344099,
+      "time_s": 27.51111882799978
+    },
+    "full_rho1e-3": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 642,
+      "n": 9358,
+      "sum_excess_over_sum_dmin": 1.720309098910857e-08,
+      "max_excess_over_scale": 1.5928863705434868e-09,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9334,
+      "n_dmin_zero": 36,
+      "max_excess_over_dmin": 4.858503671561393e+25,
+      "same_index_fraction": 0.9854669801239581,
+      "max_codebook_sq_dist_from_mean": 14.008187060344099,
+      "time_s": 27.464262695999878
+    },
+    "full_rho1e-1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 642,
+      "n": 9358,
+      "sum_excess_over_sum_dmin": 4.96313712247219e-09,
+      "max_excess_over_scale": 7.130836367565479e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9335,
+      "n_dmin_zero": 36,
+      "max_excess_over_dmin": 1.057969360972017e+25,
+      "same_index_fraction": 0.9876041889292584,
+      "max_codebook_sq_dist_from_mean": 14.008187060344099,
+      "time_s": 27.453556335999565
+    }
+  },
+  "rho_cv": {
+    "1024": 0.01,
+    "4096": 0.001,
+    "16384": 0.1,
+    "65536": 0.01
+  },
+  "warm_starts": {
+    "1024": {
+      "source": "e2_work_cache",
+      "path": "/kaggle/working/e2c_warm/room/e2_work/lloyd_wopa_area_k1024_s0.pt",
+      "origin_source": "recomputed"
+    },
+    "4096": {
+      "source": "e2_work_cache",
+      "path": "/kaggle/working/e2c_warm/room/e2_work/lloyd_wopa_area_k4096_s0.pt",
+      "origin_source": "recomputed"
+    },
+    "16384": {
+      "source": "e2_work_cache",
+      "path": "/kaggle/working/e2c_warm/room/e2_work/lloyd_wopa_area_k16384_s0.pt",
+      "origin_source": "recomputed"
+    },
+    "65536": {
+      "source": "e2_kmeans_cache",
+      "path": "/kaggle/working/e2c_warm/room/e2_kmeans/lloyd_wopa_area_s0.pt",
+      "origin_source": ""
+    }
+  },
+  "linalg": {
+    "max_batch": 32768,
+    "op_max_batch": {
+      "linalg_eigvalsh": 8192,
+      "linalg_eigh": 8192
+    },
+    "working_batches": {
+      "linalg_inv_ex": 1,
+      "linalg_solve": 1024
+    },
+    "fallbacks": []
+  },
+  "missing_rows": [],
+  "done": true,
+  "data_deleted": true
+}

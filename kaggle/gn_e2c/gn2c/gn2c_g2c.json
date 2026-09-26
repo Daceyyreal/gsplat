@@ -1,0 +1,3064 @@
+{
+  "rule": "PREREG_GN.md Amendment 11 d: over the four-point curves (K 1,024-65,536, seed 0, domain-scaled fit), G2c passes if (1) gn_vq_cvfloor wins against E2's lloyd_trace on all 5 scenes by G2a's rule (BD-rate < 0; if undefined, BD-PSNR > 0; if both undefined, a loss), (2) its mean BD-rate against E2's lloyd_wopa_area over the 5 scenes, with Amendment 8's substitutes, is <= -5%, and (3) its BD-PSNR against E2's gn_vq is >= -0.01 dB on every scene (undefined does not meet it)",
+  "verdict": "pass",
+  "conditions": {
+    "1_all_win_vs_lloyd_trace": {
+      "n_wins": 5,
+      "n_scenes": 5,
+      "ok": true,
+      "per_scene": {
+        "bonsai": "win",
+        "counter": "win",
+        "kitchen": "win",
+        "room": "win",
+        "truck": "win"
+      }
+    },
+    "2_mean_bd_rate_vs_lloyd_wopa_area": {
+      "mean": -6.167849000388882,
+      "max": -5.0,
+      "ok": true,
+      "terms": {
+        "bonsai": {
+          "value": -6.246617209764427,
+          "source": "bd_rate"
+        },
+        "counter": {
+          "value": -4.174572405276821,
+          "source": "bd_rate"
+        },
+        "kitchen": {
+          "value": -5.587951362962684,
+          "source": "bd_rate"
+        },
+        "room": {
+          "value": -8.190896238350964,
+          "source": "bd_rate"
+        },
+        "truck": {
+          "value": -6.639207785589518,
+          "source": "bd_rate"
+        }
+      }
+    },
+    "3_no_harm_vs_gn_vq": {
+      "min_bd_psnr": -0.01,
+      "bd_psnr": {
+        "bonsai": 0.0012554153753622534,
+        "counter": 0.009703829111682565,
+        "kitchen": 0.003226918280465542,
+        "room": 0.014133869084368157,
+        "truck": -0.0013173769974843448
+      },
+      "ok": true,
+      "per_scene_ok": {
+        "bonsai": true,
+        "counter": true,
+        "kitchen": true,
+        "room": true,
+        "truck": true
+      }
+    }
+  },
+  "missing": [],
+  "scenes": [
+    "bonsai",
+    "counter",
+    "kitchen",
+    "room",
+    "truck"
+  ],
+  "k_values": [
+    1024,
+    4096,
+    16384,
+    65536
+  ],
+  "rhos": [
+    0.0,
+    0.001,
+    0.01,
+    0.1,
+    0.3,
+    1.0,
+    3.0
+  ],
+  "rho_cv": {
+    "bonsai": {
+      "1024": "1e-2",
+      "4096": "1e-2",
+      "16384": "1e-2",
+      "65536": "1e-2"
+    },
+    "counter": {
+      "1024": "1e-2",
+      "4096": "1e-2",
+      "16384": "1e-2",
+      "65536": "1e-2"
+    },
+    "kitchen": {
+      "1024": "1e-3",
+      "4096": "1e-2",
+      "16384": "1e-3",
+      "65536": "1e-2"
+    },
+    "room": {
+      "1024": "1e-2",
+      "4096": "1e-3",
+      "16384": "1e-1",
+      "65536": "1e-2"
+    },
+    "truck": {
+      "1024": "1e-2",
+      "4096": "1e-2",
+      "16384": "1e-2",
+      "65536": "1e-2"
+    }
+  },
+  "n_cells_rho_cv_above_0": 20,
+  "n_cells_rho_cv_at_top_of_grid": 0,
+  "n_cells": 20,
+  "reproduction_rho0": {
+    "cells": {
+      "bonsai/1024": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "bonsai/4096": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "bonsai/16384": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "bonsai/65536": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "counter/1024": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "counter/4096": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "counter/16384": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "counter/65536": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "kitchen/1024": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "kitchen/4096": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "kitchen/16384": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "kitchen/65536": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "room/1024": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "room/4096": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "room/16384": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "room/65536": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "truck/1024": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "truck/4096": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "truck/16384": {
+        "status": "not_applicable",
+        "flagged": false
+      },
+      "truck/65536": {
+        "status": "not_applicable",
+        "flagged": false
+      }
+    },
+    "flagged": []
+  },
+  "cells": {
+    "bonsai": {
+      "1024": {
+        "scene": "bonsai",
+        "K": 1024,
+        "cv": {
+          "0": {
+            "odd_dmse": 8.083996445459361e-05,
+            "test_dmse": 8.304168272410902e-05,
+            "bytes": 13856098.0,
+            "vq_iterations": 20.0
+          },
+          "1e-3": {
+            "odd_dmse": 8.050798644700117e-05,
+            "test_dmse": 8.271652045067401e-05,
+            "bytes": 13859949.0,
+            "vq_iterations": 20.0
+          },
+          "1e-2": {
+            "odd_dmse": 7.894831492335148e-05,
+            "test_dmse": 8.098422388550185e-05,
+            "bytes": 13858187.0,
+            "vq_iterations": 20.0
+          },
+          "1e-1": {
+            "odd_dmse": 8.143883439539199e-05,
+            "test_dmse": 8.32820619963891e-05,
+            "bytes": 13842908.0,
+            "vq_iterations": 19.0
+          },
+          "3e-1": {
+            "odd_dmse": 8.727912816398599e-05,
+            "test_dmse": 8.888391179460717e-05,
+            "bytes": 13824560.0,
+            "vq_iterations": 16.0
+          },
+          "1": {
+            "odd_dmse": 0.00010055516534448339,
+            "test_dmse": 0.00010192980921636161,
+            "bytes": 13810146.0,
+            "vq_iterations": 15.0
+          },
+          "3": {
+            "odd_dmse": 0.00012073960089638194,
+            "test_dmse": 0.0001221005782487561,
+            "bytes": 13798832.0,
+            "vq_iterations": 14.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 31.695018768310547,
+          "SSIM": 0.9462138414382935,
+          "LPIPS": 0.1713748723268509,
+          "bytes": 13857753.0,
+          "test_dmse": 8.10986694330076e-05,
+          "train_PSNR": 32.484153747558594
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 30.673126220703125,
+            "bytes": 13780986.0,
+            "test_dmse": 0.0002370966757264396
+          },
+          "lloyd_trace": {
+            "PSNR": 30.935680389404297,
+            "bytes": 13802691.0,
+            "test_dmse": 0.00019641870046124377
+          },
+          "upstream_l1": {
+            "PSNR": 30.52545738220215,
+            "bytes": 13768285.0,
+            "test_dmse": 0.0002810570060215635
+          },
+          "gn_vq": {
+            "PSNR": 31.674406051635742,
+            "bytes": 13857252.0,
+            "test_dmse": 8.31476907823703e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.41288670194113997,
+        "test_dmse_over_gn_vq": 0.9753568459919617,
+        "dLPIPS_vs_gn_vq": -0.00013145804405212402,
+        "dSSIM_vs_gn_vq": 3.504753112792969e-05,
+        "dPSNR_vs_gn_vq": 0.020612716674804688,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.005570501268922223,
+          "lloyd_trace": 0.003989222101690171,
+          "upstream_l1": 0.0064981223151612255,
+          "gn_vq": 3.615435441317594e-05
+        },
+        "spearman_cv_odd_vs_cv_test": 1.0,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "4096": {
+        "scene": "bonsai",
+        "K": 4096,
+        "cv": {
+          "0": {
+            "odd_dmse": 4.910997043106092e-05,
+            "test_dmse": 5.034145505912333e-05,
+            "bytes": 14150026.0,
+            "vq_iterations": 16.0
+          },
+          "1e-3": {
+            "odd_dmse": 4.882623125266867e-05,
+            "test_dmse": 5.006183147239392e-05,
+            "bytes": 14150050.0,
+            "vq_iterations": 17.0
+          },
+          "1e-2": {
+            "odd_dmse": 4.8007456046668084e-05,
+            "test_dmse": 4.918543871858748e-05,
+            "bytes": 14148991.0,
+            "vq_iterations": 17.0
+          },
+          "1e-1": {
+            "odd_dmse": 5.0108401993556656e-05,
+            "test_dmse": 5.1063201049273064e-05,
+            "bytes": 14145865.0,
+            "vq_iterations": 14.0
+          },
+          "3e-1": {
+            "odd_dmse": 5.32279696717762e-05,
+            "test_dmse": 5.404131690156886e-05,
+            "bytes": 14134034.0,
+            "vq_iterations": 14.0
+          },
+          "1": {
+            "odd_dmse": 6.088974333109922e-05,
+            "test_dmse": 6.15785477024949e-05,
+            "bytes": 14124263.0,
+            "vq_iterations": 13.0
+          },
+          "3": {
+            "odd_dmse": 7.373805531471161e-05,
+            "test_dmse": 7.431757357929508e-05,
+            "bytes": 14119524.0,
+            "vq_iterations": 14.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 31.97563362121582,
+          "SSIM": 0.9481897354125977,
+          "LPIPS": 0.1694623976945877,
+          "bytes": 14150111.0,
+          "test_dmse": 4.9030131994818385e-05,
+          "train_PSNR": 32.81058883666992
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 31.38401985168457,
+            "bytes": 14113670.0,
+            "test_dmse": 0.00013423434758975204
+          },
+          "lloyd_trace": {
+            "PSNR": 31.450763702392578,
+            "bytes": 14118181.0,
+            "test_dmse": 0.0001258343884400211
+          },
+          "upstream_l1": {
+            "PSNR": 31.05020523071289,
+            "bytes": 14098638.0,
+            "test_dmse": 0.00018573862891073292
+          },
+          "gn_vq": {
+            "PSNR": 31.963716506958008,
+            "bytes": 14150385.0,
+            "test_dmse": 4.981085862017219e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.3896401659566103,
+        "test_dmse_over_gn_vq": 0.9843261761194049,
+        "dLPIPS_vs_gn_vq": 5.6937336921691895e-05,
+        "dSSIM_vs_gn_vq": 1.537799835205078e-05,
+        "dPSNR_vs_gn_vq": 0.0119171142578125,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.0025819648610176937,
+          "lloyd_trace": 0.002261622796874363,
+          "upstream_l1": 0.003650920039226513,
+          "gn_vq": -1.936343074759872e-05
+        },
+        "spearman_cv_odd_vs_cv_test": 1.0,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "16384": {
+        "scene": "bonsai",
+        "K": 16384,
+        "cv": {
+          "0": {
+            "odd_dmse": 2.8786847224843228e-05,
+            "test_dmse": 2.9533211779191558e-05,
+            "bytes": 14649619.0,
+            "vq_iterations": 12.0
+          },
+          "1e-3": {
+            "odd_dmse": 2.8368671381056317e-05,
+            "test_dmse": 2.9064766382109394e-05,
+            "bytes": 14646705.0,
+            "vq_iterations": 12.0
+          },
+          "1e-2": {
+            "odd_dmse": 2.8109736520256464e-05,
+            "test_dmse": 2.8743609288991404e-05,
+            "bytes": 14644648.0,
+            "vq_iterations": 13.0
+          },
+          "1e-1": {
+            "odd_dmse": 3.0113238038128005e-05,
+            "test_dmse": 3.065604836483002e-05,
+            "bytes": 14633727.0,
+            "vq_iterations": 11.0
+          },
+          "3e-1": {
+            "odd_dmse": 3.229125690785199e-05,
+            "test_dmse": 3.274381391820465e-05,
+            "bytes": 14631217.0,
+            "vq_iterations": 11.0
+          },
+          "1": {
+            "odd_dmse": 3.751474678541508e-05,
+            "test_dmse": 3.7916509910751766e-05,
+            "bytes": 14629184.0,
+            "vq_iterations": 10.0
+          },
+          "3": {
+            "odd_dmse": 4.588696484005324e-05,
+            "test_dmse": 4.624194220289067e-05,
+            "bytes": 14627628.0,
+            "vq_iterations": 11.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 32.175498962402344,
+          "SSIM": 0.9495419859886169,
+          "LPIPS": 0.1680460274219513,
+          "bytes": 14646195.0,
+          "test_dmse": 2.8575509789971288e-05,
+          "train_PSNR": 33.05377960205078
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 31.772573471069336,
+            "bytes": 14629503.0,
+            "test_dmse": 8.1652376164244e-05
+          },
+          "lloyd_trace": {
+            "PSNR": 31.797014236450195,
+            "bytes": 14628952.0,
+            "test_dmse": 7.648069188444585e-05
+          },
+          "upstream_l1": {
+            "PSNR": 31.487733840942383,
+            "bytes": 14612378.0,
+            "test_dmse": 0.0001173308802806585
+          },
+          "gn_vq": {
+            "PSNR": 32.178741455078125,
+            "bytes": 14647213.0,
+            "test_dmse": 2.8786857164906127e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.373630377627151,
+        "test_dmse_over_gn_vq": 0.9926581990620188,
+        "dLPIPS_vs_gn_vq": 0.0001109391450881958,
+        "dSSIM_vs_gn_vq": -3.8683414459228516e-05,
+        "dPSNR_vs_gn_vq": -0.00324249267578125,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.0011409820278924787,
+          "lloyd_trace": 0.0011786900387669164,
+          "upstream_l1": 0.0023142708188905736,
+          "gn_vq": -6.950127645444226e-05
+        },
+        "spearman_cv_odd_vs_cv_test": 1.0,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "65536": {
+        "scene": "bonsai",
+        "K": 65536,
+        "cv": {
+          "0": {
+            "odd_dmse": 1.5601551065567773e-05,
+            "test_dmse": 1.5984078254881136e-05,
+            "bytes": 15885927.0,
+            "vq_iterations": 9.0
+          },
+          "1e-3": {
+            "odd_dmse": 1.5146634365006614e-05,
+            "test_dmse": 1.5584483215513547e-05,
+            "bytes": 15890404.0,
+            "vq_iterations": 9.0
+          },
+          "1e-2": {
+            "odd_dmse": 1.5122399079681472e-05,
+            "test_dmse": 1.547458283686859e-05,
+            "bytes": 15885478.0,
+            "vq_iterations": 9.0
+          },
+          "1e-1": {
+            "odd_dmse": 1.6466041885725324e-05,
+            "test_dmse": 1.6736282070293857e-05,
+            "bytes": 15866420.0,
+            "vq_iterations": 9.0
+          },
+          "3e-1": {
+            "odd_dmse": 1.9034427706689335e-05,
+            "test_dmse": 1.9180813976588483e-05,
+            "bytes": 15859256.0,
+            "vq_iterations": 8.0
+          },
+          "1": {
+            "odd_dmse": 2.2805473669201863e-05,
+            "test_dmse": 2.297011870938296e-05,
+            "bytes": 15859516.0,
+            "vq_iterations": 9.0
+          },
+          "3": {
+            "odd_dmse": 2.7352310737202067e-05,
+            "test_dmse": 2.7514189856034978e-05,
+            "bytes": 15858913.0,
+            "vq_iterations": 8.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 32.32612228393555,
+          "SSIM": 0.9505969882011414,
+          "LPIPS": 0.166695237159729,
+          "bytes": 15880391.0,
+          "test_dmse": 1.5404671846974427e-05,
+          "train_PSNR": 33.241363525390625
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 32.04087829589844,
+            "bytes": 15855879.0,
+            "test_dmse": 4.906912326039328e-05
+          },
+          "lloyd_trace": {
+            "PSNR": 32.13172149658203,
+            "bytes": 15844438.0,
+            "test_dmse": 4.0759770344274516e-05
+          },
+          "upstream_l1": {
+            "PSNR": 31.768815994262695,
+            "bytes": 15903973.0,
+            "test_dmse": 7.91500951510475e-05
+          },
+          "gn_vq": {
+            "PSNR": 32.310508728027344,
+            "bytes": 15883118.0,
+            "test_dmse": 1.5729526855860332e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.37793814137959947,
+        "test_dmse_over_gn_vq": 0.9793474392546732,
+        "dLPIPS_vs_gn_vq": 6.16908073425293e-06,
+        "dSSIM_vs_gn_vq": -2.5391578674316406e-05,
+        "dPSNR_vs_gn_vq": 0.015613555908203125,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.001545925016203764,
+          "lloyd_trace": 0.002269124345085638,
+          "upstream_l1": -0.00148277414706377,
+          "gn_vq": -0.0001716917295457865
+        },
+        "spearman_cv_odd_vs_cv_test": 1.0,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      }
+    },
+    "counter": {
+      "1024": {
+        "scene": "counter",
+        "K": 1024,
+        "cv": {
+          "0": {
+            "odd_dmse": 0.00019041601106098633,
+            "test_dmse": 0.00018880164760777334,
+            "bytes": 14042360.0,
+            "vq_iterations": 20.0
+          },
+          "1e-3": {
+            "odd_dmse": 0.00018957893986706583,
+            "test_dmse": 0.0001881534295644254,
+            "bytes": 14040137.0,
+            "vq_iterations": 20.0
+          },
+          "1e-2": {
+            "odd_dmse": 0.00018923581470138407,
+            "test_dmse": 0.00018747974115461356,
+            "bytes": 14042453.0,
+            "vq_iterations": 20.0
+          },
+          "1e-1": {
+            "odd_dmse": 0.00018973738756167035,
+            "test_dmse": 0.00018833648248080633,
+            "bytes": 14035218.0,
+            "vq_iterations": 16.0
+          },
+          "3e-1": {
+            "odd_dmse": 0.0001952944713273346,
+            "test_dmse": 0.0001929355291148526,
+            "bytes": 14030131.0,
+            "vq_iterations": 14.0
+          },
+          "1": {
+            "odd_dmse": 0.00021481029190767795,
+            "test_dmse": 0.00021200636993075602,
+            "bytes": 14017680.0,
+            "vq_iterations": 14.0
+          },
+          "3": {
+            "odd_dmse": 0.0002517148893265645,
+            "test_dmse": 0.00024830009571061767,
+            "bytes": 14015535.0,
+            "vq_iterations": 14.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 28.635194778442383,
+          "SSIM": 0.9117886424064636,
+          "LPIPS": 0.17610172927379608,
+          "bytes": 14038339.0,
+          "test_dmse": 0.00018548299295942616,
+          "train_PSNR": 29.76622200012207
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 27.948972702026367,
+            "bytes": 13998342.0,
+            "test_dmse": 0.0004301759280716956
+          },
+          "lloyd_trace": {
+            "PSNR": 28.185226440429688,
+            "bytes": 14005192.0,
+            "test_dmse": 0.00034456354365717666
+          },
+          "upstream_l1": {
+            "PSNR": 28.00225067138672,
+            "bytes": 13967451.0,
+            "test_dmse": 0.000400924919681538
+          },
+          "gn_vq": {
+            "PSNR": 28.62471580505371,
+            "bytes": 14043534.0,
+            "test_dmse": 0.0001872344370191344
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.5383128783466784,
+        "test_dmse_over_gn_vq": 0.9906457162069536,
+        "dLPIPS_vs_gn_vq": -0.00014960765838623047,
+        "dSSIM_vs_gn_vq": 0.00019609928131103516,
+        "dPSNR_vs_gn_vq": 0.010478973388671875,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.002857266953472104,
+          "lloyd_trace": 0.0023667651253906907,
+          "upstream_l1": 0.005075228114278074,
+          "gn_vq": -0.0003699211323873186
+        },
+        "spearman_cv_odd_vs_cv_test": 1.0,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "4096": {
+        "scene": "counter",
+        "K": 4096,
+        "cv": {
+          "0": {
+            "odd_dmse": 0.00011907820587592719,
+            "test_dmse": 0.00011819677180852129,
+            "bytes": 14320901.0,
+            "vq_iterations": 16.0
+          },
+          "1e-3": {
+            "odd_dmse": 0.0001187831654462997,
+            "test_dmse": 0.00011748239564927491,
+            "bytes": 14321127.0,
+            "vq_iterations": 16.0
+          },
+          "1e-2": {
+            "odd_dmse": 0.00011788162139671851,
+            "test_dmse": 0.00011636197822276566,
+            "bytes": 14320822.0,
+            "vq_iterations": 16.0
+          },
+          "1e-1": {
+            "odd_dmse": 0.00011794083029904504,
+            "test_dmse": 0.00011641378656178162,
+            "bytes": 14321020.0,
+            "vq_iterations": 15.0
+          },
+          "3e-1": {
+            "odd_dmse": 0.00012075771316121435,
+            "test_dmse": 0.00011923140947716059,
+            "bytes": 14318702.0,
+            "vq_iterations": 14.0
+          },
+          "1": {
+            "odd_dmse": 0.0001343322350358168,
+            "test_dmse": 0.00013263289085750838,
+            "bytes": 14314263.0,
+            "vq_iterations": 13.0
+          },
+          "3": {
+            "odd_dmse": 0.00015750335335726627,
+            "test_dmse": 0.00015518556830653024,
+            "bytes": 14306126.0,
+            "vq_iterations": 13.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 28.89451789855957,
+          "SSIM": 0.9151046872138977,
+          "LPIPS": 0.17309580743312836,
+          "bytes": 14320961.0,
+          "test_dmse": 0.00011526944727865659,
+          "train_PSNR": 30.134674072265625
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 28.46033477783203,
+            "bytes": 14304170.0,
+            "test_dmse": 0.0002581911805007974
+          },
+          "lloyd_trace": {
+            "PSNR": 28.595823287963867,
+            "bytes": 14301675.0,
+            "test_dmse": 0.00021598197703999965
+          },
+          "upstream_l1": {
+            "PSNR": 28.371091842651367,
+            "bytes": 14279261.0,
+            "test_dmse": 0.00028297562432117476
+          },
+          "gn_vq": {
+            "PSNR": 28.89079475402832,
+            "bytes": 14321752.0,
+            "test_dmse": 0.00011609771685986853
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.5336993801909166,
+        "test_dmse_over_gn_vq": 0.9928657547830017,
+        "dLPIPS_vs_gn_vq": -0.0001430511474609375,
+        "dSSIM_vs_gn_vq": 5.9723854064941406e-05,
+        "dPSNR_vs_gn_vq": 0.00372314453125,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.0011738534986651672,
+          "lloyd_trace": 0.0013485133734334465,
+          "upstream_l1": 0.0029203191957902774,
+          "gn_vq": -5.523067289536776e-05
+        },
+        "spearman_cv_odd_vs_cv_test": 1.0,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "16384": {
+        "scene": "counter",
+        "K": 16384,
+        "cv": {
+          "0": {
+            "odd_dmse": 6.639523911584108e-05,
+            "test_dmse": 6.565686577517655e-05,
+            "bytes": 14818110.0,
+            "vq_iterations": 12.0
+          },
+          "1e-3": {
+            "odd_dmse": 6.595408761858882e-05,
+            "test_dmse": 6.523311742098837e-05,
+            "bytes": 14817816.0,
+            "vq_iterations": 12.0
+          },
+          "1e-2": {
+            "odd_dmse": 6.510699197986039e-05,
+            "test_dmse": 6.448102304566312e-05,
+            "bytes": 14812880.0,
+            "vq_iterations": 12.0
+          },
+          "1e-1": {
+            "odd_dmse": 6.551252261472472e-05,
+            "test_dmse": 6.506046455405093e-05,
+            "bytes": 14812370.0,
+            "vq_iterations": 12.0
+          },
+          "3e-1": {
+            "odd_dmse": 6.770443071715368e-05,
+            "test_dmse": 6.722381323869487e-05,
+            "bytes": 14801604.0,
+            "vq_iterations": 11.0
+          },
+          "1": {
+            "odd_dmse": 7.600062797784102e-05,
+            "test_dmse": 7.505034446496875e-05,
+            "bytes": 14799872.0,
+            "vq_iterations": 11.0
+          },
+          "3": {
+            "odd_dmse": 8.988005478586362e-05,
+            "test_dmse": 8.867512041554953e-05,
+            "bytes": 14799080.0,
+            "vq_iterations": 12.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 29.112821578979492,
+          "SSIM": 0.9177550673484802,
+          "LPIPS": 0.17036204040050507,
+          "bytes": 14813118.0,
+          "test_dmse": 6.394580390198315e-05,
+          "train_PSNR": 30.438411712646484
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 28.851943969726562,
+            "bytes": 14796507.0,
+            "test_dmse": 0.00014611667973409449
+          },
+          "lloyd_trace": {
+            "PSNR": 28.91380500793457,
+            "bytes": 14788887.0,
+            "test_dmse": 0.00012730708581240393
+          },
+          "upstream_l1": {
+            "PSNR": 28.669891357421875,
+            "bytes": 14772995.0,
+            "test_dmse": 0.0001917419980877466
+          },
+          "gn_vq": {
+            "PSNR": 29.109127044677734,
+            "bytes": 14818023.0,
+            "test_dmse": 6.428387407479507e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.5022957166438626,
+        "test_dmse_over_gn_vq": 0.9947409801030571,
+        "dLPIPS_vs_gn_vq": -4.32133674621582e-06,
+        "dSSIM_vs_gn_vq": -4.285573959350586e-05,
+        "dPSNR_vs_gn_vq": 0.0036945343017578125,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.0011226298206732377,
+          "lloyd_trace": 0.0016384600139280892,
+          "upstream_l1": 0.0027159692398190938,
+          "gn_vq": -0.0003310158176971223
+        },
+        "spearman_cv_odd_vs_cv_test": 1.0,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "65536": {
+        "scene": "counter",
+        "K": 65536,
+        "cv": {
+          "0": {
+            "odd_dmse": 3.302493639975644e-05,
+            "test_dmse": 3.273921866118523e-05,
+            "bytes": 16076967.0,
+            "vq_iterations": 9.0
+          },
+          "1e-3": {
+            "odd_dmse": 3.285911239975898e-05,
+            "test_dmse": 3.245426111222813e-05,
+            "bytes": 16074633.0,
+            "vq_iterations": 9.0
+          },
+          "1e-2": {
+            "odd_dmse": 3.226104571649329e-05,
+            "test_dmse": 3.202824111269209e-05,
+            "bytes": 16056149.0,
+            "vq_iterations": 9.0
+          },
+          "1e-1": {
+            "odd_dmse": 3.270338069793359e-05,
+            "test_dmse": 3.2507084732543375e-05,
+            "bytes": 16037541.0,
+            "vq_iterations": 9.0
+          },
+          "3e-1": {
+            "odd_dmse": 3.443952536070064e-05,
+            "test_dmse": 3.417795658154196e-05,
+            "bytes": 16038094.0,
+            "vq_iterations": 9.0
+          },
+          "1": {
+            "odd_dmse": 3.96665698767953e-05,
+            "test_dmse": 3.920437468380384e-05,
+            "bytes": 16038646.0,
+            "vq_iterations": 10.0
+          },
+          "3": {
+            "odd_dmse": 4.6782244962146996e-05,
+            "test_dmse": 4.628446675221689e-05,
+            "bytes": 16038574.0,
+            "vq_iterations": 9.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 29.26242446899414,
+          "SSIM": 0.9197839498519897,
+          "LPIPS": 0.16809624433517456,
+          "bytes": 16061987.0,
+          "test_dmse": 3.14557909819802e-05,
+          "train_PSNR": 30.661710739135742
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 29.116920471191406,
+            "bytes": 16030470.0,
+            "test_dmse": 7.619273956419239e-05
+          },
+          "lloyd_trace": {
+            "PSNR": 29.148351669311523,
+            "bytes": 16015787.0,
+            "test_dmse": 6.531516864098209e-05
+          },
+          "upstream_l1": {
+            "PSNR": 28.928382873535156,
+            "bytes": 15991192.0,
+            "test_dmse": 0.0001202648382237944
+          },
+          "gn_vq": {
+            "PSNR": 29.260786056518555,
+            "bytes": 16077227.0,
+            "test_dmse": 3.136690796542241e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.48160008825642414,
+        "test_dmse_over_gn_vq": 1.0028336556684443,
+        "dLPIPS_vs_gn_vq": 2.0310282707214355e-05,
+        "dSSIM_vs_gn_vq": -5.6862831115722656e-05,
+        "dPSNR_vs_gn_vq": 0.0016384124755859375,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.001966068368550733,
+          "lloyd_trace": 0.0028846537482047907,
+          "upstream_l1": 0.0044271246321099245,
+          "gn_vq": -0.0009479246638739447
+        },
+        "spearman_cv_odd_vs_cv_test": 0.9642857142857143,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      }
+    },
+    "kitchen": {
+      "1024": {
+        "scene": "kitchen",
+        "K": 1024,
+        "cv": {
+          "0": {
+            "odd_dmse": 0.00012871824803222383,
+            "test_dmse": 0.00012932214645344065,
+            "bytes": 13634623.0,
+            "vq_iterations": 20.0
+          },
+          "1e-3": {
+            "odd_dmse": 0.00012835811411336976,
+            "test_dmse": 0.00012954147195568213,
+            "bytes": 13634932.0,
+            "vq_iterations": 20.0
+          },
+          "1e-2": {
+            "odd_dmse": 0.00012898030916230852,
+            "test_dmse": 0.00012988681956578198,
+            "bytes": 13634652.0,
+            "vq_iterations": 20.0
+          },
+          "1e-1": {
+            "odd_dmse": 0.00013067571728396626,
+            "test_dmse": 0.00013101999679105566,
+            "bytes": 13629962.0,
+            "vq_iterations": 18.0
+          },
+          "3e-1": {
+            "odd_dmse": 0.00013573837540651988,
+            "test_dmse": 0.00013562467811766607,
+            "bytes": 13623421.0,
+            "vq_iterations": 19.0
+          },
+          "1": {
+            "odd_dmse": 0.00014892765954054116,
+            "test_dmse": 0.00014886350915950766,
+            "bytes": 13616121.0,
+            "vq_iterations": 19.0
+          },
+          "3": {
+            "odd_dmse": 0.0001722978100118784,
+            "test_dmse": 0.00017185877837006983,
+            "bytes": 13610043.0,
+            "vq_iterations": 17.0
+          }
+        },
+        "rho_cv": 0.001,
+        "rho_cv_label": "1e-3",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.001,
+          "PSNR": 30.74024772644043,
+          "SSIM": 0.9255234003067017,
+          "LPIPS": 0.1253245770931244,
+          "bytes": 13635160.0,
+          "test_dmse": 0.00012841376253110604,
+          "train_PSNR": 31.561277389526367
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 29.85621452331543,
+            "bytes": 13566735.0,
+            "test_dmse": 0.0003036243594257396
+          },
+          "lloyd_trace": {
+            "PSNR": 30.188270568847656,
+            "bytes": 13612165.0,
+            "test_dmse": 0.00023798883995743042
+          },
+          "upstream_l1": {
+            "PSNR": 29.700653076171875,
+            "bytes": 13598968.0,
+            "test_dmse": 0.0003326650115974309
+          },
+          "gn_vq": {
+            "PSNR": 30.74171257019043,
+            "bytes": 13635951.0,
+            "test_dmse": 0.0001276733141828909
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.5395789254406874,
+        "test_dmse_over_gn_vq": 1.005799554534587,
+        "dLPIPS_vs_gn_vq": 2.0802021026611328e-05,
+        "dSSIM_vs_gn_vq": 1.3113021850585938e-05,
+        "dPSNR_vs_gn_vq": -0.00146484375,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.0050435863897981825,
+          "lloyd_trace": 0.0016892977715154966,
+          "upstream_l1": 0.0026613784222448977,
+          "gn_vq": -5.80084220015431e-05
+        },
+        "spearman_cv_odd_vs_cv_test": 0.9642857142857143,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "4096": {
+        "scene": "kitchen",
+        "K": 4096,
+        "cv": {
+          "0": {
+            "odd_dmse": 8.35919557943281e-05,
+            "test_dmse": 8.453027288203812e-05,
+            "bytes": 13921979.0,
+            "vq_iterations": 18.0
+          },
+          "1e-3": {
+            "odd_dmse": 8.329326492398931e-05,
+            "test_dmse": 8.415860854703762e-05,
+            "bytes": 13922502.0,
+            "vq_iterations": 18.0
+          },
+          "1e-2": {
+            "odd_dmse": 8.32505543814824e-05,
+            "test_dmse": 8.397837068393648e-05,
+            "bytes": 13920331.0,
+            "vq_iterations": 17.0
+          },
+          "1e-1": {
+            "odd_dmse": 8.525210324248692e-05,
+            "test_dmse": 8.545827040282195e-05,
+            "bytes": 13916962.0,
+            "vq_iterations": 16.0
+          },
+          "3e-1": {
+            "odd_dmse": 8.768754813773018e-05,
+            "test_dmse": 8.748281206603039e-05,
+            "bytes": 13914645.0,
+            "vq_iterations": 15.0
+          },
+          "1": {
+            "odd_dmse": 9.668316151169842e-05,
+            "test_dmse": 9.613296548044475e-05,
+            "bytes": 13912581.0,
+            "vq_iterations": 14.0
+          },
+          "3": {
+            "odd_dmse": 0.00011080291432308128,
+            "test_dmse": 0.00011016492103725365,
+            "bytes": 13908773.0,
+            "vq_iterations": 16.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 31.010009765625,
+          "SSIM": 0.9279630184173584,
+          "LPIPS": 0.12279666215181351,
+          "bytes": 13918721.0,
+          "test_dmse": 8.298103809443567e-05,
+          "train_PSNR": 31.903654098510742
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 30.503122329711914,
+            "bytes": 13898929.0,
+            "test_dmse": 0.00017253392828008523
+          },
+          "lloyd_trace": {
+            "PSNR": 30.60265350341797,
+            "bytes": 13910950.0,
+            "test_dmse": 0.00015655302636630248
+          },
+          "upstream_l1": {
+            "PSNR": 30.18010711669922,
+            "bytes": 13902632.0,
+            "test_dmse": 0.0002325053894789755
+          },
+          "gn_vq": {
+            "PSNR": 31.01436996459961,
+            "bytes": 13921437.0,
+            "test_dmse": 8.285631531547853e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.5300506800825223,
+        "test_dmse_over_gn_vq": 1.0015052899526398,
+        "dLPIPS_vs_gn_vq": 0.00010102242231369019,
+        "dSSIM_vs_gn_vq": -7.867813110351562e-06,
+        "dPSNR_vs_gn_vq": -0.004360198974609375,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.0014239946113834279,
+          "lloyd_trace": 0.0005586246805573403,
+          "upstream_l1": 0.0011572628837475119,
+          "gn_vq": -0.00019509480235413434
+        },
+        "spearman_cv_odd_vs_cv_test": 1.0,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "16384": {
+        "scene": "kitchen",
+        "K": 16384,
+        "cv": {
+          "0": {
+            "odd_dmse": 5.2243214113284036e-05,
+            "test_dmse": 5.276508669505309e-05,
+            "bytes": 14414773.0,
+            "vq_iterations": 13.0
+          },
+          "1e-3": {
+            "odd_dmse": 5.214457478995743e-05,
+            "test_dmse": 5.263769726993761e-05,
+            "bytes": 14414637.0,
+            "vq_iterations": 12.0
+          },
+          "1e-2": {
+            "odd_dmse": 5.228197851786437e-05,
+            "test_dmse": 5.258871826284423e-05,
+            "bytes": 14412651.0,
+            "vq_iterations": 13.0
+          },
+          "1e-1": {
+            "odd_dmse": 5.328731106125948e-05,
+            "test_dmse": 5.3597391437897194e-05,
+            "bytes": 14406305.0,
+            "vq_iterations": 12.0
+          },
+          "3e-1": {
+            "odd_dmse": 5.5204306013751e-05,
+            "test_dmse": 5.51970553316247e-05,
+            "bytes": 14404821.0,
+            "vq_iterations": 12.0
+          },
+          "1": {
+            "odd_dmse": 6.183762706706274e-05,
+            "test_dmse": 6.169690545041813e-05,
+            "bytes": 14402210.0,
+            "vq_iterations": 11.0
+          },
+          "3": {
+            "odd_dmse": 7.190858376549192e-05,
+            "test_dmse": 7.164944456614174e-05,
+            "bytes": 14401482.0,
+            "vq_iterations": 11.0
+          }
+        },
+        "rho_cv": 0.001,
+        "rho_cv_label": "1e-3",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.001,
+          "PSNR": 31.21538543701172,
+          "SSIM": 0.9298936128616333,
+          "LPIPS": 0.12047353386878967,
+          "bytes": 14412345.0,
+          "test_dmse": 5.1639233705525125e-05,
+          "train_PSNR": 32.172264099121094
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 30.86757469177246,
+            "bytes": 14402193.0,
+            "test_dmse": 0.00010906290690842686
+          },
+          "lloyd_trace": {
+            "PSNR": 30.915935516357422,
+            "bytes": 14393484.0,
+            "test_dmse": 0.00010191479838220238
+          },
+          "upstream_l1": {
+            "PSNR": 30.524742126464844,
+            "bytes": 14405788.0,
+            "test_dmse": 0.0001656527498125369
+          },
+          "gn_vq": {
+            "PSNR": 31.21419906616211,
+            "bytes": 14412143.0,
+            "test_dmse": 5.194472988887969e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.5066902405268655,
+        "test_dmse_over_gn_vq": 0.9941188223712379,
+        "dLPIPS_vs_gn_vq": -6.839632987976074e-06,
+        "dSSIM_vs_gn_vq": 5.3763389587402344e-05,
+        "dPSNR_vs_gn_vq": 0.001186370849609375,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.0007048926507233766,
+          "lloyd_trace": 0.0013103846157052068,
+          "upstream_l1": 0.00045516427147207494,
+          "gn_vq": 1.4015958625934744e-05
+        },
+        "spearman_cv_odd_vs_cv_test": 0.8928571428571429,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "65536": {
+        "scene": "kitchen",
+        "K": 65536,
+        "cv": {
+          "0": {
+            "odd_dmse": 3.114912824303277e-05,
+            "test_dmse": 3.13493494350358e-05,
+            "bytes": 15683623.0,
+            "vq_iterations": 9.0
+          },
+          "1e-3": {
+            "odd_dmse": 3.099765149730713e-05,
+            "test_dmse": 3.140331838104754e-05,
+            "bytes": 15681645.0,
+            "vq_iterations": 9.0
+          },
+          "1e-2": {
+            "odd_dmse": 3.0969908512499675e-05,
+            "test_dmse": 3.1394712034480616e-05,
+            "bytes": 15670359.0,
+            "vq_iterations": 9.0
+          },
+          "1e-1": {
+            "odd_dmse": 3.2118067842812754e-05,
+            "test_dmse": 3.226972474721153e-05,
+            "bytes": 15653681.0,
+            "vq_iterations": 10.0
+          },
+          "3e-1": {
+            "odd_dmse": 3.3820571366553433e-05,
+            "test_dmse": 3.3905628442537255e-05,
+            "bytes": 15646916.0,
+            "vq_iterations": 9.0
+          },
+          "1": {
+            "odd_dmse": 3.89641227257206e-05,
+            "test_dmse": 3.8978184111316415e-05,
+            "bytes": 15644941.0,
+            "vq_iterations": 8.0
+          },
+          "3": {
+            "odd_dmse": 4.5499773655324726e-05,
+            "test_dmse": 4.5506679405078794e-05,
+            "bytes": 15644372.0,
+            "vq_iterations": 8.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 31.360633850097656,
+          "SSIM": 0.9314234256744385,
+          "LPIPS": 0.11874565482139587,
+          "bytes": 15656116.0,
+          "test_dmse": 3.107051650013617e-05,
+          "train_PSNR": 32.36457443237305
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 31.119476318359375,
+            "bytes": 15634260.0,
+            "test_dmse": 6.930844182983312e-05
+          },
+          "lloyd_trace": {
+            "PSNR": 31.15584945678711,
+            "bytes": 15647089.0,
+            "test_dmse": 6.271200434239324e-05
+          },
+          "upstream_l1": {
+            "PSNR": 30.87204933166504,
+            "bytes": 15708313.0,
+            "test_dmse": 0.00010667023553846276
+          },
+          "gn_vq": {
+            "PSNR": 31.360301971435547,
+            "bytes": 15669824.0,
+            "test_dmse": 3.09658224105044e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.49544767107902077,
+        "test_dmse_over_gn_vq": 1.0033809562117832,
+        "dLPIPS_vs_gn_vq": 3.224611282348633e-05,
+        "dSSIM_vs_gn_vq": -1.2755393981933594e-05,
+        "dPSNR_vs_gn_vq": 0.000331878662109375,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.0013979555156431456,
+          "lloyd_trace": 0.0005769124212178234,
+          "upstream_l1": -0.003322890242892451,
+          "gn_vq": -0.0008748024227968054
+        },
+        "spearman_cv_odd_vs_cv_test": 0.8928571428571429,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      }
+    },
+    "room": {
+      "1024": {
+        "scene": "room",
+        "K": 1024,
+        "cv": {
+          "0": {
+            "odd_dmse": 4.239188787811607e-05,
+            "test_dmse": 5.268832314541199e-05,
+            "bytes": 13930597.0,
+            "vq_iterations": 20.0
+          },
+          "1e-3": {
+            "odd_dmse": 4.177835240000124e-05,
+            "test_dmse": 5.310097962812799e-05,
+            "bytes": 13931367.0,
+            "vq_iterations": 20.0
+          },
+          "1e-2": {
+            "odd_dmse": 4.075630338753305e-05,
+            "test_dmse": 4.960837145783805e-05,
+            "bytes": 13933185.0,
+            "vq_iterations": 20.0
+          },
+          "1e-1": {
+            "odd_dmse": 4.1377210602635395e-05,
+            "test_dmse": 4.7204588013879196e-05,
+            "bytes": 13934240.0,
+            "vq_iterations": 18.0
+          },
+          "3e-1": {
+            "odd_dmse": 4.516295113856983e-05,
+            "test_dmse": 4.926811433962633e-05,
+            "bytes": 13910517.0,
+            "vq_iterations": 17.0
+          },
+          "1": {
+            "odd_dmse": 5.49351393873232e-05,
+            "test_dmse": 5.845477571116896e-05,
+            "bytes": 13888568.0,
+            "vq_iterations": 13.0
+          },
+          "3": {
+            "odd_dmse": 7.110104086030079e-05,
+            "test_dmse": 7.465303348734065e-05,
+            "bytes": 13872724.0,
+            "vq_iterations": 14.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 32.000919342041016,
+          "SSIM": 0.9333555698394775,
+          "LPIPS": 0.17603260278701782,
+          "bytes": 13930334.0,
+          "test_dmse": 4.584757505730986e-05,
+          "train_PSNR": 34.102962493896484
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 31.318227767944336,
+            "bytes": 13852590.0,
+            "test_dmse": 0.00015358356695590084
+          },
+          "lloyd_trace": {
+            "PSNR": 31.485820770263672,
+            "bytes": 13871139.0,
+            "test_dmse": 0.0001293490581114515
+          },
+          "upstream_l1": {
+            "PSNR": 31.232603073120117,
+            "bytes": 13839191.0,
+            "test_dmse": 0.00017104199835735705
+          },
+          "gn_vq": {
+            "PSNR": 31.99641990661621,
+            "bytes": 13934128.0,
+            "test_dmse": 4.735409540118924e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.35444846469470265,
+        "test_dmse_over_gn_vq": 0.9681860601260361,
+        "dLPIPS_vs_gn_vq": -0.00017884373664855957,
+        "dSSIM_vs_gn_vq": 5.960464477539063e-08,
+        "dPSNR_vs_gn_vq": 0.0044994354248046875,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.005612235690221068,
+          "lloyd_trace": 0.004267493822965873,
+          "upstream_l1": 0.006585861846982288,
+          "gn_vq": -0.0002722811215742915
+        },
+        "spearman_cv_odd_vs_cv_test": 0.6785714285714286,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "4096": {
+        "scene": "room",
+        "K": 4096,
+        "cv": {
+          "0": {
+            "odd_dmse": 2.6263195633139167e-05,
+            "test_dmse": 3.403491067348491e-05,
+            "bytes": 14214718.0,
+            "vq_iterations": 16.0
+          },
+          "1e-3": {
+            "odd_dmse": 2.5617565064310256e-05,
+            "test_dmse": 3.546108733874781e-05,
+            "bytes": 14215561.0,
+            "vq_iterations": 15.0
+          },
+          "1e-2": {
+            "odd_dmse": 2.5690662157076663e-05,
+            "test_dmse": 3.37575339519597e-05,
+            "bytes": 14212548.0,
+            "vq_iterations": 16.0
+          },
+          "1e-1": {
+            "odd_dmse": 2.562074477867301e-05,
+            "test_dmse": 2.9892137460464372e-05,
+            "bytes": 14207770.0,
+            "vq_iterations": 15.0
+          },
+          "3e-1": {
+            "odd_dmse": 2.7050857429647066e-05,
+            "test_dmse": 2.9646919473494424e-05,
+            "bytes": 14199858.0,
+            "vq_iterations": 13.0
+          },
+          "1": {
+            "odd_dmse": 3.330164274193446e-05,
+            "test_dmse": 3.494858264047951e-05,
+            "bytes": 14188605.0,
+            "vq_iterations": 14.0
+          },
+          "3": {
+            "odd_dmse": 4.416405996810598e-05,
+            "test_dmse": 4.538370334228176e-05,
+            "bytes": 14177042.0,
+            "vq_iterations": 13.0
+          }
+        },
+        "rho_cv": 0.001,
+        "rho_cv_label": "1e-3",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.001,
+          "PSNR": 32.096031188964844,
+          "SSIM": 0.9346078038215637,
+          "LPIPS": 0.17488940060138702,
+          "bytes": 14214925.0,
+          "test_dmse": 2.960930145214611e-05,
+          "train_PSNR": 34.29176330566406
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 31.68885612487793,
+            "bytes": 14173773.0,
+            "test_dmse": 9.111843845081297e-05
+          },
+          "lloyd_trace": {
+            "PSNR": 31.75873374938965,
+            "bytes": 14178019.0,
+            "test_dmse": 8.302280977518884e-05
+          },
+          "upstream_l1": {
+            "PSNR": 31.597450256347656,
+            "bytes": 14152639.0,
+            "test_dmse": 0.00011036449953358907
+          },
+          "gn_vq": {
+            "PSNR": 32.09666061401367,
+            "bytes": 14214972.0,
+            "test_dmse": 3.072636944879262e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.35664056097743363,
+        "test_dmse_over_gn_vq": 0.9636446473603667,
+        "dLPIPS_vs_gn_vq": -5.4135918617248535e-05,
+        "dSSIM_vs_gn_vq": 6.0439109802246094e-05,
+        "dPSNR_vs_gn_vq": -0.000629425048828125,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.0029033906497586415,
+          "lloyd_trace": 0.002603043485835288,
+          "upstream_l1": 0.004401016658447832,
+          "gn_vq": -3.3063730269233815e-06
+        },
+        "spearman_cv_odd_vs_cv_test": 0.25,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "16384": {
+        "scene": "room",
+        "K": 16384,
+        "cv": {
+          "0": {
+            "odd_dmse": 1.602472687839544e-05,
+            "test_dmse": 2.3351167948827243e-05,
+            "bytes": 14644116.0,
+            "vq_iterations": 12.0
+          },
+          "1e-3": {
+            "odd_dmse": 1.626057992918285e-05,
+            "test_dmse": 2.2730386272448104e-05,
+            "bytes": 14643113.0,
+            "vq_iterations": 12.0
+          },
+          "1e-2": {
+            "odd_dmse": 1.5647464343584553e-05,
+            "test_dmse": 1.9836187681756696e-05,
+            "bytes": 14642373.0,
+            "vq_iterations": 12.0
+          },
+          "1e-1": {
+            "odd_dmse": 1.5624988941272804e-05,
+            "test_dmse": 1.780445290396928e-05,
+            "bytes": 14638942.0,
+            "vq_iterations": 12.0
+          },
+          "3e-1": {
+            "odd_dmse": 1.7370882163169216e-05,
+            "test_dmse": 1.8837042729331974e-05,
+            "bytes": 14638636.0,
+            "vq_iterations": 10.0
+          },
+          "1": {
+            "odd_dmse": 2.186991933908297e-05,
+            "test_dmse": 2.3013813254136768e-05,
+            "bytes": 14637126.0,
+            "vq_iterations": 11.0
+          },
+          "3": {
+            "odd_dmse": 2.794902116728912e-05,
+            "test_dmse": 2.842549403093167e-05,
+            "bytes": 14636279.0,
+            "vq_iterations": 11.0
+          }
+        },
+        "rho_cv": 0.1,
+        "rho_cv_label": "1e-1",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.1,
+          "PSNR": 32.19337463378906,
+          "SSIM": 0.9352129697799683,
+          "LPIPS": 0.17422141134738922,
+          "bytes": 14639305.0,
+          "test_dmse": 1.620786759431085e-05,
+          "train_PSNR": 34.42879104614258
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 31.90186882019043,
+            "bytes": 14638887.0,
+            "test_dmse": 5.363428845151913e-05
+          },
+          "lloyd_trace": {
+            "PSNR": 31.958471298217773,
+            "bytes": 14641144.0,
+            "test_dmse": 4.82949341587393e-05
+          },
+          "upstream_l1": {
+            "PSNR": 31.835668563842773,
+            "bytes": 14620192.0,
+            "test_dmse": 6.869346768736585e-05
+          },
+          "gn_vq": {
+            "PSNR": 32.183773040771484,
+            "bytes": 14643915.0,
+            "test_dmse": 1.9783067626697933e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.3356018157315973,
+        "test_dmse_over_gn_vq": 0.8192797952344748,
+        "dLPIPS_vs_gn_vq": 0.00017273426055908203,
+        "dSSIM_vs_gn_vq": 4.667043685913086e-05,
+        "dPSNR_vs_gn_vq": 0.009601593017578125,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 2.855408338087173e-05,
+          "lloyd_trace": -0.00012560493906765835,
+          "upstream_l1": 0.0013073015730573623,
+          "gn_vq": -0.0003148065254408028
+        },
+        "spearman_cv_odd_vs_cv_test": 0.6428571428571429,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "65536": {
+        "scene": "room",
+        "K": 65536,
+        "cv": {
+          "0": {
+            "odd_dmse": 1.0356004257634307e-05,
+            "test_dmse": 1.609668284965159e-05,
+            "bytes": 15678770.0,
+            "vq_iterations": 9.0
+          },
+          "1e-3": {
+            "odd_dmse": 1.0363662804126917e-05,
+            "test_dmse": 1.5132046107889886e-05,
+            "bytes": 15679869.0,
+            "vq_iterations": 9.0
+          },
+          "1e-2": {
+            "odd_dmse": 9.649056200081e-06,
+            "test_dmse": 1.3533038591565823e-05,
+            "bytes": 15678399.0,
+            "vq_iterations": 9.0
+          },
+          "1e-1": {
+            "odd_dmse": 9.683493140462983e-06,
+            "test_dmse": 1.0913151698667363e-05,
+            "bytes": 15682622.0,
+            "vq_iterations": 9.0
+          },
+          "3e-1": {
+            "odd_dmse": 1.0973582431096958e-05,
+            "test_dmse": 1.2089765599884488e-05,
+            "bytes": 15688167.0,
+            "vq_iterations": 9.0
+          },
+          "1": {
+            "odd_dmse": 1.3922937461740519e-05,
+            "test_dmse": 1.4483415038872111e-05,
+            "bytes": 15691539.0,
+            "vq_iterations": 9.0
+          },
+          "3": {
+            "odd_dmse": 1.7368750780433696e-05,
+            "test_dmse": 1.7866343893110655e-05,
+            "bytes": 15691949.0,
+            "vq_iterations": 8.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 32.23737335205078,
+          "SSIM": 0.9357286095619202,
+          "LPIPS": 0.17353476583957672,
+          "bytes": 15678743.0,
+          "test_dmse": 1.0620136176971605e-05,
+          "train_PSNR": 34.514183044433594
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 32.06923294067383,
+            "bytes": 15694196.0,
+            "test_dmse": 3.012921893884941e-05
+          },
+          "lloyd_trace": {
+            "PSNR": 32.10620880126953,
+            "bytes": 15693195.0,
+            "test_dmse": 2.7306190796724183e-05
+          },
+          "upstream_l1": {
+            "PSNR": 31.98463249206543,
+            "bytes": 15727712.0,
+            "test_dmse": 4.417687344394182e-05
+          },
+          "gn_vq": {
+            "PSNR": 32.22181701660156,
+            "bytes": 15680033.0,
+            "test_dmse": 1.3967783144272571e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.3889277803715362,
+        "test_dmse_over_gn_vq": 0.7603308318347101,
+        "dLPIPS_vs_gn_vq": -6.115436553955078e-05,
+        "dSSIM_vs_gn_vq": -3.618001937866211e-05,
+        "dPSNR_vs_gn_vq": 0.01555633544921875,
+        "bytes_ratio": {
+          "lloyd_wopa_area": -0.0009846315160075836,
+          "lloyd_trace": -0.0009209087123431825,
+          "upstream_l1": -0.0031135488747504603,
+          "gn_vq": -8.227023501794495e-05
+        },
+        "spearman_cv_odd_vs_cv_test": 0.5,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      }
+    },
+    "truck": {
+      "1024": {
+        "scene": "truck",
+        "K": 1024,
+        "cv": {
+          "0": {
+            "odd_dmse": 0.00010929754308767935,
+            "test_dmse": 0.00010796101516887373,
+            "bytes": 14389567.0,
+            "vq_iterations": 20.0
+          },
+          "1e-3": {
+            "odd_dmse": 0.0001087730385303581,
+            "test_dmse": 0.00010739823726689152,
+            "bytes": 14389272.0,
+            "vq_iterations": 20.0
+          },
+          "1e-2": {
+            "odd_dmse": 0.00010721978748521773,
+            "test_dmse": 0.00010622171219866545,
+            "bytes": 14388091.0,
+            "vq_iterations": 20.0
+          },
+          "1e-1": {
+            "odd_dmse": 0.00010996602620807046,
+            "test_dmse": 0.00010834566264446134,
+            "bytes": 14374701.0,
+            "vq_iterations": 18.0
+          },
+          "3e-1": {
+            "odd_dmse": 0.00011931807587076861,
+            "test_dmse": 0.00011860981786815742,
+            "bytes": 14361007.0,
+            "vq_iterations": 18.0
+          },
+          "1": {
+            "odd_dmse": 0.00014197819027991668,
+            "test_dmse": 0.00013968351102728945,
+            "bytes": 14341844.0,
+            "vq_iterations": 18.0
+          },
+          "3": {
+            "odd_dmse": 0.0001782699794567599,
+            "test_dmse": 0.0001760184820191983,
+            "bytes": 14326653.0,
+            "vq_iterations": 17.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 25.77289581298828,
+          "SSIM": 0.8852772116661072,
+          "LPIPS": 0.13242855668067932,
+          "bytes": 14384226.0,
+          "test_dmse": 0.00010349371463588558,
+          "train_PSNR": 27.146785736083984
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 25.338029861450195,
+            "bytes": 14305152.0,
+            "test_dmse": 0.0004007303713073058
+          },
+          "lloyd_trace": {
+            "PSNR": 25.56854820251465,
+            "bytes": 14316555.0,
+            "test_dmse": 0.0002731061583601573
+          },
+          "upstream_l1": {
+            "PSNR": 25.456985473632812,
+            "bytes": 14301185.0,
+            "test_dmse": 0.0003228129568149905
+          },
+          "gn_vq": {
+            "PSNR": 25.76947021484375,
+            "bytes": 14383306.0,
+            "test_dmse": 0.00010467625818234466
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.378950497701351,
+        "test_dmse_over_gn_vq": 0.988702848506496,
+        "dLPIPS_vs_gn_vq": -2.0742416381835938e-05,
+        "dSSIM_vs_gn_vq": 5.7578086853027344e-05,
+        "dPSNR_vs_gn_vq": 0.00342559814453125,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.00552765884626738,
+          "lloyd_trace": 0.004726765622036888,
+          "upstream_l1": 0.005806581762280549,
+          "gn_vq": 6.396304159839161e-05
+        },
+        "spearman_cv_odd_vs_cv_test": 1.0,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "4096": {
+        "scene": "truck",
+        "K": 4096,
+        "cv": {
+          "0": {
+            "odd_dmse": 6.52368350421936e-05,
+            "test_dmse": 6.574884693701354e-05,
+            "bytes": 14664241.0,
+            "vq_iterations": 19.0
+          },
+          "1e-3": {
+            "odd_dmse": 6.559723478989807e-05,
+            "test_dmse": 6.537278958683232e-05,
+            "bytes": 14665302.0,
+            "vq_iterations": 19.0
+          },
+          "1e-2": {
+            "odd_dmse": 6.37817273689481e-05,
+            "test_dmse": 6.332060767130197e-05,
+            "bytes": 14663429.0,
+            "vq_iterations": 17.0
+          },
+          "1e-1": {
+            "odd_dmse": 6.603402988010144e-05,
+            "test_dmse": 6.641409809633863e-05,
+            "bytes": 14656801.0,
+            "vq_iterations": 15.0
+          },
+          "3e-1": {
+            "odd_dmse": 7.180647490999606e-05,
+            "test_dmse": 7.240323647493172e-05,
+            "bytes": 14651438.0,
+            "vq_iterations": 15.0
+          },
+          "1": {
+            "odd_dmse": 8.69959959559756e-05,
+            "test_dmse": 8.718048986411528e-05,
+            "bytes": 14642577.0,
+            "vq_iterations": 14.0
+          },
+          "3": {
+            "odd_dmse": 0.00010845398745438229,
+            "test_dmse": 0.00010763619251612561,
+            "bytes": 14636636.0,
+            "vq_iterations": 16.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 25.843276977539062,
+          "SSIM": 0.8866077065467834,
+          "LPIPS": 0.13060207664966583,
+          "bytes": 14660007.0,
+          "test_dmse": 6.167886768054589e-05,
+          "train_PSNR": 27.260793685913086
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 25.60150718688965,
+            "bytes": 14633336.0,
+            "test_dmse": 0.00022452910012454112
+          },
+          "lloyd_trace": {
+            "PSNR": 25.711992263793945,
+            "bytes": 14628573.0,
+            "test_dmse": 0.0001708093136634041
+          },
+          "upstream_l1": {
+            "PSNR": 25.631114959716797,
+            "bytes": 14621118.0,
+            "test_dmse": 0.00020829070265220186
+          },
+          "gn_vq": {
+            "PSNR": 25.836959838867188,
+            "bytes": 14663980.0,
+            "test_dmse": 6.283964600871087e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.36109780173983913,
+        "test_dmse_over_gn_vq": 0.9815279301859201,
+        "dLPIPS_vs_gn_vq": -5.334615707397461e-05,
+        "dSSIM_vs_gn_vq": 6.854534149169922e-05,
+        "dPSNR_vs_gn_vq": 0.006317138671875,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.0018226192578369993,
+          "lloyd_trace": 0.002148808362921084,
+          "upstream_l1": 0.0026597829249446203,
+          "gn_vq": -0.00027093599418437364
+        },
+        "spearman_cv_odd_vs_cv_test": 0.9642857142857143,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "16384": {
+        "scene": "truck",
+        "K": 16384,
+        "cv": {
+          "0": {
+            "odd_dmse": 3.702906982574974e-05,
+            "test_dmse": 3.676822679430622e-05,
+            "bytes": 15132894.0,
+            "vq_iterations": 14.0
+          },
+          "1e-3": {
+            "odd_dmse": 3.678606390948722e-05,
+            "test_dmse": 3.652183046545729e-05,
+            "bytes": 15132231.0,
+            "vq_iterations": 13.0
+          },
+          "1e-2": {
+            "odd_dmse": 3.562331066726014e-05,
+            "test_dmse": 3.582044011565917e-05,
+            "bytes": 15130902.0,
+            "vq_iterations": 13.0
+          },
+          "1e-1": {
+            "odd_dmse": 3.705678053417071e-05,
+            "test_dmse": 3.7472868013709375e-05,
+            "bytes": 15128515.0,
+            "vq_iterations": 12.0
+          },
+          "3e-1": {
+            "odd_dmse": 4.0628067561371995e-05,
+            "test_dmse": 4.1217409266496515e-05,
+            "bytes": 15127465.0,
+            "vq_iterations": 11.0
+          },
+          "1": {
+            "odd_dmse": 4.933272647085151e-05,
+            "test_dmse": 4.959083082426044e-05,
+            "bytes": 15124272.0,
+            "vq_iterations": 12.0
+          },
+          "3": {
+            "odd_dmse": 6.229754871503684e-05,
+            "test_dmse": 6.227243973712718e-05,
+            "bytes": 15123336.0,
+            "vq_iterations": 11.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 25.895885467529297,
+          "SSIM": 0.887670636177063,
+          "LPIPS": 0.1290452778339386,
+          "bytes": 15130482.0,
+          "test_dmse": 3.382161823746112e-05,
+          "train_PSNR": 27.34149742126465
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 25.768178939819336,
+            "bytes": 15120674.0,
+            "test_dmse": 0.00012236394482536636
+          },
+          "lloyd_trace": {
+            "PSNR": 25.818635940551758,
+            "bytes": 15110463.0,
+            "test_dmse": 9.713195759124115e-05
+          },
+          "upstream_l1": {
+            "PSNR": 25.717113494873047,
+            "bytes": 15108560.0,
+            "test_dmse": 0.00014230941941161874
+          },
+          "gn_vq": {
+            "PSNR": 25.895170211791992,
+            "bytes": 15132521.0,
+            "test_dmse": 3.4369631718431006e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.34820278594396387,
+        "test_dmse_over_gn_vq": 0.9840552995894916,
+        "dLPIPS_vs_gn_vq": 4.932284355163574e-06,
+        "dSSIM_vs_gn_vq": 1.4781951904296875e-05,
+        "dPSNR_vs_gn_vq": 0.0007152557373046875,
+        "bytes_ratio": {
+          "lloyd_wopa_area": 0.0006486483340624183,
+          "lloyd_trace": 0.0013248435868575825,
+          "upstream_l1": 0.001450965545359617,
+          "gn_vq": -0.00013474291560544582
+        },
+        "spearman_cv_odd_vs_cv_test": 1.0,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      },
+      "65536": {
+        "scene": "truck",
+        "K": 65536,
+        "cv": {
+          "0": {
+            "odd_dmse": 1.9291950909699722e-05,
+            "test_dmse": 1.894909348519295e-05,
+            "bytes": 16304657.0,
+            "vq_iterations": 9.0
+          },
+          "1e-3": {
+            "odd_dmse": 1.917528820563504e-05,
+            "test_dmse": 1.9203005122397676e-05,
+            "bytes": 16290683.0,
+            "vq_iterations": 9.0
+          },
+          "1e-2": {
+            "odd_dmse": 1.855407833138066e-05,
+            "test_dmse": 1.877053362684387e-05,
+            "bytes": 16294709.0,
+            "vq_iterations": 9.0
+          },
+          "1e-1": {
+            "odd_dmse": 1.8941784775010324e-05,
+            "test_dmse": 1.9281951512552747e-05,
+            "bytes": 16308087.0,
+            "vq_iterations": 9.0
+          },
+          "3e-1": {
+            "odd_dmse": 2.1047044884101803e-05,
+            "test_dmse": 2.1357120400019364e-05,
+            "bytes": 16316186.0,
+            "vq_iterations": 9.0
+          },
+          "1": {
+            "odd_dmse": 2.606937572650711e-05,
+            "test_dmse": 2.6338560239012338e-05,
+            "bytes": 16320313.0,
+            "vq_iterations": 9.0
+          },
+          "3": {
+            "odd_dmse": 3.289348058971569e-05,
+            "test_dmse": 3.290962174847607e-05,
+            "bytes": 16320483.0,
+            "vq_iterations": 9.0
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "rho_cv_at_top_of_grid": false,
+        "final": {
+          "rho": 0.01,
+          "PSNR": 25.92955780029297,
+          "SSIM": 0.8884575963020325,
+          "LPIPS": 0.12790168821811676,
+          "bytes": 16296031.0,
+          "test_dmse": 1.7337438571921913e-05,
+          "train_PSNR": 27.398088455200195
+        },
+        "final_problem": null,
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 25.865009307861328,
+            "bytes": 16313832.0,
+            "test_dmse": 6.379950579604488e-05
+          },
+          "lloyd_trace": {
+            "PSNR": 25.887014389038086,
+            "bytes": 16267375.0,
+            "test_dmse": 5.285912618396281e-05
+          },
+          "upstream_l1": {
+            "PSNR": 25.8209285736084,
+            "bytes": 16288902.0,
+            "test_dmse": 9.203250849053153e-05
+          },
+          "gn_vq": {
+            "PSNR": 25.928251266479492,
+            "bytes": 16290117.0,
+            "test_dmse": 1.7527093625855326e-05
+          }
+        },
+        "test_dmse_over_lloyd_trace": 0.3279932875088276,
+        "test_dmse_over_gn_vq": 0.9891793209997098,
+        "dLPIPS_vs_gn_vq": 2.8684735298156738e-05,
+        "dSSIM_vs_gn_vq": 5.543231964111328e-06,
+        "dPSNR_vs_gn_vq": 0.0013065338134765625,
+        "bytes_ratio": {
+          "lloyd_wopa_area": -0.0010911599432923413,
+          "lloyd_trace": 0.001761562636872993,
+          "upstream_l1": 0.00043765994785904816,
+          "gn_vq": 0.00036304220528315945
+        },
+        "spearman_cv_odd_vs_cv_test": 0.8571428571428571,
+        "reproduction_rho0": {
+          "status": "not_applicable",
+          "flagged": false
+        },
+        "missing": []
+      }
+    }
+  },
+  "per_scene": {
+    "bonsai": {
+      "scene": "bonsai",
+      "points": {
+        "gn_vq_cvfloor": [
+          {
+            "K": 1024,
+            "bytes": 13857753,
+            "PSNR": 31.695018768310547
+          },
+          {
+            "K": 4096,
+            "bytes": 14150111,
+            "PSNR": 31.97563362121582
+          },
+          {
+            "K": 16384,
+            "bytes": 14646195,
+            "PSNR": 32.175498962402344
+          },
+          {
+            "K": 65536,
+            "bytes": 15880391,
+            "PSNR": 32.32612228393555
+          }
+        ],
+        "lloyd_trace": [
+          {
+            "K": 1024,
+            "bytes": 13802691,
+            "PSNR": 30.935680389404297
+          },
+          {
+            "K": 4096,
+            "bytes": 14118181,
+            "PSNR": 31.450763702392578
+          },
+          {
+            "K": 16384,
+            "bytes": 14628952,
+            "PSNR": 31.797014236450195
+          },
+          {
+            "K": 65536,
+            "bytes": 15844438,
+            "PSNR": 32.13172149658203
+          }
+        ],
+        "lloyd_wopa_area": [
+          {
+            "K": 1024,
+            "bytes": 13780986,
+            "PSNR": 30.673126220703125
+          },
+          {
+            "K": 4096,
+            "bytes": 14113670,
+            "PSNR": 31.38401985168457
+          },
+          {
+            "K": 16384,
+            "bytes": 14629503,
+            "PSNR": 31.772573471069336
+          },
+          {
+            "K": 65536,
+            "bytes": 15855879,
+            "PSNR": 32.04087829589844
+          }
+        ],
+        "gn_vq": [
+          {
+            "K": 1024,
+            "bytes": 13857252,
+            "PSNR": 31.674406051635742
+          },
+          {
+            "K": 4096,
+            "bytes": 14150385,
+            "PSNR": 31.963716506958008
+          },
+          {
+            "K": 16384,
+            "bytes": 14647213,
+            "PSNR": 32.178741455078125
+          },
+          {
+            "K": 65536,
+            "bytes": 15883118,
+            "PSNR": 32.310508728027344
+          }
+        ],
+        "upstream_l1": [
+          {
+            "K": 1024,
+            "bytes": 13768285,
+            "PSNR": 30.52545738220215
+          },
+          {
+            "K": 4096,
+            "bytes": 14098638,
+            "PSNR": 31.05020523071289
+          },
+          {
+            "K": 16384,
+            "bytes": 14612378,
+            "PSNR": 31.487733840942383
+          },
+          {
+            "K": 65536,
+            "bytes": 15903973,
+            "PSNR": 31.768815994262695
+          }
+        ]
+      },
+      "missing": [],
+      "vs": {
+        "lloyd_trace": {
+          "bd_rate": -5.836918106740385,
+          "bd_psnr": 0.3761727788709153,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -5.836918106740385,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "lloyd_wopa_area": {
+          "bd_rate": -6.246617209764427,
+          "bd_psnr": 0.44954228711758937,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -6.246617209764427,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "gn_vq": {
+          "bd_rate": -0.23225651319037643,
+          "bd_psnr": 0.0012554153753622534,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -0.23225651319037643,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "upstream_l1": {
+          "bd_rate": -11.028722284791414,
+          "bd_psnr": 0.6720461846670616,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -11.028722284791414,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        }
+      }
+    },
+    "counter": {
+      "scene": "counter",
+      "points": {
+        "gn_vq_cvfloor": [
+          {
+            "K": 1024,
+            "bytes": 14038339,
+            "PSNR": 28.635194778442383
+          },
+          {
+            "K": 4096,
+            "bytes": 14320961,
+            "PSNR": 28.89451789855957
+          },
+          {
+            "K": 16384,
+            "bytes": 14813118,
+            "PSNR": 29.112821578979492
+          },
+          {
+            "K": 65536,
+            "bytes": 16061987,
+            "PSNR": 29.26242446899414
+          }
+        ],
+        "lloyd_trace": [
+          {
+            "K": 1024,
+            "bytes": 14005192,
+            "PSNR": 28.185226440429688
+          },
+          {
+            "K": 4096,
+            "bytes": 14301675,
+            "PSNR": 28.595823287963867
+          },
+          {
+            "K": 16384,
+            "bytes": 14788887,
+            "PSNR": 28.91380500793457
+          },
+          {
+            "K": 65536,
+            "bytes": 16015787,
+            "PSNR": 29.148351669311523
+          }
+        ],
+        "lloyd_wopa_area": [
+          {
+            "K": 1024,
+            "bytes": 13998342,
+            "PSNR": 27.948972702026367
+          },
+          {
+            "K": 4096,
+            "bytes": 14304170,
+            "PSNR": 28.46033477783203
+          },
+          {
+            "K": 16384,
+            "bytes": 14796507,
+            "PSNR": 28.851943969726562
+          },
+          {
+            "K": 65536,
+            "bytes": 16030470,
+            "PSNR": 29.116920471191406
+          }
+        ],
+        "gn_vq": [
+          {
+            "K": 1024,
+            "bytes": 14043534,
+            "PSNR": 28.62471580505371
+          },
+          {
+            "K": 4096,
+            "bytes": 14321752,
+            "PSNR": 28.89079475402832
+          },
+          {
+            "K": 16384,
+            "bytes": 14818023,
+            "PSNR": 29.109127044677734
+          },
+          {
+            "K": 65536,
+            "bytes": 16077227,
+            "PSNR": 29.260786056518555
+          }
+        ],
+        "upstream_l1": [
+          {
+            "K": 1024,
+            "bytes": 13967451,
+            "PSNR": 28.00225067138672
+          },
+          {
+            "K": 4096,
+            "bytes": 14279261,
+            "PSNR": 28.371091842651367
+          },
+          {
+            "K": 16384,
+            "bytes": 14772995,
+            "PSNR": 28.669891357421875
+          },
+          {
+            "K": 65536,
+            "bytes": 15991192,
+            "PSNR": 28.928382873535156
+          }
+        ]
+      },
+      "missing": [],
+      "vs": {
+        "lloyd_trace": {
+          "bd_rate": -3.210326005179487,
+          "bd_psnr": 0.20233537617506198,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -3.210326005179487,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "lloyd_wopa_area": {
+          "bd_rate": -4.174572405276821,
+          "bd_psnr": 0.2766103843567412,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -4.174572405276821,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "gn_vq": {
+          "bd_rate": -0.10599970213741594,
+          "bd_psnr": 0.009703829111682565,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -0.10599970213741594,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "upstream_l1": {
+          "bd_rate": -6.4328289158865015,
+          "bd_psnr": 0.41727644499669153,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -6.4328289158865015,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        }
+      }
+    },
+    "kitchen": {
+      "scene": "kitchen",
+      "points": {
+        "gn_vq_cvfloor": [
+          {
+            "K": 1024,
+            "bytes": 13635160,
+            "PSNR": 30.74024772644043
+          },
+          {
+            "K": 4096,
+            "bytes": 13918721,
+            "PSNR": 31.010009765625
+          },
+          {
+            "K": 16384,
+            "bytes": 14412345,
+            "PSNR": 31.21538543701172
+          },
+          {
+            "K": 65536,
+            "bytes": 15656116,
+            "PSNR": 31.360633850097656
+          }
+        ],
+        "lloyd_trace": [
+          {
+            "K": 1024,
+            "bytes": 13612165,
+            "PSNR": 30.188270568847656
+          },
+          {
+            "K": 4096,
+            "bytes": 13910950,
+            "PSNR": 30.60265350341797
+          },
+          {
+            "K": 16384,
+            "bytes": 14393484,
+            "PSNR": 30.915935516357422
+          },
+          {
+            "K": 65536,
+            "bytes": 15647089,
+            "PSNR": 31.15584945678711
+          }
+        ],
+        "lloyd_wopa_area": [
+          {
+            "K": 1024,
+            "bytes": 13566735,
+            "PSNR": 29.85621452331543
+          },
+          {
+            "K": 4096,
+            "bytes": 13898929,
+            "PSNR": 30.503122329711914
+          },
+          {
+            "K": 16384,
+            "bytes": 14402193,
+            "PSNR": 30.86757469177246
+          },
+          {
+            "K": 65536,
+            "bytes": 15634260,
+            "PSNR": 31.119476318359375
+          }
+        ],
+        "gn_vq": [
+          {
+            "K": 1024,
+            "bytes": 13635951,
+            "PSNR": 30.74171257019043
+          },
+          {
+            "K": 4096,
+            "bytes": 13921437,
+            "PSNR": 31.01436996459961
+          },
+          {
+            "K": 16384,
+            "bytes": 14412143,
+            "PSNR": 31.21419906616211
+          },
+          {
+            "K": 65536,
+            "bytes": 15669824,
+            "PSNR": 31.360301971435547
+          }
+        ],
+        "upstream_l1": [
+          {
+            "K": 1024,
+            "bytes": 13598968,
+            "PSNR": 29.700653076171875
+          },
+          {
+            "K": 4096,
+            "bytes": 13902632,
+            "PSNR": 30.18010711669922
+          },
+          {
+            "K": 16384,
+            "bytes": 14405788,
+            "PSNR": 30.524742126464844
+          },
+          {
+            "K": 65536,
+            "bytes": 15708313,
+            "PSNR": 30.87204933166504
+          }
+        ]
+      },
+      "missing": [],
+      "vs": {
+        "lloyd_trace": {
+          "bd_rate": -4.873110569158811,
+          "bd_psnr": 0.30037930863710266,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -4.873110569158811,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "lloyd_wopa_area": {
+          "bd_rate": -5.587951362962684,
+          "bd_psnr": 0.3870735078042412,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -5.587951362962684,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "gn_vq": {
+          "bd_rate": -0.017211139621098326,
+          "bd_psnr": 0.003226918280465542,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -0.017211139621098326,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "upstream_l1": {
+          "bd_rate": -10.453048360773543,
+          "bd_psnr": 0.6951171261409048,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -10.453048360773543,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        }
+      }
+    },
+    "room": {
+      "scene": "room",
+      "points": {
+        "gn_vq_cvfloor": [
+          {
+            "K": 1024,
+            "bytes": 13930334,
+            "PSNR": 32.000919342041016
+          },
+          {
+            "K": 4096,
+            "bytes": 14214925,
+            "PSNR": 32.096031188964844
+          },
+          {
+            "K": 16384,
+            "bytes": 14639305,
+            "PSNR": 32.19337463378906
+          },
+          {
+            "K": 65536,
+            "bytes": 15678743,
+            "PSNR": 32.23737335205078
+          }
+        ],
+        "lloyd_trace": [
+          {
+            "K": 1024,
+            "bytes": 13871139,
+            "PSNR": 31.485820770263672
+          },
+          {
+            "K": 4096,
+            "bytes": 14178019,
+            "PSNR": 31.75873374938965
+          },
+          {
+            "K": 16384,
+            "bytes": 14641144,
+            "PSNR": 31.958471298217773
+          },
+          {
+            "K": 65536,
+            "bytes": 15693195,
+            "PSNR": 32.10620880126953
+          }
+        ],
+        "lloyd_wopa_area": [
+          {
+            "K": 1024,
+            "bytes": 13852590,
+            "PSNR": 31.318227767944336
+          },
+          {
+            "K": 4096,
+            "bytes": 14173773,
+            "PSNR": 31.68885612487793
+          },
+          {
+            "K": 16384,
+            "bytes": 14638887,
+            "PSNR": 31.90186882019043
+          },
+          {
+            "K": 65536,
+            "bytes": 15694196,
+            "PSNR": 32.06923294067383
+          }
+        ],
+        "gn_vq": [
+          {
+            "K": 1024,
+            "bytes": 13934128,
+            "PSNR": 31.99641990661621
+          },
+          {
+            "K": 4096,
+            "bytes": 14214972,
+            "PSNR": 32.09666061401367
+          },
+          {
+            "K": 16384,
+            "bytes": 14643915,
+            "PSNR": 32.183773040771484
+          },
+          {
+            "K": 65536,
+            "bytes": 15680033,
+            "PSNR": 32.22181701660156
+          }
+        ],
+        "upstream_l1": [
+          {
+            "K": 1024,
+            "bytes": 13839191,
+            "PSNR": 31.232603073120117
+          },
+          {
+            "K": 4096,
+            "bytes": 14152639,
+            "PSNR": 31.597450256347656
+          },
+          {
+            "K": 16384,
+            "bytes": 14620192,
+            "PSNR": 31.835668563842773
+          },
+          {
+            "K": 65536,
+            "bytes": 15727712,
+            "PSNR": 31.98463249206543
+          }
+        ]
+      },
+      "missing": [],
+      "vs": {
+        "lloyd_trace": {
+          "bd_rate": -6.947092842393044,
+          "bd_psnr": 0.24947597012390274,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -6.947092842393044,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "lloyd_wopa_area": {
+          "bd_rate": -8.190896238350964,
+          "bd_psnr": 0.3186125475830653,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -8.190896238350964,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "gn_vq": {
+          "bd_rate": -0.5275739325689255,
+          "bd_psnr": 0.014133869084368157,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -0.5275739325689255,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "upstream_l1": {
+          "bd_rate": NaN,
+          "bd_psnr": 0.38392976462888795,
+          "decided_by": "bd_psnr",
+          "win": true,
+          "mean_term": -11.42809583491865,
+          "mean_term_source": "substitute_a",
+          "substitute": {
+            "value": -11.42809583491865,
+            "source": "substitute_a",
+            "new_point": {
+              "K": 1024,
+              "bytes": 13930334,
+              "PSNR": 32.000919342041016
+            },
+            "ref_point": {
+              "K": 65536,
+              "bytes": 15727712,
+              "PSNR": 31.98463249206543
+            }
+          },
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        }
+      }
+    },
+    "truck": {
+      "scene": "truck",
+      "points": {
+        "gn_vq_cvfloor": [
+          {
+            "K": 1024,
+            "bytes": 14384226,
+            "PSNR": 25.77289581298828
+          },
+          {
+            "K": 4096,
+            "bytes": 14660007,
+            "PSNR": 25.843276977539062
+          },
+          {
+            "K": 16384,
+            "bytes": 15130482,
+            "PSNR": 25.895885467529297
+          },
+          {
+            "K": 65536,
+            "bytes": 16296031,
+            "PSNR": 25.92955780029297
+          }
+        ],
+        "lloyd_trace": [
+          {
+            "K": 1024,
+            "bytes": 14316555,
+            "PSNR": 25.56854820251465
+          },
+          {
+            "K": 4096,
+            "bytes": 14628573,
+            "PSNR": 25.711992263793945
+          },
+          {
+            "K": 16384,
+            "bytes": 15110463,
+            "PSNR": 25.818635940551758
+          },
+          {
+            "K": 65536,
+            "bytes": 16267375,
+            "PSNR": 25.887014389038086
+          }
+        ],
+        "lloyd_wopa_area": [
+          {
+            "K": 1024,
+            "bytes": 14305152,
+            "PSNR": 25.338029861450195
+          },
+          {
+            "K": 4096,
+            "bytes": 14633336,
+            "PSNR": 25.60150718688965
+          },
+          {
+            "K": 16384,
+            "bytes": 15120674,
+            "PSNR": 25.768178939819336
+          },
+          {
+            "K": 65536,
+            "bytes": 16313832,
+            "PSNR": 25.865009307861328
+          }
+        ],
+        "gn_vq": [
+          {
+            "K": 1024,
+            "bytes": 14383306,
+            "PSNR": 25.76947021484375
+          },
+          {
+            "K": 4096,
+            "bytes": 14663980,
+            "PSNR": 25.836959838867188
+          },
+          {
+            "K": 16384,
+            "bytes": 15132521,
+            "PSNR": 25.895170211791992
+          },
+          {
+            "K": 65536,
+            "bytes": 16290117,
+            "PSNR": 25.928251266479492
+          }
+        ],
+        "upstream_l1": [
+          {
+            "K": 1024,
+            "bytes": 14301185,
+            "PSNR": 25.456985473632812
+          },
+          {
+            "K": 4096,
+            "bytes": 14621118,
+            "PSNR": 25.631114959716797
+          },
+          {
+            "K": 16384,
+            "bytes": 15108560,
+            "PSNR": 25.717113494873047
+          },
+          {
+            "K": 65536,
+            "bytes": 16288902,
+            "PSNR": 25.8209285736084
+          }
+        ]
+      },
+      "missing": [],
+      "vs": {
+        "lloyd_trace": {
+          "bd_rate": -4.355104471405147,
+          "bd_psnr": 0.07831298936162535,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -4.355104471405147,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "lloyd_wopa_area": {
+          "bd_rate": -6.639207785589518,
+          "bd_psnr": 0.1462063805114898,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -6.639207785589518,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "gn_vq": {
+          "bd_rate": -0.14238031775676285,
+          "bd_psnr": -0.0013173769974843448,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -0.14238031775676285,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": true,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        },
+        "upstream_l1": {
+          "bd_rate": -8.641999377127707,
+          "bd_psnr": 0.18223556017293197,
+          "decided_by": "bd_rate",
+          "win": true,
+          "mean_term": -8.641999377127707,
+          "mean_term_source": "bd_rate",
+          "outcome": "win",
+          "sign_disagreement": false,
+          "new_rises_with_K": true,
+          "ref_rises_with_K": true
+        }
+      }
+    }
+  }
+}

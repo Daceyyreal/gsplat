@@ -1,0 +1,303 @@
+{
+  "scene": "counter",
+  "timings_s": {
+    "download": 371.6520240306854,
+    "gn_pass_even": 16.207542275999913,
+    "job": 5145.385808696001
+  },
+  "ckpt_sha1": "50464c36ef6e1b0c2da3012bc7c8b3feb1a410c2",
+  "expected_sha1": "50464c36ef6e1b0c2da3012bc7c8b3feb1a410c2",
+  "dataset": "mipnerf360",
+  "scene_set": "gate",
+  "data_factor": 2,
+  "settings": {
+    "packed": false,
+    "rasterize_mode": "classic",
+    "camera_model": "pinhole",
+    "with_ut": false,
+    "with_eval3d": false,
+    "near_plane": 0.01,
+    "far_plane": 10000000000.0,
+    "sh_degree": 3
+  },
+  "train_views": 210,
+  "test_views": 30,
+  "n_even_views": 105,
+  "n_odd_views": 105,
+  "total_train_pixels": 339612840,
+  "even_pixels": 169806420,
+  "n_splats": 1000000,
+  "k_values": [
+    1024,
+    4096,
+    16384,
+    65536
+  ],
+  "rhos": [
+    0.0,
+    0.001,
+    0.01,
+    0.1,
+    0.3,
+    1.0,
+    3.0
+  ],
+  "seed": 0,
+  "gsplat_commit": "7617468e2e8c",
+  "gn_vq": {
+    "max_iters": 20,
+    "rel_tol": 0.001,
+    "ridge_eps": 0.01,
+    "quantizer_bits": 6,
+    "floor": "M_i + rho * tr(M_i) / 15 * I"
+  },
+  "render_parity": {
+    "max_abs_diff": 0.0,
+    "pass": true,
+    "view_size": [
+      1558,
+      1038
+    ]
+  },
+  "gn_full": {
+    "source": "restored_cache",
+    "cache_key": "v1|50464c36ef6e1b0c2da3012bc7c8b3feb1a410c2|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views210|seed0",
+    "key_equals_e2": true
+  },
+  "gn_even": {
+    "cache_key": "v1|50464c36ef6e1b0c2da3012bc7c8b3feb1a410c2|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views105|seed0|train_views=even_indexed",
+    "n_views": 105,
+    "total_pixels": 169806420,
+    "splats_zero_trace": 30339
+  },
+  "finite_check": {
+    "M": {
+      "name": "M_packed",
+      "n_rows": 1000000,
+      "n_nonfinite_rows": 0,
+      "n_nonfinite_entries": 0,
+      "n_nan_entries": 0,
+      "n_inf_entries": 0,
+      "first_nonfinite_rows": [],
+      "max_abs": 41871.0,
+      "finite": true
+    },
+    "M_even": {
+      "name": "M_even",
+      "n_rows": 1000000,
+      "n_nonfinite_rows": 0,
+      "n_nonfinite_entries": 0,
+      "n_nan_entries": 0,
+      "n_inf_entries": 0,
+      "first_nonfinite_rows": [],
+      "max_abs": 21514.6640625,
+      "finite": true
+    }
+  },
+  "warm_start_equals_run5_cache": true,
+  "lifted_checks": {
+    "even_rho0": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 322,
+      "n": 9678,
+      "sum_excess_over_sum_dmin": 5.058851135537868e-10,
+      "max_excess_over_scale": 1.243014839327986e-09,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 8340,
+      "n_dmin_zero": 51,
+      "max_excess_over_dmin": 1014.6715634487576,
+      "same_index_fraction": 0.9922504649721017,
+      "max_codebook_sq_dist_from_mean": 5.908851826889517,
+      "time_s": 27.465308602999357
+    },
+    "even_rho1e-3": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 322,
+      "n": 9678,
+      "sum_excess_over_sum_dmin": 4.2507195561943827e-10,
+      "max_excess_over_scale": 7.237905374823333e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 8336,
+      "n_dmin_zero": 51,
+      "max_excess_over_dmin": 47995.27241362195,
+      "same_index_fraction": 0.992353792105807,
+      "max_codebook_sq_dist_from_mean": 5.908851826889517,
+      "time_s": 28.61784226399959
+    },
+    "even_rho1e-2": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 322,
+      "n": 9678,
+      "sum_excess_over_sum_dmin": 2.7208533603129233e-10,
+      "max_excess_over_scale": 1.1037457990402241e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 8314,
+      "n_dmin_zero": 51,
+      "max_excess_over_dmin": 2516.44255361878,
+      "same_index_fraction": 0.992353792105807,
+      "max_codebook_sq_dist_from_mean": 5.908851826889517,
+      "time_s": 29.764054567999665
+    },
+    "even_rho1e-1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 322,
+      "n": 9678,
+      "sum_excess_over_sum_dmin": 7.038294471565772e-10,
+      "max_excess_over_scale": 2.1092293035691823e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 8134,
+      "n_dmin_zero": 51,
+      "max_excess_over_dmin": 10341.994809847976,
+      "same_index_fraction": 0.9922504649721017,
+      "max_codebook_sq_dist_from_mean": 5.908851826889517,
+      "time_s": 29.341503423000177
+    },
+    "even_rho3e-1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 322,
+      "n": 9678,
+      "sum_excess_over_sum_dmin": 1.2047406571275034e-09,
+      "max_excess_over_scale": 2.0756431027919442e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 7915,
+      "n_dmin_zero": 51,
+      "max_excess_over_dmin": 38284.71586041978,
+      "same_index_fraction": 0.9922504649721017,
+      "max_codebook_sq_dist_from_mean": 5.908851826889517,
+      "time_s": 29.077649859999838
+    },
+    "even_rho1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 322,
+      "n": 9678,
+      "sum_excess_over_sum_dmin": 4.59661162031045e-10,
+      "max_excess_over_scale": 6.201617673381561e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 7643,
+      "n_dmin_zero": 51,
+      "max_excess_over_dmin": 752.7760867460496,
+      "same_index_fraction": 0.9926637735069229,
+      "max_codebook_sq_dist_from_mean": 5.908851826889517,
+      "time_s": 29.328786024000692
+    },
+    "even_rho3": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 322,
+      "n": 9678,
+      "sum_excess_over_sum_dmin": 2.0950858152031996e-10,
+      "max_excess_over_scale": 6.806561390387313e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 7651,
+      "n_dmin_zero": 51,
+      "max_excess_over_dmin": 2811.907333468667,
+      "same_index_fraction": 0.9933870634428601,
+      "max_codebook_sq_dist_from_mean": 5.908851826889517,
+      "time_s": 29.321232504999898
+    },
+    "full_rho1e-2": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 321,
+      "n": 9679,
+      "sum_excess_over_sum_dmin": 9.346257598905785e-10,
+      "max_excess_over_scale": 1.58466608654978e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 8295,
+      "n_dmin_zero": 51,
+      "max_excess_over_dmin": 20421.901968641545,
+      "same_index_fraction": 0.9920446327099908,
+      "max_codebook_sq_dist_from_mean": 5.908851826889517,
+      "time_s": 29.616006029000346
+    }
+  },
+  "rho_cv": {
+    "1024": 0.01,
+    "4096": 0.01,
+    "16384": 0.01,
+    "65536": 0.01
+  },
+  "warm_starts": {
+    "1024": {
+      "source": "e2_work_cache",
+      "path": "/kaggle/working/e2c_warm/counter/e2_work/lloyd_wopa_area_k1024_s0.pt",
+      "origin_source": "recomputed"
+    },
+    "4096": {
+      "source": "e2_work_cache",
+      "path": "/kaggle/working/e2c_warm/counter/e2_work/lloyd_wopa_area_k4096_s0.pt",
+      "origin_source": "recomputed"
+    },
+    "16384": {
+      "source": "e2_work_cache",
+      "path": "/kaggle/working/e2c_warm/counter/e2_work/lloyd_wopa_area_k16384_s0.pt",
+      "origin_source": "recomputed"
+    },
+    "65536": {
+      "source": "e2_kmeans_cache",
+      "path": "/kaggle/working/e2c_warm/counter/e2_kmeans/lloyd_wopa_area_s0.pt",
+      "origin_source": ""
+    }
+  },
+  "linalg": {
+    "max_batch": 32768,
+    "op_max_batch": {
+      "linalg_eigvalsh": 8192,
+      "linalg_eigh": 8192
+    },
+    "working_batches": {
+      "linalg_inv_ex": 1,
+      "linalg_solve": 1024
+    },
+    "fallbacks": []
+  },
+  "missing_rows": [],
+  "done": true,
+  "data_deleted": true
+}
