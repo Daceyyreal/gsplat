@@ -1,0 +1,281 @@
+{
+  "scene": "treehill",
+  "timings_s": {
+    "download": 85.47381162643433,
+    "gn_pass_even": 4.769652180000094,
+    "job": 2750.008998775
+  },
+  "ckpt_sha1": "66fcadcf3298034c06227e69e6381e5a539f6980",
+  "expected_sha1": "66fcadcf3298034c06227e69e6381e5a539f6980",
+  "dataset": "mipnerf360",
+  "scene_set": "development",
+  "data_factor": 4,
+  "settings": {
+    "packed": false,
+    "rasterize_mode": "classic",
+    "camera_model": "pinhole",
+    "with_ut": false,
+    "with_eval3d": false,
+    "near_plane": 0.01,
+    "far_plane": 10000000000.0,
+    "sh_degree": 3
+  },
+  "train_views": 123,
+  "test_views": 18,
+  "n_even_views": 62,
+  "n_odd_views": 61,
+  "total_train_pixels": 129659712,
+  "even_pixels": 65356928,
+  "n_splats": 1000000,
+  "k_values": [
+    4096,
+    65536
+  ],
+  "rhos": [
+    0.0,
+    0.001,
+    0.01,
+    0.1
+  ],
+  "seed": 0,
+  "gsplat_commit": "0d1803606481",
+  "gn_vq": {
+    "max_iters": 20,
+    "rel_tol": 0.001,
+    "ridge_eps": 0.01,
+    "quantizer_bits": 6,
+    "floor": "M_i + rho * tr(M_i) / 15 * I"
+  },
+  "render_parity": {
+    "max_abs_diff": 0.0,
+    "pass": true,
+    "view_size": [
+      1267,
+      832
+    ]
+  },
+  "gn_full": {
+    "source": "restored_cache",
+    "cache_key": "v1|66fcadcf3298034c06227e69e6381e5a539f6980|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views123|seed0",
+    "key_equals_e2": true
+  },
+  "gn_even": {
+    "cache_key": "v1|66fcadcf3298034c06227e69e6381e5a539f6980|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views62|seed0|train_views=even_indexed",
+    "n_views": 62,
+    "total_pixels": 65356928,
+    "splats_zero_trace": 12870
+  },
+  "finite_check": {
+    "M": {
+      "name": "M_packed",
+      "n_rows": 1000000,
+      "n_nonfinite_rows": 0,
+      "n_nonfinite_entries": 0,
+      "n_nan_entries": 0,
+      "n_inf_entries": 0,
+      "first_nonfinite_rows": [],
+      "max_abs": 9668.033203125,
+      "finite": true
+    },
+    "M_even": {
+      "name": "M_even",
+      "n_rows": 1000000,
+      "n_nonfinite_rows": 0,
+      "n_nonfinite_entries": 0,
+      "n_nan_entries": 0,
+      "n_inf_entries": 0,
+      "first_nonfinite_rows": [],
+      "max_abs": 5696.1171875,
+      "finite": true
+    }
+  },
+  "lifted_checks": {
+    "even_rho0": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 131,
+      "n": 9869,
+      "sum_excess_over_sum_dmin": 3.34024685464792e-09,
+      "max_excess_over_scale": 6.458303995380755e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9855,
+      "n_dmin_zero": 28,
+      "max_excess_over_dmin": 727594803.8912365,
+      "same_index_fraction": 0.9949336305603405,
+      "max_codebook_sq_dist_from_mean": 27.087234188706525,
+      "time_s": 27.011973763000015
+    },
+    "even_rho1e-1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 131,
+      "n": 9869,
+      "sum_excess_over_sum_dmin": 2.055967496763154e-09,
+      "max_excess_over_scale": 1.5956612415474917e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9851,
+      "n_dmin_zero": 28,
+      "max_excess_over_dmin": 1971212.8747673233,
+      "same_index_fraction": 0.9955415948930996,
+      "max_codebook_sq_dist_from_mean": 27.087234188706525,
+      "time_s": 26.975699336000048
+    },
+    "even_rho1e-2": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 131,
+      "n": 9869,
+      "sum_excess_over_sum_dmin": 5.909910115269004e-10,
+      "max_excess_over_scale": 8.168985229159831e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9854,
+      "n_dmin_zero": 28,
+      "max_excess_over_dmin": 7172994.98192776,
+      "same_index_fraction": 0.9945283210051676,
+      "max_codebook_sq_dist_from_mean": 27.087234188706525,
+      "time_s": 27.255795723999995
+    },
+    "even_rho1e-3": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 131,
+      "n": 9869,
+      "sum_excess_over_sum_dmin": 1.2780282728543033e-09,
+      "max_excess_over_scale": 3.192925192187957e-09,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9855,
+      "n_dmin_zero": 28,
+      "max_excess_over_dmin": 6898857.172536952,
+      "same_index_fraction": 0.9948323031715472,
+      "max_codebook_sq_dist_from_mean": 27.087234188706525,
+      "time_s": 27.392478632999996
+    },
+    "full_rho0": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 131,
+      "n": 9869,
+      "sum_excess_over_sum_dmin": 9.387416890426688e-10,
+      "max_excess_over_scale": 1.9119004153770856e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9850,
+      "n_dmin_zero": 28,
+      "max_excess_over_dmin": 1689636.7090671812,
+      "same_index_fraction": 0.9946296483939608,
+      "max_codebook_sq_dist_from_mean": 27.087234188706525,
+      "time_s": 27.655032852999966
+    },
+    "full_rho1e-1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 131,
+      "n": 9869,
+      "sum_excess_over_sum_dmin": 4.620909793564176e-10,
+      "max_excess_over_scale": 1.4305081648787277e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9849,
+      "n_dmin_zero": 28,
+      "max_excess_over_dmin": 689008.3162990578,
+      "same_index_fraction": 0.9948323031715472,
+      "max_codebook_sq_dist_from_mean": 27.087234188706525,
+      "time_s": 27.910049726000125
+    },
+    "full_rho1e-2": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 131,
+      "n": 9869,
+      "sum_excess_over_sum_dmin": 2.9030075077148925e-08,
+      "max_excess_over_scale": 2.793642923235498e-09,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9850,
+      "n_dmin_zero": 28,
+      "max_excess_over_dmin": 1063450.8088419917,
+      "same_index_fraction": 0.9948323031715472,
+      "max_codebook_sq_dist_from_mean": 27.087234188706525,
+      "time_s": 27.973463431000027
+    },
+    "full_rho1e-3": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 131,
+      "n": 9869,
+      "sum_excess_over_sum_dmin": 2.740370738342995e-09,
+      "max_excess_over_scale": 1.0507680666650545e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 9850,
+      "n_dmin_zero": 28,
+      "max_excess_over_dmin": 1711337.0476016277,
+      "same_index_fraction": 0.9949336305603405,
+      "max_codebook_sq_dist_from_mean": 27.087234188706525,
+      "time_s": 28.066537744000016
+    }
+  },
+  "warm_starts": {
+    "65536": {
+      "source": "e2_kmeans_cache",
+      "path": "/kaggle/working/e2b_warm/treehill/e2_kmeans/lloyd_wopa_area_s0.pt",
+      "origin_source": ""
+    },
+    "4096": {
+      "source": "e2_work_cache",
+      "path": "/kaggle/working/e2b_warm/treehill/e2_work/lloyd_wopa_area_k4096_s0.pt",
+      "origin_source": "recomputed"
+    }
+  },
+  "linalg": {
+    "max_batch": 32768,
+    "op_max_batch": {
+      "linalg_eigvalsh": 8192,
+      "linalg_eigh": 8192
+    },
+    "working_batches": {
+      "linalg_inv_ex": 1,
+      "linalg_solve": 4096
+    },
+    "fallbacks": []
+  },
+  "missing_rows": [],
+  "done": true,
+  "data_deleted": true
+}

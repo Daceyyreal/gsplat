@@ -1,0 +1,1164 @@
+{
+  "exploratory": true,
+  "scenes": [
+    "treehill",
+    "flowers",
+    "stump",
+    "garden"
+  ],
+  "k_values": [
+    4096,
+    65536
+  ],
+  "rhos": [
+    0.0,
+    0.001,
+    0.01,
+    0.1
+  ],
+  "verdicts": {
+    "fidelity": "works",
+    "garden_control": true,
+    "psnr": "does not work"
+  },
+  "criterion_fidelity": {
+    "rule": "PREREG_GN.md Amendment 10 d: R = test dMSE of the full-M codebook at rho_cv / test dMSE of E2's lloyd_trace row, per scene and K. Works if R is below E2b's own rho = 0 R in at least 5 of the 6 cells of treehill, flowers and stump, and treehill's R at K = 65,536 is below 1. Garden control: test dMSE at rho_cv at most 5% above garden's own rho = 0, at both K. Exploratory, not a gate",
+    "cells": {
+      "treehill/4096": {
+        "rho_cv": 0.1,
+        "R_rho_cv": 0.6774429919618482,
+        "R_rho0": 0.8416569064363844,
+        "below_own_rho0": true
+      },
+      "treehill/65536": {
+        "rho_cv": 0.1,
+        "R_rho_cv": 0.6601744433366965,
+        "R_rho0": 1.1252679942454262,
+        "below_own_rho0": true
+      },
+      "flowers/4096": {
+        "rho_cv": 0.1,
+        "R_rho_cv": 0.6684416744077321,
+        "R_rho0": 0.7057813975304891,
+        "below_own_rho0": true
+      },
+      "flowers/65536": {
+        "rho_cv": 0.1,
+        "R_rho_cv": 0.6000214736925441,
+        "R_rho0": 0.6611125872029288,
+        "below_own_rho0": true
+      },
+      "stump/4096": {
+        "rho_cv": 0.1,
+        "R_rho_cv": 0.725681647315637,
+        "R_rho0": 0.7457937468552956,
+        "below_own_rho0": true
+      },
+      "stump/65536": {
+        "rho_cv": 0.1,
+        "R_rho_cv": 0.6447651677666981,
+        "R_rho0": 0.67966507346393,
+        "below_own_rho0": true
+      }
+    },
+    "garden_control": {
+      "4096": {
+        "rho_cv": 0.01,
+        "test_dmse_rho_cv_over_rho0": 0.9997518369142677,
+        "ok": true
+      },
+      "65536": {
+        "rho_cv": 0.0,
+        "test_dmse_rho_cv_over_rho0": 1.0,
+        "ok": true
+      }
+    },
+    "missing": [],
+    "n_cells_below_own_rho0": 6,
+    "n_cells": 6,
+    "min_cells": 5,
+    "treehill_R_at_max_K": 0.6601744433366965,
+    "treehill_R_below_1": true,
+    "garden_control_ok": true,
+    "verdict": "works"
+  },
+  "criterion_psnr": {
+    "rule": "PREREG_GN.md Amendment 9 b.e, reported with the cross-term caveat (Amendment 10 e): on treehill, at both K, rho_cv's codebook (the full-M codebook at rho_cv; E2's gn_vq row when rho_cv = 0) has a higher test PSNR than E2's lloyd_trace row; on garden, at both K, it is at least E2's gn_vq test PSNR minus 0.02 dB. Exploratory, not a gate",
+    "caveat": "PSNR is measured against the ground truth, so a change in it also contains the cross term 2 <I_q - I_orig, I_orig - I_gt> between the quantization error and the uncompressed model's own error, which can have either sign; test dMSE (render against render) leaves it out (Amendment 10 a)",
+    "treehill": {
+      "4096": {
+        "ok": false,
+        "rho_cv": 0.1,
+        "PSNR": 23.24484634399414,
+        "lloyd_trace_PSNR": 23.24648666381836,
+        "dPSNR": -0.00164032,
+        "condition": "dPSNR vs lloyd_trace > 0"
+      },
+      "65536": {
+        "ok": false,
+        "rho_cv": 0.1,
+        "PSNR": 23.26255226135254,
+        "lloyd_trace_PSNR": 23.274553298950195,
+        "dPSNR": -0.012001038,
+        "condition": "dPSNR vs lloyd_trace > 0"
+      }
+    },
+    "garden": {
+      "4096": {
+        "ok": true,
+        "rho_cv": 0.01,
+        "PSNR": 26.995845794677734,
+        "gn_vq_PSNR": 26.99587059020996,
+        "dPSNR": -2.4796e-05,
+        "condition": "dPSNR vs E2's gn_vq >= -0.02 dB"
+      },
+      "65536": {
+        "ok": true,
+        "rho_cv": 0.0,
+        "PSNR": 27.15804100036621,
+        "gn_vq_PSNR": 27.15804100036621,
+        "dPSNR": 0.0,
+        "condition": "dPSNR vs E2's gn_vq >= -0.02 dB"
+      }
+    },
+    "missing": [],
+    "treehill_ok": false,
+    "garden_ok": true,
+    "verdict": "does not work"
+  },
+  "reproduction_rho0": {
+    "cells": {
+      "treehill/4096": {
+        "status": "identical",
+        "flagged": false,
+        "dPSNR": 0.0,
+        "rel_d_test_dmse": 0.0,
+        "d_bytes": 0,
+        "m_source": "restored_cache",
+        "warm_start_source": "e2_work_cache"
+      },
+      "treehill/65536": {
+        "status": "identical",
+        "flagged": false,
+        "dPSNR": 0.0,
+        "rel_d_test_dmse": 0.0,
+        "d_bytes": 0,
+        "m_source": "restored_cache",
+        "warm_start_source": "e2_kmeans_cache"
+      },
+      "flowers/4096": {
+        "status": "identical",
+        "flagged": false,
+        "dPSNR": 0.0,
+        "rel_d_test_dmse": 0.0,
+        "d_bytes": 0,
+        "m_source": "restored_cache",
+        "warm_start_source": "e2_work_cache"
+      },
+      "flowers/65536": {
+        "status": "identical",
+        "flagged": false,
+        "dPSNR": 0.0,
+        "rel_d_test_dmse": 0.0,
+        "d_bytes": 0,
+        "m_source": "restored_cache",
+        "warm_start_source": "e2_kmeans_cache"
+      },
+      "stump/4096": {
+        "status": "identical",
+        "flagged": false,
+        "dPSNR": 0.0,
+        "rel_d_test_dmse": 0.0,
+        "d_bytes": 0,
+        "m_source": "restored_cache",
+        "warm_start_source": "e2_work_cache"
+      },
+      "stump/65536": {
+        "status": "identical",
+        "flagged": false,
+        "dPSNR": 0.0,
+        "rel_d_test_dmse": 0.0,
+        "d_bytes": 0,
+        "m_source": "restored_cache",
+        "warm_start_source": "e2_kmeans_cache"
+      },
+      "garden/4096": {
+        "status": "identical",
+        "flagged": false,
+        "dPSNR": 0.0,
+        "rel_d_test_dmse": 0.0,
+        "d_bytes": 0,
+        "m_source": "restored_cache",
+        "warm_start_source": "e2_work_cache"
+      },
+      "garden/65536": {
+        "status": "identical",
+        "flagged": false,
+        "dPSNR": 0.0,
+        "rel_d_test_dmse": 0.0,
+        "d_bytes": 0,
+        "m_source": "restored_cache",
+        "warm_start_source": "e2_kmeans_cache"
+      }
+    },
+    "flagged": [],
+    "tolerance": {
+      "PSNR_db": 0.001,
+      "test_dmse_rel": 0.001
+    }
+  },
+  "per_scene": {
+    "treehill": {
+      "4096": {
+        "scene": "treehill",
+        "K": 4096,
+        "cv": {
+          "0": {
+            "odd_dmse": 0.00020524480466856958,
+            "test_dmse": 0.00024537859228878305,
+            "bytes": 14247296.0,
+            "vq_iterations": 20.0
+          },
+          "1e-3": {
+            "odd_dmse": 0.00019654806981601422,
+            "test_dmse": 0.0002364106383801276,
+            "bytes": 14247273.0,
+            "vq_iterations": 19.0
+          },
+          "1e-2": {
+            "odd_dmse": 0.00018172928203053664,
+            "test_dmse": 0.00022295545874028837,
+            "bytes": 14249553.0,
+            "vq_iterations": 18.0
+          },
+          "1e-1": {
+            "odd_dmse": 0.00014663499704702863,
+            "test_dmse": 0.00016399208638325996,
+            "bytes": 14240693.0,
+            "vq_iterations": 16.0
+          }
+        },
+        "full": {
+          "0": {
+            "PSNR": 23.19876480102539,
+            "bytes": 14244007.0,
+            "test_dmse": 0.00018965275579727484,
+            "train_PSNR": 22.475446701049805,
+            "R": 0.8416569064363844
+          },
+          "1e-3": {
+            "PSNR": 23.179630279541016,
+            "bytes": 14250360.0,
+            "test_dmse": 0.00018299982639138,
+            "train_PSNR": 22.47907066345215,
+            "R": 0.8121319783172773
+          },
+          "1e-2": {
+            "PSNR": 23.2064151763916,
+            "bytes": 14249025.0,
+            "test_dmse": 0.00016610933788953903,
+            "train_PSNR": 22.47993278503418,
+            "R": 0.7371739517866495
+          },
+          "1e-1": {
+            "PSNR": 23.24484634399414,
+            "bytes": 14239524.0,
+            "test_dmse": 0.0001526500042221498,
+            "train_PSNR": 22.478740692138672,
+            "R": 0.6774429919618482
+          }
+        },
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 23.179569244384766,
+            "bytes": 14216027.0,
+            "test_dmse": 0.0002525113328565301
+          },
+          "lloyd_trace": {
+            "PSNR": 23.24648666381836,
+            "bytes": 14221580.0,
+            "test_dmse": 0.00022533261991548753
+          },
+          "gn_vq": {
+            "PSNR": 23.19876480102539,
+            "bytes": 14244007.0,
+            "test_dmse": 0.00018965275579727484
+          }
+        },
+        "rho_cv": 0.1,
+        "rho_cv_label": "1e-1",
+        "missing": [],
+        "reproduction_rho0": {
+          "status": "identical",
+          "flagged": false,
+          "dPSNR": 0.0,
+          "rel_d_test_dmse": 0.0,
+          "d_bytes": 0,
+          "m_source": "restored_cache",
+          "warm_start_source": "e2_work_cache"
+        },
+        "spearman_odd_vs_full_test": 1.0,
+        "spearman_odd_vs_full_test_own_rho0": 1.0,
+        "spearman_odd_vs_cv_test": 1.0,
+        "fidelity": {
+          "R_rho_cv": 0.6774429919618482,
+          "R_rho0": 0.8416569064363844,
+          "below_own_rho0": true,
+          "test_dmse_rho_cv_over_rho0": 0.804892096507797
+        },
+        "rho_cv_codebook": {
+          "rho": 0.1,
+          "source": "e2b",
+          "PSNR": 23.24484634399414,
+          "bytes": 14239524.0
+        },
+        "rho_cv_vs_e2": {
+          "lloyd_wopa_area": {
+            "dPSNR": 0.0652771,
+            "size_ratio": 0.001652852797761284
+          },
+          "lloyd_trace": {
+            "dPSNR": -0.00164032,
+            "size_ratio": 0.0012617444756490848
+          },
+          "gn_vq": {
+            "dPSNR": 0.046081543,
+            "size_ratio": -0.00031472885403660555
+          }
+        }
+      },
+      "65536": {
+        "scene": "treehill",
+        "K": 65536,
+        "cv": {
+          "0": {
+            "odd_dmse": 0.00011225272614417288,
+            "test_dmse": 0.00016058438675293674,
+            "bytes": 15841281.0,
+            "vq_iterations": 9.0
+          },
+          "1e-3": {
+            "odd_dmse": 0.00010749195925766715,
+            "test_dmse": 0.0001330210659271262,
+            "bytes": 15840790.0,
+            "vq_iterations": 9.0
+          },
+          "1e-2": {
+            "odd_dmse": 8.486944690906907e-05,
+            "test_dmse": 0.00010233235351583532,
+            "bytes": 15841035.0,
+            "vq_iterations": 9.0
+          },
+          "1e-1": {
+            "odd_dmse": 5.861371745569051e-05,
+            "test_dmse": 6.911975977198991e-05,
+            "bytes": 15843688.0,
+            "vq_iterations": 9.0
+          }
+        },
+        "full": {
+          "0": {
+            "PSNR": 23.23018455505371,
+            "bytes": 15843536.0,
+            "test_dmse": 0.00010253362810062175,
+            "train_PSNR": 22.575624465942383,
+            "R": 1.1252679942454262
+          },
+          "1e-3": {
+            "PSNR": 23.272600173950195,
+            "bytes": 15912506.0,
+            "test_dmse": 8.962364983558274e-05,
+            "train_PSNR": 22.58033561706543,
+            "R": 0.9835858396473642
+          },
+          "1e-2": {
+            "PSNR": 23.26789665222168,
+            "bytes": 15844057.0,
+            "test_dmse": 7.999339326860275e-05,
+            "train_PSNR": 22.57794189453125,
+            "R": 0.8778973968219541
+          },
+          "1e-1": {
+            "PSNR": 23.26255226135254,
+            "bytes": 15845658.0,
+            "test_dmse": 6.0154630897514265e-05,
+            "train_PSNR": 22.58136749267578,
+            "R": 0.6601744433366965
+          }
+        },
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 23.238508224487305,
+            "bytes": 15850599.0,
+            "test_dmse": 0.00010904004035442163
+          },
+          "lloyd_trace": {
+            "PSNR": 23.274553298950195,
+            "bytes": 15910516.0,
+            "test_dmse": 9.11192965808807e-05
+          },
+          "gn_vq": {
+            "PSNR": 23.23018455505371,
+            "bytes": 15843536.0,
+            "test_dmse": 0.00010253362810062175
+          }
+        },
+        "rho_cv": 0.1,
+        "rho_cv_label": "1e-1",
+        "missing": [],
+        "reproduction_rho0": {
+          "status": "identical",
+          "flagged": false,
+          "dPSNR": 0.0,
+          "rel_d_test_dmse": 0.0,
+          "d_bytes": 0,
+          "m_source": "restored_cache",
+          "warm_start_source": "e2_kmeans_cache"
+        },
+        "spearman_odd_vs_full_test": 1.0,
+        "spearman_odd_vs_full_test_own_rho0": 1.0,
+        "spearman_odd_vs_cv_test": 1.0,
+        "fidelity": {
+          "R_rho_cv": 0.6601744433366965,
+          "R_rho0": 1.1252679942454262,
+          "below_own_rho0": true,
+          "test_dmse_rho_cv_over_rho0": 0.5866819697288123
+        },
+        "rho_cv_codebook": {
+          "rho": 0.1,
+          "source": "e2b",
+          "PSNR": 23.26255226135254,
+          "bytes": 15845658.0
+        },
+        "rho_cv_vs_e2": {
+          "lloyd_wopa_area": {
+            "dPSNR": 0.024044037,
+            "size_ratio": -0.00031172323519135237
+          },
+          "lloyd_trace": {
+            "dPSNR": -0.012001038,
+            "size_ratio": -0.004076423417065822
+          },
+          "gn_vq": {
+            "dPSNR": 0.032367706,
+            "size_ratio": 0.00013393474789968884
+          }
+        }
+      }
+    },
+    "flowers": {
+      "4096": {
+        "scene": "flowers",
+        "K": 4096,
+        "cv": {
+          "0": {
+            "odd_dmse": 0.00033204208655094653,
+            "test_dmse": 0.0004726248692487452,
+            "bytes": 14618384.0,
+            "vq_iterations": 20.0
+          },
+          "1e-3": {
+            "odd_dmse": 0.00032439402911407854,
+            "test_dmse": 0.0004734380700210922,
+            "bytes": 14617933.0,
+            "vq_iterations": 20.0
+          },
+          "1e-2": {
+            "odd_dmse": 0.00031448646117773337,
+            "test_dmse": 0.000438096092367765,
+            "bytes": 14617185.0,
+            "vq_iterations": 18.0
+          },
+          "1e-1": {
+            "odd_dmse": 0.0002998286601716786,
+            "test_dmse": 0.000394267660297527,
+            "bytes": 14613844.0,
+            "vq_iterations": 16.0
+          }
+        },
+        "full": {
+          "0": {
+            "PSNR": 21.808034896850586,
+            "bytes": 14618485.0,
+            "test_dmse": 0.0003847917433055763,
+            "train_PSNR": 22.932918548583984,
+            "R": 0.7057813975304891
+          },
+          "1e-3": {
+            "PSNR": 21.805095672607422,
+            "bytes": 14618267.0,
+            "test_dmse": 0.00038453216269226036,
+            "train_PSNR": 22.932809829711914,
+            "R": 0.7053052772102761
+          },
+          "1e-2": {
+            "PSNR": 21.804718017578125,
+            "bytes": 14617371.0,
+            "test_dmse": 0.00037717762747197376,
+            "train_PSNR": 22.936336517333984,
+            "R": 0.6918156578609364
+          },
+          "1e-1": {
+            "PSNR": 21.819883346557617,
+            "bytes": 14615077.0,
+            "test_dmse": 0.00036443414078838536,
+            "train_PSNR": 22.927536010742188,
+            "R": 0.6684416744077321
+          }
+        },
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 21.71805191040039,
+            "bytes": 14598801.0,
+            "test_dmse": 0.0006040346192827212
+          },
+          "lloyd_trace": {
+            "PSNR": 21.746723175048828,
+            "bytes": 14593869.0,
+            "test_dmse": 0.0005451996108879502
+          },
+          "gn_vq": {
+            "PSNR": 21.808034896850586,
+            "bytes": 14618485.0,
+            "test_dmse": 0.0003847917433055763
+          }
+        },
+        "rho_cv": 0.1,
+        "rho_cv_label": "1e-1",
+        "missing": [],
+        "reproduction_rho0": {
+          "status": "identical",
+          "flagged": false,
+          "dPSNR": 0.0,
+          "rel_d_test_dmse": 0.0,
+          "d_bytes": 0,
+          "m_source": "restored_cache",
+          "warm_start_source": "e2_work_cache"
+        },
+        "spearman_odd_vs_full_test": 1.0,
+        "spearman_odd_vs_full_test_own_rho0": 1.0,
+        "spearman_odd_vs_cv_test": 0.8,
+        "fidelity": {
+          "R_rho_cv": 0.6684416744077321,
+          "R_rho0": 0.7057813975304891,
+          "below_own_rho0": true,
+          "test_dmse_rho_cv_over_rho0": 0.9470944923549872
+        },
+        "rho_cv_codebook": {
+          "rho": 0.1,
+          "source": "e2b",
+          "PSNR": 21.819883346557617,
+          "bytes": 14615077.0
+        },
+        "rho_cv_vs_e2": {
+          "lloyd_wopa_area": {
+            "dPSNR": 0.101831436,
+            "size_ratio": 0.0011148860786580617
+          },
+          "lloyd_trace": {
+            "dPSNR": 0.073160172,
+            "size_ratio": 0.001453212989646513
+          },
+          "gn_vq": {
+            "dPSNR": 0.01184845,
+            "size_ratio": -0.00023312949324094667
+          }
+        }
+      },
+      "65536": {
+        "scene": "flowers",
+        "K": 65536,
+        "cv": {
+          "0": {
+            "odd_dmse": 0.0001707994225081702,
+            "test_dmse": 0.00026980826875544223,
+            "bytes": 16473606.0,
+            "vq_iterations": 9.0
+          },
+          "1e-3": {
+            "odd_dmse": 0.00016026900615793556,
+            "test_dmse": 0.00024608121049974057,
+            "bytes": 16472777.0,
+            "vq_iterations": 9.0
+          },
+          "1e-2": {
+            "odd_dmse": 0.0001474697062861367,
+            "test_dmse": 0.00021199705969232127,
+            "bytes": 16464700.0,
+            "vq_iterations": 9.0
+          },
+          "1e-1": {
+            "odd_dmse": 0.0001349479491304433,
+            "test_dmse": 0.000183064182989383,
+            "bytes": 16447231.0,
+            "vq_iterations": 9.0
+          }
+        },
+        "full": {
+          "0": {
+            "PSNR": 21.89583969116211,
+            "bytes": 16473607.0,
+            "test_dmse": 0.00017949201271493718,
+            "train_PSNR": 23.09385871887207,
+            "R": 0.6611125872029288
+          },
+          "1e-3": {
+            "PSNR": 21.899322509765625,
+            "bytes": 16473465.0,
+            "test_dmse": 0.0001706572219026663,
+            "train_PSNR": 23.09551429748535,
+            "R": 0.6285719113090482
+          },
+          "1e-2": {
+            "PSNR": 21.901395797729492,
+            "bytes": 16465636.0,
+            "test_dmse": 0.0001664965455179844,
+            "train_PSNR": 23.09473419189453,
+            "R": 0.6132471317403901
+          },
+          "1e-1": {
+            "PSNR": 21.906972885131836,
+            "bytes": 16449275.0,
+            "test_dmse": 0.00016290578045248926,
+            "train_PSNR": 23.093942642211914,
+            "R": 0.6000214736925441
+          }
+        },
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 21.835824966430664,
+            "bytes": 16444351.0,
+            "test_dmse": 0.00031871290098769224
+          },
+          "lloyd_trace": {
+            "PSNR": 21.862436294555664,
+            "bytes": 16439217.0,
+            "test_dmse": 0.00027149991724456765
+          },
+          "gn_vq": {
+            "PSNR": 21.89583969116211,
+            "bytes": 16473607.0,
+            "test_dmse": 0.00017949201271493718
+          }
+        },
+        "rho_cv": 0.1,
+        "rho_cv_label": "1e-1",
+        "missing": [],
+        "reproduction_rho0": {
+          "status": "identical",
+          "flagged": false,
+          "dPSNR": 0.0,
+          "rel_d_test_dmse": 0.0,
+          "d_bytes": 0,
+          "m_source": "restored_cache",
+          "warm_start_source": "e2_kmeans_cache"
+        },
+        "spearman_odd_vs_full_test": 1.0,
+        "spearman_odd_vs_full_test_own_rho0": 1.0,
+        "spearman_odd_vs_cv_test": 1.0,
+        "fidelity": {
+          "R_rho_cv": 0.6000214736925441,
+          "R_rho0": 0.6611125872029288,
+          "below_own_rho0": true,
+          "test_dmse_rho_cv_over_rho0": 0.9075934800018673
+        },
+        "rho_cv_codebook": {
+          "rho": 0.1,
+          "source": "e2b",
+          "PSNR": 21.906972885131836,
+          "bytes": 16449275.0
+        },
+        "rho_cv_vs_e2": {
+          "lloyd_wopa_area": {
+            "dPSNR": 0.071147919,
+            "size_ratio": 0.0002994341339466189
+          },
+          "lloyd_trace": {
+            "dPSNR": 0.044536591,
+            "size_ratio": 0.0006118296266786061
+          },
+          "gn_vq": {
+            "dPSNR": 0.011133194,
+            "size_ratio": -0.0014770292869071833
+          }
+        }
+      }
+    },
+    "stump": {
+      "4096": {
+        "scene": "stump",
+        "K": 4096,
+        "cv": {
+          "0": {
+            "odd_dmse": 0.0002170943674509945,
+            "test_dmse": 0.00026786569137515634,
+            "bytes": 14034930.0,
+            "vq_iterations": 20.0
+          },
+          "1e-3": {
+            "odd_dmse": 0.00021509537986720532,
+            "test_dmse": 0.00026629512473314417,
+            "bytes": 14039761.0,
+            "vq_iterations": 19.0
+          },
+          "1e-2": {
+            "odd_dmse": 0.00020353864008297234,
+            "test_dmse": 0.0002583955042244345,
+            "bytes": 14043751.0,
+            "vq_iterations": 19.0
+          },
+          "1e-1": {
+            "odd_dmse": 0.00018307564749316086,
+            "test_dmse": 0.00023726986208745017,
+            "bytes": 14028705.0,
+            "vq_iterations": 15.0
+          }
+        },
+        "full": {
+          "0": {
+            "PSNR": 26.688861846923828,
+            "bytes": 14035146.0,
+            "test_dmse": 0.00020512351060434383,
+            "train_PSNR": 27.08500099182129,
+            "R": 0.7457937468552956
+          },
+          "1e-3": {
+            "PSNR": 26.693511962890625,
+            "bytes": 14040103.0,
+            "test_dmse": 0.00020401046148458876,
+            "train_PSNR": 27.089494705200195,
+            "R": 0.7417468920066709
+          },
+          "1e-2": {
+            "PSNR": 26.690473556518555,
+            "bytes": 14040626.0,
+            "test_dmse": 0.00020126419349507702,
+            "train_PSNR": 27.091222763061523,
+            "R": 0.7317619347107842
+          },
+          "1e-1": {
+            "PSNR": 26.699359893798828,
+            "bytes": 14028156.0,
+            "test_dmse": 0.00019959186800128613,
+            "train_PSNR": 27.079381942749023,
+            "R": 0.725681647315637
+          }
+        },
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 26.47684097290039,
+            "bytes": 14016036.0,
+            "test_dmse": 0.00031742550619142355
+          },
+          "lloyd_trace": {
+            "PSNR": 26.536643981933594,
+            "bytes": 13998853.0,
+            "test_dmse": 0.00027504053428882314
+          },
+          "gn_vq": {
+            "PSNR": 26.688861846923828,
+            "bytes": 14035146.0,
+            "test_dmse": 0.00020512351060434383
+          }
+        },
+        "rho_cv": 0.1,
+        "rho_cv_label": "1e-1",
+        "missing": [],
+        "reproduction_rho0": {
+          "status": "identical",
+          "flagged": false,
+          "dPSNR": 0.0,
+          "rel_d_test_dmse": 0.0,
+          "d_bytes": 0,
+          "m_source": "restored_cache",
+          "warm_start_source": "e2_work_cache"
+        },
+        "spearman_odd_vs_full_test": 1.0,
+        "spearman_odd_vs_full_test_own_rho0": 1.0,
+        "spearman_odd_vs_cv_test": 1.0,
+        "fidelity": {
+          "R_rho_cv": 0.725681647315637,
+          "R_rho0": 0.7457937468552956,
+          "below_own_rho0": true,
+          "test_dmse_rho_cv_over_rho0": 0.973032625140043
+        },
+        "rho_cv_codebook": {
+          "rho": 0.1,
+          "source": "e2b",
+          "PSNR": 26.699359893798828,
+          "bytes": 14028156.0
+        },
+        "rho_cv_vs_e2": {
+          "lloyd_wopa_area": {
+            "dPSNR": 0.222518921,
+            "size_ratio": 0.000864723806360157
+          },
+          "lloyd_trace": {
+            "dPSNR": 0.162715912,
+            "size_ratio": 0.002093242924973815
+          },
+          "gn_vq": {
+            "dPSNR": 0.010498047,
+            "size_ratio": -0.0004980354319078506
+          }
+        }
+      },
+      "65536": {
+        "scene": "stump",
+        "K": 65536,
+        "cv": {
+          "0": {
+            "odd_dmse": 0.00010958520494409464,
+            "test_dmse": 0.00013082431392881616,
+            "bytes": 15746681.0,
+            "vq_iterations": 9.0
+          },
+          "1e-3": {
+            "odd_dmse": 0.00010876648223593183,
+            "test_dmse": 0.00012980442520040857,
+            "bytes": 15748539.0,
+            "vq_iterations": 9.0
+          },
+          "1e-2": {
+            "odd_dmse": 9.946820764263078e-05,
+            "test_dmse": 0.00012295790150278205,
+            "bytes": 15745891.0,
+            "vq_iterations": 9.0
+          },
+          "1e-1": {
+            "odd_dmse": 7.776627098429108e-05,
+            "test_dmse": 0.00010163475404841005,
+            "bytes": 15736492.0,
+            "vq_iterations": 9.0
+          }
+        },
+        "full": {
+          "0": {
+            "PSNR": 26.81488609313965,
+            "bytes": 15747513.0,
+            "test_dmse": 8.809640198285415e-05,
+            "train_PSNR": 27.390403747558594,
+            "R": 0.67966507346393
+          },
+          "1e-3": {
+            "PSNR": 26.812255859375,
+            "bytes": 15749034.0,
+            "test_dmse": 8.783543266589565e-05,
+            "train_PSNR": 27.389949798583984,
+            "R": 0.6776516912372988
+          },
+          "1e-2": {
+            "PSNR": 26.814441680908203,
+            "bytes": 15747385.0,
+            "test_dmse": 8.66302258450247e-05,
+            "train_PSNR": 27.38957977294922,
+            "R": 0.6683535023895193
+          },
+          "1e-1": {
+            "PSNR": 26.81829261779785,
+            "bytes": 15738206.0,
+            "test_dmse": 8.357276785553688e-05,
+            "train_PSNR": 27.38744354248047,
+            "R": 0.6447651677666981
+          }
+        },
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 26.69283103942871,
+            "bytes": 15736366.0,
+            "test_dmse": 0.00014135241211924576
+          },
+          "lloyd_trace": {
+            "PSNR": 26.713607788085938,
+            "bytes": 15659603.0,
+            "test_dmse": 0.00012961737394253414
+          },
+          "gn_vq": {
+            "PSNR": 26.81488609313965,
+            "bytes": 15747513.0,
+            "test_dmse": 8.809640198285415e-05
+          }
+        },
+        "rho_cv": 0.1,
+        "rho_cv_label": "1e-1",
+        "missing": [],
+        "reproduction_rho0": {
+          "status": "identical",
+          "flagged": false,
+          "dPSNR": 0.0,
+          "rel_d_test_dmse": 0.0,
+          "d_bytes": 0,
+          "m_source": "restored_cache",
+          "warm_start_source": "e2_kmeans_cache"
+        },
+        "spearman_odd_vs_full_test": 1.0,
+        "spearman_odd_vs_full_test_own_rho0": 1.0,
+        "spearman_odd_vs_cv_test": 1.0,
+        "fidelity": {
+          "R_rho_cv": 0.6447651677666981,
+          "R_rho0": 0.67966507346393,
+          "below_own_rho0": true,
+          "test_dmse_rho_cv_over_rho0": 0.9486513180390989
+        },
+        "rho_cv_codebook": {
+          "rho": 0.1,
+          "source": "e2b",
+          "PSNR": 26.81829261779785,
+          "bytes": 15738206.0
+        },
+        "rho_cv_vs_e2": {
+          "lloyd_wopa_area": {
+            "dPSNR": 0.125461578,
+            "size_ratio": 0.00011692661444206998
+          },
+          "lloyd_trace": {
+            "dPSNR": 0.10468483,
+            "size_ratio": 0.005019475908808246
+          },
+          "gn_vq": {
+            "dPSNR": 0.003406525,
+            "size_ratio": -0.0005910139588390928
+          }
+        }
+      }
+    },
+    "garden": {
+      "4096": {
+        "scene": "garden",
+        "K": 4096,
+        "cv": {
+          "0": {
+            "odd_dmse": 0.00011787000031000111,
+            "test_dmse": 0.00012153048876281184,
+            "bytes": 14793252.0,
+            "vq_iterations": 20.0
+          },
+          "1e-3": {
+            "odd_dmse": 0.00011782817912838047,
+            "test_dmse": 0.00012146563405144052,
+            "bytes": 14792883.0,
+            "vq_iterations": 20.0
+          },
+          "1e-2": {
+            "odd_dmse": 0.00011773381207847409,
+            "test_dmse": 0.00012107069510316966,
+            "bytes": 14791279.0,
+            "vq_iterations": 19.0
+          },
+          "1e-1": {
+            "odd_dmse": 0.00012043965571589067,
+            "test_dmse": 0.00012257720364908302,
+            "bytes": 14787420.0,
+            "vq_iterations": 17.0
+          }
+        },
+        "full": {
+          "0": {
+            "PSNR": 26.99587059020996,
+            "bytes": 14793110.0,
+            "test_dmse": 0.00011868558721867079,
+            "train_PSNR": 28.041440963745117,
+            "R": 0.46647013960789757
+          },
+          "1e-3": {
+            "PSNR": 26.99599266052246,
+            "bytes": 14792698.0,
+            "test_dmse": 0.00011905245328427628,
+            "train_PSNR": 28.042926788330078,
+            "R": 0.4679120338500779
+          },
+          "1e-2": {
+            "PSNR": 26.995845794677734,
+            "bytes": 14791389.0,
+            "test_dmse": 0.00011865613383711466,
+            "train_PSNR": 28.04175567626953,
+            "R": 0.4663543789386505
+          },
+          "1e-1": {
+            "PSNR": 26.997241973876953,
+            "bytes": 14788339.0,
+            "test_dmse": 0.00012119122895361854,
+            "train_PSNR": 28.036672592163086,
+            "R": 0.4763180670378306
+          }
+        },
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 26.69765281677246,
+            "bytes": 14778950.0,
+            "test_dmse": 0.0002790502679209639
+          },
+          "lloyd_trace": {
+            "PSNR": 26.751323699951172,
+            "bytes": 14775967.0,
+            "test_dmse": 0.0002544334077170186
+          },
+          "gn_vq": {
+            "PSNR": 26.99587059020996,
+            "bytes": 14793110.0,
+            "test_dmse": 0.00011868558721867079
+          }
+        },
+        "rho_cv": 0.01,
+        "rho_cv_label": "1e-2",
+        "missing": [],
+        "reproduction_rho0": {
+          "status": "identical",
+          "flagged": false,
+          "dPSNR": 0.0,
+          "rel_d_test_dmse": 0.0,
+          "d_bytes": 0,
+          "m_source": "restored_cache",
+          "warm_start_source": "e2_work_cache"
+        },
+        "spearman_odd_vs_full_test": 0.8,
+        "spearman_odd_vs_full_test_own_rho0": 0.8,
+        "spearman_odd_vs_cv_test": 1.0,
+        "fidelity": {
+          "R_rho_cv": 0.4663543789386505,
+          "R_rho0": 0.46647013960789757,
+          "below_own_rho0": true,
+          "test_dmse_rho_cv_over_rho0": 0.9997518369142677
+        },
+        "rho_cv_codebook": {
+          "rho": 0.01,
+          "source": "e2b",
+          "PSNR": 26.995845794677734,
+          "bytes": 14791389.0
+        },
+        "rho_cv_vs_e2": {
+          "lloyd_wopa_area": {
+            "dPSNR": 0.298192978,
+            "size_ratio": 0.0008416700780502495
+          },
+          "lloyd_trace": {
+            "dPSNR": 0.244522095,
+            "size_ratio": 0.0010437218762060496
+          },
+          "gn_vq": {
+            "dPSNR": -2.4796e-05,
+            "size_ratio": -0.00011633794381304963
+          }
+        }
+      },
+      "65536": {
+        "scene": "garden",
+        "K": 65536,
+        "cv": {
+          "0": {
+            "odd_dmse": 5.0074473519910886e-05,
+            "test_dmse": 5.2024806630034226e-05,
+            "bytes": 16469090.0,
+            "vq_iterations": 10.0
+          },
+          "1e-3": {
+            "odd_dmse": 5.0188969962679676e-05,
+            "test_dmse": 5.2117209336809866e-05,
+            "bytes": 16467022.0,
+            "vq_iterations": 10.0
+          },
+          "1e-2": {
+            "odd_dmse": 5.065743075234578e-05,
+            "test_dmse": 5.23444927956902e-05,
+            "bytes": 16446031.0,
+            "vq_iterations": 10.0
+          },
+          "1e-1": {
+            "odd_dmse": 5.316046702980886e-05,
+            "test_dmse": 5.439297576917211e-05,
+            "bytes": 16422504.0,
+            "vq_iterations": 9.0
+          }
+        },
+        "full": {
+          "0": {
+            "PSNR": 27.15804100036621,
+            "bytes": 16495702.0,
+            "test_dmse": 4.996688357566501e-05,
+            "train_PSNR": 28.271812438964844,
+            "R": 0.40848505695056786
+          },
+          "1e-3": {
+            "PSNR": 27.15536117553711,
+            "bytes": 16482813.0,
+            "test_dmse": 4.9910576680170496e-05,
+            "train_PSNR": 28.272430419921875,
+            "R": 0.40802474156231766
+          },
+          "1e-2": {
+            "PSNR": 27.156734466552734,
+            "bytes": 16455598.0,
+            "test_dmse": 5.083140386184485e-05,
+            "train_PSNR": 28.269792556762695,
+            "R": 0.4155526103592236
+          },
+          "1e-1": {
+            "PSNR": 27.155677795410156,
+            "bytes": 16423676.0,
+            "test_dmse": 5.348527340779645e-05,
+            "train_PSNR": 28.264833450317383,
+            "R": 0.4372483010855786
+          }
+        },
+        "e2": {
+          "lloyd_wopa_area": {
+            "PSNR": 26.963132858276367,
+            "bytes": 16405132.0,
+            "test_dmse": 0.00014173554928616086
+          },
+          "lloyd_trace": {
+            "PSNR": 27.015243530273438,
+            "bytes": 16418411.0,
+            "test_dmse": 0.00012232242703975256
+          },
+          "gn_vq": {
+            "PSNR": 27.15804100036621,
+            "bytes": 16495702.0,
+            "test_dmse": 4.996688357566501e-05
+          }
+        },
+        "rho_cv": 0.0,
+        "rho_cv_label": "0",
+        "missing": [],
+        "reproduction_rho0": {
+          "status": "identical",
+          "flagged": false,
+          "dPSNR": 0.0,
+          "rel_d_test_dmse": 0.0,
+          "d_bytes": 0,
+          "m_source": "restored_cache",
+          "warm_start_source": "e2_kmeans_cache"
+        },
+        "spearman_odd_vs_full_test": 0.8,
+        "spearman_odd_vs_full_test_own_rho0": 0.8,
+        "spearman_odd_vs_cv_test": 1.0,
+        "fidelity": {
+          "R_rho_cv": 0.40848505695056786,
+          "R_rho0": 0.40848505695056786,
+          "below_own_rho0": false,
+          "test_dmse_rho_cv_over_rho0": 1.0
+        },
+        "rho_cv_codebook": {
+          "rho": 0.0,
+          "source": "e2_gn_vq_row",
+          "PSNR": 27.15804100036621,
+          "bytes": 16495702.0
+        },
+        "rho_cv_vs_e2": {
+          "lloyd_wopa_area": {
+            "dPSNR": 0.194908142,
+            "size_ratio": 0.005520833358731991
+          },
+          "lloyd_trace": {
+            "dPSNR": 0.14279747,
+            "size_ratio": 0.0047075810198684565
+          },
+          "gn_vq": {
+            "dPSNR": 0.0,
+            "size_ratio": 0.0
+          }
+        }
+      }
+    }
+  }
+}
