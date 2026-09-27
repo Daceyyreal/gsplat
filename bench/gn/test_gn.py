@@ -2702,3 +2702,92 @@ def test_e3p_timed_writer_equals_e0s_writer(tmp_path):
     assert {k_: v for k_, v in a["sizes"].items() if k_ not in drop} == {k_: v for k_, v in b["sizes"].items() if k_ not in drop}
     assert all(torch.equal(a["decoded"][k_], b["decoded"][k_]) for k_ in a["decoded"])
     assert b["encode_time_s"] > 0 and b["decode_time_s"] > 0
+
+
+# ------------------------------------------------ direct_distance chunked over splats (2026-09-28, before E3p)
+
+
+def _direct_distance_unchunked(x, M, C, labels, chunk=262144):
+    """``diagnostics.direct_distance`` as it was through E2c: the float64 difference for all splats at once."""
+    delta = gd._x3(x).double() - gd._x3(C).double()[labels]
+    return gd.quad_form(M, delta, chunk)
+
+
+def test_direct_distance_chunked_over_splats_is_bit_identical():
+    """The float64 difference built chunk by chunk (now) against built for all splats at once (through E2c):
+    bit-identical, on 2,003 splats (no chunk below except 1 and 2,003 divides it) with M_i of every rank 0-15,
+    zero included, for chunks from 1 splat to more than N, for both input layouts and through HostMetric.
+
+    Both versions evaluate quad_form's einsum over the same chunks (the ``chunk`` argument), which is what
+    makes this exact. It has to be the same chunks: on this machine quad_form's einsum itself can move a
+    splat's distance by 1 ulp with the splat's position inside its chunk (measured 2026-09-28: chunks of 1, 3,
+    7 and 333 differ from one chunk of 2,003 by up to 2.05e-16 relative, in the old code as much as in the new).
+    The job's default chunk, 262,144, is quad_form's default, so E2c's and E3p's chunks are the ones E2c had."""
+    import metric_store as ms
+
+    n, k = 2003, 64
+    x, M, C = _problem(n=n, k=k, seed=3)
+    rank0 = gm.trace_packed(M) == 0
+    assert bool(rank0.any()) and bool((~rank0).any())
+    labels = torch.randint(0, k, (n,), generator=torch.Generator().manual_seed(9))
+    whole = _direct_distance_unchunked(x, M, C, labels)  # the default chunk: one chunk at this N
+    assert torch.equal(gd.direct_distance(x, M, C, labels), whole)
+    assert torch.equal(whole[rank0], torch.zeros(int(rank0.sum()), dtype=torch.float64))
+    for chunk in (1, 2, 7, 333, 1000, 2002, 2003, 4096, 262144):
+        got = gd.direct_distance(x, M, C, labels, chunk)
+        assert got.dtype == torch.float64 and got.shape == (n,)
+        want = _direct_distance_unchunked(x, M, C, labels, chunk)
+        assert torch.equal(got, want), chunk
+        assert torch.equal(gd.direct_distance(x.view(n, 15, 3), M, C.view(k, 15, 3), labels, chunk), want)
+        assert torch.allclose(got, whole, rtol=1e-15, atol=0)  # other boundaries: within an ulp, not exact
+    order = torch.randperm(n, generator=torch.Generator().manual_seed(2))[:1936]
+    host = ms.HostMetric(M, "cpu", order)
+    assert torch.equal(gd.direct_distance(x[order], host, C, labels[order], 97),
+                       _direct_distance_unchunked(x[order], M[order], C, labels[order], 97))
+
+
+def test_direct_distance_chunking_changes_nothing_downstream(monkeypatch):
+    """GN-VQ's codebook, labels and report, the lifted check, gn_objective, the clusters' objectives and the
+    exact assignment with the new direct_distance equal E2c's code path, bit for bit, at the default chunk and
+    at 333 (six chunks and a remainder, both versions chunked alike)."""
+    import functools
+
+    x, M, C, labels = _vq_problem(n=2003, k=48)
+    kw = dict(total_pixels=1000, max_iters=4, rel_tol=0.0, eps=1e-2, topk_at_iter=1, topk=8, log=None)
+    new_fn = gd.direct_distance
+    for chunk in (262144, 333):
+        outs = {}
+        for mode, fn in (("old", functools.partial(_direct_distance_unchunked, chunk=chunk)),
+                         ("new", functools.partial(new_fn, chunk=chunk))):
+            monkeypatch.setattr(gd, "direct_distance", fn)
+            F = e2b.floored_metric(M, 1e-2)
+            C1, L1, rep = vq.gn_vq(x, C, labels, F, report_metrics={"M": (M, 1000)}, **kw)
+            chk = gd.lifted_check(x, F, C, n_sample=300, seed=0)
+            outs[mode] = (C1, L1, json.dumps(rep, sort_keys=True), json.dumps(chk, sort_keys=True),
+                          gd.gn_objective(x, C1, L1, M, 1000), vq.cluster_objectives(x, L1, F, C1, C1.shape[0]),
+                          gd.assign_exact(x, F, C1, L1))
+        a, b = outs["old"], outs["new"]
+        assert torch.equal(a[0], b[0]) and torch.equal(a[1], b[1]) and a[2] == b[2] and a[3] == b[3], chunk
+        assert a[4] == b[4] and torch.equal(a[5], b[5]) and torch.equal(a[6][0], b[6][0]) and a[6][1] == b[6][1]
+
+
+def test_chunked_difference_keeps_p_bit_identical():
+    """E3p's P reads its difference one quad_form chunk at a time (metric_store.ChunkedDifference): the same
+    value as the full [N, 15, 3] difference, bit for bit, for every chunk, also through HostMetric."""
+    import metric_store as ms
+
+    n = 2003
+    g = torch.Generator().manual_seed(12)
+    a, b = torch.randn(n, 15, 3, generator=g), torch.randn(n, 15, 3, generator=g)
+    _, M, _ = _problem(n=n, k=8, seed=4)
+    full = (a - b).view(-1, 15, 3)
+    lazy = ms.ChunkedDifference(a, b, (15, 3))
+    assert len(lazy) == n and torch.equal(lazy[5:900], full[5:900])
+    for chunk in (7, 333, 2003, 262144):
+        want = gd.predicted_dmse(M, full, 777, chunk)
+        assert gd.predicted_dmse(M, lazy, 777, chunk) == want
+        assert gd.predicted_dmse(ms.HostMetric(M, "cpu"), lazy, 777, chunk) == want
+    with pytest.raises(TypeError):
+        lazy[3]
+    with pytest.raises(ValueError):
+        ms.ChunkedDifference(a, b[:-1])

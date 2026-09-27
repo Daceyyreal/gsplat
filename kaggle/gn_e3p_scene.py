@@ -638,6 +638,20 @@ def main(argv=None):
     return finish()
 
 
+def direct_distance_check(x, M_packed, C, labels, n_max: int = 3 * ms.SLICE + 1000) -> Dict:
+    """Report only: ``diagnostics.direct_distance`` (the float64 difference built one chunk of splats at a
+    time, 2026-09-28) against the form E0-E2c ran (the difference built for all splats at once), on this
+    device, at the default chunk, over the first ``n_max`` sorted splats (four chunks, the last one partial).
+    The CPU tests show the two bit-identical; this is where the GPU shows it (HANDOFF, "direct_distance
+    chunked over splats")."""
+    n = min(int(x.shape[0]), n_max)
+    new = gd.direct_distance(x[:n], M_packed[:n], C, labels[:n])
+    old = gd.quad_form(M_packed[:n], gd._x3(x[:n]).double() - gd._x3(C).double()[labels[:n]])
+    return {"n_splats": n, "chunk": 262144, "identical": bool(torch.equal(new, old)),
+            "max_abs_diff": float((new - old).abs().max()), "max_value": float(old.abs().max()),
+            "device": str(new.device)}
+
+
 def gn_vq_phase(args, scene, steps, meta, save, csv_path, rhos, todo, warm, x, sorted_raw, order, order_dev,
                 g_even, g_full, even_pixels, total_train_pixels, even_views, odd_views, train_views, test_views,
                 splats_raw, runner, step, common, write, shn_full, size_fields, with_splats, evaluate_both, dev):
@@ -664,6 +678,13 @@ def gn_vq_phase(args, scene, steps, meta, save, csv_path, rhos, todo, warm, x, s
         if Mf is None:
             return
         meta["metric_store"]["device_bytes"] = store.device_bytes()
+        if "direct_distance_check" not in meta:  # once, on the first metric (report only)
+            dd = steps.run("direct_distance_check", lambda: direct_distance_check(x, Mf, C0, L0))
+            if dd is not None:
+                meta["direct_distance_check"] = {**dd, "metric": f"{kind}_rho{e2c.rho_label(rho)}"}
+                save()
+                if not dd["identical"]:
+                    log(scene, f"DIRECT_DISTANCE CHUNKING NOT BIT-IDENTICAL ON THIS DEVICE (reported only): {dd}")
         mk = metric_key(kind, rho)
         if gd.lifted_check_needed(checks.get(mk)):
             chk = steps.run(f"lifted_check_{mk}", lambda: gd.lifted_check(x, Mf, C0, n_sample=args.n_lifted_check, seed=0))
@@ -693,7 +714,8 @@ def gn_vq_phase(args, scene, steps, meta, save, csv_path, rhos, todo, warm, x, s
         if wd is None:
             return
         shn_q = shn_full(wd["decoded"])
-        delta = (splats_raw["shN"] - shn_q).view(-1, gm.D, 3)
+        # P's difference one quad_form chunk at a time, not a full [N, 15, 3] float32 copy (same values)
+        delta = ms.ChunkedDifference(splats_raw["shN"], shn_q, (gm.D, 3))
         predicted = gd.predicted_dmse(store.unsorted(kind), delta, pixels[kind])
         row = {**common, **size_fields(wd, C), "config": name, "n_clusters": args.k, "rho": rho,
                "metric_views": "even" if kind == "even" else "all", "metric_pixels": pixels[kind], "valid": True,
@@ -810,6 +832,7 @@ def summarize(out_dir: str, scenes=tuple(SCENES)) -> Dict:
              "done": meta.get("done"), "missing_rows": meta.get("missing_rows"),
              "oom_steps": meta.get("oom_steps"), "skipped_steps": meta.get("skipped_steps"),
              "rho_cv": meta.get("rho_cv"), "order": meta.get("order"), "phases": meta.get("phases"),
+             "direct_distance_check": meta.get("direct_distance_check"),
              "gn": {k: {f: v.get(f) for f in ("source", "M_bytes", "cache_file_bytes", "n_views", "time_s")}
                     for k, v in meta.get("gn", {}).items()},
              "inria_members": {k: {f: v.get(f) for f in ("name", "bytes", "crc32", "sha1", "source", "time_s")}

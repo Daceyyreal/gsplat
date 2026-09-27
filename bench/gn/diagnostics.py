@@ -351,9 +351,21 @@ def lifted_argmin(x: Tensor, M_packed: Tensor, C: Tensor, chunk: int = 2048) -> 
 def direct_distance(
     x: Tensor, M_packed: Tensor, C: Tensor, labels: Tensor, chunk: int = 262144
 ) -> Tensor:
-    """``sum_ch (c^ch - q_label^ch)^T M (c^ch - q_label^ch)`` per splat, float64, direct formula."""
-    delta = _x3(x).double() - _x3(C).double()[labels]
-    return quad_form(M_packed, delta, chunk)
+    """``sum_ch (c^ch - q_label^ch)^T M (c^ch - q_label^ch)`` per splat, float64, direct formula.
+
+    Computed ``chunk`` splats at a time, the float64 difference included, so the temporaries stay near
+    1 GB at the default ``chunk`` instead of three ``[N, 15, 3]`` float64 tensors (6.6 GB at 6.13M splats).
+    Method-neutral and bit-identical: each splat's distance depends on its own row only, the difference is
+    element-wise, and the chunks are ``quad_form``'s own, so every einsum gets the values and shapes it got
+    when the difference was built for all splats at once (``test_gn.py``; 2026-09-28, before E3p)."""
+    C3 = _x3(C).double()
+    n = M_packed.shape[0]
+    out = torch.empty(n, dtype=torch.float64, device=M_packed.device)
+    for start in range(0, n, chunk):
+        sl = slice(start, start + chunk)
+        delta = _x3(x[sl]).double() - C3[labels[sl]]
+        out[sl] = quad_form(M_packed[sl], delta, chunk)
+    return out
 
 
 def brute_force_min(

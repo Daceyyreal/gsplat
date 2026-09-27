@@ -300,9 +300,11 @@ for scene in ("bicycle", "train"):
         assert g["source"] == "computed" and g["n_views"] == nv and g["M_bytes"] == N_MODEL * 120 * 4
         assert g["cache_file_bytes"] == os.path.getsize(g["cache_path"]) > g["M_bytes"]
     assert meta["metric_store"]["device_bytes"] == N_CODED * 120 * 4 and meta["metric_store"]["device_copies"] == 1
+    dd = meta["direct_distance_check"]  # the chunked direct_distance against E0-E2c's form, on this device
+    assert dd["identical"] and dd["max_abs_diff"] == 0.0 and dd["n_splats"] == N_CODED and dd["metric"] == "even_rho0"
     names = [s["name"] for s in meta["steps"]]
     assert all(s["status"] == "ok" and s["time_s"] >= 0 for s in meta["steps"]), [s for s in meta["steps"] if s["status"] != "ok"]
-    for must in ["fetch_inria", "build_runner", "eval_i_uncompressed", "eval_ii_uncompressed", "gn_pass_even",
+    for must in ["direct_distance_check", "fetch_inria", "build_runner", "eval_i_uncompressed", "eval_ii_uncompressed", "gn_pass_even",
                  "gn_cache_write_even", "gn_pass_full", "gn_cache_write_full", "plas_sort", "cluster_upstream_l1",
                  "write_upstream_l1", "eval_i_upstream_l1", "eval_ii_upstream_l1", "cluster_lloyd_wopa_area",
                  "write_lloyd_wopa_area"] + [f"gn_vq_cv_rho{e2c.rho_label(r)}" for r in e2c.RHOS] + \
@@ -351,8 +353,8 @@ for scene in ("bicycle", "train"):
     assert float(unc["PSNR_ii"]) != float(unc["PSNR"])
     shutil.rmtree(os.path.join(DATA_ROOT, scene))
 print("(1) E3p: pinned members fetched and checked (SHA-1 recorded), 11 rows per scene (4,133 splats, 37 cropped), "
-      "protocol ii recomputed independently, rho_cv the CV argmin, 8 lifted checks, one device copy of M, every "
-      "step timed: ok")
+      "protocol ii recomputed independently, rho_cv the CV argmin, 8 lifted checks, one device copy of M, the "
+      "chunked direct_distance identical to E2c's form, every step timed: ok")
 
 # (2) resume: nothing again
 before = {s: csv_rows(os.path.join(out_dir, f"gn3p_results_{s}.csv")) for s in ("bicycle", "train")}
@@ -526,6 +528,7 @@ for scene in ("bicycle", "train"):
     assert u["protocol_ii"]["PSNR"] == float(row["PSNR_ii"]) and u["published_psnr"] == ei.PUBLISHED_PSNR[scene]
     assert u["protocol_ii_psnr_minus_published_db"] == float(row["PSNR_ii"]) - ei.PUBLISHED_PSNR[scene]
     assert s["n_splats"] == N_MODEL and s["oom_steps"] == [] and len(s["rows"]) == 11 and s["steps"]
+    assert s["direct_distance_check"]["identical"] is True
 assert summ["c3dgs_build"]["success"] is False and summ["c3dgs_build"]["failed_step"] == "torch_scatter"
 jobs = [(f"gn_e3p_{s}", "cmd", "cwd", os.path.join(ROOT, f"gn_e3p_{s}.log")) for s in ("bicycle", "train")]
 for name, _c, _w, log in jobs:

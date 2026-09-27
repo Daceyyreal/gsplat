@@ -68,6 +68,26 @@ class HostMetric:
         return rows.to(self.device)
 
 
+class ChunkedDifference:
+    """``(a - b).view(-1, *shape)`` built one row slice at a time, in the one form ``diagnostics.quad_form``
+    reads its ``delta``: a slice with step 1. E3p's rows pass it to ``predicted_dmse`` instead of the full
+    ``[N, 15, 3]`` float32 difference (1.1 GB at 6.13M splats). Each slice holds exactly the values the same
+    slice of ``a - b`` holds (the subtraction is element-wise), so ``P`` is unchanged bit for bit."""
+
+    def __init__(self, a: Tensor, b: Tensor, shape=(15, 3)):
+        if a.shape != b.shape:
+            raise ValueError(f"shapes differ: {tuple(a.shape)} and {tuple(b.shape)}")
+        self.a, self.b, self.shape = a, b, tuple(shape)
+
+    def __len__(self) -> int:
+        return self.a.shape[0]
+
+    def __getitem__(self, key) -> Tensor:
+        if not isinstance(key, slice) or key.step not in (None, 1):
+            raise TypeError(f"ChunkedDifference supports row slices with step 1 only, got {key!r}")
+        return (self.a[key] - self.b[key]).view(-1, *self.shape)
+
+
 class MetricStore:
     """The unfloored metrics in host memory and the one device buffer (module docstring)."""
 
