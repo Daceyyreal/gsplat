@@ -2403,3 +2403,302 @@ def test_findings_section_12_numbers_recheck_from_the_repo():
 
     res = check_s12.run()
     assert res["fails"] == [] and res["n_numbers"] > 50
+
+
+# --------------------------------------------------------------------------------- E3p (Amendment 12)
+
+
+def _e3p_problem(n=2100, n_coded=2025, k=32, seed=5):
+    """A problem shaped like an INRIA scene: n splats of which the codec keeps n_coded (a square), in a
+    permuted order, two unsorted metrics (M_even, M) and a warm start in the sorted order."""
+    g = torch.Generator().manual_seed(seed)
+    shn = torch.randn(n, 15, 3, generator=g) * 0.3 + 0.2
+    mats = []
+    for s in (seed, seed + 1):
+        a = torch.randn(n, 15, 15, generator=torch.Generator().manual_seed(s), dtype=torch.float64)
+        rank = torch.arange(n) % 16
+        a = a * (torch.arange(15)[None, None, :] < rank[:, None, None])
+        mats.append(gm.pack(a @ a.transpose(1, 2)).float())
+    order = torch.randperm(n, generator=g)[:n_coded]
+    x = shn[order].reshape(n_coded, 45).contiguous()
+    C0 = (x[torch.randperm(n_coded, generator=g)[:k]] + 0.05 * torch.randn(k, 45, generator=g)).clamp(-0.4, 0.8)
+    L0 = torch.cdist(x, C0).argmin(dim=1)
+    return shn, {"even": mats[0], "full": mats[1]}, order, x, C0, L0
+
+
+def test_e3p_metric_store_is_bit_identical_to_e2cs_path():
+    """Amendment 12 a: one device copy of M changes no number. For every rho of the grid and both
+    metrics, E2c's path (``M[order]`` copies, ``e2b.floored_metric`` on the whole tensor, the unfloored
+    sorted copy in ``report_metrics``, ``predicted_dmse`` on the unsorted tensor) and metric_store's (host
+    metrics, one buffer filled in slices that do not divide the problem, ``HostMetric`` reads) give the same
+    buffer, codebook, labels, report, P and lifted check, bit for bit."""
+    import e2c
+    import metric_store as ms
+
+    shn, Ms, order, x, C0, L0 = _e3p_problem()
+    px = {"even": 5000, "full": 9000}
+    kw = dict(max_iters=3, rel_tol=0.0, eps=1e-2, topk_at_iter=1, topk=8, log=None)
+    store = ms.MetricStore("cpu", order, slice_rows=97)  # 2,025 rows: 20 full slices and a remainder
+    for kind, M in Ms.items():
+        store.add(kind, M)
+    assert store.host["even"] is Ms["even"]  # a host tensor is kept, not copied
+    old_sorted = {kind: M[order] for kind, M in Ms.items()}
+    for kind in ("even", "full"):
+        for rho in e2c.RHOS:
+            Mf_old = e2b.floored_metric(old_sorted[kind], rho)
+            Mf_new = store.floored(kind, rho)
+            assert torch.equal(Mf_new, Mf_old), (kind, rho)
+            a = vq.gn_vq(x, C0, L0, Mf_old, px[kind], report_metrics={"M": (old_sorted[kind], px[kind])}, **kw)
+            b = vq.gn_vq(x, C0, L0, Mf_new, px[kind], report_metrics={"M": (store.sorted(kind), px[kind])}, **kw)
+            assert torch.equal(a[0], b[0]) and torch.equal(a[1], b[1]), (kind, rho)
+            assert json.dumps(a[2], sort_keys=True) == json.dumps(b[2], sort_keys=True), (kind, rho)
+            shn_q = shn.clone()
+            shn_q[order] = vq.quantized_codebook(b[0])[0][b[1]].view(-1, 15, 3)
+            delta = (shn - shn_q).view(-1, 15, 3)
+            for chunk in (262144, 333):
+                assert gd.predicted_dmse(Ms[kind], delta, px[kind], chunk) == \
+                    gd.predicted_dmse(store.unsorted(kind), delta, px[kind], chunk)
+            ca = gd.lifted_check(x, Mf_old, C0, n_sample=400, seed=0)
+            cb = gd.lifted_check(x, Mf_new, C0, n_sample=400, seed=0)
+            assert ca == cb, (kind, rho)
+    assert store.device_bytes() == order.numel() * 120 * 4  # one [n_coded, 120] float32 buffer
+    assert store.host_bytes() == {k: v.numel() * 4 for k, v in Ms.items()}
+    store.release()
+    assert store.device_bytes() == 0
+
+
+def test_e3p_host_metric_reads_slices_only():
+    import metric_store as ms
+
+    M = torch.arange(60 * 120, dtype=torch.float32).reshape(60, 120)
+    idx = torch.randperm(60, generator=torch.Generator().manual_seed(0))[:49]
+    h = ms.HostMetric(M, "cpu", idx)
+    assert h.shape == (49, 120) and len(h) == 49 and h.device == torch.device("cpu")
+    assert torch.equal(h[10:30], M[idx[10:30]]) and torch.equal(h[40:1000], M[idx[40:]])
+    assert torch.equal(ms.HostMetric(M, "cpu")[5:9], M[5:9])
+    for bad in (slice(0, 10, 2), 3, idx):
+        with pytest.raises(TypeError):
+            h[bad]
+    with pytest.raises(ValueError):
+        ms.HostMetric(M.to("meta"), "cpu")
+    # quad_form over a HostMetric equals quad_form over the tensor, in several chunks
+    d = torch.randn(49, 15, 3, generator=torch.Generator().manual_seed(1))
+    Mp = gm.pack(torch.randn(60, 15, 15, generator=torch.Generator().manual_seed(2)).pow(2)).float()
+    assert torch.equal(gd.quad_form(Mp[idx], d, chunk=7), gd.quad_form(ms.HostMetric(Mp, "cpu", idx), d, chunk=7))
+
+
+def _sha1(data: bytes) -> str:
+    import hashlib
+
+    return hashlib.sha1(data).hexdigest()
+
+
+def _e3p_zip(tmp_path, n=300):
+    """A local archive laid out like INRIA's (zip64 records forced on the .ply), with the pins zipfile itself
+    reports for it: an independent reading of the same directory."""
+    import zipfile
+
+    import e3p_inria as ei
+
+    g = torch.Generator().manual_seed(7)
+    splats = {"means": torch.randn(n, 3, generator=g), "quats": torch.randn(n, 4, generator=g),
+              "scales": torch.randn(n, 3, generator=g) - 3, "opacities": torch.randn(n, generator=g),
+              "sh0": torch.randn(n, 1, 3, generator=g), "shN": torch.randn(n, 15, 3, generator=g)}
+    ply = tmp_path / "src.ply"
+    ei.write_inria_ply(str(ply), splats)
+    cfg = ("Namespace(eval=True, images='images_4', model_path='./eval/bicycle', resolution=1, sh_degree=3, "
+           "source_path='x', white_background=False)")
+    cams = json.dumps([{"id": 0, "img_name": "a", "width": 8, "height": 6, "position": [0, 0, 0],
+                        "rotation": [[1, 0, 0], [0, 1, 0], [0, 0, 1]], "fx": 5.0, "fy": 5.0}])
+    path = tmp_path / "models.zip"
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("bonsai/cfg_args", "Namespace(eval=True)")
+        z.writestr("bicycle/cameras.json", cams)
+        z.writestr("bicycle/cfg_args", cfg)
+        with z.open("bicycle/point_cloud/iteration_30000/point_cloud.ply", "w", force_zip64=True) as f:
+            f.write(ply.read_bytes())
+    members = {}
+    with zipfile.ZipFile(path) as z:
+        for kind, name in (("ply", "bicycle/point_cloud/iteration_30000/point_cloud.ply"),
+                           ("cameras", "bicycle/cameras.json"), ("cfg_args", "bicycle/cfg_args")):
+            i = z.getinfo(name)
+            members[kind] = dict(name=name, header_offset=i.header_offset, compress_size=i.compress_size,
+                                 file_size=i.file_size, crc32=i.CRC, method=i.compress_type)
+    return path, members, splats
+
+
+def test_e3p_fetch_checks_the_directory_and_every_member(tmp_path):
+    import e3p_inria as ei
+
+    path, members, splats = _e3p_zip(tmp_path)
+    url, size = f"file://{path}", os.path.getsize(path)
+    reader = ei.RangeReader(url)
+    d = ei.read_directory(reader)
+    pins = {k: d[k] for k in ("n_entries", "cd_offset", "cd_size")}
+    assert d["n_entries"] == 4 and ei.check_directory(d, members, size, pins) == []
+    for pin in members.values():  # the directory reader agrees with zipfile on every pinned field
+        assert {k: d["entries"][pin["name"]][k] for k in pin if k != "name"} == {k: v for k, v in pin.items() if k != "name"}
+    out = tmp_path / "out"
+    rec = ei.fetch_scene(url, "bicycle", str(out), members, size, pins)
+    for kind, r in rec["members"].items():
+        data = (out / ei.FILE_NAMES[kind]).read_bytes()
+        assert r["source"] == "fetched" and r["bytes"] == len(data) == members[kind]["file_size"]
+        assert r["sha1"] == _sha1(data) and r["crc32"] == f"{members[kind]['crc32']:08x}"
+    got, info = ei.read_inria_ply(str(out / "point_cloud.ply"), 300)
+    assert info["n_splats"] == 300 and all(torch.equal(got[k], splats[k].reshape(got[k].shape)) for k in got)
+    # a second fetch keeps the files (their size and CRC32 checked)
+    again = ei.fetch_scene(url, "bicycle", str(out), members, size, pins)
+    assert all(r["source"] == "present" for r in again["members"].values())
+    # any pin that differs stops everything before a member is fetched
+    for field, val in (("crc32", 1), ("header_offset", 5), ("file_size", 9)):
+        bad = {**members, "cfg_args": {**members["cfg_args"], field: val}}
+        with pytest.raises(RuntimeError, match="INRIA ARCHIVE MISMATCH"):
+            ei.fetch_scene(url, "bicycle", str(tmp_path / "x"), bad, size, pins)
+        assert not (tmp_path / "x").exists()
+    with pytest.raises(RuntimeError, match="archive size"):
+        ei.fetch_scene(url, "bicycle", str(tmp_path / "x"), members, 1, pins)
+    # a member whose bytes do not inflate to the pinned CRC32 is not kept
+    with pytest.raises(RuntimeError, match="CRC32"):
+        ei.fetch_member(reader, {**members["cameras"], "crc32": members["cameras"]["crc32"] ^ 1},
+                        str(tmp_path / "c.json"))
+    assert not (tmp_path / "c.json").exists() and not (tmp_path / "c.json.part").exists()
+    with pytest.raises(RuntimeError, match="local header"):
+        ei.fetch_member(reader, {**members["cameras"], "name": "bicycle/other"}, str(tmp_path / "c.json"))
+
+
+def test_e3p_ply_layout_cfg_args_and_protocol_ii_helpers(tmp_path):
+    import e3p_inria as ei
+
+    # INRIA's f_rest is channel-major: coefficient k of channel c is f_rest_{c * 15 + k}
+    n = 5
+    shn = torch.arange(n * 45, dtype=torch.float32).reshape(n, 15, 3)
+    s = {"means": torch.zeros(n, 3), "quats": torch.ones(n, 4), "scales": torch.zeros(n, 3),
+         "opacities": torch.zeros(n), "sh0": torch.zeros(n, 1, 3), "shN": shn}
+    p = str(tmp_path / "p.ply")
+    ei.write_inria_ply(p, s)
+    raw = np.fromfile(p, dtype="<f4", offset=os.path.getsize(p) - n * 248).reshape(n, 62)
+    rest = ei.PLY_PROPERTIES.index("f_rest_0")
+    assert raw[1, rest + 2 * 15 + 4] == float(shn[1, 4, 2])
+    assert torch.equal(ei.read_inria_ply(p)[0]["shN"], shn)
+    with pytest.raises(RuntimeError, match="pinned 6"):
+        ei.read_inria_ply(p, 6)
+    assert len(ei.PLY_PROPERTIES) == 62 and ei.PLY_PROPERTIES[54:58] == ["opacity", "scale_0", "scale_1", "scale_2"]
+    cfg = ei.parse_cfg_args("Namespace(eval=True, images='images_4', model_path='./eval/bicycle', resolution=1, "
+                            "sh_degree=3, source_path='f:/x', white_background=False)")
+    assert ei.check_cfg_args(cfg, ei.CFG_ARGS["bicycle"]) == []
+    assert ei.check_cfg_args(cfg, ei.CFG_ARGS["train"]) == ["images='images_4', expected 'images'"]
+    # INRIA's loadCam sizes
+    assert ei.inria_image_size(1237, 822, 1) == (1237, 822) and ei.inria_image_size(4946, 3286, 4) == (1236, 822)
+    assert ei.inria_image_size(1959, 1090, -1) == (1600, 890) and ei.inria_image_size(980, 545, -1) == (980, 545)
+    # save_image's rounding: values land on k / 255, halves round up, the range is clamped
+    q = ei.quantize_8bit(torch.tensor([0.0, 1.0, -0.2, 1.3, 0.5 / 255, 0.49 / 255, 100.5 / 255]))
+    assert torch.equal(q * 255, torch.tensor([0.0, 255.0, 0.0, 255.0, 1.0, 0.0, 101.0]))
+
+
+def test_e3p_camera_frame_and_split_checks():
+    import e3p_inria as ei
+
+    names = [f"im{i:03d}.JPG" for i in range(17)]
+    c2w = []
+    for i in range(17):
+        m = np.eye(4)
+        m[:3, 3] = [i, 2.0 * i, -1.0]
+        c2w.append(m)
+    test = [i for i in range(17) if i % 8 == 0]
+    listed = test + [i for i in range(17) if i % 8]  # INRIA writes the test cameras first
+    cams = [{"img_name": f"im{i:03d}", "position": c2w[i][:3, 3].tolist(), "rotation": c2w[i][:3, :3].tolist()}
+            for i in listed]
+    r = ei.camera_frame_check(names, c2w, cams)
+    assert r["pass"] and r["n_matched"] == 17 and r["max_position_diff"] == 0.0
+    shifted = [dict(c, position=[v * 1.01 for v in c["position"]]) for c in cams]
+    assert not ei.camera_frame_check(names, c2w, shifted)["pass"]
+    assert not ei.camera_frame_check(names[:-1], c2w[:-1], cams)["pass"]  # every camera matched both ways
+    assert ei.split_check(names, test, cams)["equals_cameras_json_head"]
+    assert not ei.split_check(names, test, cams[1:] + cams[:1])["equals_cameras_json_head"]
+
+
+def test_e3p_pins_and_amendment_12():
+    """The job's pins are Amendment 12's table; each .ply is its header plus 248 bytes per splat; the
+    published PSNRs are the paper's."""
+    import re
+
+    import e3p_inria as ei
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    prereg = open(os.path.join(repo, "kaggle", "PREREG_GN.md"), encoding="utf-8").read()
+    a12 = prereg[prereg.index("## Amendment 12"):]
+    rx = r"\| `([\w/.]+)` \| ([\d,]+) \| ([\d,]+) \| ([\d,]+) \| `([0-9a-f]{8})` \|"
+    table = {m[0]: tuple(int(v.replace(",", "")) for v in m[1:4]) + (int(m[4], 16),) for m in re.findall(rx, a12)}
+    pins = {p["name"]: (p["header_offset"], p["compress_size"], p["file_size"], p["crc32"])
+            for s in ei.MEMBERS.values() for p in s.values()}
+    assert table == pins and len(pins) == 6 and set(ei.MEMBERS) == {"bicycle", "train"}
+    assert f"{ei.ARCHIVE_BYTES:,}" in a12 and all(p["method"] == 8 for s in ei.MEMBERS.values() for p in s.values())
+    for s, n in ei.N_SPLATS.items():
+        assert ei.MEMBERS[s]["ply"]["file_size"] == 1525 + len(str(n)) + 248 * n
+    assert ei.PUBLISHED_PSNR == {"bicycle": 25.246, "train": 21.097}
+    assert "Table 5" in ei.PUBLISHED_SOURCE["bicycle"] and "Table 8" in ei.PUBLISHED_SOURCE["train"]
+
+
+def _raise(e):
+    raise e
+
+
+def test_e3p_job_constants_steps_and_refusals():
+    import e2c
+    import gn_e2c_scene as e2cjob
+    import gn_e3p_scene as job
+
+    assert job.K == 65536 and job.RHOS == e2c.RHOS and job.VQ_EPS == 1e-2 and job.VQ_MAX_ITERS == 20
+    assert set(job.SCENES) == {"bicycle", "train"}  # Amendment 12 a: development scenes only
+    assert job.COLUMNS[:len(e2cjob.COLUMNS)] == e2cjob.COLUMNS and len(set(job.COLUMNS)) == len(job.COLUMNS)
+    w = job.wanted_rows(65536, list(e2c.RHOS))
+    assert w[:3] == [("uncompressed", 0, None), ("upstream_l1", 65536, None), ("lloyd_wopa_area", 65536, None)]
+    assert w[3:10] == [(e2c.CV, 65536, r) for r in e2c.RHOS] and w[-1] == (e2c.FINAL, 65536, None) and len(w) == 11
+    assert job.row_key({"config": e2c.CV, "n_clusters": "65536", "rho": "0.01"}) == (e2c.CV, 65536, 0.01)
+    assert job.row_key({"config": "uncompressed", "n_clusters": "0", "rho": ""}) == ("uncompressed", 0, None)
+    for scene in ("bonsai", "truck", "garden", "drjohnson"):
+        with pytest.raises(ValueError, match="not an E3p scene"):
+            job.main(["--scene", scene, "--benchmark_sh", "x", "--data_root", "x", "--inria_dir", "x",
+                      "--gn_cache_dir", "x", "--work_dir", "x", "--runs_dir", "x", "--out_dir", "x",
+                      "--examples_dir", "x"])
+    repo = os.path.dirname(os.path.dirname(HERE))
+    with pytest.raises(RuntimeError, match="not an E3p result file"):
+        job.assert_e3p_csv(os.path.join(repo, "kaggle", "gn_e2c", "gn2c", "gn2c_results_room.csv"))
+    # an out-of-memory error is recorded with where it happened and the job goes on; anything else stops it
+    meta, saves = {}, []
+    steps = job.Steps(meta, "cpu", lambda: saves.append(1))
+    oom = torch.cuda.OutOfMemoryError("CUDA out of memory. Tried to allocate 2.00 GiB")
+    assert steps.run("a", lambda: 3) == 3 and steps.run("b", lambda: _raise(oom)) is None
+    assert steps.run("c", lambda: _raise(RuntimeError("CUBLAS_STATUS_ALLOC_FAILED"))) is None
+    with pytest.raises(ValueError):
+        steps.run("d", lambda: _raise(ValueError("a bug")))
+    steps.skip("e", "needs b")
+    got = {r["name"]: r for r in meta["steps"]}
+    assert [r["status"] for r in meta["steps"]] == ["ok", "oom", "oom", "error", "skipped"] and len(saves) == 5
+    assert got["b"]["where"][-1].startswith("test_gn.py:") and "Tried to allocate" in got["b"]["error"]
+    assert got["a"]["time_s"] >= 0 and "cuda_peak" not in got["a"]  # no device memory on the CPU
+    assert job.is_oom(MemoryError()) and not job.is_oom(RuntimeError("shape mismatch"))
+
+
+def test_e3p_timed_writer_equals_e0s_writer(tmp_path):
+    """E3p's writer is E0's with timers: the same files byte for byte and the same decoded splats."""
+    import gn_e0_scene as e0job
+    import gn_e3p_scene as job
+
+    g = torch.Generator().manual_seed(4)
+    n, k = 1024, 16
+    s = {"means": torch.randn(n, 3, generator=g), "quats": torch.randn(n, 4, generator=g),
+         "scales": torch.randn(n, 3, generator=g) - 3, "opacities": torch.randn(n, generator=g),
+         "sh0": torch.randn(n, 1, 3, generator=g), "shN": torch.randn(n, 15, 3, generator=g) * 0.2}
+    C = torch.randn(k, 45, generator=g) * 0.2
+    L = torch.randint(0, k, (n,), generator=g)
+    a = e0job.write_and_decode(str(tmp_path / "a"), s, C, L)
+    b = job.write_and_decode_timed(str(tmp_path / "b"), s, C, L)
+    names = sorted(os.listdir(tmp_path / "a"))
+    assert names == sorted(os.listdir(tmp_path / "b"))
+    assert all((tmp_path / "a" / f).read_bytes() == (tmp_path / "b" / f).read_bytes() for f in names)
+    assert a["files"] == b["files"] and a["npz_members"] == b["npz_members"]
+    drop = {"zip_bytes"}  # zip -r stores the run directory's path, which differs (a vs b)
+    assert {k_: v for k_, v in a["sizes"].items() if k_ not in drop} == {k_: v for k_, v in b["sizes"].items() if k_ not in drop}
+    assert all(torch.equal(a["decoded"][k_], b["decoded"][k_]) for k_ in a["decoded"])
+    assert b["encode_time_s"] > 0 and b["decode_time_s"] > 0
