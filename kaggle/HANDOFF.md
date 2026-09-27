@@ -81,7 +81,7 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `build_gn_e1_bench.py` / `gn_e1_bench.ipynb` | E1 notebook (build output; edit the builder, never the JSON). E0's notebook is left exactly as it ran |
 | `gn_e0_scene.py` | E0, one scene per process: render parity, GN pass (`gn_cache/<scene>.pt`), spectrum, Spearman, the 9 G0 codebooks (predicted vs measured, test and train GT metrics, reproduction fields at K = 65,536), the lifted-assignment check (gates only the refines), the ridge / proximal refines (a proximal rise marks that row invalid). Resumable per (scene, config, K, seed). |
 | `build_gn_bench.py` / `gn_bench.ipynb` | E0 notebook (build output; edit the builder, never the JSON) |
-| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` / `g1.py` / `g2.py` (the G0, G1 and G2a / H2b rules as code), `gn_vq.py` (E1's variant and the codec's quantizer; `report_metrics` adds reporting only), `e2b.py` (E2b's floored metric, selection, the fidelity and PSNR criteria, the rho = 0 reproduction check and the Spearman), `e2c.py` (E2c's grid, `rho_cv`, G2c and its reported items), `metric_store.py` (E3p's one-GPU-copy layout of `M`, Amendment 12 a: host metrics, one floored device buffer, `HostMetric` reads for `quad_form`; bit-identical to E2c's path on the CPU), `bd_sensitivity.py` (E2's BD measures reproduced, the 50-digit exact cubic, PCHIP, the shN stream), `check_s11.py` / `check_s12.py` (re-check every number in FINDINGS sections 11 and 12 against the committed E2b, E2c and E2 bundles; exit 0 = no failure; both run by pytest), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (97 CPU tests), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1, E2, E2b, E2c and E3p dry runs and the writer-parity check; not collected by pytest) |
+| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` / `g1.py` / `g2.py` (the G0, G1 and G2a / H2b rules as code), `gn_vq.py` (E1's variant and the codec's quantizer; `report_metrics` adds reporting only), `e2b.py` (E2b's floored metric, selection, the fidelity and PSNR criteria, the rho = 0 reproduction check and the Spearman), `e2c.py` (E2c's grid, `rho_cv`, G2c and its reported items), `metric_store.py` (E3p's one-GPU-copy layout of `M`, Amendment 12 a: host metrics, one floored device buffer, `HostMetric` reads for `quad_form`; bit-identical to E2c's path on the CPU), `bd_sensitivity.py` (E2's BD measures reproduced, the 50-digit exact cubic, PCHIP, the shN stream), `check_s11.py` / `check_s12.py` (re-check every number in FINDINGS sections 11 and 12 against the committed E2b, E2c and E2 bundles; exit 0 = no failure; both run by pytest), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (100 CPU tests), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1, E2, E2b, E2c and E3p dry runs, the writer-parity check and `check_chunked_distance.py`, E2c's path with the chunked `direct_distance`; not collected by pytest) |
 | `.gitignore` | ignores only the 64 run-5 bundle files that were unpacked flat into `kaggle/` by hand (anchored names; nothing deleted; the committed copy is `run5/tilequant/`) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
@@ -940,13 +940,19 @@ wheel (E2c; 4,404 s more without it), smoke tests about 16 s, and the C3DGS chec
 metric fill at bicycle), and any step that runs out of memory, which would shorten the run.
 
 **Memory, what to expect (an estimate):** during GN-VQ on bicycle the device holds the runner's model (1.45 GB),
-the sorted copy the writer needs (1.45 GB) and the one metric buffer (2.94 GB), plus GN-VQ's own transients:
-`diagnostics.direct_distance` builds three `[N, 15, 3]` float64 tensors (2.2 GB each at bicycle) at once. That
-is about 12-13 GB of a T4's 15 GB, so an OOM in `direct_distance` (called by `assign_exact`,
-`accept_by_cluster` and `gn_objective`) is the likeliest one; chunking it would be the next method-neutral fix,
-and the pilot will say whether it is needed.
+the sorted copy the writer needs (1.45 GB) and the one metric buffer (2.94 GB), 5.84 GB in all, plus GN-VQ's
+transients, each now about 1 GB at most: `direct_distance` per chunk of 262,144 splats (chunked on 2026-09-28,
+below; before, it built three `[N, 15, 3]` float64 tensors, 6.6 GB at once), `update_centroids` per chunk
+(about 0.9 GB), `share_in_l2_topk`'s scores at iteration 1 (4,096 x 65,536 float32, 1.07 GB), the lifted
+assignment's (0.5 GB). That puts GN-VQ near 7-8 GB of a T4's 15 GB, against about 12-13 GB before the change.
+The final row's evaluation adds the decoded model (1.45 GB) and its full shN (1.1 GB). Unmeasured until the run.
 
-**Local checks:** `pytest bench/gn/test_gn.py` (97 tests; E3p's: the metric layout bit-identical to E2c's path
+**Also recorded, report only:** `meta["direct_distance_check"]`, `diagnostics.direct_distance` against the form
+E0-E2c ran, on the GPU, on the first 787,432 sorted splats (four chunks). See "`direct_distance` chunked over
+splats" under the session decisions.
+
+**Local checks:** `pytest bench/gn/test_gn.py` (100 tests; the chunked `direct_distance` and `P`'s chunked
+difference bit-identical to E0-E2c's forms, and E3p's: the metric layout bit-identical to E2c's path
 for every `rho` and both metrics, `HostMetric`'s slice-only reads, the zip64 directory reader against
 `zipfile`, the fetch's refusals (a changed pin before anything is fetched, a CRC32 mismatch, a wrong local
 header), INRIA's `.ply` layout, `cfg_args`, `loadCam`'s sizes, `save_image`'s rounding, the frame and split
@@ -954,7 +960,9 @@ checks, the pins against Amendment 12's table, the job's constants and refusals,
 writer byte-identical to E0's) and `python bench/gn/dryrun/dryrun_gn_e3p.py` (6 stages, see its docstring: a
 local archive laid out like INRIA's with zip64 records, 4,133-splat models, fake datasets with reduced JPEGs,
 both scenes end to end with protocol ii recomputed independently, resume, two injected OOMs, six refusals, and
-the notebook's restore, C3DGS (stubbed), summary and bundle cells; 95 s on this machine). Rebuild the notebook with
+the notebook's restore, C3DGS (stubbed), summary and bundle cells; 95 s on this machine) and
+`python bench/gn/dryrun/check_chunked_distance.py` (E2 and E2c on the toy with the old and the new
+`direct_distance`: identical; 151-269 s on this machine). Rebuild the notebook with
 `python kaggle/build_gn_e3p_bench.py` first.
 
 **After the run:** unpack `gn3p_bundle.zip` into `kaggle/gn_e3p/` (arcname `gn3p/`), check every file against its
@@ -1982,8 +1990,8 @@ choices this session made that the request left open, and why. No E3p row, bundl
 - **Also not a copy, beyond the request:** the job's `splats_raw` are the runner's own tensors (E2c cloned
   them); the runner is pointed back at them after every swap. Values are unchanged; it saves one model copy
   (1.45 GB at bicycle).
-- **`diagnostics.direct_distance` is left as it is** (method code used by E0-E2c): it is the likeliest OOM on
-  bicycle (see "Memory" under "E3p notebook"), and the pilot is there to measure that.
+- ~~**`diagnostics.direct_distance` is left as it is**~~ **Superseded on 2026-09-28** (Dace): it is now chunked
+  over splats, before any E3p run; see the next subsection.
 - **Only out-of-memory errors are caught** (CUDA's OOM, cuBLAS / cuSOLVER / cuDNN allocation failures, host
   `MemoryError`); a job with an OOM exits 0 with its rows missing, because an OOM is a result of the pilot. Any
   other error is recorded and stops the job, and the bundle cell raises at the end.
@@ -2007,6 +2015,52 @@ choices this session made that the request left open, and why. No E3p row, bundl
 - **Queue:** bicycle on the first GPU, train on the second, as E0 ran two scenes; one job each, so the order only
   matters for the start cutoff.
 - **Commit split:** Amendment 12 alone (docs), then the code and tests, then the notebook and the docs.
+
+### `direct_distance` chunked over splats (2026-09-28, before any E3p run)
+
+Dace asked for it before E3p runs. `bench/gn/diagnostics.py` changed; no rule, method or result did.
+
+- **What changed.** `diagnostics.direct_distance` builds the float64 difference `c_i - q_label(i)` one chunk of
+  splats at a time and hands each chunk to `quad_form`, instead of building it for all splats first. At
+  bicycle's 6.13M splats the old form held three `[N, 15, 3]` float64 tensors at once (2.2 GB each: the
+  splats in float64, the gathered centroids, their difference); now each chunk of 262,144 splats needs about
+  1 GB (those three at 94 MB each, the chunk's metric in float64, 252 MB, and unpacked, 472 MB). It is called by
+  `assign_exact`, `accept_by_cluster` (`cluster_objectives`), `gn_objective` and `lifted_check`.
+- **It is method-neutral:** it computes the same quantity, the direct-formula distance of every splat to its
+  centroid, from the same inputs; only the order in which memory is used changes.
+- **Why it is bit-identical.** A splat's distance depends only on its own row. The difference is element-wise, so
+  each chunk holds exactly the values the same rows of the full difference held. And the chunks are
+  `quad_form`'s own (the same `chunk` argument, default 262,144, whose boundaries `quad_form` already used), so
+  every einsum receives the same values in the same shapes and positions as before. That last part is needed:
+  on this machine `quad_form`'s einsum can move a distance by 1 ulp with the splat's position inside its chunk
+  (chunks of 1, 3, 7 and 333 splats differ from one chunk of 2,003 by up to 2.05e-16 relative, in the old code
+  exactly as in the new), so bit-identity holds for equal chunks and is not claimed for different ones.
+- **Checked on the CPU:** `test_direct_distance_chunked_over_splats_is_bit_identical` (2,003 splats, M_i of every
+  rank 0-15 with zero ones, chunks from 1 to above N, none but 1 and 2,003 dividing N, both input layouts,
+  through `HostMetric`); `test_direct_distance_chunking_changes_nothing_downstream` (GN-VQ's codebook, labels and
+  report, the lifted check, `gn_objective`, the cluster objectives and the exact assignment, at the default
+  chunk and at 333); and `bench/gn/dryrun/check_chunked_distance.py`, E2c's dry-run path: E2's and E2c's real
+  jobs on the toy with the old and the new function give identical rows (25), GN-VQ reports (18) and lifted
+  checks, at the default chunk (one chunk, as E2c's 1M-splat scenes) and at 1,000 splats per chunk.
+- **Confirmed on the GPU by the E3p run, not before:** CUDA kernels are not the CPU's, so the CPU tests do not
+  settle it. E3p's job records `direct_distance_check` once, on the first metric it fills: both forms on the GPU
+  over the first 787,432 sorted splats (three full chunks and a partial one), with `identical` and the largest
+  difference. It is report only. If it is not identical, the pilot's GN-VQ numbers differ from what the old
+  form would have given by that much, and that is the thing to read before quoting them.
+- **The rest of the GN-VQ step at 6.13M, checked for the same problem** (per-splat float64 intermediates,
+  full-N copies):
+  - changed: E3p's `P` (`predicted_dmse`) took a full `[N, 15, 3]` float32 difference of the model's and the
+    decoded shN (1.1 GB). It now reads it through `metric_store.ChunkedDifference`, one `quad_form` chunk at a
+    time: element-wise, the same values, `P` bit-identical (`test_chunked_difference_keeps_p_bit_identical`).
+    E2c's job is not changed;
+  - left, under about 1 GB: `quad_form` and `update_centroids` (already chunked at 262,144: about 0.9 GB per
+    chunk), the lifted assignment (2,048 splats per chunk, 0.5 GB of scores), `share_in_l2_topk` and
+    `shortlist_l2` (4,096 per chunk, 1.07 GB of float32 scores at K = 65,536), `trace_packed` of the metric
+    (a `[N, 15]` float32 gather, 368 MB), full-N distances and labels (49 MB each), and `assign_exact`'s
+    `x[zero]` (the splats no train view sees; at most 61,407 of 1M in E2's metas, so about 0.07 GB at 6.13M);
+  - outside the GN-VQ step and not changed: the writer's input copy of the sorted splats (1.45 GB, float32:
+    `PngCompression.compress` edits its input dict in place) and the decoded model's full shN (1.1 GB), which
+    the renders need.
 
 ### Open items (E0, E1, E2, E2b, E2c: closed; E3p: built, not run; E3: not designed)
 
