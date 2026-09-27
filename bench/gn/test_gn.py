@@ -2396,3 +2396,10 @@ def test_findings_section_11_numbers_recheck_from_the_repo():
 
     res = check_s11.run()
     assert res["fails"] == [] and res["n_numbers"] > 100
+
+
+def test_findings_section_12_numbers_recheck_from_the_repo():
+    import check_s12
+
+    res = check_s12.run()
+    assert res["fails"] == [] and res["n_numbers"] > 50

@@ -75,7 +75,7 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `build_gn_e1_bench.py` / `gn_e1_bench.ipynb` | E1 notebook (build output; edit the builder, never the JSON). E0's notebook is left exactly as it ran |
 | `gn_e0_scene.py` | E0, one scene per process: render parity, GN pass (`gn_cache/<scene>.pt`), spectrum, Spearman, the 9 G0 codebooks (predicted vs measured, test and train GT metrics, reproduction fields at K = 65,536), the lifted-assignment check (gates only the refines), the ridge / proximal refines (a proximal rise marks that row invalid). Resumable per (scene, config, K, seed). |
 | `build_gn_bench.py` / `gn_bench.ipynb` | E0 notebook (build output; edit the builder, never the JSON) |
-| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` / `g1.py` / `g2.py` (the G0, G1 and G2a / H2b rules as code), `gn_vq.py` (E1's variant and the codec's quantizer; `report_metrics` adds reporting only), `e2b.py` (E2b's floored metric, selection, the fidelity and PSNR criteria, the rho = 0 reproduction check and the Spearman), `e2c.py` (E2c's grid, `rho_cv`, G2c and its reported items), `bd_sensitivity.py` (E2's BD measures reproduced, the 50-digit exact cubic, PCHIP, the shN stream), `check_s11.py` (re-checks every number in FINDINGS section 11 against the committed E2b and E2 bundles; exit 0 = no failure), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (88 CPU tests), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1, E2, E2b and E2c dry runs and the writer-parity check; not collected by pytest) |
+| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` / `g1.py` / `g2.py` (the G0, G1 and G2a / H2b rules as code), `gn_vq.py` (E1's variant and the codec's quantizer; `report_metrics` adds reporting only), `e2b.py` (E2b's floored metric, selection, the fidelity and PSNR criteria, the rho = 0 reproduction check and the Spearman), `e2c.py` (E2c's grid, `rho_cv`, G2c and its reported items), `bd_sensitivity.py` (E2's BD measures reproduced, the 50-digit exact cubic, PCHIP, the shN stream), `check_s11.py` / `check_s12.py` (re-check every number in FINDINGS sections 11 and 12 against the committed E2b, E2c and E2 bundles; exit 0 = no failure; both run by pytest), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (89 CPU tests), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1, E2, E2b and E2c dry runs and the writer-parity check; not collected by pytest) |
 | `.gitignore` | ignores only the 64 run-5 bundle files that were unpacked flat into `kaggle/` by hand (anchored names; nothing deleted; the committed copy is `run5/tilequant/`) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
@@ -1749,9 +1749,9 @@ section-11 checker (below).
 - **The bundle is committed exactly as downloaded** (179 files, `b1163f24`, data only). Dace left it in the
   repo root as `gn2c_bundle.zip`, byte-identical to `~/Downloads/gn2c_bundle.zip`. Each file was checked
   byte for byte against its zip entry on disk and again as a staged blob. The 5 CSVs carry the writer's
-  CRLF, and the PNG contains `\r\n` only in its signature, so it is compared exactly. The zip stays
-  untracked in the repo root: it is not ignored and not deleted, so remove it or move it to `~/Downloads`
-  whenever convenient.
+  CRLF, and the PNG contains `\r\n` only in its signature, so it is compared exactly. The zip stays in the
+  repo root, not deleted; since the scouting session (2026-09-27) the root `.gitignore` ignores that one
+  name (`/gn2c_bundle.zip`, anchored), as for E0's and E1's bundles.
 - **Dace's reading was checked against the files before anything was written.** Two points differed, and
   section 12 states both in their measured form:
   - the test-dMSE ratio against E2's `gn_vq` on bonsai, counter, kitchen and truck is 0.9754-1.0058, not
@@ -1769,8 +1769,8 @@ section-11 checker (below).
     (0.0075 dB, Amendment 7 e) as the scale for the BD-PSNRs against `gn_vq`.
 - **Section 12 was checked mechanically:** 83 recomputed numbers and 220 numeric tokens, 0 failures. The
   check caught one wrong figure before commit (bonsai's BD-rate shift is -0.30 percentage points, not
-  -0.31). The script is in this session's scratchpad as `check_s12.py`, not in the repo; committing it as
-  `bench/gn/check_s12.py` next to `check_s11.py` is an open item.
+  -0.31). The script is now `bench/gn/check_s12.py` (`python bench/gn/check_s12.py`, 0 failures; pytest runs
+  it), built like `check_s11.py`, with its summary and Sources slices bounded from the start.
 - **`bench/gn/check_s11.py` had to be fixed** (`4ec8ab50`): its summary and Sources slices ran to the next
   heading, so they took in section 12's paragraph and entry. They are now bounded to section 11's own. The
   script gives the same 175 tokens and 0 failures as before, and pytest passes.
@@ -1813,8 +1813,7 @@ section-11 checker (below).
       extended grid was never used above 1e-1;
     - on treehill the floor closed most of the test-PSNR gap to `lloyd_trace`, but not all of it;
     - post hoc: large `rho` tends to `lloyd_trace`'s objective (section 11, "The limit of the floor").
-- **Commit `check_s12.py`** (scratchpad) as `bench/gn/check_s12.py` with a pytest hook, as for `check_s11.py`,
-  if Dace wants section 12 re-checkable from the repo.
+- ~~**Commit `check_s12.py`.**~~ **Done (2026-09-27):** `bench/gn/check_s12.py`, run by pytest.
 - ~~**Amendment 6's two rows cost little.**~~ **E1 done;** the measured costs are in FINDINGS
   section 9. Kept for the record: They are two more GN-VQ runs per scene at seed 0 and
   K = 65,536, warm-started from a `lloyd_wopa_area` cache that is already on disk, so they add no
