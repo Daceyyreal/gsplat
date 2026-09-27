@@ -6,7 +6,9 @@ Runs 1-5 are on `bench/tilequant`. E0 (a Gauss-Newton metric for shN), E1 (GN-VQ
 works in fidelity terms, not by the PSNR criterion) are on `bench/gn-vq`: see the E0, E1, E2 and E2b
 notebook sections below and `kaggle/PREREG_GN.md`. E2c (GN-VQ with the cross-validated floor, gated by
 G2c on bonsai, counter, kitchen, room and truck; Amendment 11) is done: **G2c passed**, and the method is
-frozen (FINDINGS section 12, "The method, as frozen"). E3 has no design yet.
+frozen (FINDINGS section 12, "The method, as frozen"). E3 has no design yet. **E3p**, an exploratory
+engineering pilot on INRIA's bicycle and train 30k checkpoints (Amendment 12), is built and has not run: see
+"E3p notebook" below.
 
 ## Context and rules
 
@@ -37,7 +39,7 @@ Upstream main at the time of this work: `28e794c`.
 | `feat/png-tile-quantization` (`3ff67e8`) | `PngCompression(tile_size=, bits=)` | benchmark said no PR; leave alone |
 | `feat/png-weighted-kmeans` (`61cd1baf`) | `gsplat/compression/kmeans.py` + `kmeans_backend` / `kmeans_weighting` / `kmeans_chunk_size`, off upstream main `28e794c`; `tests/test_kmeans.py`. Commits `9348e32` (backend + options), `a4c31082` (`kmeans_chunk_size`), `61cd1baf` (default flip, droppable) | **upstream PR [#1063](https://github.com/nerfstudio-project/gsplat/pull/1063), open** (opened 2026-09-18), measured by run 5. Keep this branch clean: library only (3 files). Upstream main had not moved on 2026-09-18. |
 | `bench/tilequant` | both feat branches merged + benchmark code and results; never goes upstream | runs 1-5 done; head = `git log -1 fork/bench/tilequant`. The blog post links its FINDINGS, so keep those numbers stable. |
-| `bench/gn-vq` | off `bench/tilequant` (`12f912eb`): the E0 / E1 / E2 / E2b / E2c pre-registration (Amendments 1-11), `bench/gn/` (GN metric, diagnostics, G0 / G1 / G2 rules, GN-VQ, E2b's and E2c's rules, the BD sensitivity script, smoke tests, scene fixtures), the E0, E1, E2, E2b and E2c jobs and notebooks, and E0's, E1's, E2's and E2b's results; never goes upstream | **E0 done: G0 passed** (2026-09-20, `kaggle/gn_e0/gn/`, FINDINGS section 8). **E1 done: G1 failed** on the size rule (`kaggle/gn_e1/gn1/`, FINDINGS section 9). **E2 done: G2a passed** (`kaggle/gn_e2/gn2/`, FINDINGS section 10). **E2b done** (Amendments 9-10, exploratory): fidelity criterion `works`, garden control held, PSNR criterion `does not work` (`kaggle/gn_e2b/gn2b/`, FINDINGS section 11). **E2c done: G2c passed** (Amendment 11; `kaggle/gn_e2c/gn2c/`, FINDINGS section 12); the method `gn_vq_cvfloor` is frozen. **E3: no design yet.** `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
+| `bench/gn-vq` | off `bench/tilequant` (`12f912eb`): the E0 / E1 / E2 / E2b / E2c pre-registration (Amendments 1-11), `bench/gn/` (GN metric, diagnostics, G0 / G1 / G2 rules, GN-VQ, E2b's and E2c's rules, the BD sensitivity script, smoke tests, scene fixtures), the E0, E1, E2, E2b and E2c jobs and notebooks, and E0's, E1's, E2's and E2b's results; never goes upstream | **E0 done: G0 passed** (2026-09-20, `kaggle/gn_e0/gn/`, FINDINGS section 8). **E1 done: G1 failed** on the size rule (`kaggle/gn_e1/gn1/`, FINDINGS section 9). **E2 done: G2a passed** (`kaggle/gn_e2/gn2/`, FINDINGS section 10). **E2b done** (Amendments 9-10, exploratory): fidelity criterion `works`, garden control held, PSNR criterion `does not work` (`kaggle/gn_e2b/gn2b/`, FINDINGS section 11). **E2c done: G2c passed** (Amendment 11; `kaggle/gn_e2c/gn2c/`, FINDINGS section 12); the method `gn_vq_cvfloor` is frozen. **E3: no design yet. E3p (Amendment 12, exploratory pilot): built, not run.** `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
 
 Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): `PR_DRAFT_weighted_kmeans.md`,
 `PR_DRAFT_empty_tensor.md`, `ISSUE_566_COMMENT.md`, `ISSUE_787_COMMENT.md`.
@@ -57,9 +59,12 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `tilequant_run4_analysis.py` | run 4: `parse_mcmc_sh`, `SCENE_META` (zip sizes, image sizes), `scene_plan`, `sanity_gate`, **pre-registered** `decide_run4`, `run4_table`, runtime estimate / session split, `plot_run4` |
 | `FINDINGS.md` | results write-up, every number from the committed bundles |
 | `E3_SCOUTING.md` | E3 scouting (2026-09-27, not pre-registered): the INRIA pretrained models (13 scenes, splat counts derived from the archive), the candidate hosts (C3DGS, LightGaussian, MesonGS++, POTR: where the SH VQ is, what GN-VQ needs, builds, protocols, published numbers and their MB / MiB units), compute estimates at INRIA scale, cost options, and the recommendation (C3DGS first; E3a feasible) |
+| `gn_e3p_scene.py` | E3p, one scene per process (Amendment 12; exploratory, no verdict): INRIA's pinned members fetched and checked, a runner holding the INRIA model (world space not normalized; `cameras.json` frame check; render parity), the uncompressed model under protocols i and ii, the GN passes (moved to host memory), the PLAS sort, `upstream_l1` and `lloyd_wopa_area` at K = 65,536, `gn_vq_cvfloor` at K = 65,536 as E2c ran it with `M` in one GPU copy; every step timed with its peak GPU memory (`Steps`), an out-of-memory step recorded with where it failed and the rest still run; `summarize` writes the notebook's summary |
+| `e3p_inria.py` | INRIA's archive for E3p: the pinned members (Amendment 12 a's table), the zip64 directory reader and range-request fetch with size / CRC32 checks and SHA-1s, the `.ply` loader (INRIA's channel-major `f_rest` to gsplat's `shN`), `cfg_args`, the camera-frame and split checks, INRIA's image size rule, 8-bit quantization and protocol ii's evaluation; the published PSNRs with their table |
+| `build_gn_e3p_bench.py` / `gn_e3p_bench.ipynb` | E3p notebook, Kaggle title "E3p INRIA pilot" (build output; edit the builder, never the JSON). E0's-E2c's notebooks are left exactly as they ran |
 | `HANDOFF.md` | this file |
 | `run2/tilequant/` ... `run5/tilequant/` | results bundles (`results_bundle.zip` contents); each session restores the previous one, so files repeat (git stores them once). In `run5/`, `run5_tt_table.csv` and `rd_run5.png` were regenerated locally after the label fix `1b4d40f8` (see FINDINGS sources); the downloaded original is `~/Downloads/results_bundle (3).zip` |
-| `PREREG_GN.md` | E0 / E1 pre-registration (`bench/gn-vq`): G0 rule, validity checks, exploratory scope, G1 for E1. Amendment 1: the toy check. Amendment 2: G0 over 9 codebooks per scene with tie-exempt pairs, and exact-assignment refines instead of the shortlist one. Amendment 3: the G0 verdict is the ranking alone (the ratio is reported as calibration), the end-to-end exactness check, the lifted-check criterion v2, and a proximal rise invalidating that variant instead of stopping. Amendment 4: the toy and end-to-end scenes are committed fixtures with pinned hashes (a correction: the CUDA toy check would have drawn a different scene from the simulated one), end-to-end preconditions read from gsplat's render, and a report-only probe-noise diagnostic. Amendment 5 (after G0 passed, before any E1 code): E1's GN-VQ variant, the one-sided size matching that G1's last sentence delegates, the reported secondaries and the exploratory ablations. Amendment 6 (2026-09-21, before any E1 run): two more exploratory rows, GN-VQ at ridge `eps` = 1e-3 and 1e-2, seed 0 at K = 65,536 on both scenes, not judged by anything; and the final codebook's own quantizer range logged beside the warm start's. Amendment 7 (2026-09-21, after E1's results, before any E2 code): G1 failed as pre-registered and is not amended; the project's deviation, stated as one (it continues on Amendment 5 d's rate-distortion evidence; garden and bicycle become development scenes); E2's variant (eps = 1e-2, 20 iterations), 9 held-out scenes, 4 configs x 4 K, G2a (gate) and H2b (reported). Amendment 8 (2026-09-21, before any E2 data): G2a's mean is over all 9 held-out scenes, a scene without a defined BD-rate entering with a substitute (a: `gn_vq` reaches the baseline's best PSNR for fewer bytes; b: the reverse; c: 0%), so it is always defined; exploratory `gn_vq_eps1e4` rows on garden and bicycle, not judged. Amendment 9 (2026-09-22, after E2's results, before any E2b code): from E2b on, BD measures are computed with the domain-scaled fit (`g2.bd_rate_scaled` / `bd_psnr_scaled`; the pre-registered quantity is unchanged, E2's values stand); E2b, exploratory with a pre-stated criterion: E2's GN-VQ with `M_i + rho tr(M_i)/15 I` in assignment and update, rho chosen by train-view cross-validation, on treehill, flowers and train with garden as the control (those three become development scenes). Amendment 10 (2026-09-25, before any E2b data): E2b's scenes become treehill, flowers and stump (the largest train-to-test growth of the gn_vq / `lloyd_trace` dMSE ratio; Amendment 9's PSNR ratio mixed in the cross term with the model's own error), train dropped (it stays a development scene); E2b also runs its own rho = 0 full-`M` rows, checked against E2's `gn_vq` rows; a fidelity criterion on test dMSE (R below its own rho = 0 in >= 5 of 6 cells, treehill's R at K = 65,536 below 1; garden within 5%); Amendment 9's PSNR criteria reported alongside with the cross-term caveat; neither gates. Amendment 10 f (2026-09-26, before any E2b data): a claim that the floor works needs both the fidelity verdict and the garden control. Amendment 11 (2026-09-26, after E2b's results, before any E2c code): E2c, `gn_vq_cvfloor` (E2b's floor at `rho_cv` from the grid {0, 1e-3, 1e-2, 1e-1, 3e-1, 1, 3}, final codebook on E2's full `M`) on bonsai, counter, kitchen, room and truck, all gate scenes, K = 1,024-65,536, E2's rows as comparators and E2's warm starts with no fallback; gate G2c (BD-rate < 0 against `lloyd_trace` on all 5, mean BD-rate <= -5% against `lloyd_wopa_area`, BD-PSNR >= -0.01 dB against E2's `gn_vq` on every scene; domain-scaled fit). **Never edit a rule after results exist**; add a dated amendment instead. |
+| `PREREG_GN.md` | E0 / E1 pre-registration (`bench/gn-vq`): G0 rule, validity checks, exploratory scope, G1 for E1. Amendment 1: the toy check. Amendment 2: G0 over 9 codebooks per scene with tie-exempt pairs, and exact-assignment refines instead of the shortlist one. Amendment 3: the G0 verdict is the ranking alone (the ratio is reported as calibration), the end-to-end exactness check, the lifted-check criterion v2, and a proximal rise invalidating that variant instead of stopping. Amendment 4: the toy and end-to-end scenes are committed fixtures with pinned hashes (a correction: the CUDA toy check would have drawn a different scene from the simulated one), end-to-end preconditions read from gsplat's render, and a report-only probe-noise diagnostic. Amendment 5 (after G0 passed, before any E1 code): E1's GN-VQ variant, the one-sided size matching that G1's last sentence delegates, the reported secondaries and the exploratory ablations. Amendment 6 (2026-09-21, before any E1 run): two more exploratory rows, GN-VQ at ridge `eps` = 1e-3 and 1e-2, seed 0 at K = 65,536 on both scenes, not judged by anything; and the final codebook's own quantizer range logged beside the warm start's. Amendment 7 (2026-09-21, after E1's results, before any E2 code): G1 failed as pre-registered and is not amended; the project's deviation, stated as one (it continues on Amendment 5 d's rate-distortion evidence; garden and bicycle become development scenes); E2's variant (eps = 1e-2, 20 iterations), 9 held-out scenes, 4 configs x 4 K, G2a (gate) and H2b (reported). Amendment 8 (2026-09-21, before any E2 data): G2a's mean is over all 9 held-out scenes, a scene without a defined BD-rate entering with a substitute (a: `gn_vq` reaches the baseline's best PSNR for fewer bytes; b: the reverse; c: 0%), so it is always defined; exploratory `gn_vq_eps1e4` rows on garden and bicycle, not judged. Amendment 9 (2026-09-22, after E2's results, before any E2b code): from E2b on, BD measures are computed with the domain-scaled fit (`g2.bd_rate_scaled` / `bd_psnr_scaled`; the pre-registered quantity is unchanged, E2's values stand); E2b, exploratory with a pre-stated criterion: E2's GN-VQ with `M_i + rho tr(M_i)/15 I` in assignment and update, rho chosen by train-view cross-validation, on treehill, flowers and train with garden as the control (those three become development scenes). Amendment 10 (2026-09-25, before any E2b data): E2b's scenes become treehill, flowers and stump (the largest train-to-test growth of the gn_vq / `lloyd_trace` dMSE ratio; Amendment 9's PSNR ratio mixed in the cross term with the model's own error), train dropped (it stays a development scene); E2b also runs its own rho = 0 full-`M` rows, checked against E2's `gn_vq` rows; a fidelity criterion on test dMSE (R below its own rho = 0 in >= 5 of 6 cells, treehill's R at K = 65,536 below 1; garden within 5%); Amendment 9's PSNR criteria reported alongside with the cross-term caveat; neither gates. Amendment 10 f (2026-09-26, before any E2b data): a claim that the floor works needs both the fidelity verdict and the garden control. Amendment 11 (2026-09-26, after E2b's results, before any E2c code): E2c, `gn_vq_cvfloor` (E2b's floor at `rho_cv` from the grid {0, 1e-3, 1e-2, 1e-1, 3e-1, 1, 3}, final codebook on E2's full `M`) on bonsai, counter, kitchen, room and truck, all gate scenes, K = 1,024-65,536, E2's rows as comparators and E2's warm starts with no fallback; gate G2c (BD-rate < 0 against `lloyd_trace` on all 5, mean BD-rate <= -5% against `lloyd_wopa_area`, BD-PSNR >= -0.01 dB against E2's `gn_vq` on every scene; domain-scaled fit). Amendment 12 (2026-09-27, after E3's scouting, before any E3p code): E3p, an exploratory engineering pilot with no verdicts, on INRIA's 30k checkpoints of bicycle and train only (Deep Blending and bonsai, counter, kitchen, room, truck untouched), the archive members pinned (offset, sizes, CRC32); two evaluation protocols; one GPU copy of `M`, method-neutral; step costs; a C3DGS build check; the 7-`rho` grid kept for E3; planned with their own pre-registrations: the C3DGS comparison (primary without fine-tuning, secondary with C3DGS's 5k-iteration fine-tuning) and INRIA's protocol for E3's cross-paper comparisons. **Never edit a rule after results exist**; add a dated amendment instead. |
 | `gn_e0/gn/` | the E0 results bundle, unpacked as downloaded (22 files); FINDINGS section 8 quotes it |
 | `gn_e1/gn1/` | the E1 results bundle, unpacked as downloaded (28 files); FINDINGS section 9 quotes it |
 | `gn_e2/gn2/` | the E2 results bundle, unpacked as downloaded (91 files); FINDINGS section 10 quotes it. E2b's analysis cell reads its comparator rows from here |
@@ -76,7 +81,7 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `build_gn_e1_bench.py` / `gn_e1_bench.ipynb` | E1 notebook (build output; edit the builder, never the JSON). E0's notebook is left exactly as it ran |
 | `gn_e0_scene.py` | E0, one scene per process: render parity, GN pass (`gn_cache/<scene>.pt`), spectrum, Spearman, the 9 G0 codebooks (predicted vs measured, test and train GT metrics, reproduction fields at K = 65,536), the lifted-assignment check (gates only the refines), the ridge / proximal refines (a proximal rise marks that row invalid). Resumable per (scene, config, K, seed). |
 | `build_gn_bench.py` / `gn_bench.ipynb` | E0 notebook (build output; edit the builder, never the JSON) |
-| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` / `g1.py` / `g2.py` (the G0, G1 and G2a / H2b rules as code), `gn_vq.py` (E1's variant and the codec's quantizer; `report_metrics` adds reporting only), `e2b.py` (E2b's floored metric, selection, the fidelity and PSNR criteria, the rho = 0 reproduction check and the Spearman), `e2c.py` (E2c's grid, `rho_cv`, G2c and its reported items), `bd_sensitivity.py` (E2's BD measures reproduced, the 50-digit exact cubic, PCHIP, the shN stream), `check_s11.py` / `check_s12.py` (re-check every number in FINDINGS sections 11 and 12 against the committed E2b, E2c and E2 bundles; exit 0 = no failure; both run by pytest), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (89 CPU tests), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1, E2, E2b and E2c dry runs and the writer-parity check; not collected by pytest) |
+| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check), `g0.py` / `g1.py` / `g2.py` (the G0, G1 and G2a / H2b rules as code), `gn_vq.py` (E1's variant and the codec's quantizer; `report_metrics` adds reporting only), `e2b.py` (E2b's floored metric, selection, the fidelity and PSNR criteria, the rho = 0 reproduction check and the Spearman), `e2c.py` (E2c's grid, `rho_cv`, G2c and its reported items), `metric_store.py` (E3p's one-GPU-copy layout of `M`, Amendment 12 a: host metrics, one floored device buffer, `HostMetric` reads for `quad_form`; bit-identical to E2c's path on the CPU), `bd_sensitivity.py` (E2's BD measures reproduced, the 50-digit exact cubic, PCHIP, the shN stream), `check_s11.py` / `check_s12.py` (re-check every number in FINDINGS sections 11 and 12 against the committed E2b, E2c and E2 bundles; exit 0 = no failure; both run by pytest), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (97 CPU tests), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1, E2, E2b, E2c and E3p dry runs and the writer-parity check; not collected by pytest) |
 | `.gitignore` | ignores only the 64 run-5 bundle files that were unpacked flat into `kaggle/` by hand (anchored names; nothing deleted; the committed copy is `run5/tilequant/`) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
@@ -804,6 +809,159 @@ and `conditions`, then `n_cells_rho_cv_above_0` (Amendment 11 f) and `reproducti
 `missing_rows`, `lifted_checks`, `gn_full`, `warm_starts` and `warm_start_equals_run5_cache`, every row's
 `writer_codes_equal`, and each log tail's `exit_code` / `skipped_by_cutoff`, before quoting a row. Then
 FINDINGS section 12 from the files, checked mechanically as `check_s11.py` does, post-hoc items labelled.
+
+## E3p notebook (`bench/gn-vq`, `kaggle/gn_e3p_bench.ipynb`, Kaggle title "E3p INRIA pilot")
+
+**Built, not run.** E3p is **pre-registered in `PREREG_GN.md` Amendment 12** (`aa67e21e`, docs only, before any
+E3p code). It is an **exploratory engineering pilot and produces no verdicts**: it measures whether the frozen
+pipeline runs at INRIA scale and what each step costs, so that E3 can be designed and pre-registered from
+measured parts. Its numbers inform E3's design; no claim about the method rests on them.
+
+- **Scenes:** bicycle and train, both already development scenes, with **INRIA's 30k checkpoints** (not the
+  gsplat MCMC checkpoints of runs 4-5). Deep Blending and bonsai, counter, kitchen, room and truck are not
+  touched; neither are garden, stump, treehill and flowers.
+- **The method:** `gn_vq_cvfloor` exactly as E2c ran it (Amendment 11 b), at K = 65,536 only, with the 7-`rho`
+  grid (Amendment 12 b keeps it for E3).
+- **One method-neutral change:** `M` lives in one GPU copy (`bench/gn/metric_store.py`); pytest checks on the
+  CPU that codebooks, labels, reports, `P` and the lifted check are bit-identical to E2c's code path.
+
+**Kaggle steps:**
+
+1. Import the notebook from
+   `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e3p_bench.ipynb` and title it
+   **E3p INRIA pilot**.
+2. Attach the input in the table below (optional, but it saves the wheel build).
+3. GPU T4 x2, Internet on. Save & Run All.
+4. Bring back `/kaggle/working/gn3p_bundle.zip` (look in `~/Downloads`).
+
+**Inputs.** E3p needs no checkpoint and no earlier result: its models come from INRIA's archive, fetched and
+checked by each job, and its datasets from runs 4-5's downloaders.
+
+| Attach | Required | What E3p takes from it, and why |
+|---|---|---|
+| **"R5 tilequant"** (the run-5 notebook output) | no, but attach it | **`wheels/` only**: the gsplat wheel is reused when its key matches (`gsplat/` and `setup.py` are unchanged since run 5; E2c reused it on 2026-09-26, install 168.5 s). Without it the install cell builds the wheel (4,404 s in run 5). Nothing else in it is read: no checkpoint, sort cache or clustering |
+| this notebook's own earlier output | only to resume | `gn3p/` (rows, metas, reports), `gn3p_work/` (the sort orders, the clusterings, the job logs), `e3p_inria/` (the fetched members; each is re-checked by size and CRC32 before it is reused). Every row resumes on its own; the `M` caches live in `/tmp` and are recomputed |
+
+**What it does:** restore (the wheel, a resume), install (the wheel, TorchPQ + cupy, PLAS from its GitHub head as
+run 4 installed it, the example dependencies, `remotezip`), `gn3p_env.json` (torch, CUDA, cuDNN, the GPU, the
+driver from `nvidia-smi`, `nvcc`, package versions), the CUDA smoke tests (`bench/gn/selftest.py`), the C3DGS
+build check, then one job per scene (bicycle on the first GPU, train on the second, 9.5 h start cutoff), the
+summary cell and the bundle cell. Each job (`kaggle/gn_e3p_scene.py`):
+
+- refuses a scene that is not bicycle or train and a results CSV that is not its own, before anything else;
+- **INRIA members:** reads the archive's zip directory (13,708 bytes) by range requests and compares it with
+  Amendment 12 a's pins (archive size, entry count, directory offset and size; per member the local-header
+  offset, sizes, CRC32 and method), **before anything is fetched**; then fetches `point_cloud.ply`,
+  `cameras.json` and `cfg_args` (bicycle: 1,353,363,151 compressed bytes; train: 219,441,845), checks each
+  local header's name and method, inflates, checks size and CRC32 before keeping the file, and records its
+  SHA-1 (`meta["inria"]`). `cfg_args` must say what the pins say (bicycle `images_4`, train `images`, both
+  `resolution=1`, `sh_degree=3`, `eval=True`); the `.ply` must hold the pinned vertex count (6,131,954 /
+  1,026,508) and exactly INRIA's 62 properties;
+- downloads the dataset (bicycle from `360_v2.zip` with `images/`, `images_4/`, `sparse/`; train from
+  `tandt_db.zip`) and builds a runner holding the INRIA model with **`normalize_world_space` off** (INRIA's
+  splats are in COLMAP's frame). The runner's cameras must equal `cameras.json` to 1e-4
+  (`camera_frame_check`, a stop condition; checked here on bicycle's real COLMAP model against the fetched
+  `cameras.json`: 194 of 194 matched, largest differences 8.9e-16 in position and 3.3e-16 in rotation). The
+  test split is compared with INRIA's (reported; on bicycle it matched, 25 test views). Render parity as in
+  E0-E2c (a stop condition);
+- **`uncompressed`** under both protocols: (i) `Runner.eval` on gsplat's own downscaled images (bicycle's
+  `images_4_png`, resized by gsplat from the full-resolution JPEGs), float renders clamped; (ii) INRIA's:
+  `cfg_args`'s image folder loaded directly (bicycle's `images_4` JPEGs, train's `images`), the size INRIA's
+  `loadCam` gives it, INRIA's camera (focal `fx * w / W` from `cameras.json`, principal point at the centre),
+  the render quantized as `save_image` does, the runner's PSNR / SSIM / LPIPS-VGG modules. The summary puts
+  protocol ii's PSNR next to INRIA's published number (bicycle 25.246, train 21.097: arXiv 2308.04079v1,
+  Tables 5 and 8, row Ours-30k), a sanity check only: INRIA's README says the released models were made with
+  the release codebase and differ from the paper's;
+- the GN passes, `M_even` then `M` (E0's `compute_gn`), each moved to host memory as it finishes and cached in
+  `/tmp/gn3p_cache` (the file size is recorded next to `M`'s 480 bytes per splat);
+- the PLAS sort (run 4's `load_or_build_sort_order`, seed 0). The codec keeps the largest square number of
+  splats (bicycle 2,476^2 = 6,130,576, dropping 1,378; train 1,013^2 = 1,026,169, dropping 339); in the
+  shN-only renders a dropped splat keeps its own shN. If the sort runs out of memory the job continues with
+  the crop alone (`order_source` says so);
+- `upstream_l1` (TorchPQ) and `lloyd_wopa_area` (the library's weighted Lloyd) at K = 65,536 through E2's
+  `get_codebook`, each written with `PngCompression`, decoded and evaluated under both protocols;
+- `gn_vq_cvfloor` at K = 65,536: per `rho` the metric buffer filled, the lifted check, GN-VQ on `M_even`, the
+  write, the odd- and test-view dMSE; then `rho_cv` (read back from the CSV, `e2c.select_rho_cv`) and the final
+  codebook on `M`, measured as E2c's final rows (`P`, D train / test, protocol i, train PSNR, shN-only) plus
+  protocol ii.
+
+**Every step is a record in `meta["steps"]`** (`Steps`): status, wall time, the device memory held at its start,
+free and total device memory, the peak allocated and reserved memory during the step (reset at its start) and
+the host's peak RSS. **A step that runs out of memory** (CUDA's OOM, an allocation failure in cuBLAS / cuSOLVER
+/ cuDNN, or host `MemoryError`) is recorded with its message, the innermost frames where it was raised and the
+memory at that point; the device cache is emptied and the job continues. Steps that need its product are
+recorded as `skipped` with the reason (no `lloyd_wopa_area` means no GN-VQ rows; no `M_even` means no CV rows).
+An OOM leaves the job's exit code 0 and its rows missing (`missing_rows`, `oom_steps`, `skipped_steps` in the
+meta); any other error stops the job and the notebook's bundle cell raises at the end.
+
+**C3DGS build check** (`gn3p_c3dgs_build.json`, never stops the notebook, capped at 3,600 s): clone
+`KeKsBoTer/c3dgs`, check out `2a234af55fbe8b90c8829c1436ce80088c4b622b` (the commit E3_SCOUTING.md read) with its
+glm submodule; a venv with `--system-site-packages` over the session's torch; `plyfile==0.8.1` and `tqdm`
+(environment.yml's pins), `torch-scatter` from the PyG wheel index for this torch and CUDA, then
+`submodules/diff-gaussian-rasterization` and `submodules/weighted_distance` built with
+`--no-build-isolation`; then only imports: `torch`, `torchvision`, `torch_scatter`, `plyfile`, `tqdm`,
+`diff_gaussian_rasterization` (and `._C`), `weighted_distance._C`, and C3DGS's own `compression.vq` and
+`gaussian_renderer` (the modules that load them). The README's own route is a conda environment (python 3.8,
+pytorch-cuda 12.1, cuda-toolkit 12.1); the JSON lists the deviations (the session's python, torch and CUDA
+toolkit) and records whether `conda` was on the path, each step's command, return code, time and last 60
+lines, `build_time_s` (the three builds), `total_time_s` and the first failed step.
+
+**Outputs** (`gn3p_bundle.zip`, arcname `gn3p/`): `gn3p_results_<scene>.csv` (11 rows: `uncompressed`,
+`upstream_l1`, `lloyd_wopa_area`, 7 `gn_vq_cvfloor_cv`, `gn_vq_cvfloor`; E2c's columns plus `PSNR_ii` /
+`SSIM_ii` / `LPIPS_ii`, both resolutions, the encode / decode / evaluation times, sizes in bytes, MB and MiB,
+the crop), `gn3p_meta_<scene>.json` (the INRIA members with SHA-1s, `cfg_args`, the frame and split checks,
+`env`, `steps`, `gn`, `order`, `lifted_checks`, `metric_store`, `rho_cv`, `phases`, `missing_rows`,
+`oom_steps`, `skipped_steps`), one `gn3p_<config>_rho<rho>_k65536_s0_<scene>.json` per GN-VQ row (16),
+`gn3p_env.json`, `gn3p_selftest.json`, `gn3p_c3dgs_build.json`, `gn3p_summary.json`,
+`gn_e3p_<scene>_log_tail.json`, `timings.json`. Not bundled: `e3p_inria/` (1.77 GB of members) and
+`gn3p_work/` stay in `/kaggle/working` for a resume; the `M` caches and run directories are in `/tmp`.
+
+**Runtime, an estimate, not a measurement.** Every input is a number this repository already records: the
+parts at 1,000,000 splats (E3_SCOUTING.md c; the E2 and E2c tables above), scaled linearly by the splat count
+(6.13x for bicycle, 1.03x for train), which is itself unverified above 1M:
+
+| Part | bicycle (s) | train (s) |
+|---|---|---|
+| GN-VQ, 8 runs at K = 65,536 | 6,817-7,618 (E3_SCOUTING.md c) | 1,141-1,275 (E2c: 1,112-1,242 at 1M) |
+| TorchPQ `upstream_l1` (E2: 398.2-425.7 at 1M) | 2,442-2,610 | 409-437 |
+| `lloyd_wopa_area` (E2 / run 5: 276.0-646.0 at 1M) | 1,692-3,961 | 283-663 |
+| PLAS sort (run 4: 69-83 at 1M) | 423-509 | 71-85 |
+| GN passes, 1.5 full passes (E2: 8.4-12.8 outdoor, 16.2 train) | 77-118 | 25 |
+| Lifted checks, 8 x 25.9-29.8 (E2c) | 207-238 | 207-238 |
+| Evaluations: bicycle 7 CV rows (E2b 13.0-20.6 at 1M) and 4 full ones (E2 36.2-44.4 at 1M); train 11 rows at E2c truck's 373 s / 32 rows | 1,446-1,973 | 132 |
+| **Job, before downloads** | **13,105-17,028 (3.6-4.7 h)** | **2,268-2,855 (0.6-0.8 h)** |
+
+Downloads come on top: the datasets took 63.0 s (bicycle) and 500.0 s (train) in E2, while E2c's MipNeRF360
+downloads took 371.7-911.2 s; the INRIA fetches (1.35 GB and 0.22 GB compressed) are unmeasured. The two jobs run
+in parallel, so the session is about bicycle's job plus the session steps: install 168.5 s with the restored
+wheel (E2c; 4,404 s more without it), smoke tests about 16 s, and the C3DGS check, unmeasured and capped at
+3,600 s. **About 4-6 h in all, inside the 9.5 h start cutoff.** Not covered by the estimate: protocol ii's cost
+(assumed within the full evaluations' figure), the extra GN-VQ memory traffic from host to device (2.94 GB per
+metric fill at bicycle), and any step that runs out of memory, which would shorten the run.
+
+**Memory, what to expect (an estimate):** during GN-VQ on bicycle the device holds the runner's model (1.45 GB),
+the sorted copy the writer needs (1.45 GB) and the one metric buffer (2.94 GB), plus GN-VQ's own transients:
+`diagnostics.direct_distance` builds three `[N, 15, 3]` float64 tensors (2.2 GB each at bicycle) at once. That
+is about 12-13 GB of a T4's 15 GB, so an OOM in `direct_distance` (called by `assign_exact`,
+`accept_by_cluster` and `gn_objective`) is the likeliest one; chunking it would be the next method-neutral fix,
+and the pilot will say whether it is needed.
+
+**Local checks:** `pytest bench/gn/test_gn.py` (97 tests; E3p's: the metric layout bit-identical to E2c's path
+for every `rho` and both metrics, `HostMetric`'s slice-only reads, the zip64 directory reader against
+`zipfile`, the fetch's refusals (a changed pin before anything is fetched, a CRC32 mismatch, a wrong local
+header), INRIA's `.ply` layout, `cfg_args`, `loadCam`'s sizes, `save_image`'s rounding, the frame and split
+checks, the pins against Amendment 12's table, the job's constants and refusals, `Steps` on an OOM, and the timed
+writer byte-identical to E0's) and `python bench/gn/dryrun/dryrun_gn_e3p.py` (6 stages, see its docstring: a
+local archive laid out like INRIA's with zip64 records, 4,133-splat models, fake datasets with reduced JPEGs,
+both scenes end to end with protocol ii recomputed independently, resume, two injected OOMs, six refusals, and
+the notebook's restore, C3DGS (stubbed), summary and bundle cells; 95 s on this machine). Rebuild the notebook with
+`python kaggle/build_gn_e3p_bench.py` first.
+
+**After the run:** unpack `gn3p_bundle.zip` into `kaggle/gn_e3p/` (arcname `gn3p/`), check every file against its
+zip entry, and make a data-only commit. Read `gn3p_summary.json` first, then each meta's `oom_steps`,
+`skipped_steps`, `missing_rows`, `camera_frame_check`, `split_check` and `inria.members`, then `steps` for the
+times and peaks, and `gn3p_c3dgs_build.json`. No verdict exists to read. Then write E3's design (its own
+amendment) from these measured parts; any number quoted from E3p comes from these files.
 
 ## Session decisions (E0, 2026-09-19)
 
@@ -1776,7 +1934,81 @@ section-11 checker (below).
   heading, so they took in section 12's paragraph and entry. They are now bounded to section 11's own. The
   script gives the same 175 tokens and 0 failures as before, and pytest passes.
 
-### Open items (E0, E1, E2, E2b, E2c: closed; E3: not designed)
+### Amendment 12 and the E3p build (2026-09-27/28, before any E3p data)
+
+Dace specified E3p. Amendment 12 was committed first, docs only (`aa67e21e`), before any E3p code. These are the
+choices this session made that the request left open, and why. No E3p row, bundle or log exists.
+
+- **Amendment 12's one factual claim was checked from the files before it was written:** in all six E2b gap
+  cells (treehill, flowers, stump at K = 4,096 and 65,536) both the odd-view score and the full-`M` codebook's
+  test dMSE are lowest at `rho` = 1e-1 (`kaggle/gn_e2b/gn2b/gn2b_results_<scene>.csv`). Garden's are not, which
+  is why the amendment names the gap cells.
+- **The pins were read from the archive, twice.** The zip directory (zip64: 117 entries, directory at
+  14,660,617,193, 13,708 bytes) was read by range requests on 2026-09-27; then `e3p_inria.py`'s own reader
+  checked it against the pins (no mismatch), fetched both scenes' `cfg_args` and `cameras.json` through
+  `fetch_member` (sizes and CRC32 matched), and inflated the first 64 KB of both `.ply` members: 62 INRIA
+  properties, 1,532-byte headers, 6,131,954 and 1,026,508 vertices, each file exactly header + 248 bytes per
+  splat. Nothing larger than those 64 KB was downloaded here, so the `.ply` SHA-1s will first exist in E3p's
+  meta.
+- **E3p's own zip reader, not `remotezip`,** for the INRIA members: the directory has to be compared with the
+  pins before anything is fetched, the local header's name checked at the pinned offset, and a 1.35 GB member
+  streamed with resume; the same code reads a `file://` archive, so pytest and the dry run exercise every
+  check. The datasets still use runs 4-5's `remotezip` downloaders.
+- **`normalize_world_space` off, and the camera-frame check a stop condition.** INRIA's splats are in COLMAP's
+  world frame; gsplat's parser normalizes by default, which would put every camera elsewhere. Checked on real
+  data: bicycle's `sparse/0/images.bin` (range-read from `360_v2.zip`) against the fetched `cameras.json`, 194 of
+  194 matched, largest differences 8.9e-16 (position) and 3.3e-16 (rotation): `cameras.json`'s `position` and
+  `rotation` are the camera-to-world translation and rotation, which is what the check compares.
+- **The test-split check is reported, not a stop:** it relies on `cameras.json` listing the test cameras first,
+  which the release codebase does and bicycle's file confirms (its first 25 names are every 8th image), but a
+  report should not end a session. gsplat's parser and INRIA's reader both take every 8th image by sorted name.
+- **Protocol ii, as implemented** (the request fixed the images, the resolution and the 8-bit quantization):
+  INRIA's camera, built from `cameras.json` (focal `fx * w / W`, principal point at the image centre, which in
+  gsplat's pixel convention is INRIA's `ndc2Pix` centre); `loadCam`'s size rule; PIL, with a resize only when
+  `loadCam` changes the size (not for these two scenes); `save_image`'s rounding (`mul(255).add_(0.5)`, clamp,
+  uint8). **The metric modules are the runner's** (torchmetrics PSNR, SSIM, LPIPS-VGG as gsplat configures it),
+  not INRIA's `ssim` and `lpipsPyTorch`; PSNR is the same formula, SSIM's border handling differs. E3's own
+  amendment should say which it uses.
+- **The crop.** `PngCompression` keeps the largest square number of splats, dropping the lowest-opacity ones
+  (bicycle 1,378, train 339). In the shN-only renders (dMSE) and in `P` a dropped splat keeps its own shN, so
+  those measure the codebook alone; the full-pipeline evaluations use the decoded, cropped model, as the codec
+  delivers it. With E0-E2c's 1,000,000-splat checkpoints nothing is dropped and this is E2c's arithmetic.
+- **The one-copy layout (Amendment 12 a) keeps GN-VQ's code unchanged.** `gn_vq` takes the floored buffer as
+  its metric; the unfloored metric it reports on (`report_metrics`) and `predicted_dmse` read through
+  `HostMetric`, which answers `quad_form`'s row slices from host memory. The floor is filled slice by slice with
+  `e2b.floored_metric` itself. Bit-identity is shown on the CPU (pytest, all 7 `rho`, both metrics, slices
+  that do not divide the problem). On the GPU the per-row arithmetic and kernels are the same; that the GPU's
+  per-row reductions do not depend on the number of rows in a slice is assumed, not shown.
+- **Also not a copy, beyond the request:** the job's `splats_raw` are the runner's own tensors (E2c cloned
+  them); the runner is pointed back at them after every swap. Values are unchanged; it saves one model copy
+  (1.45 GB at bicycle).
+- **`diagnostics.direct_distance` is left as it is** (method code used by E0-E2c): it is the likeliest OOM on
+  bicycle (see "Memory" under "E3p notebook"), and the pilot is there to measure that.
+- **Only out-of-memory errors are caught** (CUDA's OOM, cuBLAS / cuSOLVER / cuDNN allocation failures, host
+  `MemoryError`); a job with an OOM exits 0 with its rows missing, because an OOM is a result of the pilot. Any
+  other error is recorded and stops the job, and the bundle cell raises at the end.
+- **If the PLAS sort runs out of memory,** the job continues with the crop's opacity order (`order_source`
+  `crop_only_unsorted`), so the later steps are still measured; their sizes would then not be comparable.
+- **The `M` caches go to `/tmp`,** not the output: at bicycle each is about 3 GB, and the output keeps the
+  INRIA members (1.77 GB) for a resume instead.
+- **The C3DGS check uses pip in a venv over the session's torch,** not the README's conda environment
+  (python 3.8, pytorch-cuda 12.1): that is how E3 would run C3DGS next to gsplat on Kaggle, it installs no
+  second torch, and it leaves the jobs' environment untouched. The deviations are listed in the JSON, as is
+  whether `conda` was on the path. It runs **before the jobs**, so it cannot disturb their timings and runs even
+  if a job overruns; it is capped at 3,600 s and never raises. It imports C3DGS's `compression.vq` and
+  `gaussian_renderer` as well as the packages, because those are the imports C3DGS itself makes
+  (`from weighted_distance._C import weightedDistance`); nothing is called.
+- **The published PSNRs** (bicycle 25.246, train 21.097) were read from arXiv 2308.04079v1's HTML, Tables 5 and 8
+  (`A4.T5`, `A4.T8`), row Ours-30k. A first table parser attached each caption to the wrong table (the SSIM table
+  came out labelled PSNR); the captions were then matched by figure id. Only PSNR is carried, as the request
+  asked.
+- **"R5 tilequant" is attached for the wheel only.** E3p uses no run-5 checkpoint, sort cache or clustering;
+  without it the notebook builds the wheel (`ALLOW_WHEEL_BUILD` is True).
+- **Queue:** bicycle on the first GPU, train on the second, as E0 ran two scenes; one job each, so the order only
+  matters for the start cutoff.
+- **Commit split:** Amendment 12 alone (docs), then the code and tests, then the notebook and the docs.
+
+### Open items (E0, E1, E2, E2b, E2c: closed; E3p: built, not run; E3: not designed)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -1802,7 +2034,9 @@ section-11 checker (below).
   governs any later write-up of E2b.
 - ~~**Run E2c on Kaggle.**~~ **Done (2026-09-26): G2c passed** (FINDINGS section 12, `kaggle/gn_e2c/gn2c/`,
   `b1163f24`). The measured runtime is under "E2c notebook". Nothing in E2c is left to run.
-- **Next: E3's design, not written yet** (no amendment, code or notebook; `kaggle/E3_SCOUTING.md` has the
+- **Next: run E3p on Kaggle** (Amendment 12; built, not run; see "E3p notebook" for the steps, the inputs and
+  the runtime estimate). Then commit its bundle and write E3's design from its measured parts.
+- **Then: E3's design, not written yet** (no amendment, code or notebook; `kaggle/E3_SCOUTING.md` has the
   scouting, which recommends C3DGS as the first host and E3a, gsplat PNG on the INRIA checkpoints, as the
   first step): port the frozen `gn_vq_cvfloor`
   (FINDINGS section 12, "The method, as frozen"; Amendment 11 b) to other codecs, on INRIA checkpoints.
@@ -2019,10 +2253,11 @@ section-11 checker (below).
   follow-up, only if maintainers want the default flip.
 - `lint/format-code.sh` and the tests on a CUDA machine (locally only CPU).
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
-- **E0 / E1 / E2 / E2b / E2c / E3:** see "Open items (E0, E1, E2, E2b, E2c: closed; E3: not designed)". E0 is done
+- **E0 / E1 / E2 / E2b / E2c / E3p / E3:** see "Open items (E0, E1, E2, E2b, E2c: closed; E3p: built, not run; E3: not designed)". E0 is done
   and G0 passed (`kaggle/gn_e0/gn/`, FINDINGS section 8); E1 is done and G1 failed (`kaggle/gn_e1/gn1/`,
   FINDINGS section 9); E2 is done and G2a passed (`kaggle/gn_e2/gn2/`, FINDINGS section 10); E2b
   (Amendments 9 and 10, exploratory) is done, and works in fidelity terms but not by the PSNR criterion
   (`kaggle/gn_e2b/gn2b/`, FINDINGS section 11); E2c (Amendment 11) is done and G2c passed, with the method
-  frozen (`kaggle/gn_e2c/gn2c/`, FINDINGS section 12). E3's design (other codecs, INRIA checkpoints) is not
-  written yet.
+  frozen (`kaggle/gn_e2c/gn2c/`, FINDINGS section 12). E3p (Amendment 12, an exploratory engineering pilot on
+  INRIA's bicycle and train checkpoints) is built and has not run. E3's design (other codecs, INRIA checkpoints)
+  is not written yet.
