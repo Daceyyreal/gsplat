@@ -1211,3 +1211,83 @@ per scene; the writer-code assertion on every row; the lifted-assignment check (
 10,000 splats, on the K = 65,536 warm start) once per metric used: the floored `M_even` at each of the 7
 `rho`, and the floored full `M` at each distinct `rho_cv`. E2c writes its own files (`gn2c/`) and never
 those of E0, E1, E2 or E2b.
+
+## Amendment 12 (2026-09-27, after E3's scouting and before any E3p code)
+
+E2c has run and the method is frozen (FINDINGS section 12, "The method, as frozen"; Amendment 11 b). E3's
+scouting is in `kaggle/E3_SCOUTING.md` (`dc5345f3`). E3 itself has no design yet. This amendment fixes
+the scope of **E3p, an engineering pilot** that comes before E3's pre-registration, fixes the `rho` grid E3
+will use, and records what E3 will pre-register later. G0, G1, G2a, H2b, G2c, E2b's criteria and
+Amendments 1-11 are unchanged.
+
+### a. Scope of E3p
+
+- **E3p is exploratory and produces no verdicts.** It has no gate, no criterion and no comparison that
+  decides anything. It measures whether the pipeline runs at INRIA scale and what it costs, so that E3
+  can be designed and pre-registered from measured parts rather than estimates. Its numbers may inform
+  E3's design; no claim about the method rests on them.
+- **Scenes: bicycle and train only**, both already development scenes: bicycle since Amendment 7, train
+  since Amendment 9 (Amendment 10 b kept it one). E3p uses **INRIA's 30k checkpoints** of these two
+  scenes (`<scene>/point_cloud/iteration_30000/point_cloud.ply` in INRIA's pretrained-models archive),
+  not the gsplat MCMC checkpoints of runs 4-5.
+- **Untouched:** Deep Blending (drjohnson, playroom) and the five scenes no tuning decision has used
+  (bonsai, counter, kitchen, room, truck; Amendment 11 a). E3p fetches, loads, renders and measures
+  nothing of theirs, INRIA checkpoints included. The other INRIA scenes (garden, stump, treehill,
+  flowers) are not used either.
+- **Inputs.** From the archive
+  (`https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip`,
+  14,660,630,999 bytes), only three members per scene are fetched, by HTTP range requests: the 30k
+  `point_cloud.ply`, `cameras.json` and `cfg_args`. Each member's offset, sizes and CRC32 are pinned
+  from the archive's zip directory, read on 2026-09-27, and checked on fetch; the SHA-1 of each extracted
+  file is recorded.
+
+  | Member | Local header offset | Compressed bytes | Bytes | CRC32 |
+  |---|---|---|---|---|
+  | `bicycle/cameras.json` | 38 | 25,147 | 77,427 | `fd1d74d3` |
+  | `bicycle/cfg_args` | 25,235 | 137 | 169 | `ae8c42ba` |
+  | `bicycle/point_cloud/iteration_30000/point_cloud.ply` | 1,470,979 | 1,353,363,151 | 1,520,726,124 | `ebf2474a` |
+  | `train/cameras.json` | 12,050,023,231 | 38,454 | 120,800 | `9940f310` |
+  | `train/cfg_args` | 12,050,061,733 | 130 | 162 | `cbf086a8` |
+  | `train/point_cloud/iteration_30000/point_cloud.ply` | 12,052,819,184 | 219,441,845 | 254,575,516 | `85d6d4ca` |
+
+  The datasets are bicycle's MipNeRF360 images and Tanks & Temples train, from the downloaders runs 4
+  and 5 used.
+- **What E3p measures:**
+  - the uncompressed INRIA model under two evaluation protocols, test PSNR / SSIM / LPIPS for each:
+    (i) this project's harness (gsplat's own downscaled images, float renders clamped to [0, 1]) and
+    (ii) INRIA's protocol (the resolution in the model's `cfg_args`, the dataset's own reduced images
+    loaded directly, renders quantized to 8 bits before the metrics). Protocol (ii)'s PSNR is put next
+    to INRIA's published per-scene number as a sanity check only;
+  - time and peak GPU memory of each step at INRIA scale: the GN pass and the size of `M`, the PLAS
+    sort, TorchPQ `upstream_l1` and `lloyd_wopa_area` at K = 65,536, `gn_vq_cvfloor` at K = 65,536 (the
+    7-`rho` cross-validation and the final codebook), the `PngCompression` write and the evaluation; the
+    torch, CUDA and driver versions; output sizes. A step that runs out of memory is recorded with where
+    it failed, and the steps that do not depend on it still run;
+  - a build check of C3DGS (`KeKsBoTer/c3dgs` at `2a234af55fbe8b90c8829c1436ce80088c4b622b`, the commit
+    E3's scouting read): its dependencies and CUDA extensions are installed and compiled and then
+    imported, and nothing of C3DGS is run.
+- **One engineering change, method-neutral:** E3p keeps one copy of `M` in GPU memory instead of the
+  five E2c's job holds (E3_SCOUTING.md c). The arithmetic of `gn_vq_cvfloor` does not change; a CPU test
+  checks that codebooks, labels and reports are bit-identical to E2c's code path.
+
+### b. The `rho` grid stays {0, 1e-3, 1e-2, 1e-1, 3e-1, 1, 3}, selected per K
+
+E3 uses Amendment 11 b's grid, with `rho_cv` selected per scene and K, unchanged. E3_SCOUTING.md d
+listed a 3-point grid and a per-scene selection as ways to cut the cost. Neither is adopted:
+
+- In E2c, no cell selected 3e-1, 1 or 3 (0 of 20; FINDINGS section 12).
+- But in E2b's six gap cells (treehill, flowers, stump at K = 4,096 and 65,536), `rho_cv` was 1e-1, the
+  top of a grid that ended there, and the full-`M` codebook's test dMSE was still falling at that top: in
+  all six cells it is lowest at `rho` = 1e-1 (`kaggle/gn_e2b/gn2b/gn2b_results_<scene>.csv`; FINDINGS
+  section 11; Amendment 11 f). On gap-prone scenes, which E3's new checkpoints may be, values above 1e-1
+  have not been shown to be unneeded, so the evidence does not support dropping them.
+
+### c. Planned, each with its own pre-registration before any of its code or data
+
+- **The C3DGS comparison.** Primary: **no fine-tuning**, for both C3DGS's own vector quantization and
+  GN-VQ. Secondary: with C3DGS's 5,000-iteration quantization-aware fine-tuning, for both.
+- **Cross-paper comparisons in E3 use INRIA's evaluation protocol** (protocol ii above: the dataset's own
+  reduced JPEGs, renders quantized to 8 bits before the metrics).
+
+Nothing else about E3 is decided here: its scenes, hosts, grids of K, comparators and rules are for its
+own amendment, written after E3p's results and before any E3 code or data.
