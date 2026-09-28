@@ -146,3 +146,7 @@ scratch/**
 # The E2c results bundle as downloaded (2026-09-26), left in the repo root. Its contents are committed
 # unpacked in kaggle/gn_e2c/gn2c/. This exact name at the repo root only; nothing is deleted.
 /gn2c_bundle.zip
+
+# The E3p results bundle as downloaded (2026-09-28), left in the repo root. Its contents are committed
+# unpacked in kaggle/gn_e3p/gn3p/. This exact name at the repo root only; nothing is deleted.
+/gn3p_bundle.zip
