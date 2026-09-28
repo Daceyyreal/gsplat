@@ -1,0 +1,1614 @@
+{
+  "scene": "bicycle",
+  "timings_s": {
+    "download": 256.78349232673645,
+    "job": 19699.007038281
+  },
+  "dataset": "mipnerf360",
+  "scene_set": "development",
+  "data_factor": 4,
+  "k": 65536,
+  "rhos": [
+    0.0,
+    0.001,
+    0.01,
+    0.1,
+    0.3,
+    1.0,
+    3.0
+  ],
+  "seed": 0,
+  "gsplat_commit": "1277435310f7",
+  "env": {
+    "python": "3.12.13",
+    "torch": "2.10.0+cu128",
+    "torch_cuda": "12.8",
+    "cudnn": 91002,
+    "packages": {
+      "gsplat": "1.6.0",
+      "torchpq": "0.3.0.6",
+      "cupy-cuda12x": "14.0.1",
+      "plas": "0.1",
+      "torchmetrics": "1.8.2",
+      "numpy": "2.0.2",
+      "pycolmap": "4.2.0",
+      "remotezip": "0.12.6"
+    },
+    "gpu": {
+      "name": "Tesla T4",
+      "capability": "7.5",
+      "total_memory": 15636037632,
+      "count": 1
+    },
+    "nvidia_smi": "Tesla T4, 580.159.04, 15360 MiB\nTesla T4, 580.159.04, 15360 MiB",
+    "nvcc": [
+      "Build cuda_12.8.r12.8/compiler.35583870_0"
+    ]
+  },
+  "gn_vq": {
+    "max_iters": 20,
+    "rel_tol": 0.001,
+    "ridge_eps": 0.01,
+    "quantizer_bits": 6,
+    "floor": "M_i + rho * tr(M_i) / 15 * I",
+    "metric_layout": "one device copy (bench/gn/metric_store.py)"
+  },
+  "steps": [
+    {
+      "name": "fetch_inria",
+      "timestamp": "2026-09-27T21:04:28",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 141.15427821799994,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 854937600
+    },
+    {
+      "name": "build_runner",
+      "timestamp": "2026-09-27T21:11:08",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 182.63644277599997,
+      "cuda_peak": {
+        "allocated": 1557184000,
+        "reserved": 1595932672,
+        "allocated_over_start": 1557184000
+      },
+      "host_max_rss_bytes": 4377948160
+    },
+    {
+      "name": "eval_i_uncompressed",
+      "timestamp": "2026-09-27T21:14:19",
+      "cuda_start": {
+        "allocated": 1565266944,
+        "reserved": 3332374528,
+        "free": 12128681984,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 10.197682059000044,
+      "cuda_peak": {
+        "allocated": 4395875328,
+        "reserved": 4775215104,
+        "allocated_over_start": 2830608384
+      },
+      "host_max_rss_bytes": 4377948160
+    },
+    {
+      "name": "eval_ii_uncompressed",
+      "timestamp": "2026-09-27T21:14:29",
+      "cuda_start": {
+        "allocated": 1565281280,
+        "reserved": 4775215104,
+        "free": 10683744256,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 9.540230917999907,
+      "cuda_peak": {
+        "allocated": 4101903872,
+        "reserved": 4775215104,
+        "allocated_over_start": 2536622592
+      },
+      "host_max_rss_bytes": 4377948160
+    },
+    {
+      "name": "gn_pass_even",
+      "n_views": 85,
+      "timestamp": "2026-09-27T21:14:38",
+      "cuda_start": {
+        "allocated": 1565294080,
+        "reserved": 4775215104,
+        "free": 10683744256,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 15.273525570999936,
+      "cuda_peak": {
+        "allocated": 7992437760,
+        "reserved": 8956936192,
+        "allocated_over_start": 6427143680
+      },
+      "host_max_rss_bytes": 5691256832
+    },
+    {
+      "name": "gn_cache_write_even",
+      "timestamp": "2026-09-27T21:14:54",
+      "cuda_start": {
+        "allocated": 1565294080,
+        "reserved": 8956936192,
+        "free": 6502023168,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 3.22842347400001,
+      "cuda_peak": {
+        "allocated": 1565294080,
+        "reserved": 8956936192,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 5691609088
+    },
+    {
+      "name": "gn_pass_full",
+      "n_views": 169,
+      "timestamp": "2026-09-27T21:15:23",
+      "cuda_start": {
+        "allocated": 1565294080,
+        "reserved": 8956936192,
+        "free": 6502023168,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 28.160469878999947,
+      "cuda_peak": {
+        "allocated": 7994320384,
+        "reserved": 8956936192,
+        "allocated_over_start": 6429026304
+      },
+      "host_max_rss_bytes": 13056528384
+    },
+    {
+      "name": "gn_cache_write_full",
+      "timestamp": "2026-09-27T21:15:51",
+      "cuda_start": {
+        "allocated": 1565294080,
+        "reserved": 8956936192,
+        "free": 6502023168,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 3.6398505019999448,
+      "cuda_peak": {
+        "allocated": 1565294080,
+        "reserved": 8956936192,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 13056528384
+    },
+    {
+      "name": "plas_sort",
+      "cached": false,
+      "timestamp": "2026-09-27T21:16:24",
+      "cuda_start": {
+        "allocated": 1565294080,
+        "reserved": 8956936192,
+        "free": 6502023168,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 947.0399016559998,
+      "cuda_peak": {
+        "allocated": 8274488832,
+        "reserved": 11639193600,
+        "allocated_over_start": 6709194752
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "cluster_upstream_l1",
+      "k": 65536,
+      "cached": false,
+      "timestamp": "2026-09-27T21:32:11",
+      "cuda_start": {
+        "allocated": 3061802496,
+        "reserved": 11639193600,
+        "free": 3817668608,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 2512.822531257,
+      "cuda_peak": {
+        "allocated": 4324239360,
+        "reserved": 11639193600,
+        "allocated_over_start": 1262436864
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "write_upstream_l1",
+      "timestamp": "2026-09-27T22:14:04",
+      "cuda_start": {
+        "allocated": 3061802496,
+        "reserved": 4517265408,
+        "free": 10939596800,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 18.415375088000474,
+      "cuda_peak": {
+        "allocated": 4729321984,
+        "reserved": 5622464512,
+        "allocated_over_start": 1667519488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "eval_i_upstream_l1",
+      "timestamp": "2026-09-27T22:14:23",
+      "cuda_start": {
+        "allocated": 4508620288,
+        "reserved": 5622464512,
+        "free": 9834397696,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 10.509841895000136,
+      "cuda_peak": {
+        "allocated": 7337799680,
+        "reserved": 7816085504,
+        "allocated_over_start": 2829179392
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "eval_ii_upstream_l1",
+      "timestamp": "2026-09-27T22:14:34",
+      "cuda_start": {
+        "allocated": 4508633088,
+        "reserved": 7816085504,
+        "free": 7640776704,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 10.186386872000185,
+      "cuda_peak": {
+        "allocated": 7043495936,
+        "reserved": 7816085504,
+        "allocated_over_start": 2534862848
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "cluster_lloyd_wopa_area",
+      "k": 65536,
+      "cached": false,
+      "timestamp": "2026-09-27T22:14:44",
+      "cuda_start": {
+        "allocated": 3061828096,
+        "reserved": 7816085504,
+        "free": 7640776704,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 3557.0170636909997,
+      "cuda_peak": {
+        "allocated": 7625250816,
+        "reserved": 12232687616,
+        "allocated_over_start": 4563422720
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "write_lloyd_wopa_area",
+      "timestamp": "2026-09-27T23:14:01",
+      "cuda_start": {
+        "allocated": 3062876672,
+        "reserved": 12232687616,
+        "free": 3224174592,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 18.31264976700004,
+      "cuda_peak": {
+        "allocated": 4730396160,
+        "reserved": 12232687616,
+        "allocated_over_start": 1667519488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "eval_i_lloyd_wopa_area",
+      "timestamp": "2026-09-27T23:14:20",
+      "cuda_start": {
+        "allocated": 4509694464,
+        "reserved": 12232687616,
+        "free": 3224174592,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 10.521556825000516,
+      "cuda_peak": {
+        "allocated": 7339153920,
+        "reserved": 12232687616,
+        "allocated_over_start": 2829459456
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "eval_ii_lloyd_wopa_area",
+      "timestamp": "2026-09-27T23:14:30",
+      "cuda_start": {
+        "allocated": 4509707264,
+        "reserved": 12232687616,
+        "free": 3224174592,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 10.283902151999428,
+      "cuda_peak": {
+        "allocated": 7047000064,
+        "reserved": 12232687616,
+        "allocated_over_start": 2537292800
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "metric_fill_even_rho0",
+      "timestamp": "2026-09-27T23:14:40",
+      "cuda_start": {
+        "allocated": 3123743744,
+        "reserved": 12232687616,
+        "free": 3224174592,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 2.3365922450011567,
+      "cuda_peak": {
+        "allocated": 6318078464,
+        "reserved": 15177089024,
+        "allocated_over_start": 3194334720
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "direct_distance_check",
+      "timestamp": "2026-09-27T23:14:43",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 279773184,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 1.1545354910012975,
+      "cuda_peak": {
+        "allocated": 7557874176,
+        "reserved": 15177089024,
+        "allocated_over_start": 1491453952
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "lifted_check_even_rho0",
+      "timestamp": "2026-09-27T23:14:44",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 25.6743648089996,
+      "cuda_peak": {
+        "allocated": 6654643712,
+        "reserved": 15177089024,
+        "allocated_over_start": 588223488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "gn_vq_cv_rho0",
+      "timestamp": "2026-09-27T23:15:10",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 1590.9883298900004,
+      "cuda_peak": {
+        "allocated": 8488094720,
+        "reserved": 15177089024,
+        "allocated_over_start": 2421674496
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "write_cv_rho0",
+      "timestamp": "2026-09-27T23:41:41",
+      "cuda_start": {
+        "allocated": 6127261696,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 18.161917601000823,
+      "cuda_peak": {
+        "allocated": 7794781184,
+        "reserved": 15177089024,
+        "allocated_over_start": 1667519488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "dmse_cv_rho0",
+      "timestamp": "2026-09-27T23:42:04",
+      "cuda_start": {
+        "allocated": 7231013888,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 12.664066447998266,
+      "cuda_peak": {
+        "allocated": 8996294144,
+        "reserved": 15177089024,
+        "allocated_over_start": 1765280256
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "metric_fill_even_rho1e-3",
+      "timestamp": "2026-09-27T23:42:16",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 2.318391201999475,
+      "cuda_peak": {
+        "allocated": 6477462528,
+        "reserved": 15177089024,
+        "allocated_over_start": 411042304
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "lifted_check_even_rho1e-3",
+      "timestamp": "2026-09-27T23:42:19",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 25.731502665001244,
+      "cuda_peak": {
+        "allocated": 6654643712,
+        "reserved": 15177089024,
+        "allocated_over_start": 588223488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "gn_vq_cv_rho1e-3",
+      "timestamp": "2026-09-27T23:42:44",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 1506.2868640059987,
+      "cuda_peak": {
+        "allocated": 8488094720,
+        "reserved": 15177089024,
+        "allocated_over_start": 2421674496
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "write_cv_rho1e-3",
+      "timestamp": "2026-09-28T00:07:51",
+      "cuda_start": {
+        "allocated": 6127261696,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 18.091293908000807,
+      "cuda_peak": {
+        "allocated": 7794781184,
+        "reserved": 15177089024,
+        "allocated_over_start": 1667519488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "dmse_cv_rho1e-3",
+      "timestamp": "2026-09-28T00:08:14",
+      "cuda_start": {
+        "allocated": 7231013888,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 12.669504293999125,
+      "cuda_peak": {
+        "allocated": 8996163584,
+        "reserved": 15177089024,
+        "allocated_over_start": 1765149696
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "metric_fill_even_rho1e-2",
+      "timestamp": "2026-09-28T00:08:27",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 2.344927326999823,
+      "cuda_peak": {
+        "allocated": 6477462528,
+        "reserved": 15177089024,
+        "allocated_over_start": 411042304
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "lifted_check_even_rho1e-2",
+      "timestamp": "2026-09-28T00:08:29",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 25.793477645000166,
+      "cuda_peak": {
+        "allocated": 6654643712,
+        "reserved": 15177089024,
+        "allocated_over_start": 588223488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "gn_vq_cv_rho1e-2",
+      "timestamp": "2026-09-28T00:08:55",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 1338.3522111090006,
+      "cuda_peak": {
+        "allocated": 8488094720,
+        "reserved": 15177089024,
+        "allocated_over_start": 2421674496
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "write_cv_rho1e-2",
+      "timestamp": "2026-09-28T00:31:13",
+      "cuda_start": {
+        "allocated": 6127261696,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 18.14144531799866,
+      "cuda_peak": {
+        "allocated": 7794781184,
+        "reserved": 15177089024,
+        "allocated_over_start": 1667519488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "dmse_cv_rho1e-2",
+      "timestamp": "2026-09-28T00:31:36",
+      "cuda_start": {
+        "allocated": 7231013888,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 12.649492001000908,
+      "cuda_peak": {
+        "allocated": 8996163584,
+        "reserved": 15177089024,
+        "allocated_over_start": 1765149696
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "metric_fill_even_rho1e-1",
+      "timestamp": "2026-09-28T00:31:49",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 2.378027556998859,
+      "cuda_peak": {
+        "allocated": 6477462528,
+        "reserved": 15177089024,
+        "allocated_over_start": 411042304
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "lifted_check_even_rho1e-1",
+      "timestamp": "2026-09-28T00:31:51",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 25.798318379000193,
+      "cuda_peak": {
+        "allocated": 6654643712,
+        "reserved": 15177089024,
+        "allocated_over_start": 588223488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "gn_vq_cv_rho1e-1",
+      "timestamp": "2026-09-28T00:32:17",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 1339.4625420939992,
+      "cuda_peak": {
+        "allocated": 8488094720,
+        "reserved": 15177089024,
+        "allocated_over_start": 2421674496
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "write_cv_rho1e-1",
+      "timestamp": "2026-09-28T00:54:36",
+      "cuda_start": {
+        "allocated": 6127261696,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 18.01859266899919,
+      "cuda_peak": {
+        "allocated": 7794781184,
+        "reserved": 15177089024,
+        "allocated_over_start": 1667519488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "dmse_cv_rho1e-1",
+      "timestamp": "2026-09-28T00:54:59",
+      "cuda_start": {
+        "allocated": 7231013888,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 12.640445609999006,
+      "cuda_peak": {
+        "allocated": 8996163584,
+        "reserved": 15177089024,
+        "allocated_over_start": 1765149696
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "metric_fill_even_rho3e-1",
+      "timestamp": "2026-09-28T00:55:12",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 2.3083125520006433,
+      "cuda_peak": {
+        "allocated": 6477462528,
+        "reserved": 15177089024,
+        "allocated_over_start": 411042304
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "lifted_check_even_rho3e-1",
+      "timestamp": "2026-09-28T00:55:14",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 25.74493905199961,
+      "cuda_peak": {
+        "allocated": 6654643712,
+        "reserved": 15177089024,
+        "allocated_over_start": 588223488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "gn_vq_cv_rho3e-1",
+      "timestamp": "2026-09-28T00:55:40",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 1423.2043164009992,
+      "cuda_peak": {
+        "allocated": 8488094720,
+        "reserved": 15177089024,
+        "allocated_over_start": 2421674496
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "write_cv_rho3e-1",
+      "timestamp": "2026-09-28T01:19:23",
+      "cuda_start": {
+        "allocated": 6127261696,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 17.44599008700061,
+      "cuda_peak": {
+        "allocated": 7794781184,
+        "reserved": 15177089024,
+        "allocated_over_start": 1667519488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "dmse_cv_rho3e-1",
+      "timestamp": "2026-09-28T01:19:46",
+      "cuda_start": {
+        "allocated": 7231013888,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 12.650156853000226,
+      "cuda_peak": {
+        "allocated": 8996294144,
+        "reserved": 15177089024,
+        "allocated_over_start": 1765280256
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "metric_fill_even_rho1",
+      "timestamp": "2026-09-28T01:19:58",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 2.3170534020009654,
+      "cuda_peak": {
+        "allocated": 6477462528,
+        "reserved": 15177089024,
+        "allocated_over_start": 411042304
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "lifted_check_even_rho1",
+      "timestamp": "2026-09-28T01:20:01",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 25.796371709000596,
+      "cuda_peak": {
+        "allocated": 6654643712,
+        "reserved": 15177089024,
+        "allocated_over_start": 588223488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "gn_vq_cv_rho1",
+      "timestamp": "2026-09-28T01:20:27",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 1422.0958164919994,
+      "cuda_peak": {
+        "allocated": 8488094720,
+        "reserved": 15177089024,
+        "allocated_over_start": 2421674496
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "write_cv_rho1",
+      "timestamp": "2026-09-28T01:44:09",
+      "cuda_start": {
+        "allocated": 6127261696,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 18.025910781001585,
+      "cuda_peak": {
+        "allocated": 7794781184,
+        "reserved": 15177089024,
+        "allocated_over_start": 1667519488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "dmse_cv_rho1",
+      "timestamp": "2026-09-28T01:44:32",
+      "cuda_start": {
+        "allocated": 7231013888,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 12.650825300999713,
+      "cuda_peak": {
+        "allocated": 8996294144,
+        "reserved": 15177089024,
+        "allocated_over_start": 1765280256
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "metric_fill_even_rho3",
+      "timestamp": "2026-09-28T01:44:44",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 2.3150957799989555,
+      "cuda_peak": {
+        "allocated": 6477462528,
+        "reserved": 15177089024,
+        "allocated_over_start": 411042304
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "lifted_check_even_rho3",
+      "timestamp": "2026-09-28T01:44:47",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 25.76537833600014,
+      "cuda_peak": {
+        "allocated": 6654643712,
+        "reserved": 15177089024,
+        "allocated_over_start": 588223488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "gn_vq_cv_rho3",
+      "timestamp": "2026-09-28T01:45:12",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 1338.0495978049985,
+      "cuda_peak": {
+        "allocated": 8488094720,
+        "reserved": 15177089024,
+        "allocated_over_start": 2421674496
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "write_cv_rho3",
+      "timestamp": "2026-09-28T02:07:30",
+      "cuda_start": {
+        "allocated": 6127261696,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 18.011529355000675,
+      "cuda_peak": {
+        "allocated": 7794781184,
+        "reserved": 15177089024,
+        "allocated_over_start": 1667519488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "dmse_cv_rho3",
+      "timestamp": "2026-09-28T02:07:53",
+      "cuda_start": {
+        "allocated": 7231013888,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 12.64834872800202,
+      "cuda_peak": {
+        "allocated": 8996163584,
+        "reserved": 15177089024,
+        "allocated_over_start": 1765149696
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "metric_fill_full_rho3e-1",
+      "timestamp": "2026-09-28T02:08:06",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 2.3694578649992764,
+      "cuda_peak": {
+        "allocated": 6477462528,
+        "reserved": 15177089024,
+        "allocated_over_start": 411042304
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "lifted_check_full_rho3e-1",
+      "timestamp": "2026-09-28T02:08:08",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 26.072431794000295,
+      "cuda_peak": {
+        "allocated": 6654707200,
+        "reserved": 15177089024,
+        "allocated_over_start": 588286976
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "gn_vq_final_rho3e-1",
+      "timestamp": "2026-09-28T02:08:35",
+      "cuda_start": {
+        "allocated": 6066420224,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 1328.5282018979997,
+      "cuda_peak": {
+        "allocated": 8475172352,
+        "reserved": 15177089024,
+        "allocated_over_start": 2408752128
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "write_final_rho3e-1",
+      "timestamp": "2026-09-28T02:30:43",
+      "cuda_start": {
+        "allocated": 6127261696,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 18.217913163996855,
+      "cuda_peak": {
+        "allocated": 7794781184,
+        "reserved": 15177089024,
+        "allocated_over_start": 1667519488
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "dmse_final_rho3e-1",
+      "timestamp": "2026-09-28T02:31:06",
+      "cuda_start": {
+        "allocated": 7231013888,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 22.51863350900021,
+      "cuda_peak": {
+        "allocated": 8997697024,
+        "reserved": 15177089024,
+        "allocated_over_start": 1766683136
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "eval_i_final_rho3e-1",
+      "timestamp": "2026-09-28T02:31:29",
+      "cuda_start": {
+        "allocated": 8677831680,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 11.124024387998361,
+      "cuda_peak": {
+        "allocated": 11505812480,
+        "reserved": 15177089024,
+        "allocated_over_start": 2827980800
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "eval_ii_final_rho3e-1",
+      "timestamp": "2026-09-28T02:31:40",
+      "cuda_start": {
+        "allocated": 8677844480,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 10.581596546002402,
+      "cuda_peak": {
+        "allocated": 11213712384,
+        "reserved": 15177089024,
+        "allocated_over_start": 2535867904
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "train_psnr_final_rho3e-1",
+      "timestamp": "2026-09-28T02:31:51",
+      "cuda_start": {
+        "allocated": 8677857280,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 16.68687956100257,
+      "cuda_peak": {
+        "allocated": 10431237632,
+        "reserved": 15177089024,
+        "allocated_over_start": 1753380352
+      },
+      "host_max_rss_bytes": 16152850432
+    },
+    {
+      "name": "eval_shn_only_final_rho3e-1",
+      "timestamp": "2026-09-28T02:32:07",
+      "cuda_start": {
+        "allocated": 7231039488,
+        "reserved": 15177089024,
+        "free": 277676032,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 10.572798228000465,
+      "cuda_peak": {
+        "allocated": 10059731968,
+        "reserved": 15177089024,
+        "allocated_over_start": 2828692480
+      },
+      "host_max_rss_bytes": 16152850432
+    }
+  ],
+  "inria": {
+    "url": "https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip",
+    "directory_checked": true,
+    "directory_time_s": 2.280069206999997,
+    "members": {
+      "ply": {
+        "name": "bicycle/point_cloud/iteration_30000/point_cloud.ply",
+        "path": "/kaggle/working/e3p_inria/bicycle/point_cloud.ply",
+        "bytes_pinned": 1520726124,
+        "crc32_pinned": "ebf2474a",
+        "compressed_bytes": 1353363151,
+        "header_offset": 1470979,
+        "source": "fetched",
+        "bytes": 1520726124,
+        "crc32": "ebf2474a",
+        "sha1": "a05ba7756af3b3eed9e92d266af9ba025f84dc15",
+        "time_s": 135.98344794000002
+      },
+      "cameras": {
+        "name": "bicycle/cameras.json",
+        "path": "/kaggle/working/e3p_inria/bicycle/cameras.json",
+        "bytes_pinned": 77427,
+        "crc32_pinned": "fd1d74d3",
+        "compressed_bytes": 25147,
+        "header_offset": 38,
+        "source": "fetched",
+        "bytes": 77427,
+        "crc32": "fd1d74d3",
+        "sha1": "12f9fe39e8694d5941bb9cbb13ffb449641f1593",
+        "time_s": 1.5199919789999967
+      },
+      "cfg_args": {
+        "name": "bicycle/cfg_args",
+        "path": "/kaggle/working/e3p_inria/bicycle/cfg_args",
+        "bytes_pinned": 169,
+        "crc32_pinned": "ae8c42ba",
+        "compressed_bytes": 137,
+        "header_offset": 25235,
+        "source": "fetched",
+        "bytes": 169,
+        "crc32": "ae8c42ba",
+        "sha1": "9af19ee53f1368b07c7d2b31756c3c3a2e3c94ad",
+        "time_s": 1.3670074410000552
+      }
+    },
+    "time_s": 141.15402434700002,
+    "http_requests": 13
+  },
+  "inria_cfg_args": {
+    "eval": true,
+    "images": "images_4",
+    "model_path": "./eval/bicycle",
+    "resolution": 1,
+    "sh_degree": 3,
+    "source_path": "f:/bkerbl/Downloads/360_v2/bicycle",
+    "white_background": false
+  },
+  "model_sha1": "a05ba7756af3b3eed9e92d266af9ba025f84dc15",
+  "ply": {
+    "n_splats": 6131954,
+    "header_bytes": 1532,
+    "file_bytes": 1520726124
+  },
+  "camera_frame_check": {
+    "n_runner": 194,
+    "n_cameras_json": 194,
+    "n_matched": 194,
+    "max_position_diff": 1.3322676295501878e-15,
+    "max_rotation_diff": 3.3306690738754696e-16,
+    "tol": 0.0001,
+    "pass": true
+  },
+  "split_check": {
+    "n_test": 25,
+    "test_names": [
+      "_DSC8679",
+      "_DSC8687",
+      "_DSC8695",
+      "_DSC8703",
+      "_DSC8711",
+      "_DSC8719",
+      "_DSC8727",
+      "_DSC8735",
+      "_DSC8744",
+      "_DSC8752",
+      "_DSC8760",
+      "_DSC8768",
+      "_DSC8776",
+      "_DSC8784",
+      "_DSC8792",
+      "_DSC8800",
+      "_DSC8808",
+      "_DSC8816",
+      "_DSC8824",
+      "_DSC8832",
+      "_DSC8840",
+      "_DSC8848",
+      "_DSC8856",
+      "_DSC8864",
+      "_DSC8872"
+    ],
+    "equals_cameras_json_head": true
+  },
+  "n_splats": 6131954,
+  "settings": {
+    "packed": false,
+    "rasterize_mode": "classic",
+    "camera_model": "pinhole",
+    "with_ut": false,
+    "with_eval3d": false,
+    "near_plane": 0.01,
+    "far_plane": 10000000000.0,
+    "sh_degree": 3
+  },
+  "train_views": 169,
+  "test_views": 25,
+  "n_even_views": 85,
+  "n_odd_views": 84,
+  "total_train_pixels": 171702648,
+  "even_pixels": 86359320,
+  "resolution_i": [
+    [
+      1236,
+      822
+    ]
+  ],
+  "resolution_ii": [
+    [
+      1237,
+      822
+    ]
+  ],
+  "render_parity": {
+    "max_abs_diff": 0.0,
+    "pass": true,
+    "view_size": [
+      1236,
+      822
+    ]
+  },
+  "gn": {
+    "even": {
+      "source": "computed",
+      "cache_key": "v1|a05ba7756af3b3eed9e92d266af9ba025f84dc15|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views85|seed0|train_views=even_indexed",
+      "cache_path": "/tmp/gn3p_cache/bicycle_even.pt",
+      "cache_file_bytes": 3090508209,
+      "M_bytes": 2943337920,
+      "M_shape": [
+        6131954,
+        120
+      ],
+      "n_views": 85,
+      "total_pixels": 86359320,
+      "time_s": 12.71151113299993,
+      "clamp_fraction": 0.10471031171357083,
+      "splats_zero_trace": 762896,
+      "finite_check": {
+        "name": "M_even",
+        "n_rows": 6131954,
+        "n_nonfinite_rows": 0,
+        "n_nonfinite_entries": 0,
+        "n_nan_entries": 0,
+        "n_inf_entries": 0,
+        "first_nonfinite_rows": [],
+        "max_abs": 17906.0703125,
+        "finite": true
+      }
+    },
+    "full": {
+      "source": "computed",
+      "cache_key": "v1|a05ba7756af3b3eed9e92d266af9ba025f84dc15|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views169|seed0",
+      "cache_path": "/tmp/gn3p_cache/bicycle.pt",
+      "cache_file_bytes": 3090508090,
+      "M_bytes": 2943337920,
+      "M_shape": [
+        6131954,
+        120
+      ],
+      "n_views": 169,
+      "total_pixels": 171702648,
+      "time_s": 25.607210949999853,
+      "clamp_fraction": 0.10506012277420583,
+      "splats_zero_trace": 694162,
+      "finite_check": {
+        "name": "M_full",
+        "n_rows": 6131954,
+        "n_nonfinite_rows": 0,
+        "n_nonfinite_entries": 0,
+        "n_nan_entries": 0,
+        "n_inf_entries": 0,
+        "first_nonfinite_rows": [],
+        "max_abs": 27121.765625,
+        "finite": true
+      }
+    }
+  },
+  "order": {
+    "source": "plas_seed0",
+    "n_coded": 6130576,
+    "n_cropped": 1378
+  },
+  "lifted_checks": {
+    "even_rho0": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 1227,
+      "n": 8773,
+      "sum_excess_over_sum_dmin": 3.7222736498251186e-10,
+      "max_excess_over_scale": 3.8549119827603365e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 8626,
+      "n_dmin_zero": 156,
+      "max_excess_over_dmin": 0.00029802297961311404,
+      "same_index_fraction": 0.98837341844295,
+      "max_codebook_sq_dist_from_mean": 8.617476853046659
+    },
+    "even_rho1e-3": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 1227,
+      "n": 8773,
+      "sum_excess_over_sum_dmin": 2.2694114363532106e-11,
+      "max_excess_over_scale": 5.466790029440283e-09,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 8626,
+      "n_dmin_zero": 156,
+      "max_excess_over_dmin": 0.00011870369350506372,
+      "same_index_fraction": 0.9888293628177363,
+      "max_codebook_sq_dist_from_mean": 8.617476853046659
+    },
+    "even_rho1e-2": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 1227,
+      "n": 8773,
+      "sum_excess_over_sum_dmin": 4.1069720002519865e-12,
+      "max_excess_over_scale": 8.216511974637664e-14,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 8620,
+      "n_dmin_zero": 156,
+      "max_excess_over_dmin": 1.2631689963799287e-15,
+      "same_index_fraction": 0.9890573350051294,
+      "max_codebook_sq_dist_from_mean": 8.617476853046659
+    },
+    "even_rho1e-1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 1227,
+      "n": 8773,
+      "sum_excess_over_sum_dmin": 3.549434759948758e-12,
+      "max_excess_over_scale": 1.074536025112769e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 8590,
+      "n_dmin_zero": 156,
+      "max_excess_over_dmin": 0.0005679247746235175,
+      "same_index_fraction": 0.9882594323492534,
+      "max_codebook_sq_dist_from_mean": 8.617476853046659
+    },
+    "even_rho3e-1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 1227,
+      "n": 8773,
+      "sum_excess_over_sum_dmin": 2.272465934597545e-12,
+      "max_excess_over_scale": 1.0260262796522845e-11,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 8530,
+      "n_dmin_zero": 156,
+      "max_excess_over_dmin": 0.000399527555538064,
+      "same_index_fraction": 0.9890573350051294,
+      "max_codebook_sq_dist_from_mean": 8.617476853046659
+    },
+    "even_rho1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 1227,
+      "n": 8773,
+      "sum_excess_over_sum_dmin": 1.942256082776485e-12,
+      "max_excess_over_scale": 5.659271088409247e-14,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 8466,
+      "n_dmin_zero": 156,
+      "max_excess_over_dmin": 5.832085404258242e-16,
+      "same_index_fraction": 0.9901971959420951,
+      "max_codebook_sq_dist_from_mean": 8.617476853046659
+    },
+    "even_rho3": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 1227,
+      "n": 8773,
+      "sum_excess_over_sum_dmin": 2.258584781996948e-12,
+      "max_excess_over_scale": 9.44837345644307e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 8444,
+      "n_dmin_zero": 156,
+      "max_excess_over_dmin": 0.00016272918745816278,
+      "same_index_fraction": 0.9896272654736122,
+      "max_codebook_sq_dist_from_mean": 8.617476853046659
+    },
+    "full_rho3e-1": {
+      "criterion_version": 2,
+      "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+      "tol_rel": 0.0001,
+      "n_sample": 10000,
+      "n_zero_trace_in_sample": 1099,
+      "n": 8901,
+      "sum_excess_over_sum_dmin": 2.2942863163911792e-10,
+      "max_excess_over_scale": 1.2140055952035475e-10,
+      "n_excess_over_tol_scale": 0,
+      "aggregate_pass": true,
+      "per_splat_pass": true,
+      "pass": true,
+      "n_dmin_below_1e-3_scale": 8637,
+      "n_dmin_zero": 158,
+      "max_excess_over_dmin": 0.0003765475556460753,
+      "same_index_fraction": 0.9891023480507809,
+      "max_codebook_sq_dist_from_mean": 8.617476853046659
+    }
+  },
+  "metric_store": {
+    "host_bytes": {
+      "even": 2943337920,
+      "full": 2943337920
+    },
+    "device_copies": 1,
+    "device_bytes": 2942676480
+  },
+  "direct_distance_check": {
+    "n_splats": 787432,
+    "chunk": 262144,
+    "identical": true,
+    "max_abs_diff": 0.0,
+    "max_value": 8.87450386982648,
+    "device": "cuda:0",
+    "metric": "even_rho0"
+  },
+  "rho_cv": 0.3,
+  "phases": [
+    {
+      "name": "gn_vq_cvfloor",
+      "wall_time_s": 11857.665144048002,
+      "steps": [
+        "metric_fill_even_rho0",
+        "direct_distance_check",
+        "lifted_check_even_rho0",
+        "gn_vq_cv_rho0",
+        "write_cv_rho0",
+        "dmse_cv_rho0",
+        "metric_fill_even_rho1e-3",
+        "lifted_check_even_rho1e-3",
+        "gn_vq_cv_rho1e-3",
+        "write_cv_rho1e-3",
+        "dmse_cv_rho1e-3",
+        "metric_fill_even_rho1e-2",
+        "lifted_check_even_rho1e-2",
+        "gn_vq_cv_rho1e-2",
+        "write_cv_rho1e-2",
+        "dmse_cv_rho1e-2",
+        "metric_fill_even_rho1e-1",
+        "lifted_check_even_rho1e-1",
+        "gn_vq_cv_rho1e-1",
+        "write_cv_rho1e-1",
+        "dmse_cv_rho1e-1",
+        "metric_fill_even_rho3e-1",
+        "lifted_check_even_rho3e-1",
+        "gn_vq_cv_rho3e-1",
+        "write_cv_rho3e-1",
+        "dmse_cv_rho3e-1",
+        "metric_fill_even_rho1",
+        "lifted_check_even_rho1",
+        "gn_vq_cv_rho1",
+        "write_cv_rho1",
+        "dmse_cv_rho1",
+        "metric_fill_even_rho3",
+        "lifted_check_even_rho3",
+        "gn_vq_cv_rho3",
+        "write_cv_rho3",
+        "dmse_cv_rho3",
+        "metric_fill_full_rho3e-1",
+        "lifted_check_full_rho3e-1",
+        "gn_vq_final_rho3e-1",
+        "write_final_rho3e-1",
+        "dmse_final_rho3e-1",
+        "eval_i_final_rho3e-1",
+        "eval_ii_final_rho3e-1",
+        "train_psnr_final_rho3e-1",
+        "eval_shn_only_final_rho3e-1"
+      ],
+      "cuda_peak_allocated": 11505812480,
+      "cuda_peak_reserved": 15177089024
+    }
+  ],
+  "missing_rows": [],
+  "done": true,
+  "oom_steps": [],
+  "skipped_steps": [],
+  "data_deleted": true
+}

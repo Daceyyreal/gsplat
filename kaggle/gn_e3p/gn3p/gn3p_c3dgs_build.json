@@ -1,0 +1,50 @@
+{
+  "repo": "https://github.com/KeKsBoTer/c3dgs.git",
+  "commit": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+  "steps": [
+    {
+      "name": "clone",
+      "cmd": "rm -rf /tmp/c3dgs && git clone --recursive https://github.com/KeKsBoTer/c3dgs.git /tmp/c3dgs",
+      "returncode": 0,
+      "time_s": 7.275296211242676,
+      "tail": [
+        "Submodule path 'submodules/diff-gaussian-rasterization/third_party/glm': checked out '673a963a0f1eb82f5fcef00b7b873371555e5814'",
+        "Cloning into '/tmp/c3dgs'...",
+        "Submodule 'submodules/diff-gaussian-rasterization/third_party/glm' (https://github.com/g-truc/glm.git) registered for path 'submodules/diff-gaussian-rasterization/third_party/glm'",
+        "Cloning into '/tmp/c3dgs/submodules/diff-gaussian-rasterization/third_party/glm'..."
+      ]
+    },
+    {
+      "name": "checkout",
+      "cmd": "git -C /tmp/c3dgs checkout -q 2a234af55fbe8b90c8829c1436ce80088c4b622b && git -C /tmp/c3dgs submodule update --init --recursive",
+      "returncode": 0,
+      "time_s": 0.3686046600341797,
+      "tail": []
+    },
+    {
+      "name": "venv",
+      "cmd": "/usr/bin/python3 -m venv --system-site-packages /tmp/c3dgs_venv",
+      "returncode": 1,
+      "time_s": 0.1561567783355713,
+      "tail": [
+        "Error: Command '['/tmp/c3dgs_venv/bin/python3', '-m', 'ensurepip', '--upgrade', '--default-pip']' returned non-zero exit status 1."
+      ]
+    }
+  ],
+  "success": false,
+  "method": "pip in a venv (--system-site-packages) over this session's torch; the README's conda environment.yml packages, pinned where it pins them",
+  "deviations": [
+    "python 3.12.13, not 3.8",
+    "torch 2.10.0+cu128 (CUDA 12.8), not conda's pytorch-cuda 12.1",
+    "the session's CUDA toolkit (nvcc), not conda's cuda-toolkit 12.1",
+    "torch_scatter from the PyG wheel index for this torch, not conda's pytorch-scatter"
+  ],
+  "conda_on_path": false,
+  "failed_step": "venv",
+  "build_time_s": 0,
+  "head": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+  "submodules": [
+    "673a963a0f1eb82f5fcef00b7b873371555e5814 submodules/diff-gaussian-rasterization/third_party/glm (0.9.5.3-2833-g673a963a)"
+  ],
+  "total_time_s": 7.864497900009155
+}
