@@ -2791,3 +2791,170 @@ def test_chunked_difference_keeps_p_bit_identical():
         lazy[3]
     with pytest.raises(ValueError):
         ms.ChunkedDifference(a, b[:-1])
+
+
+# --------------------------------------------------------------------------------- E3q (Amendment 13)
+
+
+def _fake_commands(fail=None, plyfile_ok=True, scatter_source=False, int_error=False, commit=None):
+    """A stand-in for e3q_c3dgs.run_command: records each command and answers like the real tools would."""
+    import e3q_c3dgs as c3
+
+    calls = []
+    commit = commit or c3.C3DGS_COMMIT
+
+    def run(cmd, cwd=None, env=None, timeout=None):
+        calls.append({"cmd": cmd, "env": dict(env or {})})
+        text, code = "ok\n", 0
+        if "rev-parse HEAD" in cmd:
+            text = "" if not any("git clone" in c["cmd"] for c in calls) else commit + "\n"
+            code = 0 if text else 128
+        elif "submodule status" in cmd:
+            text = " 673a963a0f1eb82f5fcef00b7b873371555e5814 submodules/diff-gaussian-rasterization/third_party/glm\n"
+        elif "PLYFILE_OK" in cmd:
+            ok = plyfile_ok or "-U plyfile" in " ".join(c["cmd"] for c in calls)
+            text, code = ("PLYFILE_OK 1.1\n", 0) if ok else ("AttributeError: module 'numpy' has no attribute\n", 1)
+        elif "torch-scatter" in cmd:
+            text = "Building wheel for torch-scatter (setup.py)\n" if scatter_source else "Using cached torch_scatter-2.1.2.whl\n"
+        elif "diff-gaussian-rasterization" in cmd and int_error and "NVCC_APPEND_FLAGS" not in (env or {}):
+            text, code = "rasterizer_impl.h:39: error: 'uint32_t' was not declared in this scope\n", 1
+        elif "C3DGS_IMPORTS" in cmd:
+            text = "C3DGS_IMPORTS " + json.dumps({m: {"ok": True} for m in c3.IMPORTS}) + "\n"
+        if fail and fail in cmd:
+            text, code = "ERROR: failed\n", 1
+        return {"cmd": cmd, "cwd": cwd, "returncode": code, "time_s": 0.01, "tail": text.splitlines()[-60:],
+                "output_lines": 1, "_text": text}
+
+    return run, calls
+
+
+def test_e3q_build_records_every_step_and_the_two_fallbacks(monkeypatch, tmp_path):
+    """Amendment 13 b: --no-deps on every pip install, the README deviations recorded, and each fallback used
+    only when its trigger occurs and then recorded; a failed step stops the build there."""
+    import e3q_c3dgs as c3
+
+    d = str(tmp_path / "c3dgs")
+    run, calls = _fake_commands()
+    monkeypatch.setattr(c3, "run_command", run)
+    b = c3.build("PY", d, "2.10.0+cu128", "12.8")
+    assert b["ok"] and b["failed_step"] is None and b["head"] == c3.C3DGS_COMMIT
+    pips = [c["cmd"] for c in calls if " -m pip install" in c["cmd"]]
+    assert pips and all("--no-deps" in c for c in pips)
+    assert any(c3.PLYFILE_PIN in c for c in pips) and not any("-U plyfile" in c for c in pips)
+    assert any("https://data.pyg.org/whl/torch-2.10.0+cu128.html" in c for c in pips)
+    assert sum("--no-build-isolation" in c for c in pips) == 3  # torch-scatter and the two extensions
+    assert all(dev in b["deviations"] for dev in c3.README_DEVIATIONS) and len(b["deviations"]) == len(c3.README_DEVIATIONS) + 1
+    assert [s["name"] for s in b["steps"]] == ["clone", "checkout", "plyfile", "plyfile_check", "tqdm", "torch_scatter",
+                                               "diff_gaussian_rasterization", "weighted_distance", "imports"]
+    assert all("_text" not in s for s in b["steps"]) and b["imports"]["weighted_distance._C"]["ok"]
+    # the fallbacks, and torch-scatter built from source
+    run, calls = _fake_commands(plyfile_ok=False, scatter_source=True, int_error=True)
+    monkeypatch.setattr(c3, "run_command", run)
+    b = c3.build("PY", d, "2.10.0+cu128", "12.8")
+    names = [s["name"] for s in b["steps"]]
+    assert b["ok"] and "plyfile_current" in names and "diff_gaussian_rasterization_cstdint" in names
+    assert "weighted_distance_cstdint" not in names  # only the extension whose log named the type is retried
+    retry = next(c for c in calls if c["env"].get("NVCC_APPEND_FLAGS") == "-include cstdint")
+    assert "diff-gaussian-rasterization" in retry["cmd"] and retry["env"]["CXXFLAGS"] == "-include cstdint"
+    extra = b["deviations"][len(c3.README_DEVIATIONS) + 1:]
+    assert len(extra) == 3 and any("plyfile" in x for x in extra) and any("from source" in x for x in extra)
+    assert any("<cstdint>" in x and "not edited" in x for x in extra)
+    # a failed step ends the build: nothing after it runs
+    for i, (step, marker) in enumerate((("clone", "git clone"), ("torch_scatter", "torch-scatter"),
+                                        ("weighted_distance", os.path.join("submodules", "weighted_distance")))):
+        run, calls = _fake_commands(fail=marker)
+        monkeypatch.setattr(c3, "run_command", run)
+        b = c3.build("PY", str(tmp_path / f"checkout{i}"), "2.10.0+cu128", "12.8")
+        assert not b["ok"] and b["failed_step"] == step and b["steps"][-1]["name"] == step, step
+    assert c3.INT_TYPE_ERROR.search("error: 'uint32_t' does not name a type") and not c3.INT_TYPE_ERROR.search("error: foo")
+    assert c3.torch_tags("2.9.1+cu126", "12.6")["pyg_index"] == "https://data.pyg.org/whl/torch-2.9.1+cu126.html"
+
+
+def test_e3q_layout_run_and_wrapper(monkeypatch, tmp_path):
+    """The model directory from E3p's three members; compress.py through the wrapper (argv, peak memory, a
+    raised error); a run's outputs parsed with its size in MiB and MB."""
+    import subprocess as sp
+
+    import e3q_c3dgs as c3
+
+    inria = tmp_path / "inria"
+    inria.mkdir()
+    for n, body in (("cfg_args", "Namespace(eval=True)"), ("cameras.json", "[]"), ("point_cloud.ply", "x" * 100)):
+        (inria / n).write_text(body)
+    model = c3.layout_model(str(inria), str(tmp_path / "model"))
+    assert (tmp_path / "model" / "point_cloud" / "iteration_30000" / "point_cloud.ply").read_text() == "x" * 100
+    assert (tmp_path / "model" / "cfg_args").exists() and c3.layout_model(str(inria), model) == model
+    # the wrapper runs compress.py as __main__ in its own directory, with the arguments after "--"
+    c3d = tmp_path / "c3dgs"
+    c3d.mkdir()
+    (c3d / "compress.py").write_text(
+        "import sys, json, os\n"
+        "if __name__ == '__main__':\n"
+        "    json.dump({'argv': sys.argv, 'cwd': os.getcwd()}, open('seen.json', 'w'))\n"
+        "    if '--boom' in sys.argv: raise ValueError('boom')\n")
+    wrapper = os.path.join(os.path.dirname(HERE), "..", "kaggle", "e3q_c3dgs_run.py")
+    for extra, code in (([], 0), (["--boom"], 1)):
+        out = tmp_path / f"w{code}.json"
+        p = sp.run([sys.executable, wrapper, "--c3dgs_dir", str(c3d), "--out_json", str(out), "--", "--model_path", "m"] + extra)
+        rec = json.load(open(out))
+        assert p.returncode == code and rec["status"] == ("ok" if code == 0 else "error") and rec["wall_s"] >= 0
+        seen = json.load(open(c3d / "seen.json"))
+        assert seen["argv"] == ["compress.py", "--model_path", "m"] + extra and os.path.samefile(seen["cwd"], c3d)
+        if code:
+            assert "ValueError: boom" in rec["error"]
+    # run_compress: the command, then results.json, times.json and the npz of iteration 30000 + finetune
+    out_dir = tmp_path / "out"
+
+    def fake(cmd, cwd=None, env=None, timeout=None):
+        assert "--finetune_iterations 5000" in cmd and "--source_path" in cmd and "--data_device cuda" in cmd
+        npz = out_dir / "point_cloud" / "iteration_35000" / "point_cloud.npz"
+        npz.parent.mkdir(parents=True)
+        npz.write_bytes(b"\0" * 3_000_000)
+        (out_dir / "results.json").write_text(json.dumps({"ours_35000": {"PSNR": 21.8, "SSIM": 0.79, "LPIPS": 0.23, "size": 2.86}}))
+        (out_dir / "times.json").write_text(json.dumps({"finetune": 600.0, "total": 700.0}))
+        json.dump({"status": "ok", "max_memory_allocated": 5}, open(str(out_dir) + "_wrapper.json", "w"))
+        return {"cmd": cmd, "returncode": 0, "time_s": 1.0, "tail": [], "_text": ""}
+
+    monkeypatch.setattr(c3, "run_command", fake)
+    r = c3.run_compress("PY", str(c3d), model, "/data/train", str(out_dir), 5000, "wrap.py")
+    assert r["ok"] and r["npz_bytes"] == 3_000_000 and r["size_MB"] == 3.0 and r["size_MiB"] == 3_000_000 / 2 ** 20
+    assert r["results"]["ours_35000"]["PSNR"] == 21.8 and r["times"]["finetune"] == 600.0 and r["wrapper"]["max_memory_allocated"] == 5
+
+
+def test_e3q_job_constants_published_numbers_and_refusals():
+    """Train only, the two runs, the columns; the published numbers and the commit are Amendment 13's; E3p's
+    Steps with any error caught."""
+    import re
+
+    import e3q_c3dgs as c3
+    import gn_e3q_scene as job
+
+    assert set(job.SCENES) == {"train"} and job.FINETUNE == (0, 5000)
+    assert job.wanted_configs() == ["uncompressed", "c3dgs_ft0", "c3dgs_ft5000"] and len(set(job.COLUMNS)) == len(job.COLUMNS)
+    repo = os.path.dirname(os.path.dirname(HERE))
+    prereg = re.sub(r"\s+", " ", open(os.path.join(repo, "kaggle", "PREREG_GN.md"), encoding="utf-8").read())
+    a13 = prereg[prereg.index("## Amendment 13"):]
+    assert c3.C3DGS_COMMIT in a13 and "Table 9" in a13 and "2401.02436v2" in a13
+    p = c3.PUBLISHED_TRAIN
+    c, g = p["c3dgs"], p["3dgs"]
+    assert f'"Ours" {c["PSNR"]:.3f} dB PSNR, {c["SSIM"]:.3f} SSIM, {c["LPIPS"]:.3f} LPIPS, {c["size_MiB"]:.3f}' in a13
+    assert f'{g["PSNR"]:.3f} / {g["SSIM"]:.3f} / {g["LPIPS"]:.3f} / {g["size_MiB"]:.3f}' in a13
+    import e3p_inria as ei
+
+    assert round(ei.MEMBERS["train"]["ply"]["file_size"] / 2 ** 20, 3) == p["3dgs"]["size_MiB"]  # "MB" is MiB
+    with pytest.raises(ValueError, match="not an E3q scene"):
+        job.main(["--scene", "bicycle", "--benchmark_sh", "x", "--data_root", "x", "--inria_dir", "x", "--c3dgs_dir", "x",
+                  "--work_dir", "x", "--out_dir", "x", "--examples_dir", "x"])
+    with pytest.raises(RuntimeError, match="not an E3q result file"):
+        job.assert_e3q_csv(os.path.join(repo, "kaggle", "gn_e3p", "gn3p", "gn3p_results_train.csv"))
+    meta = {}
+    steps = job.Steps(meta, "cpu", lambda: None)
+    assert steps.run("bug", lambda: _raise(ValueError("any error"))) is None and steps.run("fine", lambda: 1) == 1
+    assert [r["status"] for r in meta["steps"]] == ["error", "ok"] and "any error" in meta["steps"][0]["error"]
+
+
+def test_findings_section_13_numbers_recheck_from_the_repo():
+    import check_s13
+
+    res = check_s13.run()
+    assert res["fails"] == [] and res["n_numbers"] > 100
