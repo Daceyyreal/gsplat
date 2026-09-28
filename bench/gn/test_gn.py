@@ -2953,6 +2953,139 @@ def test_e3q_job_constants_published_numbers_and_refusals():
     assert [r["status"] for r in meta["steps"]] == ["error", "ok"] and "any error" in meta["steps"][0]["error"]
 
 
+def _symmetric_batch(n, dtype, seed=5):
+    g = torch.Generator().manual_seed(seed)
+    a = torch.randn(n, 3, 3, generator=g, dtype=dtype)
+    return a @ a.transpose(1, 2) + torch.eye(3, dtype=dtype) * 1e-8
+
+
+def test_e3q_chunked_linalg_equals_the_unpatched_call():
+    """Amendment 13 g: the wrapper's eigh and det, chunked, equal the unpatched ops on random symmetric batches
+    whose size the chunk does not divide: values, eigenvector layout, and C3DGS's R.det() on the result; other
+    shapes pass through; the global random stream is untouched; every call is recorded with its check."""
+    import e3q_c3dgs_run as wr
+
+    for n, max_batch, dtype in ((1000, 64, torch.float32), (1000, 64, torch.float64), (20037, 8192, torch.float32)):
+        assert n % max_batch
+        bl.reset_linalg_state()  # a batch that worked is remembered per process; each case starts afresh
+        a = _symmetric_batch(n, dtype)
+        ref = {u: torch.linalg.eigh(a, UPLO=u) for u in ("U", "L")}
+        ref_det = {u: ref[u].eigenvectors.det() for u in ref}
+        ref_det_a = a.det()
+        rng = torch.get_rng_state()
+        p = wr.ChunkedLinalg(max_batch=max_batch, log=None).install()
+        try:
+            got = {u: torch.linalg.eigh(a, UPLO=u) for u in ("U", "L")}
+            got_pos = torch.linalg.eigh(a, "U")  # UPLO by position is chunked too
+            got_det = {u: got[u].eigenvectors.det() for u in got}  # C3DGS's R.det(), a method call
+            got_det_a = a.det()
+            single = torch.linalg.eigh(a[0], UPLO="U")  # not a batch: passes through
+            nested = a[:12].reshape(3, 4, 3, 3).det()  # two batch dimensions: passes through
+        finally:
+            p.uninstall()
+        assert torch.linalg.eigh is p.orig["eigh"] and torch.Tensor.det is p.orig["det"]
+        assert torch.equal(rng, torch.get_rng_state())
+        for u in ("U", "L"):
+            assert type(got[u]) is type(ref[u])
+            assert torch.equal(got[u].eigenvalues, ref[u].eigenvalues) and torch.equal(got[u].eigenvectors, ref[u].eigenvectors)
+            assert got[u].eigenvectors.stride() == ref[u].eigenvectors.stride()  # the op's column-major layout
+            assert torch.equal(got_det[u], ref_det[u]), (n, dtype, u)
+        assert torch.equal(got_pos.eigenvectors, ref["U"].eigenvectors) and torch.equal(got_det_a, ref_det_a)
+        assert torch.equal(single.eigenvalues, torch.linalg.eigh(a[0], UPLO="U").eigenvalues)
+        assert torch.equal(nested, a[:12].reshape(3, 4, 3, 3).det())
+        rec = p.record()
+        assert rec["n_chunked_calls"] == {"eigh": 3, "det": 3} and rec["n_passthrough_calls"] == {"eigh": 1, "det": 1}
+        assert rec["fallbacks"] == [] and rec["max_batch"] == max_batch and "not edited" in rec["deviation"]
+        for c in rec["calls"]:
+            assert c["n"] == n and c["reductions"] == 0 and c["start_batch"] == max_batch and c["dtype"] == str(dtype)
+            chk = c["check"]
+            assert chk["n_sampled"] == min(n, wr.CHECK_SAMPLE) and chk["nonfinite_in_sample"] == 0, chk
+            tol = 1e-4 if dtype == torch.float32 else 1e-10
+            if c["op"] == "linalg_eigh":
+                assert chk["max_abs_eigenvalue_diff"] < tol * chk["max_abs_eigenvalue"]
+                assert chk["max_abs_reconstruction_residual"] < tol * chk["max_abs_eigenvalue"]
+            else:
+                assert c["op"] == "det" and chk["max_abs_det_diff"] < tol * max(1.0, chk["max_abs_det"])
+    bl.reset_linalg_state()
+
+
+def test_e3q_chunked_linalg_halves_on_a_refusal_and_records_it():
+    """A backend that refuses batches above 4 (as cuSOLVER refused attempt 1's): the chunked eigh halves from 16 to
+    4, records both reductions, remembers 4 for the next call, and still equals the unpatched op."""
+    import e3q_c3dgs_run as wr
+
+    bl.reset_linalg_state()
+    a = _symmetric_batch(37, torch.float32)
+    ref = torch.linalg.eigh(a, UPLO="U")
+    p = wr.ChunkedLinalg(max_batch=16, log=None).install()
+    real = p.orig["eigh"]
+    sizes = []
+
+    def linalg_eigh(t, **kw):  # refuses float32 batches above 4; the float64 CPU reference of the check runs
+        if t.dtype == torch.float64:
+            return real(t, **kw)
+        sizes.append(t.shape[0])
+        if t.shape[0] > 4:
+            raise torch._C._LinAlgError("cusolver error: CUSOLVER_STATUS_INVALID_VALUE, when calling "
+                                        "`cusolverDnXsyevBatched_bufferSize(...)`")
+        return real(t, **kw)
+
+    p.orig["eigh"] = linalg_eigh
+    try:
+        got = torch.linalg.eigh(a, UPLO="U")
+        again = torch.linalg.eigh(a, UPLO="U")
+    finally:
+        p.orig["eigh"] = real
+        p.uninstall()
+    try:
+        assert torch.equal(got.eigenvalues, ref.eigenvalues) and torch.equal(again.eigenvectors, ref.eigenvectors)
+        rec = p.record()
+        assert [f["batch"] for f in rec["fallbacks"]] == [16, 8] and rec["fallbacks"][-1]["retry_batch"] == 4
+        assert all(f["op"] == "linalg_eigh" and "cusolver" in f["error"].lower() for f in rec["fallbacks"])
+        assert [c["reductions"] for c in rec["calls"]] == [2, 0] and [c["start_batch"] for c in rec["calls"]] == [16, 4]
+        assert rec["working_batches"]["linalg_eigh"] == 4 and sizes[:3] == [16, 8, 4] and max(sizes[3:]) == 4
+        assert all("error" not in c["check"] and c["check"]["n_sampled"] == 37 for c in rec["calls"])
+    finally:
+        bl.reset_linalg_state()
+
+
+def test_e3q_wrapper_installs_the_chunked_linalg(tmp_path):
+    """The wrapper chunks compress.py's eigh and R.det() in its own process (the results equal the unpatched ops),
+    records every call, the deviation and the check, and keeps them when compress.py raises afterwards."""
+    import subprocess as sp
+
+    import e3q_c3dgs_run as wr
+
+    c3d = tmp_path / "c3dgs"
+    c3d.mkdir()
+    (c3d / "compress.py").write_text(
+        "import sys, torch\n"
+        "g = torch.Generator().manual_seed(5)\n"
+        "a = torch.randn(20037, 3, 3, generator=g)\n"
+        "cov = a @ a.transpose(1, 2)\n"
+        "S, R = torch.linalg.eigh(cov + torch.eye(3) * 1e-8, UPLO='U')\n"
+        "torch.save({'S': S, 'R': R, 'det': R.det(), 'stride': R.stride()}, 'out.pt')\n"
+        "if '--boom' in sys.argv: raise ValueError('boom')\n")
+    g = torch.Generator().manual_seed(5)
+    a = torch.randn(20037, 3, 3, generator=g)
+    S, R = torch.linalg.eigh(a @ a.transpose(1, 2) + torch.eye(3) * 1e-8, UPLO="U")
+    wrapper = os.path.join(os.path.dirname(HERE), "..", "kaggle", "e3q_c3dgs_run.py")
+    for extra, code in (([], 0), (["--boom"], 1)):
+        out = tmp_path / f"w{code}.json"
+        p = sp.run([sys.executable, wrapper, "--c3dgs_dir", str(c3d), "--out_json", str(out), "--"] + extra)
+        rec = json.load(open(out))
+        assert p.returncode == code and rec["status"] == ("ok" if code == 0 else "error")
+        got = torch.load(c3d / "out.pt")
+        assert torch.equal(got["S"], S) and torch.equal(got["R"], R) and torch.equal(got["det"], R.det())
+        assert tuple(got["stride"]) == R.stride()
+        lp = rec["linalg_patch"]
+        assert rec["deviations"] == [wr.DEVIATION] and lp["deviation"] == wr.DEVIATION and lp["max_batch"] == 8192
+        assert [(c["op"], c["n"], c["reductions"]) for c in lp["calls"]] == [("linalg_eigh", 20037, 0), ("det", 20037, 0)]
+        assert lp["fallbacks"] == [] and lp["calls"][0]["check"]["n_sampled"] == 4096
+        if code:
+            assert "ValueError: boom" in rec["error"]
+
+
 def test_findings_section_13_numbers_recheck_from_the_repo():
     import check_s13
 

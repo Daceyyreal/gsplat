@@ -9,8 +9,9 @@ its own compression pipeline, and its decoder, each command recorded.
   retry of an extension build with ``<cstdint>`` force-included if its log names a missing fixed-width
   integer type.
 - ``run_compress``: C3DGS's ``compress.py``, unchanged, through ``e3q_c3dgs_run.py`` (which records the process's
-  peak GPU memory), with ``--finetune_iterations`` 0 or 5000; then its ``results.json``, ``times.json`` and the
-  ``point_cloud.npz`` it wrote.
+  peak GPU memory and, from attempt 2 on, chunks ``torch.linalg.eigh`` and ``torch.Tensor.det``; Amendment 13 g),
+  with ``--finetune_iterations`` 0 or 5000; then its ``results.json``, ``times.json`` and the ``point_cloud.npz`` it
+  wrote.
 - ``npz_to_ply``: C3DGS's ``npz2ply.py``, which writes INRIA's 62-property layout that ``e3p_inria`` reads.
 
 Every command goes through ``run_command``, which a dry run replaces.

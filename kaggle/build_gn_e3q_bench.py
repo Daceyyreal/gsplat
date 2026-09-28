@@ -47,13 +47,20 @@ The job (`kaggle/gn_e3q_scene.py`):
 
 A step that fails is recorded and the steps that do not depend on it still run.
 
+**Attempt 2** (Amendment 13 g). Attempt 1 built C3DGS, but both runs failed in its `extract_rot_scale`: cuSOLVER
+refused `torch.linalg.eigh` on one batch of 3x3 float32 matrices (`kaggle/gn_e3q/attempt1/`). The wrapper that runs
+`compress.py` now replaces `torch.linalg.eigh` and `torch.Tensor.det` in its own process with chunked versions
+(`bench/gn/batched.py`: at most 8,192 matrices per call, halved on a refusal, every reduction recorded). C3DGS's
+source is not edited, and each run's record carries the deviation, every call's batch size and a report-only
+float64 CPU check. Run it fresh: do not attach attempt 1's output. The bundle is `E3q_bundle_2.zip`.
+
 **Kaggle settings:** accelerator *GPU T4 x2* (one is used), Internet *on*.
 
 | Attach | Required | What E3q takes from it |
 |---|---|---|
 | the **run-5 notebook output** ("R5 tilequant") | no | `wheels/` only: the gsplat wheel, reused when its key matches (otherwise it is built, about 73 min) |
 | the **E3p notebook output** | no | `e3p_inria/` only, to skip train's 219 MB fetch; each member is re-checked by size and CRC32 |
-| this notebook's own earlier output | only to resume | `gn3q/`, `gn3q_work/` |
+| this notebook's own earlier output | only to resume attempt 2 (never attempt 1's) | `gn3q/`, `gn3q_work/` |
 
 | Step | What |
 |---|---|
@@ -62,7 +69,7 @@ A step that fails is recorded and the steps that do not depend on it still run.
 | 3 | install gsplat (restored wheel or a build) and the example dependencies; `gn3q_env.json` |
 | 4 | the E3q job: fetch, dataset, C3DGS build, two C3DGS runs, their decoding, the harness's protocol ii |
 | 5 | `gn3q_summary.json`: the rows next to C3DGS's published numbers, the build's deviations; no verdict |
-| 6 | `gn3q_bundle.zip` (top-level csv / json of `gn3q/`); raises last if the job crashed |
+| 6 | `E3q_bundle_2.zip` (top-level csv / json of `gn3q/`); raises last if the job crashed |
 """
 )
 
@@ -91,6 +98,7 @@ GN3Q_OUT = f"{WORK}/gn3q"  # E3q result files (bundled)
 GN3Q_WORK = f"{WORK}/gn3q_work"  # the model directory, C3DGS's outputs, runner stats, job logs (not bundled)
 INRIA_DIR = f"{WORK}/e3p_inria"  # the fetched INRIA members (E3p's layout; not bundled)
 C3DGS_DIR = "/tmp/c3dgs"  # the C3DGS checkout the job builds
+BUNDLE = f"{WORK}/E3q_bundle_2.zip"  # attempt 2 (Amendment 13 g); attempt 1's was gn3q_bundle.zip
 WHEEL_ROOT = f"{WORK}/wheels"
 INPUT_ROOT = "/kaggle/input"
 ALLOW_WHEEL_BUILD = True
@@ -379,7 +387,7 @@ try:
     run_gpu_queue(jobs, 1, progress=progress, start_cutoff_s=START_CUTOFF_S)
 finally:
     print("log tails:", write_log_tails(jobs, GN3Q_OUT), flush=True)
-    write_bundle(GN3Q_OUT, f"{WORK}/gn3q_bundle.zip")
+    write_bundle(GN3Q_OUT, BUNDLE)
 JOB_FAILED = sorted(name for name, code in JOB_EXITS.items() if code != 0)
 print("exit codes:", JOB_EXITS, "\nfailed:", JOB_FAILED, "\nnot started (cutoff):", JOB_SKIPPED)
 """
@@ -410,10 +418,10 @@ code(
     r"""
 # The bundle holds only the top-level csv / json files of gn3q/. gn3q_work/ (the model directory, C3DGS's
 # outputs), e3p_inria/ and the wheel stay in /kaggle/working for a resume; the C3DGS checkout is in /tmp.
-names = write_bundle(GN3Q_OUT, f"{WORK}/gn3q_bundle.zip")
-print("gn3q_bundle.zip:", names)
+names = write_bundle(GN3Q_OUT, BUNDLE)
+print(f"{os.path.basename(BUNDLE)}:", names)
 sh(f"du -sh {WORK}/* || true")
-print("Bring back /kaggle/working/gn3q_bundle.zip")
+print(f"Bring back {BUNDLE}")
 if JOB_SKIPPED:
     print(f"NOT STARTED (start cutoff): {JOB_SKIPPED}. Resume by attaching this notebook's output.")
 if JOB_FAILED:

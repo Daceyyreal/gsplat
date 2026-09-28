@@ -11,7 +11,9 @@ In order (every step recorded in ``gn3q_meta_train.json``, every row in ``gn3q_r
 2. the Tanks & Temples train dataset (run 5's downloader);
 3. C3DGS's build into the session's Python (``e3q_c3dgs.build``: ``--no-deps``, deviations recorded);
 4. C3DGS's ``compress.py`` twice, with ``--finetune_iterations`` 0 and 5000 (``e3q_c3dgs.run_compress``), each
-   decoded with its ``npz2ply.py``;
+   decoded with its ``npz2ply.py``. The wrapper runs ``compress.py`` with ``torch.linalg.eigh`` and
+   ``torch.Tensor.det`` chunked (Amendment 13 g, after attempt 1's cuSOLVER refusal); its record (every call's batch,
+   every reduction, the float64 check, the deviation) lands in the meta's ``c3dgs_runs``;
 5. this project's harness: a runner holding the INRIA model (E3p's ``build_runner``, the camera-frame check),
    protocol ii of the uncompressed model and of each decoded model that loads.
 
@@ -212,8 +214,11 @@ def main(argv=None):
                     run["npz2ply"] = conv
                     meta["c3dgs_runs"][str(ft)]["npz2ply"] = conv
                 save()
+                lp = (run.get("wrapper") or {}).get("linalg_patch") or {}
                 log(scene, f"C3DGS finetune {ft}: ok {run['ok']}, results {run.get('results')}, "
-                           f"{run.get('npz_bytes')} bytes")
+                           f"{run.get('npz_bytes')} bytes; chunked linalg calls "
+                           f"{[(c['op'], c['n'], c['reductions']) for c in lp.get('calls', [])]}, "
+                           f"reductions {len(lp.get('fallbacks', []))}")
 
     # 5. this project's harness: the runner, the camera frame, protocol ii
     runner, views = None, None
@@ -320,12 +325,20 @@ def main(argv=None):
 def summarize(out_dir: str, scene: str = "train") -> Dict:
     """The notebook's ``gn3q_summary.json``: per row C3DGS's metrics, protocol ii, sizes in MiB and MB, time and
     memory, next to C3DGS's published train numbers (a sanity check only; Amendment 13 e); the build's
-    deviations and failures. No verdict."""
+    deviations and failures; per C3DGS run, the wrapper's status, its deviations and its chunked-linalg record
+    (Amendment 13 g). No verdict."""
     meta_path = os.path.join(out_dir, f"gn3q_meta_{scene}.json")
     if not os.path.exists(meta_path):
         return {"missing": "no meta file"}
     meta = json.load(open(meta_path))
     b = meta.get("c3dgs_build") or {}
+    runs = {}
+    for ft, r in (meta.get("c3dgs_runs") or {}).items():
+        w = r.get("wrapper") or {}
+        lp = w.get("linalg_patch") or {}
+        runs[ft] = {"status": w.get("status"), "error": w.get("error"), "deviations": w.get("deviations"),
+                    "linalg_patch": {k: lp.get(k) for k in ("n_chunked_calls", "n_passthrough_calls", "calls",
+                                                            "fallbacks", "working_batches")}}
     return {
         "exploratory": "PREREG_GN.md Amendment 13: an engineering smoke test of the C3DGS host, no verdicts",
         "published": c3.PUBLISHED_TRAIN,
@@ -333,6 +346,8 @@ def summarize(out_dir: str, scene: str = "train") -> Dict:
         "build": {k: b.get(k) for k in ("ok", "failed_step", "build_time_s", "total_time_s", "imports", "deviations",
                                          "head", "submodules")},
         "failed_steps": meta.get("failed_steps"), "skipped_steps": meta.get("skipped_steps"),
+        "c3dgs_runs": runs,
+        "run_deviations": sorted({d for r in runs.values() for d in (r["deviations"] or [])}),
         "missing_or_failed": meta.get("missing_or_failed"), "camera_frame_check": meta.get("camera_frame_check"),
         "split_check": meta.get("split_check"), "env": meta.get("env"),
         "steps": [{f: s.get(f) for f in ("name", "status", "time_s", "error", "reason")}

@@ -2,23 +2,29 @@
 
 The same CPU stand-ins as the E3p dry run (the brute-force renderer, a fake runner with a COLMAP-like parser, a
 local archive laid out like INRIA's whose pins replace E3p's), plus a stand-in for every command the job runs
-(``e3q_c3dgs.run_command``): git, pip and the checks answer as the real tools do, and C3DGS's ``compress.py``
-(through the wrapper) and ``npz2ply.py`` write what they would, the decoded model being the train model with its
-shN perturbed. Nothing is cloned, installed or downloaded.
+(``e3q_c3dgs.run_command``): git, pip and the checks answer as the real tools do, and ``npz2ply.py`` writes what it
+would, the decoded model being the train model with its shN perturbed. C3DGS's ``compress.py`` is a stand-in run
+through the **real** wrapper (``e3q_c3dgs_run.py``, a subprocess): it does what C3DGS's ``extract_rot_scale`` does
+to a batch that 8,192 does not divide (``eigh`` with ``UPLO="U"``, then ``R.det()``) and writes the outputs, so the
+wrapper's chunked linear algebra (Amendment 13 g) runs as it will on Kaggle; only its GPU-memory fields are stood in
+for. Nothing is cloned, installed or downloaded.
 
 Stages:
 (0) the notebook: cells compile in order (restore, install, the job, summary, bundle); its first markdown cell
     names the Kaggle title "E3q C3DGS smoke"; train only; one job on one GPU;
 (1) E3q end to end: the pinned members fetched and laid out as INRIA's model directory, the build (every pip
     install with --no-deps, the README deviations recorded), both C3DGS runs (0 and 5,000 fine-tuning
-    iterations) with sizes in MiB and MB, their decoding, protocol ii of the uncompressed and both decoded
-    models recomputed independently, the camera-frame check;
+    iterations) with sizes in MiB and MB, the wrapper's chunked eigh and det (results equal to the unpatched
+    ops, every call and its check recorded, the deviation), their decoding, protocol ii of the uncompressed and
+    both decoded models recomputed independently, the camera-frame check;
 (2) resume runs nothing again;
 (3) failures, recorded and not fatal: a build that fails at torch-scatter leaves both C3DGS rows failed with
-    the step named and the uncompressed row done; a fine-tuned run that raises leaves the other run done; a
-    decoded .ply the harness cannot read is recorded as not loaded;
+    the step named and the uncompressed row done; a fine-tuned run that raises after its chunked calls leaves the
+    other run done and keeps its linear-algebra record; a decoded .ply the harness cannot read is recorded as not
+    loaded;
 (4) refusals: a scene that is not train, a foreign CSV;
-(5) the notebook's restore, summary and bundle cells.
+(5) the notebook's restore, summary (with each run's linear-algebra record and deviations) and bundle cells
+    (``E3q_bundle_2.zip``).
 
     python bench/gn/dryrun/dryrun_gn_e3q.py
 
@@ -34,6 +40,7 @@ import os
 import re
 import shlex
 import shutil
+import subprocess
 import sys
 import tempfile
 import types
@@ -51,6 +58,7 @@ from PIL import Image  # noqa: E402
 
 import e3p_inria as ei  # noqa: E402
 import e3q_c3dgs as c3  # noqa: E402
+import e3q_c3dgs_run as wr  # noqa: E402
 import gn_e3p_scene as e3pjob  # noqa: E402
 import gn_e3q_scene as job  # noqa: E402
 import tilequant_run4 as r4  # noqa: E402
@@ -176,6 +184,38 @@ def fake_data():
 
 FAIL = {"marker": None, "bad_ply": False}
 CALLS = []
+N_COV = 20037  # a C3DGS-like covariance batch: above 2 x 8,192 and not divisible by it
+FAKE_COMPRESS = r'''
+import json, os, sys
+import torch
+a = sys.argv[1:]
+out, ft = a[a.index("--output_vq") + 1], int(a[a.index("--finetune_iterations") + 1])
+assert "--source_path" in a and a[a.index("--source_path") + 1].endswith(os.path.join("data", "train"))
+# what C3DGS's extract_rot_scale does: eigh of 3x3 float32 covariances (UPLO="U"), then R.det()
+g = torch.Generator().manual_seed(7)
+L = torch.randn(N_COV, 3, 3, generator=g)
+S, R = torch.linalg.eigh(L @ L.transpose(1, 2) + torch.eye(3) * 1e-8, UPLO="U")
+d = R.det()
+os.makedirs(out, exist_ok=True)
+torch.save({"S": S, "R": R, "det": d}, os.path.join(out, "rot_scale.pt"))
+if os.environ.get("E3Q_DRYRUN_FAIL") == str(ft):
+    raise RuntimeError("CUDA error (dry run)")
+npz = os.path.join(out, "point_cloud", f"iteration_{30000 + ft}", "point_cloud.npz")
+os.makedirs(os.path.dirname(npz), exist_ok=True)
+open(npz, "wb").write(b"\1" * (2_000_000 - 500_000 * (ft > 0)))
+json.dump({f"ours_{30000 + ft}": {"PSNR": 21.5 + ft / 1e4, "SSIM": 0.79, "LPIPS": 0.23,
+                                  "size": os.path.getsize(npz) / 2 ** 20}}, open(os.path.join(out, "results.json"), "w"))
+json.dump({"sensitivity_calculation": 10.0, "clustering": 20.0, **({"finetune": 600.0} if ft else {}),
+           "encode": 1.0, "total": 31.0 + (600.0 if ft else 0)}, open(os.path.join(out, "times.json"), "w"))
+'''.replace("N_COV", str(N_COV))
+
+
+def unpatched_rot_scale():
+    """The stand-in compress.py's eigh and det, computed here without the wrapper's patch."""
+    g = torch.Generator().manual_seed(7)
+    L = torch.randn(N_COV, 3, 3, generator=g)
+    S, R = torch.linalg.eigh(L @ L.transpose(1, 2) + torch.eye(3) * 1e-8, UPLO="U")
+    return {"S": S, "R": R, "det": R.det()}
 
 
 def fake_run_command(cmd, cwd=None, env=None, timeout=None):
@@ -198,23 +238,19 @@ def fake_run_command(cmd, cwd=None, env=None, timeout=None):
     elif "C3DGS_IMPORTS" in cmd:
         text = "C3DGS_IMPORTS " + json.dumps({m: {"ok": True} for m in c3.IMPORTS}) + "\n"
     elif "e3q_c3dgs_run.py" in cmd:
+        # the real wrapper, in its own process, around the stand-in compress.py
         a = argv[argv.index("--") + 1:]
-        out, ft = a[a.index("--output_vq") + 1], int(a[a.index("--finetune_iterations") + 1])
-        mem = argv[argv.index("--out_json") + 1]
-        assert "--source_path" in a and a[a.index("--source_path") + 1].endswith(os.path.join("data", "train"))
-        if FAIL["marker"] == f"compress{ft}":
-            json.dump({"status": "error", "error": "RuntimeError: CUDA error (dry run)", "wall_s": 1.0}, open(mem, "w"))
-            text, code = "Traceback ...\nRuntimeError: CUDA error (dry run)\n", 1
-        else:
-            npz = os.path.join(out, "point_cloud", f"iteration_{30000 + ft}", "point_cloud.npz")
-            os.makedirs(os.path.dirname(npz), exist_ok=True)
-            open(npz, "wb").write(b"\1" * (2_000_000 - 500_000 * (ft > 0)))
-            json.dump({f"ours_{30000 + ft}": {"PSNR": 21.5 + ft / 1e4, "SSIM": 0.79, "LPIPS": 0.23,
-                                              "size": os.path.getsize(npz) / 2 ** 20}}, open(os.path.join(out, "results.json"), "w"))
-            json.dump({"sensitivity_calculation": 10.0, "clustering": 20.0, **({"finetune": 600.0} if ft else {}),
-                       "encode": 1.0, "total": 31.0 + (600.0 if ft else 0)}, open(os.path.join(out, "times.json"), "w"))
-            json.dump({"status": "ok", "error": None, "wall_s": 42.0, "max_memory_allocated": 3_000_000_000 + ft,
-                       "max_memory_reserved": 4_000_000_000, "device": "fake"}, open(mem, "w"))
+        ft = int(a[a.index("--finetune_iterations") + 1])
+        mem, c3dgs_dir = argv[argv.index("--out_json") + 1], argv[argv.index("--c3dgs_dir") + 1]
+        assert argv[0] == "PY" and os.path.samefile(argv[1], job.WRAPPER)
+        open(os.path.join(c3dgs_dir, "compress.py"), "w").write(FAKE_COMPRESS)
+        env = {**os.environ, "E3Q_DRYRUN_FAIL": str(ft) if FAIL["marker"] == f"compress{ft}" else ""}
+        p = subprocess.run([sys.executable] + argv[1:], capture_output=True, text=True, env=env)
+        text, code = p.stdout + p.stderr, p.returncode
+        rec = json.load(open(mem))
+        assert "max_memory_allocated" not in rec  # a CPU run: the GPU fields below are the stand-in's
+        rec.update(wall_s=42.0, max_memory_allocated=3_000_000_000 + ft, max_memory_reserved=4_000_000_000, device="fake")
+        json.dump(rec, open(mem, "w"))
     elif "npz2ply.py" in cmd:
         ply = argv[argv.index("--ply_file") + 1]
         ft = int(re.search(r"iteration_(\d+)", argv[2]).group(1)) - 30000
@@ -318,8 +354,22 @@ for s in ("fetch_inria", "layout_model", "download_dataset", "c3dgs_build", "c3d
     assert s in [x["name"] for x in meta["steps"]], s
 names = [x["name"] for x in meta["steps"]]
 assert names.index("npz2ply_ft5000") < names.index("build_runner")  # C3DGS has the GPU to itself
+# Amendment 13 g: the wrapper chunked the stand-in's eigh and det, which equal the unpatched ops bit for bit
+ref = unpatched_rot_scale()
+for ft in job.FINETUNE:
+    w = meta["c3dgs_runs"][str(ft)]["wrapper"]
+    lp = w["linalg_patch"]
+    assert w["status"] == "ok" and w["deviations"] == [wr.DEVIATION] and lp["max_batch"] == 8192 and lp["fallbacks"] == []
+    assert [(c["op"], c["n"], c["start_batch"], c["reductions"]) for c in lp["calls"]] == [
+        ("linalg_eigh", N_COV, 8192, 0), ("det", N_COV, 8192, 0)]
+    eig, det = lp["calls"][0]["check"], lp["calls"][1]["check"]
+    assert eig["n_sampled"] == 4096 and eig["max_abs_eigenvalue_diff"] < 1e-4 * eig["max_abs_eigenvalue"]
+    assert eig["max_abs_reconstruction_residual"] < 1e-4 * eig["max_abs_eigenvalue"] and det["max_abs_det_diff"] < 1e-4
+    got = torch.load(os.path.join(OUT, "work", f"c3dgs_ft{ft}", "rot_scale.pt"))
+    assert all(torch.equal(got[k], ref[k]) for k in ref) and got["R"].stride() == ref["R"].stride()
 print("(1) E3q: members fetched and laid out, build with --no-deps and the deviations recorded, both C3DGS runs with "
-      "sizes in MiB and MB, decoded and evaluated under protocol ii (recomputed independently), frame check: ok")
+      "sizes in MiB and MB and their eigh / det chunked by the real wrapper (equal to the unpatched ops, calls, checks "
+      "and the deviation recorded), decoded and evaluated under protocol ii (recomputed independently), frame check: ok")
 
 # (2) resume
 n_calls, n_builds = len(CALLS), BUILDS["n"]
@@ -346,6 +396,9 @@ for label, marker, bad_ply in (("scatter", "torch-scatter", False), ("ft5000", "
     elif label == "ft5000":
         assert rr["c3dgs_ft0"]["status"] == "ok" and rr["c3dgs_ft5000"]["status"] == "failed"
         assert "CUDA error (dry run)" in rr["c3dgs_ft5000"]["reason"] and "npz2ply_ft5000" not in [s["name"] for s in m["steps"]]
+        w = m["c3dgs_runs"]["5000"]["wrapper"]  # the failed run keeps its chunked calls and deviation
+        assert w["status"] == "error" and [c["n"] for c in w["linalg_patch"]["calls"]] == [N_COV, N_COV]
+        assert w["deviations"] == [wr.DEVIATION]
     else:
         assert all(rr[c]["status"] == "ok" and rr[c]["ply_loaded"] == "False" and rr[c]["PSNR_ii"] == "" for c in ("c3dgs_ft0", "c3dgs_ft5000"))
         assert "load_ply_ft0" in m["failed_steps"] and rr["c3dgs_ft0"]["ply_error"]
@@ -387,13 +440,16 @@ rns.update(SRC_DIR=REPO, JOB_FAILED=[], JOB_SKIPPED=[], sh=lambda cmd, **k: None
 exec(srcs[idx["summary"]], rns)
 summ = json.load(open(os.path.join(rns["GN3Q_OUT"], "gn3q_summary.json")))
 assert summ["published"] == c3.PUBLISHED_TRAIN and summ["build"]["ok"] and len(summ["rows"]) == 3 and summ["camera_frame_check"]["pass"]
+assert summ["run_deviations"] == [wr.DEVIATION] and sorted(summ["c3dgs_runs"]) == ["0", "5000"]
+assert all([c["n"] for c in r["linalg_patch"]["calls"]] == [N_COV, N_COV] and r["linalg_patch"]["fallbacks"] == []
+           for r in summ["c3dgs_runs"].values())
 jobs = [("gn_e3q_train", "cmd", "cwd", os.path.join(ROOT, "gn_e3q_train.log"))]
 open(jobs[0][3], "w").write("\n".join(f"[train] line {i}" for i in range(250)) + "\n")
 rns["JOB_EXITS"]["gn_e3q_train"] = 0
 assert rns["write_log_tails"](jobs, rns["GN3Q_OUT"]) == ["gn_e3q_train_log_tail.json"]
 open(os.path.join(rns["GN3Q_OUT"], "gn3p_meta_train.json"), "w").write("{}")  # an E3p file that strayed in
 exec(srcs[idx["bundle"]], rns)
-names = zipfile.ZipFile(os.path.join(rns["WORK"], "gn3q_bundle.zip")).namelist()
+names = zipfile.ZipFile(os.path.join(rns["WORK"], "E3q_bundle_2.zip")).namelist()
 for f in ("gn3q/gn3q_summary.json", "gn3q/gn3q_results_train.csv", "gn3q/gn3q_meta_train.json", "gn3q/gn_e3q_train_log_tail.json"):
     assert f in names, (f, names)
 assert "gn3q/gn3p_meta_train.json" not in names and not any(n.endswith((".ply", ".npz")) for n in names)
