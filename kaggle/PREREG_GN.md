@@ -1374,3 +1374,49 @@ A step that fails, out of memory or otherwise, is recorded with its error, and e
 its product still runs (a failed build still leaves the harness's uncompressed evaluation; a failed
 fine-tuned run still leaves the one without fine-tuning). The notebook reports the failures; it has no
 verdict to withhold.
+
+### g. Note (2026-09-28, after E3q's attempt 1 and before any attempt-2 code)
+
+**What attempt 1 showed** (its bundle is committed unchanged in `kaggle/gn_e3q/attempt1/gn3q/`, `59303486`): C3DGS
+built and imported, and both runs, `c3dgs_ft0` and `c3dgs_ft5000`, failed in `compress.py` after 270.8 s and 273.3 s
+(the wrapper's wall time). They failed in C3DGS's `utils/splats.py`, line 29, `extract_rot_scale`, called from
+`compress_covariance` in `compression/vq.py`. There, `torch.linalg.eigh` on one batch of 3x3 float32 matrices was refused
+by cuSOLVER: `CUSOLVER_STATUS_INVALID_VALUE` from `cusolverDnXsyevBatched_bufferSize`. This is the failure class that
+`bench/gn/batched.py` fixed for E0.
+
+- **The batch** is the 4,096 Gaussian-codebook covariances plus every splat kept above `gaussian_importance_include`,
+  so it grows with the splat count. On train it is at most 4,096 + 1,026,508 = 1,030,604; attempt 1's files do not
+  record the kept count.
+- **`R.det()` on the same batch.** The same function then calls `R.det()` (line 34, `torch.linalg.det` through the
+  tensor method) on the eigenvectors of that batch. It never ran, because `eigh` failed first.
+- **No other batched linear algebra** is on the compress, fine-tuning, save or evaluation path; only single 4x4
+  camera inverses run there.
+
+**For attempt 2.** This changes Amendment 13 c's "unchanged" in this respect only:
+
+- **The wrapper replaces two functions.** In its own process, before it runs `compress.py`, the wrapper
+  (`e3q_c3dgs_run.py`) replaces `torch.linalg.eigh` and `torch.Tensor.det` with chunked versions built on
+  `bench/gn/batched.py`'s `batched_linalg`:
+  - at most **8,192 matrices per call**;
+  - on a backend refusal, the batch is **halved**, down to one matrix;
+  - **every reduction is recorded** (`linalg_fallbacks`).
+
+  Covering `det` as well as `eigh` was Dace's decision after the diagnosis above. An input that is not a single
+  batch of matrices (`[N, n, n]`) passes through unchanged.
+- **C3DGS's source is not edited.** `compress.py` still runs as `__main__`, with the same arguments.
+- **What is computed does not change.** Each matrix is decomposed independently, so chunking does not change what is
+  computed. Two caveats:
+  - a chunk of one matrix may take torch's unbatched path, a different algorithm for that matrix;
+  - either way, the replacement is **recorded as a deviation** in each run's record.
+- **A report-only check** runs on each chunked call. It takes a random sample of up to 4,096 of the actual input
+  matrices (seed 0, from a separate generator, so C3DGS's own random stream is untouched) and compares the chunked
+  GPU results with a float64 CPU reference:
+  - for `eigh`: the largest absolute eigenvalue difference, the sample's largest absolute eigenvalue (for scale), and
+    the largest absolute entry of the float64 reconstruction residual of the chunked eigenpairs;
+  - for `det`: the largest absolute determinant difference.
+
+  No threshold attaches to it.
+- **Batch sizes are recorded.** The wrapper also records each call's batch size, so attempt 2 measures the batch on
+  train.
+- **Everything else in Amendment 13 stands**, f included: a later failure is recorded, and every step that does not
+  need its product still runs.
