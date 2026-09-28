@@ -1291,3 +1291,86 @@ listed a 3-point grid and a per-scene selection as ways to cut the cost. Neither
 
 Nothing else about E3 is decided here: its scenes, hosts, grids of K, comparators and rules are for its
 own amendment, written after E3p's results and before any E3 code or data.
+
+## Amendment 13 (2026-09-28, after E3p's results and before any E3q code)
+
+E3p has run. Its bundle is committed unchanged in `kaggle/gn_e3p/gn3p/` (`25f2133a`) and its numbers are in
+`kaggle/FINDINGS.md` section 13 (`08902af2`, re-checked by `bench/gn/check_s13.py`). E3p's C3DGS build check
+failed before compiling anything: `python -m venv` could not run `ensurepip` in the session's Python. This
+amendment pre-registers **E3q, an engineering smoke test of the C3DGS host**. G0, G1, G2a, H2b, G2c, E2b's
+criteria and Amendments 1-12 are unchanged.
+
+### a. Scope
+
+- **E3q has no verdicts.** It checks that C3DGS builds, runs its own compression pipeline on an INRIA
+  checkpoint, and produces numbers that can be read next to C3DGS's published ones and next to this project's
+  harness. GN-VQ is not run in E3q, and nothing in it is a result about the method. Its numbers inform E3's
+  C3DGS comparison (Amendment 12 c), which still gets its own pre-registration before any of its code or data.
+- **One scene: train**, a development scene (Amendment 9; kept one by Amendment 10 b), with INRIA's 30k
+  checkpoint through E3p's pinned archive members (Amendment 12 a) and the Tanks & Temples dataset through
+  run 5's downloader. Nothing else is fetched: Deep Blending, bonsai, counter, kitchen, room and truck stay
+  untouched, as do the other INRIA scenes.
+
+### b. Build
+
+- **C3DGS** (`KeKsBoTer/c3dgs`) at `2a234af55fbe8b90c8829c1436ce80088c4b622b`, the commit E3's scouting read,
+  with its glm submodule.
+- **Into the session's own Python environment, not a venv**, because Kaggle's Python lacks `ensurepip`
+  (E3p). The README's route is a conda environment from `environment.yml`; its packages are installed with pip
+  instead: `plyfile==0.8.1` (its pin), `tqdm`, `torch-scatter` (from the PyG wheel index for the session's
+  torch and CUDA; built from source if no wheel exists), and `submodules/diff-gaussian-rasterization` and
+  `submodules/weighted_distance` built with `--no-build-isolation`. **`--no-deps` on every one of them**, so
+  that the session's torch, torchvision and CUDA toolkit stay as they are.
+- **Every deviation from the README is recorded** in the job's output. Known before any code: the session's
+  Python, torch, torchvision and CUDA toolkit instead of `python=3.8`, `pytorch-cuda=12.1` and
+  `cuda-toolkit=12.1`; pip instead of conda; `--no-deps`; torch-scatter from pip rather than conda's
+  `pytorch-scatter`; `--source_path` passed on the command line (the checkpoint's `cfg_args` names its
+  authors' local paths); the model directory laid out from the three pinned members, without the archive's
+  other files (`input.ply`, the 7k iteration).
+- **Two fallbacks, fixed now, each recorded as a deviation when used:** if `plyfile==0.8.1` cannot write and
+  read back a small `.ply` in the session, the current `plyfile` is installed instead; if a CUDA extension
+  fails to compile and its log names a missing fixed-width integer type (`uint32_t` and the like), the build is
+  retried once with `<cstdint>` force-included through compiler flags. The source is never edited.
+
+### c. Runs
+
+C3DGS's own `compress.py`, unchanged, with its own vector quantization and its defaults otherwise (colour and
+Gaussian codebooks of 4,096, `color_compress_non_dir` on, its importance thresholds and cluster iterations,
+Morton sorting), on the INRIA train 30k model and the train dataset, **twice**:
+
+1. `--finetune_iterations 0`: no fine-tuning, the setting Amendment 12 c makes E3's primary comparison;
+2. `--finetune_iterations 5000`: its default quantization-aware fine-tuning, the published setting.
+
+Each run is started through a small wrapper that executes `compress.py` as it is and records the process's
+peak GPU memory from torch's allocator. Its written `point_cloud.npz` is then decoded with C3DGS's own
+`npz2ply.py` into a `.ply`, which E3p's loader reads.
+
+### d. Reported, per run
+
+- **Size:** the bytes of the written `point_cloud.npz`, in MiB (2^20, C3DGS's own unit) and in MB (10^6).
+- **C3DGS's own evaluation:** PSNR, SSIM and LPIPS from its `render_and_eval` (`results.json`; it evaluates the
+  compressed model in memory, before the `.npz` round trip, on INRIA's test split, with float renders).
+- **Protocol ii from this project's harness** (Amendment 12 a, as E3p ran it) on the decoded model, if its `.ply`
+  loads there; if it does not, the report says so and why. The uncompressed model's protocol ii from the same
+  session sits beside it. The `.ply` carries the decoded attributes but not C3DGS's render-time fake
+  quantization, so this evaluates the decoded model as `npz2ply.py` writes it.
+- **Time and memory:** the run's wall time, C3DGS's own `times.json` (sensitivity, clustering, fine-tuning,
+  encoding), the peak GPU memory from the wrapper, and each harness step's time and peak memory as E3p
+  recorded them.
+
+### e. Published numbers, a sanity check only
+
+C3DGS's published train numbers (Niedermayr et al., arXiv 2401.02436v2, **Table 9, "Tanks&Temples results"**,
+row train), in its own protocol and with fine-tuning: "Ours" 21.863 dB PSNR, 0.798 SSIM, 0.226 LPIPS, 13.249
+"MB"; the "3D Gaussian Splatting" columns 21.770 / 0.805 / 0.217 / 242.782 "MB". The "MB" is MiB: 242.782 is
+the train 30k `.ply`'s 254,575,516 bytes divided by 2^20 (Amendment 12 a's pin). E3q's numbers are placed next
+to these. No criterion attaches to the comparison. For context, known before E3q: that "3D Gaussian Splatting"
+train PSNR, 21.770 dB, differs from INRIA's own published 21.097 dB and from E3p's protocol ii, 21.293 dB
+(FINDINGS section 13).
+
+### f. Failures
+
+A step that fails, out of memory or otherwise, is recorded with its error, and every step that does not need
+its product still runs (a failed build still leaves the harness's uncompressed evaluation; a failed
+fine-tuned run still leaves the one without fine-tuning). The notebook reports the failures; it has no
+verdict to withhold.
