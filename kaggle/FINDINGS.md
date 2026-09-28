@@ -54,6 +54,14 @@ against E2's `gn_vq` is -0.0013 to +0.0141 dB, above the -0.01 dB no-harm bound.
 all 20 cells (`rho_cv` 1e-3 to 1e-1). Against E2's GN-VQ it changed little except on room, whose test
 dMSE fell to 0.7603 of `gn_vq`'s at K = 65,536.
 
+**E3p (section 13, branch `bench/gn-vq`): exploratory engineering pilot, no verdict (Amendment 12).** The
+frozen pipeline ran at K = 65,536 on INRIA's 30k checkpoints of bicycle (6,131,954 splats) and train
+(1,026,508) with no step out of memory: bicycle peaked at 11.51 GB of allocated GPU memory, its GN-VQ runs at
+8.49 GB, and its job took 19,699.0 s. Under INRIA's protocol the uncompressed models read 25.196 dB (bicycle)
+and 21.293 dB (train), against INRIA's published 25.246 and 21.097; this project's own protocol reads bicycle
+0.598 dB lower. `rho_cv` was 3e-1 on bicycle, the first selection above 1e-1. The C3DGS build failed before
+compiling (no `ensurepip` for a venv).
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -95,6 +103,13 @@ dMSE fell to 0.7603 of `gn_vq`'s at K = 65,536.
   unpacked unchanged in `kaggle/gn_e2b/gn2b/`. `bench/gn/check_s11.py` recomputes every number in the
   section from those two sources and checks each against the text (`python bench/gn/check_s11.py`,
   0 failures).
+- Section 13: every number comes from `kaggle/gn_e3p/gn3p/` (one Kaggle session on 2x T4, rows
+  timestamped 2026-09-27T21:11 to 2026-09-28T02:32, gsplat commit `12774353` on `bench/gn-vq`, a restored
+  wheel reused), except the published PSNRs (arXiv 2308.04079v1, Tables 5 and 8), the pre-run estimate
+  (HANDOFF, "E3p notebook") and, in the post-hoc cost estimate, E2c's and E2's per-K times
+  (`kaggle/gn_e2c/gn2c/`, `kaggle/gn_e2/gn2/`) and the 13 scenes' splat counts (kaggle/E3_SCOUTING.md a).
+  The bundle is unpacked unchanged in `kaggle/gn_e3p/gn3p/` (`25f2133a`). `bench/gn/check_s13.py`
+  recomputes every number in the section from those files and checks each against the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -1955,3 +1970,182 @@ scenes in E2.
     counter's (+0.0097 dB) and room's (+0.0141 dB) are larger.
 - **All 11 scenes with pinned checkpoints have now informed a decision or a gate.** Any later held-out
   claim, E3's included, needs new scenes or checkpoints.
+
+## 13. E3p: the pipeline on INRIA's 30k checkpoints of bicycle and train (`bench/gn-vq`, exploratory pilot) — no step ran out of memory; C3DGS did not build
+
+**E3p is an exploratory engineering pilot and has no verdict** (Amendment 12 a, `aa67e21e`, written before any
+E3p code). It ran the frozen `gn_vq_cvfloor` and its comparators at K = 65,536 on INRIA's 30k checkpoints of
+bicycle and train, both development scenes, to measure what E3 will cost. Nothing below is a result about the
+method: one K, one k-means seed, two development scenes, no pre-stated criterion. Every number comes from
+`kaggle/gn_e3p/gn3p/`; items marked **post hoc** were read from the files after the fact.
+
+**What ran:** every step on both scenes, with no step out of memory and no row missing. Bicycle's 6,131,954
+splats peaked at 11.51 GB of allocated GPU memory (the final codebook's protocol-i evaluation); its GN-VQ runs
+peaked at 8.49 GB. The chunked `direct_distance` was bit-identical to E0-E2c's form on the GPU. The C3DGS build
+check failed before compiling anything: the venv could not be created (no `ensurepip`).
+
+### Inputs and checks
+
+| Check | bicycle | train |
+|---|---|---|
+| INRIA members (size and CRC32 against Amendment 12's pins) | fetched, all 3 match; `point_cloud.ply` SHA-1 `a05ba7756af3b3eed9e92d266af9ba025f84dc15` | fetched, all 3 match; `point_cloud.ply` SHA-1 `187b6095ffe3135c7769d73a9caefcd03a5273d8` |
+| Splats (pinned count) / kept by the codec's square crop | 6,131,954 / 6,130,576 (1,378 cropped) | 1,026,508 / 1,026,169 (339 cropped) |
+| Camera frame against `cameras.json` (stop condition) | pass: 194 of 194 cameras, largest differences 1.33e-15 (position), 3.33e-16 (rotation) | pass: 301 of 301, 1.78e-15, 3.33e-16 |
+| Test split against INRIA's (reported) | equal, 25 test views | equal, 38 test views |
+| Render parity | max abs difference 0.0 | 0.0 |
+| `direct_distance_check` (the chunked form against E0-E2c's, on `cuda:0`, 787,432 splats) | identical, max abs difference 0.0 | identical, 0.0 |
+| Lifted check (10,000 splats), 8 per scene | all pass; sum excess / sum d_min at most 3.72e-10 | all pass; at most 5.31e-10 |
+| Rows | 11, `writer_codes_equal` True on all 10 codebooks | 11, the same |
+
+CUDA smoke tests (`gn3p_selftest.json`): pass. Both jobs exited with code 0 and neither was skipped by the start
+cutoff. The session: torch 2.10.0+cu128 (CUDA 12.8), driver 580.159.04, cuDNN 91002, 2x Tesla T4, the
+restored gsplat wheel (install 167.8 s, no build).
+
+### The uncompressed models under the two protocols (Amendment 12 a)
+
+Protocol i is this project's harness (gsplat's own downscaled images, float renders clamped); protocol ii is
+INRIA's (the dataset's own images at `cfg_args`'s resolution, renders quantized to 8 bits). The metric modules
+are the harness's in both. The published PSNR is INRIA's (Kerbl et al., arXiv 2308.04079v1, Table 5 for
+bicycle, Table 8 for train, row Ours-30k); INRIA's README says the released models were made with the release
+codebase and differ from the paper's, so the comparison is a sanity check only.
+
+| Scene | Splats | Protocol i: resolution, PSNR / SSIM / LPIPS | Protocol ii: resolution, PSNR / SSIM / LPIPS | ii minus i (dB) | Published PSNR | ii minus published (dB) |
+|---|---|---|---|---|---|---|
+| bicycle | 6,131,954 | 1236x822: 24.598 / 0.7358 / 0.2162 | 1237x822: 25.196 / 0.7604 / 0.2117 | +0.598 | 25.246 | -0.050 |
+| train | 1,026,508 | 980x545: 21.294 / 0.7931 / 0.2180 | 980x545: 21.293 / 0.7926 / 0.2170 | -0.001 | 21.097 | +0.196 |
+
+- On bicycle the protocols differ by 0.598 dB. They differ in the ground-truth images (gsplat resizes the
+  full-resolution JPEGs itself, bicubic, to 1236x822; INRIA loads the dataset's own `images_4`, 1237x822), in
+  the 8-bit quantization and in the principal point.
+- On train both read the same full-resolution images, so only the quantization and the principal point
+  differ, and the two protocols are 0.001 dB apart. **Post hoc:** this suggests the images carry most of
+  bicycle's gap; how it splits between the resize and the extra pixel column is not measured.
+
+### The compressed rows at K = 65,536 (exploratory)
+
+| Scene | Config | PSNR ii | PSNR i | SSIM ii | LPIPS ii | Raw bytes | MB | MiB |
+|---|---|---|---|---|---|---|---|---|
+| bicycle | `upstream_l1` | 24.959 | 24.420 | 0.7484 | 0.2269 | 91,906,116 | 91.91 | 87.65 |
+| bicycle | `lloyd_wopa_area` | 24.978 | 24.450 | 0.7476 | 0.2266 | 91,878,426 | 91.88 | 87.62 |
+| bicycle | `gn_vq_cvfloor` | 25.109 | 24.543 | 0.7557 | 0.2192 | 91,986,055 | 91.99 | 87.72 |
+| train | `upstream_l1` | 21.136 | 21.137 | 0.7859 | 0.2259 | 16,826,981 | 16.83 | 16.05 |
+| train | `lloyd_wopa_area` | 21.209 | 21.210 | 0.7862 | 0.2251 | 16,823,682 | 16.82 | 16.04 |
+| train | `gn_vq_cvfloor` | 21.252 | 21.253 | 0.7899 | 0.2203 | 16,896,483 | 16.90 | 16.11 |
+
+| Scene | `gn_vq_cvfloor` minus | PSNR ii (dB) | PSNR i (dB) | SSIM ii | LPIPS ii | Raw bytes |
+|---|---|---|---|---|---|---|
+| bicycle | `lloyd_wopa_area` | +0.131 | +0.093 | +0.0081 | -0.0074 | +0.117% |
+| bicycle | `upstream_l1` | +0.150 | +0.123 | +0.0073 | -0.0078 | +0.087% |
+| train | `lloyd_wopa_area` | +0.043 | +0.043 | +0.0037 | -0.0048 | +0.433% |
+| train | `upstream_l1` | +0.116 | +0.116 | +0.0039 | -0.0056 | +0.413% |
+
+- These are single points at one K and one seed, with GN-VQ a little larger in bytes than both comparators; no
+  size-matched or rate-distortion comparison exists here, and none is claimed.
+- Against the uncompressed model, protocol ii: -0.087 dB (bicycle) and -0.041 dB (train).
+- "MB" is 10^6 bytes and "MiB" 2^20, of the raw compressed directory.
+
+### `rho_cv` and the cross-validation
+
+| Scene | dMSE | `rho` = 0 | `rho` = 1e-3 | `rho` = 1e-2 | `rho` = 1e-1 | `rho` = 3e-1 | `rho` = 1 | `rho` = 3 |
+|---|---|---|---|---|---|---|---|---|
+| bicycle | odd train views (the score) | 1.2750e-04 | 1.2445e-04 | 1.1456e-04 | 9.0845e-05 | **8.2701e-05** | 8.3759e-05 | 9.4126e-05 |
+| bicycle | test views | 1.4037e-04 | 1.3862e-04 | 1.3086e-04 | 1.1244e-04 | **1.0632e-04** | 1.1035e-04 | 1.2364e-04 |
+| train | odd train views (the score) | 7.8035e-05 | 6.1820e-05 | 4.6419e-05 | **3.7600e-05** | 3.7917e-05 | 4.4750e-05 | 5.4317e-05 |
+| train | test views | 5.5516e-05 | 5.3631e-05 | 4.3016e-05 | **3.5540e-05** | 3.7996e-05 | 4.4263e-05 | 5.3296e-05 |
+
+- `rho_cv` is 3e-1 on bicycle and 1e-1 on train. On both scenes the CV codebooks' test-view dMSE is lowest at
+  the same `rho` as the odd-view score.
+- GN-VQ ran 14-17 iterations per CV run on bicycle (14 for the final codebook) and 8-9 on train (9), every run
+  stopping at the relative-drop rule.
+
+### Cost: time and memory
+
+Seconds of wall time and the peak allocated GPU memory of each step, in GB (10^9 bytes; `meta["steps"]`):
+
+| Step | bicycle: s | bicycle: peak GB | train: s | train: peak GB |
+|---|---|---|---|---|
+| INRIA fetch (3 members) | 141.2 | 0.00 | 28.7 | 0.00 |
+| runner and model load | 182.6 | 1.56 | 56.5 | 0.34 |
+| uncompressed, protocols i and ii | 19.7 | 4.40 | 16.7 | 1.72 |
+| GN pass, even views | 15.3 | 7.99 | 9.0 | 1.52 |
+| GN pass, all train views | 28.2 | 7.99 | 17.6 | 1.52 |
+| PLAS sort | 947.0 | 8.27 | 91.4 | 1.44 |
+| TorchPQ `upstream_l1` | 2,512.8 | 4.32 | 519.0 | 0.80 |
+| `lloyd_wopa_area` (the warm start) | 3,557.0 | 7.63 | 686.0 | 3.15 |
+
+- **`gn_vq_cvfloor` (7 CV codebooks and the final one, with their writes, dMSE, lifted checks and the final
+  row's evaluation):** 11,857.7 s of wall time on bicycle (the 7 CV rows' steps 10,370.7 s, the final row's
+  1,446.7 s) and 1,595.2 s on train.
+  - GN-VQ itself: 1,328.5-1,591.0 s per run on bicycle, 11,287.0 s for all 8; 147.0-162.0 s per run on train.
+  - Lifted checks: 25.7-26.1 s (bicycle), 26.1-26.3 s (train) each. Writes 17.4-18.4 s and 3.1-3.5 s.
+- **Whole jobs:** bicycle 19,699.0 s (`timings_s.job`; 19,710.7 s in the queue), train 3,427.5 s (3,435.2 s).
+  Dataset downloads 256.8 s and 351.7 s. Session steps: restore 1.7 s, install 167.8 s, smoke tests 15.2 s.
+  Rows are timestamped 2026-09-27T21:11 to 2026-09-28T02:32.
+- **Memory on bicycle:** the largest allocations were the final row's protocol-i evaluation (11.51 GB) and
+  protocol-ii evaluation (11.21 GB); the GN-VQ runs peaked at 8.49 GB, the dMSE steps at 9.00 GB, the PLAS
+  sort at 8.27 GB. The allocator's reserved memory reached 15.18 GB of the T4's 15.64 GB, and the job's host
+  memory 16.2 GB (peak RSS). Train peaked at 3.30 GB (its GN-VQ runs).
+- **`M`:** 2,943,337,920 bytes per metric on bicycle (480 per splat); the full `M`'s cache file took
+  3,090,508,090 bytes. On train 492,723,840 and 517,363,172. One copy on the GPU in both jobs (`metric_store`).
+- **Post hoc, against the pre-run estimate (HANDOFF, "E3p notebook"):** bicycle's job took 19,699.0 s, its
+  256.8 s download included, against the estimated 13,105-17,028 s before downloads. GN-VQ took 11,287.0 s against 6,817-7,618 s (bicycle's runs
+  took 14-17 iterations; E2c's runs at K = 65,536 took 8-10), and the PLAS sort 947.0 s against 423-509 s (it
+  grew faster than the splat count: 10.4 times train's for 6.0 times the splats). The two clusterings fell
+  inside their estimates.
+
+### The C3DGS build check
+
+`gn3p_c3dgs_build.json`: failed at the `venv` step, before any compilation. The clone of `KeKsBoTer/c3dgs`
+(7.3 s) and the checkout of `2a234af55fbe8b90c8829c1436ce80088c4b622b` with its glm submodule (`673a963a`)
+succeeded; `python -m venv --system-site-packages` then failed after 0.2 s because the session's Python
+3.12.13 has no `ensurepip`. Nothing was installed, compiled or imported; `conda` was not on the path.
+
+### Post hoc
+
+- **Bicycle's `rho_cv` (3e-1) lies above E2b's grid ceiling (1e-1)** and above every `rho_cv` selected before
+  it: E2b's 8 cells topped out at 1e-1 (the top of that grid) and E2c's 20 cells at 1e-1. This is the first
+  selection above 1e-1, and it supports Amendment 12 b's keeping of the upper grid values.
+- **Protocol i numbers are not comparable to published tables.** E0-E2c measured every row under protocol i.
+  On bicycle protocol i reads 0.598 dB below protocol ii for the same model; E0-E2c's MipNeRF360 scenes were
+  all resized by gsplat itself (data factor 4 or 2), so their PSNRs sit on protocol i's scale. The offset was
+  measured on bicycle only (and is 0.001 dB on train, which is not resized); for other scenes it is not
+  known. E0-E2c also used this project's MCMC checkpoints, not INRIA's.
+- **A cost estimate for the frozen method at the four K of E2c on all 13 INRIA scenes (an estimate, not a
+  measurement; `bench/gn/e3p_estimate.py`).** Each part is E3p's measured time per million splats, with the
+  range over bicycle and train; GN-VQ at the three smaller K and the warm starts there are scaled by E2c's and
+  E2's measured ratios to K = 65,536. Linear in the splat count, which the PLAS sort and the iteration counts
+  above already contradict:
+
+  | Part (per million splats unless noted) | Estimate |
+  |---|---|
+  | GN-VQ at K = 65,536, per run (E3p) | 143.2-259.5 s |
+  | GN-VQ at 1,024-16,384 together, over K = 65,536 (E2c, 5 scenes) | 1.885-2.202 |
+  | `lloyd_wopa_area` at K = 65,536 (E3p) | 580.1-668.3 s |
+  | `lloyd_wopa_area` at 1,024-16,384 together, over K = 65,536 (E2, 11 scenes) | 0.308-0.816 |
+  | a CV row's write and dMSE (E3p), 28 per scene | 4.9-7.8 s |
+  | a final row's measurement (E3p), 4 per scene | 14.6-41.6 s |
+  | the two GN passes (E3p) | 7.1-25.9 s |
+  | the PLAS sort (E3p) | 89.1-154.4 s |
+  | lifted checks, 8-11 per scene (E3p: 25.7-26.3 s each) | 205-289 s per scene |
+  | **per scene, per million splats** | **4,356-8,425 s** |
+  | bicycle (6.13M splats) | 26,916-51,954 s (7.5-14.4 h) |
+  | train (1.03M splats) | 4,677-8,938 s |
+  | **13 scenes (39,781,233 splats)** | **175,957-338,937 s (48.9-94.1 GPU-hours)** |
+  | on two T4s, no schedule shorter than | 87,979-169,469 s (24.4-47.1 h) |
+
+  That is at least 3-5 Kaggle sessions at the 9.5 h start cutoff, before downloads, comparators and session
+  steps. Bicycle alone may not fit one session: the job resumes per row, so it can be split. The range's
+  upper end uses bicycle's GN-VQ rate (more iterations) for every scene.
+
+### What E3p settles, and what it does not
+
+- **The pipeline runs at INRIA scale on a T4:** 6.13M splats, K = 65,536, the 7-`rho` cross-validation and
+  the final codebook, with one GPU copy of `M` and the chunked `direct_distance`, and no step out of memory.
+  The headroom is small: the allocator reserved 15.18 GB of 15.64 GB.
+- **Protocol ii reads INRIA's models close to their published PSNR** (-0.050 dB on bicycle, +0.196 dB on
+  train), as a sanity check of the loader, the camera frame and the protocol.
+- **Nothing about the method is settled here.** GN-VQ's gains over the comparators above are single
+  exploratory points on development scenes, at slightly larger sizes.
+- **The C3DGS host is not built yet;** the venv route does not work on this image.
+- **Time, not memory, is E3's constraint:** the estimate above puts the frozen method at 4 K on the 13 scenes
+  at 48.9-94.1 GPU-hours.
