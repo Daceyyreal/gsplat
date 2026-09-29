@@ -1603,3 +1603,77 @@ default generator starts from a different seed in every process: two fresh proce
   (`bench/gn/test_gn.py`).
 - **The rest of Amendment 14 stands.** This changes neither its grids nor its order, and E3q's runs (Amendment 13)
   were unseeded.
+
+### g. Note (2026-09-29, after E3r's code was pushed at `290e62f5` and before any E3r run): a memory check restricts bicycle
+
+**The order of events.** Dace asked for a GPU-memory check before E3r was pushed. The request reached this session
+after the push, so this note follows the code it constrains. No E3r run exists, and nothing has run on Kaggle.
+
+**The check** (`bench/gn/e3r_memory.py`; its numbers are in `kaggle/gn_e3r_memory/e3r_memory.json`) sizes, from the
+code, what each step allocates on the GPU. The inputs are the pinned train and bicycle checkpoints and their
+`cameras.json`, fetched locally, with SHA-1s equal to E3p's. Every figure below is in 10^9 bytes.
+
+- **The 16 x 16 metric:**
+  - it takes 544 bytes per splat, float32 and packed (136 values), as stored;
+  - the GN pass's accumulator takes 628 bytes per splat, for every splat;
+  - the colour-quantized splats need the metric in this host. Their count is not known before C3DGS runs, and
+    the only bound the checkpoint gives is the whole model: on bicycle, 6,131,774 of 6,131,954 splats touch a
+    tile in some train view. So one device copy is at most 3.34 GB on bicycle.
+- **C3DGS's own peak.** It is the backward pass of its sensitivity computation (`compress.py` `calc_importance`)
+  over its worst train view. The allocations that scale with the splat count total 1,850 bytes per splat:
+  - the parameters and their gradients;
+  - the fake-quantized features and masks;
+  - the rasterizer's per-splat state;
+  - its 75-float backward buffers;
+  - the hooks' temporaries.
+
+  On top of those come the images, which sit on the GPU with `--data_device cuda`, and the binning buffers, at
+  36 bytes per tile instance. The tile instances were counted with the rasterizer's own formulas: at most
+  6,254,053 per train view on train and 11,798,558 on bicycle.
+- **The tie to E3q.** On train this accounting gives 4.068 GB against E3q's measured 4.551 GB, explaining 89.4%.
+  The rest, 0.482 GB, is not attributed; scaled per splat, it is 470 bytes each.
+- **C3DGS on bicycle:**
+
+  | Images | From the code | With train's unexplained rest per splat |
+  |---|---|---|
+  | on the GPU (`--data_device cuda`) | 14.16 GB | 17.05 GB |
+  | on the CPU (`--data_device cpu`) | 11.80 GB | 14.68 GB |
+
+  This is before either process's CUDA context and before allocator fragmentation: E3p's bicycle job reserved
+  15.18 GB with 11.51 GB allocated. The T4 has 15.64 GB.
+- **E3r's own steps.** As `290e62f5` codes them, the cross-validation and the injection hold two copies of the
+  metric, and `e2b.floored_metric` makes a float64 copy of the whole metric for its trace: on bicycle 12.57 GB
+  plus a 6.67 GB transient, beyond the T4. With one device copy they fit:
+  - the GN pass: 8.41 GB (E3p's measured 7.99 GB plus the extra width);
+  - the cross-validation's GN-VQ: 8.06 GB, and its scoring 5.82 GB;
+  - the injected run's colour step, with C3DGS's own state at that point: 11.78 GB with images on the GPU, or
+    9.41 GB on the CPU.
+
+  But C3DGS's sensitivity pass comes first in every C3DGS run.
+
+**For E3r:**
+- **Mitigations, method-neutral.** The cross-validation and the injection keep one device copy of the floored
+  metric: E3p's `metric_store` layout, filled slice by slice with `e2b.floored_metric` itself, with the unfloored
+  objective read from host memory. The reference colours stay in host memory, and the metric's buffer is released
+  during the scoring renders. A CPU test shows GN-VQ's codebook, labels and report, `P` and the lifted check bit
+  for bit as the full-copy path gives them. With these, every E3r step of its own fits on both scenes.
+- **No method-neutral mitigation brings C3DGS itself under about 14 GB on bicycle.** Its allocations are its own,
+  and its source stays unedited. `--data_device cpu` still leaves 11.80-14.68 GB.
+- **So bicycle's C3DGS steps are restricted to train:** the probe run, the injected run and the other K
+  (Amendment 14 c.i, c.iii and c.iv), as Dace set the rule.
+  - Train keeps everything in c.
+  - Bicycle keeps its runner, the uncompressed model's protocol ii and the two 16 x 16 GN passes, which measure
+    the extension's time and memory at 6.13M splats.
+  - Bicycle has no C3DGS row, no cross-validation, no trace share and no calibration.
+- **What the arm inherits.** On this data, C3DGS does not fit a T4 at bicycle's size. The arm's gate scenes are
+  at most 3,405,153 splats (drjohnson); their own checks belong to the arm's pre-registration.
+- **The runtime estimate for this configuration** (`bench/gn/e3r_estimate.py`, `estimate_g`), an estimate:
+
+  | Part | Estimate |
+  |---|---|
+  | train | 5,362-8,309 s, unchanged |
+  | bicycle | 492-498 s |
+  | the session | 5,747-8,694 s (1.6-2.4 h) |
+
+  Amendment 14 e's table stays as it was estimated.
+- **Everything else in Amendment 14 stands.**
