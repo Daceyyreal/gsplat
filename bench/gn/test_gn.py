@@ -3213,6 +3213,90 @@ def test_e3r_gn_vq_16x16_runs_and_does_not_raise_the_objective():
     assert 0 < share["15x15"]["share"] < 1
 
 
+def test_e3r_one_device_copy_is_bit_identical_at_16():
+    """E3r's memory layout (metric_store: the floored metric in one buffer filled slice by slice, the unfloored one
+    read from host memory) gives GN-VQ's codebook, labels and report, P and the lifted check bit for bit as the
+    full-copy path does, at 16 x 16, with slices that do not divide the problem."""
+    import e3r
+    import metric_store as ms
+
+    g = torch.Generator().manual_seed(8)
+    n_all, k = 700, 16
+    M_all = _psd16(n_all, seed=9)
+    ids = torch.randperm(n_all, generator=g)[:523].sort().values
+    x = torch.randn(len(ids), 48, generator=g) * 0.3
+    C0 = x[:k].clone()
+    L0 = torch.cdist(x, C0).argmin(1)
+    q = e3r.C3DGSQuantizer(0.01, 0, 0.005, 0)
+    for rho in (0.0, 0.1, 3.0):
+        ref = e3r.run_gn_vq(x, C0, L0, M_all[ids], rho, 5000, q, log=None)
+        store = ms.MetricStore("cpu", ids, slice_rows=97)
+        store.add("even", M_all)
+        got = e3r.run_gn_vq(x, C0, L0, store.floored("even", rho), rho, 5000, q, log=None,
+                            report_metric=store.sorted("even"))
+        assert torch.equal(ref[0], got[0]) and torch.equal(ref[1], got[1])
+        strip = lambda r: {kk: v for kk, v in r.items() if kk != "time_s"}  # noqa: E731
+        assert strip(ref[2]) == strip(got[2])
+        d = (q.quantize(ref[0])[0][ref[1]] - x)
+        assert e3r.predicted_colour_dmse(M_all[ids], d, 5000) == e3r.predicted_colour_dmse(store.sorted("even"), d, 5000)
+        assert gd.lifted_check(x, e2b_floor(M_all[ids], rho), ref[0], n_sample=100) ==             gd.lifted_check(x, store.floored("even", rho), ref[0], n_sample=100)
+
+
+def e2b_floor(M, rho):
+    import e2b
+
+    return e2b.floored_metric(M, rho)
+
+
+def test_e3r_memory_tiles_and_the_committed_check():
+    """The tile count follows the rasterizer's formulas on a splat whose footprint is known by hand; the committed
+    memory check (kaggle/gn_e3r_memory/e3r_memory.json) is what report() computes from its tiles, and Amendment 14 g
+    quotes its numbers."""
+    import re
+
+    import e3r_memory as em
+
+    W, H, f, z, sig = 160, 96, 100.0, 4.0, 0.08
+    s = {"means": torch.tensor([[0.0, 0.0, z], [0.0, 0.0, -1.0]]), "quats": torch.tensor([[1.0, 0, 0, 0]] * 2),
+         "scales": torch.log(torch.full((2, 3), sig))}
+    cam = {"img_name": "a", "rotation": torch.eye(3).tolist(), "position": [0.0, 0.0, 0.0], "width": W, "height": H,
+           "fx": f, "fy": f}
+    got = em.tile_instances(s, cam, W, H, em.cov3d(s))
+    var = (f * sig / z) ** 2 + 0.3  # the projected variance plus the low-pass; the splat behind the camera is culled
+    r = math.ceil(3 * math.sqrt(var))
+    cx, cy = (W - 1) / 2, (H - 1) / 2
+    nx = min(10, int((cx + r + 15) / 16)) - max(0, int((cx - r) / 16))
+    ny = min(6, int((cy + r + 15) / 16)) - max(0, int((cy - r) / 16))
+    assert got["num_rendered"] == nx * ny and got["visible"] == 1
+    repo = os.path.dirname(os.path.dirname(HERE))
+    chk = json.load(open(os.path.join(repo, "kaggle", "gn_e3r_memory", "e3r_memory.json")))
+    rep = em.report(chk["tiles"])
+    assert json.loads(json.dumps(rep)) == chk["report"]
+    assert chk["inputs"]["train"]["point_cloud.ply"] == "187b6095ffe3135c7769d73a9caefcd03a5273d8"
+    assert chk["inputs"]["bicycle"]["point_cloud.ply"] == "a05ba7756af3b3eed9e92d266af9ba025f84dc15"
+    a14g = re.sub(r"\s+", " ", open(os.path.join(repo, "kaggle", "PREREG_GN.md"), encoding="utf-8").read())
+    a14g = a14g[a14g.index("### g. Note (2026-09-29, after E3r"):]
+    t, b, G = rep["train_tie"], rep["bicycle"], 1e9
+    for q in (f"{sum(x for _k, _w, x in em.C3DGS_PER_SPLAT):,} bytes per splat",
+              f"{chk['tiles']['train']['max_num_rendered']:,} per train view on train and "
+              f"{chk['tiles']['bicycle']['max_num_rendered']:,} on bicycle",
+              f"gives {t['total'] / G:.3f} GB against E3q's measured {t['measured'] / G:.3f} GB, explaining "
+              f"{t['explained_fraction'] * 100:.1f}%", f"The rest, {t['residual'] / G:.3f} GB",
+              f"it is {t['residual_per_splat']:.0f} bytes each",
+              f"| {b['cuda']['code_only'] / G:.2f} GB | {b['cuda']['with_train_residual_per_splat'] / G:.2f} GB |",
+              f"| {b['cpu']['code_only'] / G:.2f} GB | {b['cpu']['with_train_residual_per_splat'] / G:.2f} GB |",
+              f"{chk['tiles']['bicycle']['seen_in_any_train_view']:,} of 6,131,954",
+              f"at most {rep['m16']['bicycle_all_splats'] / G:.2f} GB on bicycle"):
+        assert q in a14g, q
+    e = rep["e3r"]
+    m = e["bicycle_mitigated_images_cuda"]
+    for q in (f"{e['bicycle_as_coded_images_cuda']['cv_gn_vq'] / G:.2f} GB", f"{m['gn_pass'] / G:.2f} GB",
+              f"{m['cv_gn_vq'] / G:.2f} GB, and its scoring {m['cv_scoring'] / G:.2f} GB",
+              f"{m['injected_colour_step'] / G:.2f} GB with images on the GPU, or "
+              f"{e['bicycle_mitigated_images_cpu']['injected_colour_step'] / G:.2f} GB"):
+        assert q in a14g, q
+
+
 def _fake_model(tmp_path, n=600, seed=0):
     """A small model directory (INRIA layout) for the fake C3DGS, and its splats."""
     import e3p_inria as ei
@@ -3306,13 +3390,13 @@ def test_e3r_job_constants_and_the_estimate():
     import gn_e3r_scene as job
 
     assert set(job.SCENES) == {"train", "bicycle"} and job.KS == (1024, 4096, 16384, 65536) and job.K_DEFAULT == 4096
-    assert job.THRESHOLD_SCENES == ("train",) and job.FT5000_SCENES == ("train",)
+    assert job.THRESHOLD_SCENES == ("train",) and job.FT5000_SCENES == ("train",) and job.C3DGS_SCENES == ("train",)
     assert [job.threshold_value(j) for j in (-2, -1, 0, 1, 2)] == pytest.approx([0.6e-6 / 9, 0.2e-6, 0.6e-6, 1.8e-6, 5.4e-6])
     tr_specs, bi_specs = job.run_specs("train"), job.run_specs("bicycle")
     assert [s["name"] for s in tr_specs] == ["c3dgs_k4096", "gnvq_k4096", "gnvq_k4096_ft5000", "c3dgs_k1024", "c3dgs_k16384",
                                             "c3dgs_k65536", "c3dgs_k4096_j-2", "c3dgs_k4096_j-1", "c3dgs_k4096_j+1",
                                             "c3dgs_k4096_j+2"]
-    assert [s["name"] for s in bi_specs] == ["c3dgs_k4096", "gnvq_k4096", "c3dgs_k1024", "c3dgs_k16384", "c3dgs_k65536"]
+    assert bi_specs == [] and job.wanted_configs("bicycle") == ["uncompressed"]  # Amendment 14 g
     assert len(job.wanted_configs("train")) == 1 + 7 + 10 and len(set(job.COLUMNS)) == len(job.COLUMNS)
     e = e3r_estimate.estimate()
     repo = os.path.dirname(os.path.dirname(HERE))
@@ -3326,6 +3410,10 @@ def test_e3r_job_constants_and_the_estimate():
     assert f"| session setup (restore, install, build) | {e['setup_s']:,.0f} s |" in a14
     assert f"{e['session'][0] / 3600:.1f}-{e['session'][1] / 3600:.1f} h" in a14
     assert e["exceeds_one_session_with_thresholds_on_both"] and e["thresholds_on"] == list(job.THRESHOLD_SCENES)
+    g = e3r_estimate.estimate_g()
+    a14g = a14[a14.index("### g. Note"):]
+    assert f"| train | {f(g['train'])}, unchanged |" in a14g and f"| bicycle | {f(g['bicycle_gn_only'])} |" in a14g
+    assert f"| the session | {f(g['session'])} ({g['session'][0] / 3600:.1f}-{g['session'][1] / 3600:.1f} h) |" in a14g
     with pytest.raises(ValueError, match="not an E3r scene"):
         job.main(["--scene", "room", "--c3dgs_dir", "x", "--out_dir", "x"])
     with pytest.raises(RuntimeError, match="not an E3r result file"):

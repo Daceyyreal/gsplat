@@ -1,0 +1,181 @@
+{
+  "what": "E3r memory check (HANDOFF, E3r notebook): tile instances per train view from the INRIA rasterizer formulas on the pinned checkpoints (bench/gn/e3r_memory.py), computed locally on the CPU; inputs fetched with e3p_inria.fetch_scene (size and CRC32 checked), SHA-1s equal to E3p meta",
+  "inputs": {
+    "train": {
+      "point_cloud.ply": "187b6095ffe3135c7769d73a9caefcd03a5273d8",
+      "cameras.json": "79ee8c10b5991f634545557ca401cd2e31a31f75"
+    },
+    "bicycle": {
+      "point_cloud.ply": "a05ba7756af3b3eed9e92d266af9ba025f84dc15",
+      "cameras.json": "12f9fe39e8694d5941bb9cbb13ffb449641f1593"
+    }
+  },
+  "tiles": {
+    "train": {
+      "scene": "train",
+      "n_splats": 1026508,
+      "n_train_views": 263,
+      "n_test_views": 38,
+      "n_views": 301,
+      "image_size": [
+        980,
+        545
+      ],
+      "cameras_json_size": [
+        1959,
+        1090
+      ],
+      "max_num_rendered": 6254053,
+      "worst_view": "00072",
+      "mean_num_rendered": 4550540.2205323195,
+      "max_visible": 906452,
+      "seen_in_any_train_view": 1026508
+    },
+    "bicycle": {
+      "scene": "bicycle",
+      "n_splats": 6131954,
+      "n_train_views": 169,
+      "n_test_views": 25,
+      "n_views": 194,
+      "image_size": [
+        1237,
+        822
+      ],
+      "cameras_json_size": [
+        4946,
+        3286
+      ],
+      "max_num_rendered": 11798558,
+      "worst_view": "_DSC8706",
+      "mean_num_rendered": 7658656.284023669,
+      "max_visible": 2153507,
+      "seen_in_any_train_view": 6131774
+    }
+  },
+  "report": {
+    "train_tie": {
+      "per_splat_bytes": 1850,
+      "per_splat_total": 1899039800,
+      "images": 1929169200,
+      "binning": 225145908,
+      "image_state": 14954800,
+      "total": 4068309708,
+      "measured": 4550748160,
+      "explained_fraction": 0.893987002787691,
+      "residual": 482438452,
+      "residual_per_splat": 469.9802164230576
+    },
+    "bicycle": {
+      "cuda": {
+        "per_splat_bytes": 1850,
+        "per_splat_total": 11344114900,
+        "images": 2367142992,
+        "binning": 424748088,
+        "image_state": 28470792,
+        "total": 14164476772,
+        "code_only": 14164476772,
+        "with_train_residual_per_splat": 17046373840.016233
+      },
+      "cpu": {
+        "per_splat_bytes": 1850,
+        "per_splat_total": 11344114900,
+        "images": 0,
+        "binning": 424748088,
+        "image_state": 28470792,
+        "total": 11797333780,
+        "code_only": 11797333780,
+        "with_train_residual_per_splat": 14679230848.016233
+      }
+    },
+    "e3r": {
+      "train_as_coded_images_cuda": {
+        "gn_pass": 1408076417.0165086,
+        "cv_gn_vq": 2873112080,
+        "cv_scoring": 1927166125.9630845,
+        "injected_colour_step": 4831023504,
+        "render_temporaries": 141042205.96308452,
+        "metric_on_device": 558420352,
+        "M16_bytes_per_splat": 544
+      },
+      "train_as_coded_images_cpu": {
+        "gn_pass": 1408076417.0165086,
+        "cv_gn_vq": 2873112080,
+        "cv_scoring": 1927166125.9630845,
+        "injected_colour_step": 2901854304,
+        "render_temporaries": 141042205.96308452,
+        "metric_on_device": 558420352,
+        "M16_bytes_per_splat": 544
+      },
+      "train_mitigated_images_cuda": {
+        "gn_pass": 1408076417.0165086,
+        "cv_gn_vq": 2117602192,
+        "cv_scoring": 974566701.9630845,
+        "injected_colour_step": 4272603152,
+        "render_temporaries": 141042205.96308452,
+        "metric_on_device": 558420352,
+        "M16_bytes_per_splat": 544
+      },
+      "train_mitigated_images_cpu": {
+        "gn_pass": 1408076417.0165086,
+        "cv_gn_vq": 2117602192,
+        "cv_scoring": 974566701.9630845,
+        "injected_colour_step": 2343433952,
+        "render_temporaries": 141042205.96308452,
+        "metric_on_device": 558420352,
+        "M16_bytes_per_splat": 544
+      },
+      "bicycle_as_coded_images_cuda": {
+        "gn_pass": 8411293256.0,
+        "cv_gn_vq": 12573459480,
+        "cv_scoring": 11512130480.0,
+        "injected_colour_step": 15112297184,
+        "render_temporaries": 842530520.0,
+        "metric_on_device": 3335782976,
+        "M16_bytes_per_splat": 544
+      },
+      "bicycle_as_coded_images_cpu": {
+        "gn_pass": 8411293256.0,
+        "cv_gn_vq": 12573459480,
+        "cv_scoring": 11512130480.0,
+        "injected_colour_step": 12745154192,
+        "render_temporaries": 842530520.0,
+        "metric_on_device": 3335782976,
+        "M16_bytes_per_splat": 544
+      },
+      "bicycle_mitigated_images_cuda": {
+        "gn_pass": 8411293256.0,
+        "cv_gn_vq": 8060341336,
+        "cv_scoring": 5821677168.0,
+        "injected_colour_step": 11776514208,
+        "render_temporaries": 842530520.0,
+        "metric_on_device": 3335782976,
+        "M16_bytes_per_splat": 544
+      },
+      "bicycle_mitigated_images_cpu": {
+        "gn_pass": 8411293256.0,
+        "cv_gn_vq": 8060341336,
+        "cv_scoring": 5821677168.0,
+        "injected_colour_step": 9409371216,
+        "render_temporaries": 842530520.0,
+        "metric_on_device": 3335782976,
+        "M16_bytes_per_splat": 544
+      }
+    },
+    "m16": {
+      "bytes_per_splat": 544,
+      "accumulator_bytes_per_splat": 628,
+      "bicycle_all_splats": 3335782976,
+      "bicycle_accumulator": 3850867112
+    },
+    "t4_bytes": 15636037632,
+    "e3p_bicycle_measured": {
+      "gn_pass": 7994320384,
+      "dmse": 8997697024,
+      "gn_vq": 8488094720,
+      "runner": 1557184000,
+      "M15_bytes": 2943337920,
+      "n_splats": 6131954,
+      "reserved_max": 15177089024
+    }
+  }
+}

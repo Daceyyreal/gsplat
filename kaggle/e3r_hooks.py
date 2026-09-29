@@ -51,11 +51,11 @@ def _import_gn():
     sys.path.insert(0, os.path.join(REPO, "bench", "gn"))
     try:
         import diagnostics as gd
-        import e2b
         import e3r
+        import metric_store as ms
     finally:
         sys.path[:] = saved
-    return gd, e2b, e3r
+    return gd, ms, e3r
 
 
 class Hooks:
@@ -193,16 +193,18 @@ class Hooks:
                               "n_colour_quantized": int(s["vq_ids"].numel()), "n_kept_colour": int(s["kept_ids"].numel())}
 
     def _inject(self, x, C0, L0, qa):
-        gd, e2b, e3r = _import_gn()
+        gd, ms, e3r = _import_gn()
         cfg = self.inject_cfg
         t0 = time.perf_counter()
         ids = self.state["vq_ids"]
         payload = torch.load(cfg["m_path"], map_location="cpu", weights_only=False)
-        M = payload["M_packed"]
+        M = payload.pop("M_packed")
         if M.shape[0] != self.state["n_ckpt"]:
             raise RuntimeError(f"the metric has {M.shape[0]} rows, the checkpoint {self.state['n_ckpt']} splats")
-        M_sub = M.index_select(0, ids).to(x.device)
-        del M, payload["M_packed"]
+        # one device copy of the floored metric, filled slice by slice from host memory (metric_store, as E3p)
+        store = ms.MetricStore(x.device, ids)
+        store.add("full", M)
+        del M
         rep = {"rho": cfg["rho"], "n_colour_quantized": int(ids.numel()), "metric_path": cfg["m_path"],
                "total_pixels": int(payload["total_pixels"]), "quantizer_at_injection": qa}
         if cfg.get("probe_record") and os.path.exists(cfg["probe_record"]):
@@ -214,19 +216,22 @@ class Hooks:
                 rep["set_vs_probe"]["features_equal"] = bool(torch.equal(probe["x"], x.cpu()))
             del probe
         q = e3r.C3DGSQuantizer.from_state(qa)
-        C, L, report = e3r.run_gn_vq(x.float(), C0.float(), L0.long(), M_sub, float(cfg["rho"]), rep["total_pixels"], q,
+        Mf = store.floored("full", float(cfg["rho"]))
+        rep["metric_device_bytes"] = store.device_bytes()
+        C, L, report = e3r.run_gn_vq(x.float(), C0.float(), L0.long(), Mf, float(cfg["rho"]), rep["total_pixels"], q,
                                      eps=cfg.get("eps", e3r.VQ_EPS), max_iters=cfg.get("max_iters", e3r.VQ_MAX_ITERS),
-                                     rel_tol=cfg.get("rel_tol", e3r.VQ_REL_TOL), log=self.log)
+                                     rel_tol=cfg.get("rel_tol", e3r.VQ_REL_TOL), log=self.log,
+                                     report_metric=store.sorted("full"))
         rep["gn_vq"] = {k: v for k, v in report.items() if k != "history"}
         rep["gn_vq"]["history"] = report["history"][-3:]
         if cfg.get("n_lifted_check", 10000):
-            def lifted():
-                Mf = e2b.floored_metric(M_sub, float(cfg["rho"]))
+            def lifted():  # on the same floored buffer
                 Cq = q.quantize(C)[0]
                 rep["lifted_check"] = gd.lifted_check(x.float(), Mf, Cq, n_sample=int(cfg.get("n_lifted_check", 10000)), seed=0)
 
             self._safe("lifted_check", lifted)
-        del M_sub
+        del Mf
+        store.release()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
         rep["time_s"] = time.perf_counter() - t0

@@ -14,9 +14,9 @@ Stages:
 (1) the build, once (``--build_only``), every pip install with --no-deps;
 (2) train end to end: every row ok; the probe record, the colour share, the 7 CV rows, ``rho_cv``, the calibration;
     the injected run's set equal to the probe's and its geometry SHA-1 equal to the probe's (the seeding); the labels
-    surviving the fine-tune; the threshold rows; protocol ii of the uncompressed model recomputed independently;
-(3) bicycle: no threshold rows and no fine-tuned run (Amendment 14 e, c.v); a run out of GPU memory retried once
-    on the CPU data device and recorded as a deviation;
+    surviving the fine-tune; the threshold rows; a run out of GPU memory retried once on the CPU data device and
+    recorded as a deviation; protocol ii of the uncompressed model recomputed independently;
+(3) bicycle (Amendment 14 g): no C3DGS run at all; the uncompressed row and the two 16 x 16 GN passes;
 (4) resume runs nothing again;
 (5) failures recorded and not fatal: a failed build (every C3DGS row failed with the step named, the uncompressed
     row done), a passed deadline (no C3DGS run started, the reason recorded);
@@ -311,9 +311,13 @@ pips = [c for c in CALLS if " -m pip install" in c]
 assert b["ok"] and b["head"] == c3.C3DGS_COMMIT and pips and all("--no-deps" in c for c in pips)
 print("(1) the build, once: every pip install with --no-deps, the README deviations recorded: ok")
 
-# (2) train end to end
+# (2) train end to end, with a run out of GPU memory
 fake_data("train")
-assert job.main(argv(OUT, "train")) == 0
+FAIL["oom_run"] = "c3dgs_k8"
+try:
+    assert job.main(argv(OUT, "train")) == 0
+finally:
+    FAIL["oom_run"] = None
 meta = json.load(open(os.path.join(OUT, "gn3r", "gn3r_meta_train.json")))
 rr = rows_of(OUT, "train")
 assert set(rr) == set(job.wanted_configs("train")) and all(r["status"] == "ok" for r in rr.values()), \
@@ -337,30 +341,27 @@ nq = [int(r["n_colour_quantized"]) for r in thr[:2]] + [int(probe["n_colour_quan
 assert nq == sorted(nq) and nq[0] < nq[-1]  # a higher threshold quantizes more splats
 assert [float(rr[f"c3dgs_k{k}"]["color_codebook_size"]) for k in job.KS] == [float(k) for k in job.KS]
 assert abs(float(rr["uncompressed"]["PSNR_ii"]) - protocol_ii("train", MODELS["train"])) < 1e-4
+oom = rr["c3dgs_k8"]
+assert oom["data_device"] == "cpu" and oom["retried_on_cpu"] == "True"
+assert "OutOfMemoryError" in meta["runs"]["c3dgs_k8"]["first_error"] and meta["runs"]["c3dgs_k8"]["deviations"]
+assert all(rr[c]["data_device"] == "cuda" for c in rr if c.startswith(("c3dgs_k16", "c3dgs_k32", "gnvq_k")))
 summ = job.summarize(os.path.join(OUT, "gn3r"), ("train",))["scenes"]["train"]
 assert summ["knob_K"]["n_points"] == 4 and summ["knob_threshold"]["n_points"] == 5 and summ["rho_cv"] == meta["rho_cv"]
 print(f"(2) train: {len(rr)} rows ok; probe record, colour share {share['16x16']['share']:.3f} (15 x 15: "
       f"{share['15x15']['share']:.3f}), 7 CV rows, rho_cv {meta['rho_cv']}, calibration; the injected set = the probe's "
-      "and the same geometry SHA-1 (seeded), labels surviving the fine-tune, thresholds monotone, protocol ii "
-      "recomputed independently: ok")
+      "and the same geometry SHA-1 (seeded), labels surviving the fine-tune, thresholds monotone, a run out of GPU "
+      "memory retried once with --data_device cpu (a deviation), protocol ii recomputed independently: ok")
 
-# (3) bicycle, with a run out of GPU memory
+# (3) bicycle (Amendment 14 g): the GN passes alone, no C3DGS run
 fake_data("bicycle")
-FAIL["oom_run"] = "c3dgs_k8"
-try:
-    assert job.main(argv(OUT, "bicycle")) == 0
-finally:
-    FAIL["oom_run"] = None
+n0 = n_wrapper_calls()
+assert job.main(argv(OUT, "bicycle")) == 0
 mb = json.load(open(os.path.join(OUT, "gn3r", "gn3r_meta_bicycle.json")))
 rb = rows_of(OUT, "bicycle")
-assert set(rb) == set(job.wanted_configs("bicycle")) and all(r["status"] == "ok" for r in rb.values())
-assert not any("_j" in c or "ft5000" in c for c in rb)
-oom = rb["c3dgs_k8"]
-assert oom["data_device"] == "cpu" and oom["retried_on_cpu"] == "True"
-assert "OutOfMemoryError" in mb["runs"]["c3dgs_k8"]["first_error"] and mb["runs"]["c3dgs_k8"]["deviations"]
-assert all(rb[c]["data_device"] == "cuda" for c in rb if c.startswith(("c3dgs_k16", "c3dgs_k32", "gnvq_k"))),     {c: (r["data_device"], r["retried_on_cpu"]) for c, r in rb.items()}
-print("(3) bicycle: no threshold or fine-tuned rows, a run out of GPU memory retried once with --data_device cpu "
-      "(recorded as a deviation), every row ok: ok")
+assert set(rb) == {"uncompressed"} and rb["uncompressed"]["status"] == "ok" and n_wrapper_calls() == n0
+assert mb["gn_only"] and mb["done"] and mb["gn"]["full"]["M_shape"][1] == 136 and mb["gn"]["even"]["bands"] == "0-3"
+assert "colour_share" not in mb and mb.get("rho_cv") is None and mb["runs"] == {}
+print("(3) bicycle: no C3DGS run, the uncompressed row and the two 16 x 16 GN passes: ok")
 
 # (4) resume
 n_calls, n_builds = n_wrapper_calls(), BUILDS["n"]
@@ -432,6 +433,7 @@ exec(srcs[idx["summary"]], rns)
 summ = json.load(open(os.path.join(rns["GN3R_OUT"], "gn3r_summary.json")))
 assert summ["build"]["ok"] and set(summ["scenes"]) == {"bicycle", "train"}
 assert summ["scenes"]["bicycle"]["knob_threshold"] is None and summ["scenes"]["train"]["knob_threshold"]["n_points"] == 5
+assert summ["scenes"]["bicycle"]["knob_K"]["n_points"] == 0 and summ["scenes"]["bicycle"]["gn"]["full"]["bands"] == "0-3"
 jobs = [(f"gn_e3r_{s}", "cmd", "cwd", os.path.join(ROOT, f"gn_e3r_{s}.log")) for s in ("bicycle", "train")]
 for j in jobs:
     open(j[3], "w").write("\n".join(f"[x] line {i}" for i in range(250)) + "\n")

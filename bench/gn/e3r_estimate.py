@@ -124,7 +124,29 @@ def estimate():
     }
 
 
+def gn_only_job(scene: str, m=None):
+    """Amendment 14 g: a scene whose C3DGS steps moved to train keeps the download, one runner, the uncompressed
+    model's protocol ii and the two 16 x 16 GN passes (E3p's 15 x 15 times, up to 136 / 120 of them)."""
+    m = m or measured()
+    e3pm = json.load(open(os.path.join(E3P, f"gn3p_meta_{scene}.json")))
+    ev = next(s["time_s"] for s in e3pm["steps"] if s["name"] == "eval_ii_uncompressed")
+    fixed = m["download_s"][scene] + m["runner_s"][scene] + ev
+    return (fixed + m["gn_passes_s"][scene], fixed + m["gn_passes_s"][scene] * 136 / 120)
+
+
+def estimate_g():
+    """Amendment 14 g's configuration: train as Amendment 14 c-e has it, bicycle GN-only."""
+    m = measured()
+    setup = m["restore_s"] + m["install_s"] + m["build_s"]
+    train, _ = job("train", True, True, m)
+    bike = gn_only_job("bicycle", m)
+    return {"train": train, "bicycle_gn_only": bike, "setup_s": setup,
+            "session": (setup + max(train[0], bike[0]), setup + max(train[1], bike[1]))}
+
+
 def main() -> int:
+    g = estimate_g()
+    print("Amendment 14 g: train", g["train"], "bicycle GN-only", g["bicycle_gn_only"], "session", g["session"])
     e = estimate()
     f = lambda t: f"{t[0]:,.0f}-{t[1]:,.0f} s ({t[0] / 3600:.1f}-{t[1] / 3600:.1f} h)"
     print("setup (restore, install, build):", f"{e['setup_s']:,.0f} s")

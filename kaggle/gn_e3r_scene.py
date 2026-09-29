@@ -21,6 +21,12 @@ scenes, with INRIA's 30k checkpoints. No verdicts.
 4. **the other K** (c.i), and on train **the threshold grid** (c.ii, Amendment 14 e);
 5. **protocol ii** of every decoded row (``npz2ply.py``, E3p's loader), one ``.ply`` at a time.
 
+**Amendment 14 g** (a memory check from the code): C3DGS's own sensitivity pass does not fit a T4 at bicycle's 6.13M
+splats, so the C3DGS steps (1, 3, 4, and the cross-validation and trace share that need the probe) run on train only.
+Bicycle keeps its runner, the uncompressed model's protocol ii and the two 16 x 16 GN passes. The cross-validation and
+the injection hold one device copy of the floored metric (``metric_store``, as E3p), and the reference colours stay in
+host memory.
+
 Every C3DGS run records its splat counts, quantizer state and times. A C3DGS run that fails out of GPU memory is
 retried once with ``--data_device cpu``, and the retry is recorded as a deviation. No new C3DGS run starts after
 ``--deadline`` minus ``--reserve_s``. Any error is recorded and the steps that do not need its product still run
@@ -51,6 +57,7 @@ import gn_e2_scene as e2  # noqa: E402  (the dataset downloaders)
 import gn_e3p_scene as e3p  # noqa: E402  (the runner, the environment)
 import gn_e3q_scene as e3q  # noqa: E402  (Steps with any error caught)
 import gn_metric as gm  # noqa: E402
+import metric_store as ms  # noqa: E402
 import tilequant_run4 as r4  # noqa: E402
 import tilequant_run5_analysis as r5a  # noqa: E402
 
@@ -62,6 +69,7 @@ THRESHOLD_DEFAULT = 0.6e-6  # C3DGS's color_importance_include
 THRESHOLD_STEPS = (-2, -1, 1, 2)  # c.ii: 0.6e-6 x 3^j; j = 0 is the probe run
 THRESHOLD_SCENES = ("train",)  # Amendment 14 e: the runtime estimate exceeds one session with (ii) on both
 FT5000_SCENES = ("train",)  # c.v
+C3DGS_SCENES = ("train",)  # Amendment 14 g: C3DGS's own peak does not fit a T4 at bicycle's size
 RHOS = e2c.RHOS  # Amendment 12 b
 PROBE_SEED = 0
 UNCOMPRESSED, CV = "uncompressed", "gnvq_cv"
@@ -92,7 +100,9 @@ def threshold_value(j: int) -> float:
 
 
 def run_specs(scene: str) -> List[Dict]:
-    """The C3DGS runs of a scene, in Amendment 14 d's order."""
+    """The C3DGS runs of a scene, in Amendment 14 d's order; none on a scene Amendment 14 g restricts."""
+    if scene not in C3DGS_SCENES:
+        return []
     base = {"thr": THRESHOLD_DEFAULT, "j": 0, "ft": 0}
     specs = [{"name": f"c3dgs_k{K_DEFAULT}", "kind": "baseline", "K": K_DEFAULT, **base, "probe": True},
              {"name": f"gnvq_k{K_DEFAULT}", "kind": "injected", "K": K_DEFAULT, **base}]
@@ -106,7 +116,8 @@ def run_specs(scene: str) -> List[Dict]:
 
 
 def wanted_configs(scene: str) -> List[str]:
-    return [UNCOMPRESSED] + [f"{CV}_rho{e2c.rho_label(r)}" for r in RHOS] + [s["name"] for s in run_specs(scene)]
+    cv = [f"{CV}_rho{e2c.rho_label(r)}" for r in RHOS] if scene in C3DGS_SCENES else []
+    return [UNCOMPRESSED] + cv + [s["name"] for s in run_specs(scene)]
 
 
 def append_row(csv_path: str, row: Dict) -> None:
@@ -204,7 +215,9 @@ def main(argv=None):
         return {r["config"] for r in read_rows(csv_path, scene) if r["status"] == "ok"}
 
     specs = run_specs(scene)
-    if not [c for c in wanted_configs(scene) if c not in done_configs()]:
+    gn_only = scene not in C3DGS_SCENES
+    gn_measured = all(k in meta.get("gn", {}) for k in ("full", "even"))
+    if not [c for c in wanted_configs(scene) if c not in done_configs()] and (gn_measured or not gn_only):
         log(scene, "all rows exist")
         meta["done"] = True
         save()
@@ -212,7 +225,8 @@ def main(argv=None):
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     meta.update(dataset=args.dataset, scene_set="development", data_factor=args.data_factor, ks=list(KS),
                 k_default=K_DEFAULT, thresholds={str(j): threshold_value(j) for j in (0,) + THRESHOLD_STEPS},
-                threshold_scenes=list(THRESHOLD_SCENES), rhos=list(RHOS), gsplat_commit=args.commit,
+                threshold_scenes=list(THRESHOLD_SCENES), c3dgs_scenes=list(C3DGS_SCENES), gn_only=gn_only,
+                rhos=list(RHOS), gsplat_commit=args.commit,
                 env=e3p.environment(), c3dgs_commit=c3.C3DGS_COMMIT, deadline=args.deadline, reserve_s=args.reserve_s,
                 gn_vq={"eps": e3r.VQ_EPS, "max_iters": e3r.VQ_MAX_ITERS, "rel_tol": e3r.VQ_REL_TOL,
                        "floor": "M_i + rho * tr(M_i) / 16 * I", "metric": "16 x 16, bands 0-3 (Amendment 14 b)",
@@ -301,8 +315,8 @@ def main(argv=None):
         return meta["runs"][name]
 
     # 2. the probe run
-    probe = specs[0]
-    if probe["name"] not in done_configs():
+    probe = specs[0] if specs else None
+    if probe is not None and probe["name"] not in done_configs():
         run_c3dgs(probe, f"--seed 0 --observe --record {shlex.quote(probe_record)}")
 
     # 3. the harness phase
@@ -369,13 +383,16 @@ def main(argv=None):
     full_cache = os.path.join(args.gn_cache_dir, f"{scene}_full16.pt")
     even_cache = os.path.join(args.gn_cache_dir, f"{scene}_even16.pt")
     injected = [s for s in specs if s["kind"] == "injected"]
+    if gn_only:  # Amendment 14 g: the GN passes alone, measured
+        cv_names = {}
     need_cv = any(n not in done_configs() for n in cv_names.values())
-    need_share = "colour_share" not in meta
-    need_calib = "calibration" not in meta
+    need_share = "colour_share" not in meta and not gn_only
+    need_calib = "calibration" not in meta and not gn_only
     need_full = any(s["name"] not in done_configs() for s in injected)
-    if need_cv or need_share or need_calib or need_full:
+    if need_cv or need_share or need_calib or need_full or (gn_only and not gn_measured):
         harness_phase(args, scene, steps, meta, save, csv_path, common, get_runner, uncompressed_row, probe_record,
-                      full_cache, even_cache, cv_names, need_cv, need_share, need_calib, need_full, dev, done_configs)
+                      full_cache, even_cache, cv_names, need_cv, need_share, need_calib, need_full, dev, done_configs,
+                      gn_only=gn_only)
     else:
         uncompressed_row()
     drop_runner()
@@ -421,7 +438,7 @@ def main(argv=None):
     meta["missing_or_failed"] = [c for c in wanted_configs(scene) if got.get(c) != "ok"]
     meta["failed_steps"] = [s["name"] for s in meta["steps"] if s["status"] in ("error", "oom")]
     meta["skipped_steps"] = [s["name"] for s in meta["steps"] if s["status"] == "skipped"]
-    meta["done"] = not meta["missing_or_failed"]
+    meta["done"] = not meta["missing_or_failed"] and (not gn_only or all(k in meta.get("gn", {}) for k in ("full", "even")))
     meta["data_deleted"] = False if args.keep_data else e2.delete_data(args)
     save()
     log(scene, "E3r DONE" if meta["done"] else f"E3r FINISHED: missing or failed {meta['missing_or_failed']}, "
@@ -430,9 +447,10 @@ def main(argv=None):
 
 
 def harness_phase(args, scene, steps, meta, save, csv_path, common, get_runner, uncompressed_row, probe_record,
-                  full_cache, even_cache, cv_names, need_cv, need_share, need_calib, need_full, dev, done_configs):
+                  full_cache, even_cache, cv_names, need_cv, need_share, need_calib, need_full, dev, done_configs,
+                  gn_only: bool = False):
     """Step 3: the runner, the uncompressed model, the 16 x 16 GN passes, the trace share, the SH-only
-    cross-validation and the calibration (Amendment 14 b-c)."""
+    cross-validation and the calibration (Amendment 14 b-c). ``gn_only`` (Amendment 14 g): the two GN passes alone."""
     runner = get_runner()
     uncompressed_row()
     if runner is None:
@@ -472,6 +490,11 @@ def harness_phase(args, scene, steps, meta, save, csv_path, common, get_runner, 
         save()
         return g
 
+    if gn_only:
+        for kind, views, path in (("full", train_views, full_cache), ("even", even_views, even_cache)):
+            if kind not in gn_meta:
+                gn16(kind, views, path)
+        return
     rec = torch.load(probe_record, map_location="cpu", weights_only=False) if os.path.exists(probe_record) else None
     if rec is None:
         steps.skip("colour_share", "no probe record (the probe run did not finish)")
@@ -493,19 +516,29 @@ def harness_phase(args, scene, steps, meta, save, csv_path, common, get_runner, 
     C0, L0 = rec["codebook"].to(dev).float(), rec["labels"].to(dev).long()
     ids = rec["vq_ids"].long()
     q = e3r.C3DGSQuantizer.from_state(rec["qa"])
-    M_even = g_even["M_packed"].index_select(0, ids).to(dev)
-    base = e3r.colours_of(splats_raw["sh0"], splats_raw["shN"]).clone()
-    base[ids.to(base.device)] = x.to(base.device)
-    base[rec["kept_ids"].long().to(base.device)] = rec["kept_rows"].to(base.device, base.dtype)
+    # One device copy of the floored metric (metric_store, as E3p; bit-identical values), released during the
+    # scoring renders; the reference colours kept on the host, only the rendered ones on the device.
+    store = ms.MetricStore(dev, ids)
+    store.add("even", g_even["M_packed"])
+    del g_even
+    base = e3r.colours_of(splats_raw["sh0"], splats_raw["shN"]).cpu().clone()
+    base[ids] = x.cpu()
+    base[rec["kept_ids"].long()] = rec["kept_rows"].to(base.dtype)
     sh0_ref, shn_ref = e3r.split_colours(base)
-    ref = {**splats_raw, "sh0": sh0_ref, "shN": shn_ref}
+    ref = {**splats_raw, "sh0": sh0_ref.to(dev), "shN": shn_ref.to(dev)}
+    del sh0_ref, shn_ref
     render_rgb = e0.eval_renderer(runner)
-    ids_dev = ids.to(base.device)
     codebooks: Dict[float, tuple] = {}
 
     def gn_vq(rho):
-        res = steps.run(f"gn_vq_cv_rho{e2c.rho_label(rho)}", lambda: e3r.run_gn_vq(
-            x, C0, L0, M_even, rho, even_pixels, q, log=lambda m: log(scene, m)))
+        def run():
+            Mf = store.floored("even", rho)
+            meta.setdefault("metric_store", {})["device_bytes"] = store.device_bytes()
+            return e3r.run_gn_vq(x, C0, L0, Mf, rho, even_pixels, q, log=lambda m: log(scene, m),
+                                 report_metric=store.sorted("even"))
+
+        res = steps.run(f"gn_vq_cv_rho{e2c.rho_label(rho)}", run)
+        store.release()  # the scoring renders do not need it
         if res is None:
             return None
         C, L, rep = res
@@ -515,8 +548,9 @@ def harness_phase(args, scene, steps, meta, save, csv_path, common, get_runner, 
 
     def variant(Cq, L):
         v = base.clone()
-        v[ids_dev] = Cq[L].to(v.device, v.dtype)
-        return e3r.split_colours(v)
+        v[ids] = Cq[L].cpu().to(v.dtype)
+        sh0, shn = e3r.split_colours(v)
+        return sh0.to(dev), shn.to(dev)
 
     for rho, name in cv_names.items():
         if name in done_configs():
@@ -558,7 +592,7 @@ def harness_phase(args, scene, steps, meta, save, csv_path, common, get_runner, 
         Cq, L, _ = r
 
         def calib():
-            P = e3r.predicted_colour_dmse(M_even, (Cq[L] - x).to(M_even.device), even_pixels)
+            P = e3r.predicted_colour_dmse(store.sorted("even"), Cq[L].to(x.device) - x, even_pixels)
             m = e3r.colour_dmse(render_rgb, even_views, ref, {"v": variant(Cq, L)})["v"]
             return {"rho": rho, "predicted": P, "measured_even_raw": m["raw"], "measured_even_clamped": m["clamped"],
                     "ratio_raw": P / m["raw"] if m["raw"] > 0 else float("inf"), "n_views": m["n_views"],

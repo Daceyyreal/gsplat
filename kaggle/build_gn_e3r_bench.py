@@ -29,20 +29,22 @@ md(
 
 Kaggle notebook title: **E3r C3DGS pilot** (`bench/gn-vq`, `kaggle/gn_e3r_bench.ipynb`).
 
-`kaggle/PREREG_GN.md` **Amendment 14** (with its note f), committed before any E3r code, fixes this pilot. **E3r is an
+`kaggle/PREREG_GN.md` **Amendment 14** (with its notes f and g) fixes this pilot. **E3r is an
 engineering pilot of the C3DGS host and has no verdicts.** Two development scenes, **train** and **bicycle**, with
 INRIA's 30k checkpoints through E3p's pinned archive members. The gate scenes are untouched.
 
 The C3DGS host is E3q's: `KeKsBoTer/c3dgs` at `2a234af5`, built once per session into the session's Python with
 `--no-deps`, its `compress.py` run unchanged through E3q's wrapper (the chunked `eigh` / `det` of Amendment 13 g), every
-run seeded with 0 as C3DGS's own `safe_state` seeds (Amendment 14 f). Per scene (`kaggle/gn_e3r_scene.py`):
+run seeded with 0 as C3DGS's own `safe_state` seeds (Amendment 14 f). **Amendment 14 g:** C3DGS's own peak memory does
+not fit a T4 at bicycle's 6.13M splats (a check from the code), so **every C3DGS step runs on train only**; bicycle
+measures the two 16 x 16 GN passes and the uncompressed model's protocol ii. On train (`kaggle/gn_e3r_scene.py`):
 
-- **C3DGS's baseline without fine-tuning at K = 1,024, 4,096, 16,384 and 65,536** (colour codebook size); on train
-  also **the colour-importance threshold** 0.6e-6 x 3^j, j = -2..2 (Amendment 14 e keeps it to train);
+- **C3DGS's baseline without fine-tuning at K = 1,024, 4,096, 16,384 and 65,536** (colour codebook size), and
+  **the colour-importance threshold** 0.6e-6 x 3^j, j = -2..2 (Amendment 14 e);
 - **the colour-quantized splats' count and their share of `tr(M_i)`** under the 16 x 16 GN metric (bands 0-3,
   Amendment 14 b) and its 15 x 15 block;
 - **GN-VQ with the floor** `M_i + rho tr(M_i) / 16 I`, `rho` by SH-only cross-validation on the odd train views,
-  **injected into C3DGS's own run** at K = 4,096 without fine-tuning, and on train also with its 5,000-iteration
+  **injected into C3DGS's own run** at K = 4,096 without fine-tuning, and also with its 5,000-iteration
   fine-tuning (do the labels survive?);
 - sizes in MiB and MB, C3DGS's own metrics and **protocol ii** of every decoded model, times and peak memory.
 
@@ -50,7 +52,8 @@ A step that fails is recorded and the steps that do not depend on it still run. 
 deadline (11.5 h into the session) less a reserve for evaluation and the bundle; a resumed session reruns only what
 has no `ok` row.
 
-**Kaggle settings:** accelerator *GPU T4 x2* (both are used: bicycle on one, train on the other), Internet *on*.
+**Kaggle settings:** accelerator *GPU T4 x2* (both are used: bicycle's short GN job on one, train on the other),
+Internet *on*.
 
 | Attach | Required | What E3r takes from it |
 |---|---|---|
