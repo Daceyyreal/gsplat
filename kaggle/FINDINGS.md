@@ -62,6 +62,16 @@ and 21.293 dB (train), against INRIA's published 25.246 and 21.097; this project
 0.598 dB lower. `rho_cv` was 3e-1 on bicycle, the first selection above 1e-1. The C3DGS build failed before
 compiling (no `ensurepip` for a venv).
 
+**E3q (section 14, branch `bench/gn-vq`): exploratory smoke test of the C3DGS host, no verdicts (Amendment
+13).**
+- **The runs:** C3DGS built into the session's Python and ran its own compression on INRIA's train model. Attempt
+  1 failed in a cuSOLVER batched eigendecomposition. Attempt 2, with `eigh` and `det` chunked (Amendment 13 g, no
+  refusal at 8,192), ran both runs.
+- **The fine-tuned run:** 13.267 MiB, and 21.843 dB in C3DGS's own evaluation against its published 21.863 dB.
+- **Protocol ii** reads the compressed models 0.410-0.523 dB lower than C3DGS's own evaluation; the files do not
+  say why.
+- **Cost:** each run took 351.6 s without fine-tuning and 666.4 s with it.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -110,6 +120,16 @@ compiling (no `ensurepip` for a venv).
   (`kaggle/gn_e2c/gn2c/`, `kaggle/gn_e2/gn2/`) and the 13 scenes' splat counts (kaggle/E3_SCOUTING.md a).
   The bundle is unpacked unchanged in `kaggle/gn_e3p/gn3p/` (`25f2133a`). `bench/gn/check_s13.py`
   recomputes every number in the section from those files and checks each against the text.
+- Section 14: every number comes from the two E3q bundles, each unpacked unchanged:
+  - attempt 1: `kaggle/gn_e3q/attempt1/gn3q/` (`59303486`; one Kaggle session, 2026-09-28, gsplat commit
+    `27ea27db`);
+  - attempt 2: `kaggle/gn_e3q/attempt2/gn3q/` (`a6c6f725`; one Kaggle session, rows timestamped
+    2026-09-28T20:08, gsplat commit `b7125673`).
+
+  Both sessions reused a restored wheel and E3p's fetched members. The exceptions are C3DGS's published row (arXiv
+  2401.02436v2, Table 9, row train), E3p's rows and its protocol gap (`kaggle/gn_e3p/gn3p/`, section 13), and the
+  note on `load_npz` / `save_ply`, which was read from C3DGS's source at `2a234af5`. Every number was recomputed
+  from those files by a script and checked against the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -2149,3 +2169,165 @@ succeeded; `python -m venv --system-site-packages` then failed after 0.2 s becau
 - **The C3DGS host is not built yet;** the venv route does not work on this image.
 - **Time, not memory, is E3's constraint:** the estimate above puts the frozen method at 4 K on the 13 scenes
   at 48.9-94.1 GPU-hours.
+
+## 14. E3q: the C3DGS host on INRIA's train model (`bench/gn-vq`, exploratory smoke test) — attempt 1 failed in cuSOLVER; attempt 2 ran both C3DGS runs
+
+**E3q is an engineering smoke test of the C3DGS host and has no verdicts** (Amendment 13, `b1e8725b`, and its
+note g, `0b11f7ab`, both written before the code they govern). It builds C3DGS (`KeKsBoTer/c3dgs` at `2a234af5`)
+on Kaggle and runs its own `compress.py`, with its own vector quantization and defaults, on INRIA's 30k train
+checkpoint, twice:
+- without fine-tuning (`c3dgs_ft0`);
+- with its 5,000-iteration quantization-aware fine-tuning (`c3dgs_ft5000`).
+
+GN-VQ does not run here, and nothing below is a result about the method. Every number comes from
+`kaggle/gn_e3q/attempt1/gn3q/` and `kaggle/gn_e3q/attempt2/gn3q/`, except C3DGS's published row (arXiv
+2401.02436v2, Table 9) and E3p's rows (`kaggle/gn_e3p/gn3p/`). Items marked **post hoc** were read from the files
+after the fact.
+
+**What ran:**
+- **Attempt 1** built C3DGS, but both runs failed in its covariance compression. cuSOLVER refused one batched
+  `torch.linalg.eigh`.
+- **Attempt 2** ran with `eigh` and `det` chunked in the wrapper (Amendment 13 g). Every step and all three rows
+  succeeded, and no chunk was refused at 8,192.
+- **Against the published row:** the fine-tuned run reads 21.843 dB and 13.267 MiB in C3DGS's own evaluation,
+  against its published 21.863 dB and 13.249 MiB.
+- **Two protocols:** under this project's protocol ii, both compressed models read 0.410-0.523 dB lower than
+  C3DGS's own evaluation of the same run.
+
+### Attempt 1 (2026-09-28, `kaggle/gn_e3q/attempt1/gn3q/`)
+
+- **The build:** C3DGS built and imported (10 of 10 imports) in 204.9 s. The two CUDA extensions took 112.8 s and
+  70.4 s, and `torch-scatter` came from a PyG wheel (2.2 s). No fallback was used, and the deviations are
+  Amendment 13 b's six.
+- **Both runs failed:** after 270.8 s (`c3dgs_ft0`) and 273.3 s (`c3dgs_ft5000`), in C3DGS's `utils/splats.py`,
+  `extract_rot_scale`: `torch.linalg.eigh` on one float32 batch of 3x3 matrices, `CUSOLVER_STATUS_INVALID_VALUE`
+  from `cusolverDnXsyevBatched_bufferSize`. Neither wrote a `.npz`.
+- **The uncompressed row:** protocol ii read 21.293 dB, the same value as E3p's.
+
+### Attempt 2: inputs and checks
+
+| Check | Result |
+|---|---|
+| Session | torch 2.10.0+cu128 (CUDA 12.8), driver 580.159.04, Tesla T4; gsplat commit `b7125673`; the restored gsplat wheel (install 160.7 s) |
+| INRIA members | E3p's attached copies, re-checked and reused (`present`); `cfg_args` matches E3p's pin, no mismatch |
+| C3DGS build | ok, 204.3 s (extensions 113.5 s and 70.8 s, `torch-scatter` wheel 1.9 s), 10 of 10 imports, head `2a234af5`; no fallback; the six fixed README deviations |
+| Camera frame / test split | pass / 38 test views, equal to `cameras.json`'s |
+| Rows | `uncompressed`, `c3dgs_ft0`, `c3dgs_ft5000`, all `ok`; no failed or skipped step; the job exited 0 |
+
+### The chunked linear algebra (Amendment 13 g)
+
+Each run made one chunked `eigh` call and one chunked `det` call, each on 281,237 float32 3x3 matrices. No
+backend refused a chunk: `fallbacks` is empty and the working batch stayed at 8,192. No other call passed through
+the patch.
+
+The report-only float64 CPU check used 4,096 sampled matrices per call:
+
+| Run | `eigh`: largest eigenvalue difference (largest eigenvalue) | `eigh`: largest reconstruction residual | `det`: largest difference |
+|---|---|---|---|
+| `c3dgs_ft0` | 1.44e-06 (16.20) | 2.77e-06 | 2.20e-07 |
+| `c3dgs_ft5000` | 2.17e-06 (38.99) | 1.09e-05 | 2.20e-07 |
+
+**Post hoc:** the batch is the 4,096 Gaussian-codebook entries plus 277,141 splats kept with their own geometry.
+That is 30.43% of the 910,601 splats left after C3DGS's pruning (below).
+
+### The rows
+
+C3DGS's evaluation is its own `render_and_eval`: float renders of the in-memory compressed model, on INRIA's test
+split. Protocol ii is this project's (Amendment 12 a), run on the `.ply` that C3DGS's `npz2ply.py` decoded from the
+`.npz`. Sizes are the `.npz`'s bytes; MiB is 2^20 bytes (C3DGS's own "MB"), MB is 10^6 bytes.
+
+| Config | Splats | `.npz` bytes | MiB | MB | C3DGS: PSNR / SSIM / LPIPS | Protocol ii: PSNR / SSIM / LPIPS |
+|---|---|---|---|---|---|---|
+| `uncompressed` | 1,026,508 | - | - | - | - | 21.293 / 0.7926 / 0.2170 |
+| `c3dgs_ft0` | 910,601 | 13,822,087 | 13.182 | 13.822 | 21.508 / 0.7900 / 0.2353 | 20.986 / 0.7738 / 0.2366 |
+| `c3dgs_ft5000` | 910,601 | 13,911,175 | 13.267 | 13.911 | 21.843 / 0.8009 / 0.2261 | 21.434 / 0.7875 / 0.2273 |
+
+- **Pruning:** C3DGS pruned 115,907 splats (11.29%), those with zero colour sensitivity (`prune_threshold` 0), in
+  both runs.
+- **Compression ratio:** the `.npz` files are 18.42 (`c3dgs_ft0`) and 18.30 (`c3dgs_ft5000`) times smaller than the
+  30k `.ply`.
+- **Fine-tuning's size cost:** it added 89,088 bytes (+0.64%).
+
+**The published row, a sanity check only (Amendment 13 e).** C3DGS's Table 9 train row, with fine-tuning and in
+its own protocol, is 21.863 dB / 0.798 / 0.226 / 13.249 MiB. `c3dgs_ft5000` in C3DGS's own evaluation differs from
+it by:
+- -0.020 dB PSNR;
+- +0.0029 SSIM and +0.0001 LPIPS;
+- +0.134% in size.
+
+No criterion attaches to the comparison.
+
+### The two protocols
+
+| | C3DGS's evaluation (dB) | Protocol ii (dB) | Difference (dB) |
+|---|---|---|---|
+| `c3dgs_ft0` | 21.508 | 20.986 | +0.523 |
+| `c3dgs_ft5000` | 21.843 | 21.434 | +0.410 |
+| uncompressed: C3DGS's published "3D Gaussian Splatting" row vs this session | 21.770 (published) | 21.293 | +0.477 |
+
+**Post hoc: what the files do and do not show.**
+- **Not a constant offset.** On the compressed models, C3DGS's evaluation reads higher than protocol ii in both runs,
+  but by amounts that differ by 0.113 dB.
+- **The uncompressed row is not a same-session measurement.** Its C3DGS-side number is a published value from
+  another session. E3q never ran C3DGS's evaluation on the uncompressed model.
+- **What the gap is compatible with.** A protocol offset that is present with and without compression is
+  compatible with these numbers, but they do not show one.
+- **What the gap could come from, which these files cannot separate:**
+  - the rasterizer: INRIA's, in C3DGS, against gsplat's;
+  - the metric code;
+  - the 8-bit quantization of protocol ii's renders;
+  - for the compressed rows, the in-memory model against its `.npz` round trip.
+- **The 8-bit step is small here.** On this checkpoint E3p measured this project's two protocols 0.001 dB apart
+  (section 13), and the 8-bit step is one of their differences.
+- **Correction to Amendment 13 d's caveat, from C3DGS's code (read, not run).** Amendment 13 d says the `.ply`
+  lacks C3DGS's render-time fake quantization. But `load_npz` restores `xyz` from its stored half-precision values
+  and opacity from its int8 codes, and `save_ply` writes those values. So the decoded `.ply` carries the stored
+  quantized values. At most, it lacks a second application of the quantizers at render time.
+
+### Time and memory (attempt 2)
+
+| Step | Seconds | Peak allocated GPU memory (GB) |
+|---|---|---|
+| dataset download | 352.0 | - |
+| C3DGS build | 204.3 | - |
+| `c3dgs_ft0` (wall time in the wrapper) | 351.6: sensitivity 16.0, clustering 257.7, encode 1.7 | 4.55 (reserved 4.81) |
+| `c3dgs_ft5000` (wall time in the wrapper) | 666.4: sensitivity 16.6, clustering 257.1, fine-tuning 317.9, encode 1.7 | 4.55 (reserved 4.96) |
+| `npz2ply.py` | 11.9 / 11.8 | - |
+| harness runner | 42.5 | 0.34 |
+| protocol ii: uncompressed / `c3dgs_ft0` / `c3dgs_ft5000` | 8.4 / 7.9 / 8.1 | 1.65 / 1.87 / 1.87 |
+
+- **What the rest of each wall time is:** mainly loading and C3DGS's own evaluation; its 38 test renders took 1:05
+  and 1:03 by the runs' progress-bar tails.
+- **The chunked calls themselves:** `eigh` took 0.142 s and 0.053 s, `det` 1.067 s and 0.018 s.
+- **The whole job:** 1,676.4 s by its own clock, 1,695.0 s in the queue. Restore took 20.1 s and install 160.7 s.
+  Rows are timestamped 2026-09-28T20:08:17 to 20:08:33.
+
+### Post hoc
+
+- **Fine-tuning** raises protocol ii by 0.448 dB, from 20.986 to 21.434 dB. C3DGS's own evaluation rises by 0.335
+  dB.
+  - Without fine-tuning, the compressed model reads 0.308 dB below the uncompressed one under protocol ii; with
+    it, 0.141 dB above.
+  - The fine-tuning is 5,000 more iterations of training on the train views, so this is not a like-for-like
+    comparison with the uncompressed checkpoint.
+- **Context, not a comparison.** E3p ran gsplat's `PngCompression` on the same checkpoint, under protocol ii
+  (section 13): `gn_vq_cvfloor` read 21.252 dB at 16,896,483 bytes, and `lloyd_wopa_area` 21.209 dB at 16,823,682
+  bytes. These rows are not comparable with C3DGS's, because the two codecs differ:
+  - in what they quantize and prune;
+  - in their entropy coding;
+  - in what is counted: a directory of PNGs and metadata, against one `.npz`.
+
+### What E3q settles, and what it does not
+
+- **C3DGS runs on Kaggle's T4 image** under torch 2.10.0+cu128. That takes the session's environment instead of the
+  README's conda one, and the chunked `eigh` and `det`. Both are recorded deviations, and the source is unedited.
+- **Its own evaluation reproduces its published train row** to within 0.020 dB in PSNR and 0.134% in size, a
+  sanity check of the host.
+- **A C3DGS run is cheap on train:** 351.6 s without fine-tuning and 666.4 s with it, at 4.55 GB peak.
+- **Not settled:**
+  - what makes up the 0.410-0.523 dB gap between the two protocols;
+  - C3DGS on any other scene;
+  - any codebook size other than 4,096;
+  - how many splats keep their own colour, which the files do not record.
+
+  Nothing about GN-VQ inside C3DGS is settled either.
