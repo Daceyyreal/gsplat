@@ -110,6 +110,11 @@ source stays unedited **[not implemented]**.
    - it consumes the global CPU and CUDA random streams exactly as the baseline does, so the geometry VQ that
      follows draws the same batches in both arms;
    - its codebook and labels are the baseline arm's colour codebook, which is the natural warm start.
+
+   **Corrected 2026-09-29 (PREREG_GN.md Amendment 14 f):** the first reason holds only if both runs start from the
+   same seed. `compress.py` seeds nothing, and torch's default generator starts from a different seed in each
+   process. E3r's wrapper therefore seeds `random`, `numpy` and `torch` with 0, as C3DGS's own `safe_state` does.
+   GPU atomics can still separate two seeded runs; E3r records by how much.
 3. Run GN-VQ with the floored metric on the quantized splats from that warm start, with its own generators (no
    global torch or Python `random` draws: fine-tuning picks cameras with Python's `random.randint`). Return its
    codebook and labels.

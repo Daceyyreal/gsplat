@@ -1572,3 +1572,34 @@ proportional in K, and the 16 x 16 GN-VQ as 1 to 136 / 120 times the 15 x 15 cos
 - **With both jobs in parallel,** the session is estimated at 2.7-10.7 h.
 - **What is not estimated:** C3DGS on bicycle has never run, so its memory is not estimated either. The deadline
   and resume in (d) cover the upper end.
+
+### f. Note (2026-09-29, before any E3r code is committed and before any E3r run)
+
+**What building E3r showed.** C3DGS's `compress.py` sets no seed. Its `render.py` calls `safe_state`
+(`utils/general_utils.py`), which seeds `random`, `numpy` and `torch` with 0; `compress.py` does not. And torch's
+default generator starts from a different seed in every process: two fresh processes gave different
+`torch.initial_seed()` values locally, under torch 2.11 on the CPU.
+
+- **The consequence.** Two C3DGS runs draw different random batches. That holds for any two runs: a baseline and
+  an injected run, or two baselines.
+- **What that does to b.** Its statement that running C3DGS's own `vq_features` first makes "the global random
+  streams advance exactly as in C3DGS's own run" holds within one run, but pairs nothing across runs. The same
+  goes for `kaggle/E3_C3DGS_DESIGN.md` section 2's "the geometry VQ that follows draws the same batches in both
+  arms".
+
+**For E3r:**
+- **Every run is seeded.** The wrapper seeds `random`, `numpy` and `torch` (all devices) with 0 before it runs
+  `compress.py` (`--seed 0`): the seeds of C3DGS's own `safe_state`. This covers every E3r run, baseline and
+  injected alike. It is recorded as a deviation in each run's record. C3DGS's source is still not edited.
+- **The pairing can still break.** GPU atomics can make two seeded runs differ: C3DGS's scatter-based codebook
+  updates, and the backward pass of its sensitivity computation, which sets the keep thresholds' inputs. The pilot
+  already records how much:
+  - the injected run's quantized set against the probe run's (c.iv);
+  - every run's geometry-table SHA-1.
+
+  Equal SHA-1s mean the geometry VQ was reproduced.
+- **A CPU check:** a stand-in with C3DGS's call structure, fake quantizers and random streams gives identical
+  outputs across processes once seeded, and identical outputs with and without the observe and record hooks
+  (`bench/gn/test_gn.py`).
+- **The rest of Amendment 14 stands.** This changes neither its grids nor its order, and E3q's runs (Amendment 13)
+  were unseeded.
