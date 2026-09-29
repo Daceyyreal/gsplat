@@ -1420,3 +1420,155 @@ by cuSOLVER: `CUSOLVER_STATUS_INVALID_VALUE` from `cusolverDnXsyevBatched_buffer
   train.
 - **Everything else in Amendment 13 stands**, f included: a later failure is recorded, and every step that does not
   need its product still runs.
+
+## Amendment 14 (2026-09-29, after E3q's results and before any E3r code)
+
+E3q has closed (FINDINGS section 14, `6568cf25`, re-checked by `bench/gn/check_s14.py`). The C3DGS arm's integration
+design is `kaggle/E3_C3DGS_DESIGN.md` (`cab8d1d3`), which recommends a pilot before the arm's pre-registration.
+This amendment pre-registers that pilot, **E3r**, and records the method extension it exercises. G0, G1, G2a, H2b,
+G2c, E2b's criteria and Amendments 1-13 are unchanged.
+
+### a. Scope
+
+- **E3r is an engineering pilot of the C3DGS host. It is exploratory and has no verdicts.** It measures what the
+  arm's pre-registration needs:
+  - C3DGS's rate range under two knobs;
+  - how much of the metric the colour-quantized splats carry;
+  - whether GN-VQ with the floor runs inside C3DGS end to end, and what it costs.
+
+  No claim about the method rests on its numbers. In particular, the GN-VQ row against C3DGS's own row at the same
+  settings is reported as an engineering number, not as a comparison.
+- **Scenes: train and bicycle**, both development scenes (Amendments 7 and 9), with INRIA's 30k checkpoints through
+  E3p's pinned archive members (Amendment 12 a), and their datasets through the downloaders runs 4 and 5 used.
+  - **Untouched:** the gate scenes of the planned arm (`kaggle/E3_C3DGS_DESIGN.md` section 8: bonsai, counter,
+    kitchen, room and truck on INRIA checkpoints, and Deep Blending's drjohnson and playroom) and the other INRIA
+    scenes. E3r fetches, loads, renders and measures nothing of theirs.
+- **The host is E3q's:**
+  - C3DGS at `2a234af55fbe8b90c8829c1436ce80088c4b622b`, built into the session's Python as Amendment 13 b sets
+    out, with its two fallbacks;
+  - its `compress.py` run unchanged through E3q's wrapper, with Amendment 13 g's chunked `eigh` and `det`;
+  - its outputs decoded by `npz2ply.py` and evaluated with protocol ii (Amendment 12 a) against the uncompressed
+    model measured in the same session.
+- **The build and the jobs.** C3DGS is built once per session, before the scene jobs. The two scene jobs then run
+  in parallel, one per T4.
+
+### b. A method extension for this host, planned for the arm's pre-registration
+
+- **Why:** C3DGS vector-quantizes all 48 colour values per splat, the DC coefficient included
+  (`color_compress_non_dir = True`, its default and published setting). Its DC-excluded setting looks broken at
+  `2a234af5` (`kaggle/E3_C3DGS_DESIGN.md` section 2, read from the code, not run). The frozen metric covers bands
+  1-3 only (15 x 15; Amendment 11 b), so it has no term for a change in DC.
+- **What:** the GN metric extends from 15 x 15 (bands 1-3) to 16 x 16 (bands 0-3), by the same derivation.
+  - The same render, probes and per-view weights `s_iv`, with `y` the 16 basis values at `d_iv`:
+    `M_i = sum_v s_iv y(d_iv) y(d_iv)^T`.
+  - Its lower-right 15 x 15 block is the frozen metric, entry for entry.
+  - The floor becomes `M_i + rho * tr(M_i) / 16 * I`, and the ridge `mu = eps * tr(sum M_k) / 16`.
+  - The cross-validation grid {0, 1e-3, 1e-2, 1e-1, 3e-1, 1, 3} and its procedure are unchanged (Amendments 11 b
+    and 12 b).
+- **How GN-VQ sits in this host** (the pilot's definition; the arm's pre-registration may change it):
+  - **Where:** the colour call of C3DGS's `vq_features`, replaced in the wrapper's process (C3DGS's source stays
+    unedited). C3DGS's own `vq_features` runs first, unchanged, so the global random streams advance exactly as in
+    C3DGS's own run. Its codebook and labels are GN-VQ's warm start.
+  - **Which splats:** the splats C3DGS quantizes in that run, after its pruning, with colour importance at or below
+    the threshold.
+  - **Their values:** C3DGS's quantizer input (`get_features`, already int8-fake-quantized; 48 values, index
+    `k * 3 + channel`).
+  - **The variant:** E2's GN-VQ (eps = 1e-2, at most 20 iterations, the 1e-3 relative-drop stopping rule, the clip
+    to the warm-start range with per-cluster acceptance), with the floored 16 x 16 metric.
+  - **The codec's quantizer:** C3DGS's per-tensor int8 quantization of the colour table, DC and AC separately, with
+    the scale and zero point its two fake quantizers hold at injection. The final exact assignment is against that
+    dequantized codebook. The scales C3DGS actually writes are recorded next to them, because its observers keep
+    updating afterwards.
+- **Selection of `rho`: SH-only cross-validation,** as the design doc recommends (its section 3, option a):
+  - **The splats:** those quantized in C3DGS's own run at K = 4,096 and the default threshold (c.i's probe run).
+  - **`M_even`:** the 16 x 16 metric over the even-indexed train views (probe seed 0).
+  - **Scoring:** for each `rho`, GN-VQ from that run's recorded warm start, scored by the render-vs-render dMSE,
+    clamped, on the odd-indexed train views:
+    - the variant replaces those splats' 48 colour values with the dequantized codebook at their labels;
+    - the reference has every splat's colour at C3DGS's quantizer input;
+    - the geometry is the checkpoint's, and the renderer is gsplat's.
+  - **`rho_cv`** is the lowest score; a tie goes to the smaller `rho`.
+  - **The recorded choice:** SH-only scoring, not the full C3DGS pipeline.
+- **The final codebook** is computed inside the injected run itself, at `rho_cv`, with the full-train-view 16 x 16
+  metric, from that run's own warm start, on that run's own set of quantized splats. How that set differs from the
+  probe run's is recorded.
+- **The pilot implements and exercises the extension, and nothing is concluded from it.** Whether the arm uses it
+  is for the arm's pre-registration.
+
+### c. What the pilot measures, per scene
+
+Every C3DGS run is `compress.py` with C3DGS's defaults except where stated, through the wrapper. Each run reports:
+- the `.npz`'s bytes, in MiB and MB;
+- C3DGS's own PSNR / SSIM / LPIPS;
+- protocol ii's PSNR / SSIM / LPIPS of the decoded model;
+- C3DGS's `times.json` parts (clustering among them), the wall time and the peak GPU memory;
+- the number of pruned, kept and colour-quantized splats.
+
+1. **C3DGS's baseline without fine-tuning at K in {1,024, 4,096, 16,384, 65,536}** (`--color_codebook_size`).
+   - The K = 4,096 run is C3DGS's default and is the **probe run**. Its colour-quantizer input, its masks, codebook,
+     labels and quantizer state are recorded for (iii) and (iv).
+2. **The colour-importance threshold as a second rate knob:** `color_importance_include` = 0.6e-6 x 3^j,
+   j = -2, ..., 2 (the default 0.6e-6 and two tripling steps each way), at K = 4,096 without fine-tuning.
+   - The default point is (i)'s probe run.
+   - Chosen by Dace (2026-09-29); the design doc named the knob without values.
+   - Per (e), this runs **on train only**.
+   - The aim is to see which knob gives enough rate range for BD-rate. The report gives each knob's byte range and
+     PSNR range. No criterion attaches to them; the arm's pre-registration chooses.
+3. **The colour-quantized splats:**
+   - their number (and the pruned and kept numbers) in the probe run;
+   - their share of the total `tr(M_i)` over all the checkpoint's splats, under the full-train-view 16 x 16 metric;
+   - the same share under its 15 x 15 block (the frozen metric).
+4. **GN-VQ with the floor, injected, at K = 4,096, default threshold, without fine-tuning, end to end:**
+   - the row's measurements as above;
+   - `rho_cv` and all 7 cross-validation scores;
+   - the GN-VQ runs' iterations and times;
+   - the injected set's difference from the probe run's;
+   - the quantizer scales at injection and at write;
+   - its time.
+
+   Two report-only checks come with it:
+   - the lifted check (Amendment 3's criterion, 10,000 splats) on the final codebook;
+   - a calibration: the predicted dMSE `P` from the even-view 16 x 16 metric against the measured unclamped dMSE on
+     the even train views, for the `rho_cv` cross-validation codebook. This exercises the DC terms.
+5. **Train only: the same injected run with C3DGS's 5,000-iteration fine-tuning.** It checks that the pipeline
+   completes and that the labels survive: the colour indices C3DGS holds just before it writes must equal the
+   injected ones. It records how far fine-tuning moved the injected codebook, and gives its size, C3DGS's metrics
+   and protocol ii. No baseline with fine-tuning runs in E3r.
+
+### d. Failures
+
+- **A failure is recorded, and the rest still runs.** A step that fails, out of memory or otherwise, is recorded
+  with its error, and every step that does not need its product still runs. A failed GN pass leaves (i) and (ii); a
+  failed injected run leaves every baseline row.
+- **One fallback, fixed now:** a C3DGS run that fails out of GPU memory is retried once with `--data_device cpu`
+  (C3DGS's own option: the images stay in host memory). The retry is recorded as a deviation. C3DGS has never run on
+  bicycle's 6,131,954 splats.
+- **The deadline.** A job starts no new C3DGS run once the session's deadline, less a reserve for protocol ii and
+  the bundle, has passed. A run not started is recorded with that reason. The job resumes from the notebook's own
+  output, and every row resumes on its own.
+- **The order within a job** puts what the arm needs most first:
+  1. the probe run;
+  2. the harness phase (runner, the uncompressed model's protocol ii, the GN passes, (iii), the cross-validation);
+  3. the injected run(s);
+  4. the other K;
+  5. the thresholds;
+  6. protocol ii of every decoded row.
+
+### e. The runtime estimate, before any E3r code
+
+`bench/gn/e3r_estimate.py` builds it only from E3q's, E3p's and E2c's committed files. It is an estimate, not a
+measurement. C3DGS's runs are taken as flat to linear in the splat count, its colour clustering as flat to
+proportional in K, and the 16 x 16 GN-VQ as 1 to 136 / 120 times the 15 x 15 cost.
+
+| Job | Estimate |
+|---|---|
+| train | 5,362-8,309 s |
+| bicycle, (ii) included | 10,735-46,922 s (3.0-13.0 h) |
+| bicycle, without (ii) | 9,247-38,037 s |
+| session setup (restore, install, build) | 385 s |
+
+- **(ii) on both scenes exceeds one session.** Its upper end, 13.0 h for bicycle alone, is above Kaggle's 12 h
+  session, so (ii) runs on train only. That is the rule this request set.
+- **With both jobs in parallel,** the session is estimated at 2.7-10.7 h.
+- **What is not estimated:** C3DGS on bicycle has never run, so its memory is not estimated either. The deadline
+  and resume in (d) cover the upper end.
