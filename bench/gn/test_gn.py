@@ -3091,3 +3091,10 @@ def test_findings_section_13_numbers_recheck_from_the_repo():
 
     res = check_s13.run()
     assert res["fails"] == [] and res["n_numbers"] > 100
+
+
+def test_findings_section_14_numbers_recheck_from_the_repo():
+    import check_s14
+
+    res = check_s14.run()
+    assert res["fails"] == [] and res["n_numbers"] > 40
