@@ -1,0 +1,24 @@
+{
+  "name": "gn_e3q_train",
+  "log": "/kaggle/working/gn3q_work/gn_e3q_train.log",
+  "exit_code": 0,
+  "skipped_by_cutoff": false,
+  "lines_total": 14,
+  "lines_kept": 14,
+  "tail": [
+    "[train] 305 files, 0.22 GB (0.22 GB to fetch) from https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/input/tandt_db.zip; free 1201.1 GB",
+    "[train] C3DGS finetune 0: ok True, results {'ours_30000': {'SSIM': 0.7900350689888, 'PSNR': 21.508447647094727, 'LPIPS': 0.2352815866470337, 'size': 13.181769371032715}}, 13822087 bytes; chunked linalg calls [('linalg_eigh', 281237, 0), ('det', 281237, 0)], reductions 0",
+    "[train] C3DGS finetune 5000: ok True, results {'ours_35000': {'SSIM': 0.8008813858032227, 'PSNR': 21.843338012695312, 'LPIPS': 0.2261238396167755, 'size': 13.266730308532715}}, 13911175 bytes; chunked linalg calls [('linalg_eigh', 281237, 0), ('det', 281237, 0)], reductions 0",
+    "[Parser] 301 images, taken by 1 cameras.",
+    "",
+    "Loading EXIF exposure:   0%|          | 0/301 [00:00<?, ?it/s]",
+    "Loading EXIF exposure: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 301/301 [00:00<00:00, 20241.87it/s]",
+    "[Parser] No valid EXIF exposure data found in any image.",
+    "Scene scale: 7.490638414419265",
+    "Model initialized. Number of GS: 182686",
+    "[train] uncompressed: protocol ii PSNR 21.293174743652344",
+    "[train] c3dgs_ft0: status ok, C3DGS PSNR 21.508447647094727, protocol ii 20.985551834106445, 13.181769371032715 MiB",
+    "[train] c3dgs_ft5000: status ok, C3DGS PSNR 21.843338012695312, protocol ii 21.43380355834961, 13.266730308532715 MiB",
+    "[train] E3q DONE"
+  ]
+}

@@ -1,0 +1,546 @@
+{
+  "exploratory": "PREREG_GN.md Amendment 13: an engineering smoke test of the C3DGS host, no verdicts",
+  "published": {
+    "source": "Niedermayr et al., Compressed 3D Gaussian Splatting for Accelerated Novel View Synthesis, arXiv 2401.02436v2, Table 9 (Tanks&Temples results), row train",
+    "c3dgs": {
+      "PSNR": 21.863,
+      "SSIM": 0.798,
+      "LPIPS": 0.226,
+      "size_MiB": 13.249,
+      "ratio": 18.324
+    },
+    "3dgs": {
+      "PSNR": 21.77,
+      "SSIM": 0.805,
+      "LPIPS": 0.217,
+      "size_MiB": 242.782
+    }
+  },
+  "rows": [
+    {
+      "scene": "train",
+      "config": "uncompressed",
+      "finetune_iterations": "",
+      "status": "ok",
+      "reason": "",
+      "n_splats": "1026508",
+      "c3dgs_PSNR": "",
+      "c3dgs_SSIM": "",
+      "c3dgs_LPIPS": "",
+      "c3dgs_size_MiB_reported": "",
+      "npz_bytes": "",
+      "size_MiB": "",
+      "size_MB": "",
+      "PSNR_ii": "21.293174743652344",
+      "SSIM_ii": "0.7926117181777954",
+      "LPIPS_ii": "0.2170325070619583",
+      "resolution_ii": "[[980, 545]]",
+      "n_views_ii": "38",
+      "eval_ii_time_s": "8.356289131999802",
+      "ply_loaded": "",
+      "ply_error": "",
+      "c3dgs_wall_s": "",
+      "c3dgs_sensitivity_s": "",
+      "c3dgs_clustering_s": "",
+      "c3dgs_finetune_s": "",
+      "c3dgs_encode_s": "",
+      "c3dgs_total_s": "",
+      "peak_allocated_bytes": "",
+      "peak_reserved_bytes": "",
+      "npz2ply_time_s": "",
+      "model_sha1": "187b6095ffe3135c7769d73a9caefcd03a5273d8",
+      "c3dgs_commit": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+      "gsplat_commit": "b712567393d0",
+      "timestamp": "2026-09-28T20:08:17"
+    },
+    {
+      "scene": "train",
+      "config": "c3dgs_ft0",
+      "finetune_iterations": "0",
+      "status": "ok",
+      "reason": "",
+      "n_splats": "910601",
+      "c3dgs_PSNR": "21.508447647094727",
+      "c3dgs_SSIM": "0.7900350689888",
+      "c3dgs_LPIPS": "0.2352815866470337",
+      "c3dgs_size_MiB_reported": "13.181769371032715",
+      "npz_bytes": "13822087",
+      "size_MiB": "13.181769371032715",
+      "size_MB": "13.822087",
+      "PSNR_ii": "20.985551834106445",
+      "SSIM_ii": "0.7738361358642578",
+      "LPIPS_ii": "0.23660112917423248",
+      "resolution_ii": "[[980, 545]]",
+      "n_views_ii": "38",
+      "eval_ii_time_s": "7.926869232000172",
+      "ply_loaded": "True",
+      "ply_error": "",
+      "c3dgs_wall_s": "351.60628509521484",
+      "c3dgs_sensitivity_s": "16.025534868240356",
+      "c3dgs_clustering_s": "257.68043518066406",
+      "c3dgs_finetune_s": "",
+      "c3dgs_encode_s": "1.6520426273345947",
+      "c3dgs_total_s": "275.358012676239",
+      "peak_allocated_bytes": "4550748160",
+      "peak_reserved_bytes": "4808769536",
+      "npz2ply_time_s": "11.873019695281982",
+      "model_sha1": "187b6095ffe3135c7769d73a9caefcd03a5273d8",
+      "c3dgs_commit": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+      "gsplat_commit": "b712567393d0",
+      "timestamp": "2026-09-28T20:08:25"
+    },
+    {
+      "scene": "train",
+      "config": "c3dgs_ft5000",
+      "finetune_iterations": "5000",
+      "status": "ok",
+      "reason": "",
+      "n_splats": "910601",
+      "c3dgs_PSNR": "21.843338012695312",
+      "c3dgs_SSIM": "0.8008813858032227",
+      "c3dgs_LPIPS": "0.2261238396167755",
+      "c3dgs_size_MiB_reported": "13.266730308532715",
+      "npz_bytes": "13911175",
+      "size_MiB": "13.266730308532715",
+      "size_MB": "13.911175",
+      "PSNR_ii": "21.43380355834961",
+      "SSIM_ii": "0.7875158786773682",
+      "LPIPS_ii": "0.22726325690746307",
+      "resolution_ii": "[[980, 545]]",
+      "n_views_ii": "38",
+      "eval_ii_time_s": "8.09533570199983",
+      "ply_loaded": "True",
+      "ply_error": "",
+      "c3dgs_wall_s": "666.3933515548706",
+      "c3dgs_sensitivity_s": "16.637410163879395",
+      "c3dgs_clustering_s": "257.1475987434387",
+      "c3dgs_finetune_s": "317.8930685520172",
+      "c3dgs_encode_s": "1.6787302494049072",
+      "c3dgs_total_s": "593.3568077087402",
+      "peak_allocated_bytes": "4551455744",
+      "peak_reserved_bytes": "4957667328",
+      "npz2ply_time_s": "11.817203521728516",
+      "model_sha1": "187b6095ffe3135c7769d73a9caefcd03a5273d8",
+      "c3dgs_commit": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+      "gsplat_commit": "b712567393d0",
+      "timestamp": "2026-09-28T20:08:33"
+    }
+  ],
+  "build": {
+    "ok": true,
+    "failed_step": null,
+    "build_time_s": 186.18548130989075,
+    "total_time_s": 204.28971219062805,
+    "imports": {
+      "torch": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/torch/__init__.py",
+        "version": "2.10.0+cu128"
+      },
+      "torchvision": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/torchvision/__init__.py",
+        "version": "0.25.0+cu128"
+      },
+      "torch_scatter": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/torch_scatter/__init__.py",
+        "version": "2.1.2+pt210cu128"
+      },
+      "plyfile": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/plyfile.py",
+        "version": null
+      },
+      "tqdm": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/tqdm/__init__.py",
+        "version": "4.67.3"
+      },
+      "diff_gaussian_rasterization": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/diff_gaussian_rasterization/__init__.py",
+        "version": null
+      },
+      "diff_gaussian_rasterization._C": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/diff_gaussian_rasterization/_C.cpython-312-x86_64-linux-gnu.so",
+        "version": null
+      },
+      "weighted_distance._C": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/weighted_distance/_C.cpython-312-x86_64-linux-gnu.so",
+        "version": null
+      },
+      "compression.vq": {
+        "ok": true,
+        "file": "/tmp/c3dgs/compression/vq.py",
+        "version": null
+      },
+      "gaussian_renderer": {
+        "ok": true,
+        "file": "/tmp/c3dgs/gaussian_renderer/__init__.py",
+        "version": null
+      }
+    },
+    "deviations": [
+      "installed into the session's Python environment with pip, not a conda environment from environment.yml (Amendment 13 b: Kaggle's Python lacks ensurepip, so no venv either)",
+      "--no-deps on every pip install, so the session's torch, torchvision and CUDA toolkit stay as they are",
+      "torch-scatter from pip (the PyG wheel index for the session's torch), not conda's pytorch-scatter",
+      "--source_path given on the command line: the checkpoint's cfg_args names its authors' local paths",
+      "the model directory laid out from the three pinned archive members (cfg_args, cameras.json, the 30k point_cloud.ply), without the archive's input.ply and 7k iteration",
+      "the session's torch 2.10.0+cu128 (CUDA 12.8) and CUDA toolkit, not pytorch-cuda=12.1 and cuda-toolkit=12.1; the session's Python, not python=3.8"
+    ],
+    "head": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+    "submodules": [
+      "673a963a0f1eb82f5fcef00b7b873371555e5814 submodules/diff-gaussian-rasterization/third_party/glm (0.9.5.3-2833-g673a963a)"
+    ]
+  },
+  "failed_steps": [],
+  "skipped_steps": [],
+  "c3dgs_runs": {
+    "0": {
+      "status": "ok",
+      "error": null,
+      "deviations": [
+        "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+      ],
+      "linalg_patch": {
+        "n_chunked_calls": {
+          "eigh": 1,
+          "det": 1
+        },
+        "n_passthrough_calls": {
+          "eigh": 0,
+          "det": 0
+        },
+        "calls": [
+          {
+            "op": "linalg_eigh",
+            "n": 281237,
+            "shape": [
+              281237,
+              3,
+              3
+            ],
+            "dtype": "torch.float32",
+            "device": "cuda:0",
+            "start_batch": 8192,
+            "reductions": 0,
+            "time_s": 0.1423492431640625,
+            "check": {
+              "n_sampled": 4096,
+              "seed": 0,
+              "reference": "float64, CPU, the original op",
+              "max_abs_eigenvalue_diff": 1.4362356512975794e-06,
+              "max_abs_eigenvalue": 16.204586557936885,
+              "max_abs_reconstruction_residual": 2.7731983891499112e-06,
+              "nonfinite_in_sample": 0
+            }
+          },
+          {
+            "op": "det",
+            "n": 281237,
+            "shape": [
+              281237,
+              3,
+              3
+            ],
+            "dtype": "torch.float32",
+            "device": "cuda:0",
+            "start_batch": 8192,
+            "reductions": 0,
+            "time_s": 1.0667283535003662,
+            "check": {
+              "n_sampled": 4096,
+              "seed": 0,
+              "reference": "float64, CPU, the original op",
+              "max_abs_det_diff": 2.1952856099627382e-07,
+              "max_abs_det": 1.0000006579118148,
+              "nonfinite_in_sample": 0
+            }
+          }
+        ],
+        "fallbacks": [],
+        "working_batches": {
+          "linalg_eigh": 8192,
+          "det": 8192
+        }
+      }
+    },
+    "5000": {
+      "status": "ok",
+      "error": null,
+      "deviations": [
+        "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+      ],
+      "linalg_patch": {
+        "n_chunked_calls": {
+          "eigh": 1,
+          "det": 1
+        },
+        "n_passthrough_calls": {
+          "eigh": 0,
+          "det": 0
+        },
+        "calls": [
+          {
+            "op": "linalg_eigh",
+            "n": 281237,
+            "shape": [
+              281237,
+              3,
+              3
+            ],
+            "dtype": "torch.float32",
+            "device": "cuda:0",
+            "start_batch": 8192,
+            "reductions": 0,
+            "time_s": 0.053249359130859375,
+            "check": {
+              "n_sampled": 4096,
+              "seed": 0,
+              "reference": "float64, CPU, the original op",
+              "max_abs_eigenvalue_diff": 2.1729225103683802e-06,
+              "max_abs_eigenvalue": 38.985818661987665,
+              "max_abs_reconstruction_residual": 1.093553504105671e-05,
+              "nonfinite_in_sample": 0
+            }
+          },
+          {
+            "op": "det",
+            "n": 281237,
+            "shape": [
+              281237,
+              3,
+              3
+            ],
+            "dtype": "torch.float32",
+            "device": "cuda:0",
+            "start_batch": 8192,
+            "reductions": 0,
+            "time_s": 0.018174171447753906,
+            "check": {
+              "n_sampled": 4096,
+              "seed": 0,
+              "reference": "float64, CPU, the original op",
+              "max_abs_det_diff": 2.1952856099627382e-07,
+              "max_abs_det": 1.0000006579118148,
+              "nonfinite_in_sample": 0
+            }
+          }
+        ],
+        "fallbacks": [],
+        "working_batches": {
+          "linalg_eigh": 8192,
+          "det": 8192
+        }
+      }
+    }
+  },
+  "run_deviations": [
+    "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+  ],
+  "missing_or_failed": [],
+  "camera_frame_check": {
+    "n_runner": 301,
+    "n_cameras_json": 301,
+    "n_matched": 301,
+    "max_position_diff": 1.7763568394002505e-15,
+    "max_rotation_diff": 3.3306690738754696e-16,
+    "tol": 0.0001,
+    "pass": true
+  },
+  "split_check": {
+    "n_test": 38,
+    "test_names": [
+      "00001",
+      "00009",
+      "00017",
+      "00025",
+      "00033",
+      "00041",
+      "00049",
+      "00057",
+      "00065",
+      "00073",
+      "00081",
+      "00089",
+      "00097",
+      "00105",
+      "00113",
+      "00121",
+      "00129",
+      "00137",
+      "00145",
+      "00153",
+      "00161",
+      "00169",
+      "00177",
+      "00185",
+      "00193",
+      "00201",
+      "00209",
+      "00217",
+      "00225",
+      "00233",
+      "00241",
+      "00249",
+      "00257",
+      "00265",
+      "00273",
+      "00281",
+      "00289",
+      "00297"
+    ],
+    "equals_cameras_json_head": true
+  },
+  "env": {
+    "python": "3.12.13",
+    "torch": "2.10.0+cu128",
+    "torch_cuda": "12.8",
+    "cudnn": 91002,
+    "packages": {
+      "gsplat": "1.6.0",
+      "torchpq": null,
+      "cupy-cuda12x": "14.0.1",
+      "plas": null,
+      "torchmetrics": "1.8.2",
+      "numpy": "2.0.2",
+      "pycolmap": "4.2.0",
+      "remotezip": "0.12.6"
+    },
+    "gpu": {
+      "name": "Tesla T4",
+      "capability": "7.5",
+      "total_memory": 15636037632,
+      "count": 1
+    },
+    "nvidia_smi": "Tesla T4, 580.159.04, 15360 MiB\nTesla T4, 580.159.04, 15360 MiB",
+    "nvcc": [
+      "Build cuda_12.8.r12.8/compiler.35583870_0"
+    ]
+  },
+  "steps": [
+    {
+      "name": "fetch_inria",
+      "status": "ok",
+      "time_s": 4.294804585999827,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 0
+    },
+    {
+      "name": "layout_model",
+      "status": "ok",
+      "time_s": 0.00026940399993691244,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 0
+    },
+    {
+      "name": "download_dataset",
+      "status": "ok",
+      "time_s": 351.96194066199996,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 0
+    },
+    {
+      "name": "c3dgs_build",
+      "status": "ok",
+      "time_s": 204.28988847000005,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 0
+    },
+    {
+      "name": "c3dgs_compress_ft0",
+      "status": "ok",
+      "time_s": 354.62361433399974,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 0
+    },
+    {
+      "name": "npz2ply_ft0",
+      "status": "ok",
+      "time_s": 11.873190681000324,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 0
+    },
+    {
+      "name": "c3dgs_compress_ft5000",
+      "status": "ok",
+      "time_s": 669.1256287759998,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 0
+    },
+    {
+      "name": "npz2ply_ft5000",
+      "status": "ok",
+      "time_s": 11.817366945999765,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 0
+    },
+    {
+      "name": "build_runner",
+      "status": "ok",
+      "time_s": 42.525134807000086,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 337296896
+    },
+    {
+      "name": "protocol_ii_views",
+      "status": "ok",
+      "time_s": 0.005379349000122602,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 310493184
+    },
+    {
+      "name": "eval_ii_uncompressed",
+      "status": "ok",
+      "time_s": 8.35661763600001,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 1652295680
+    },
+    {
+      "name": "load_ply_ft0",
+      "status": "ok",
+      "time_s": 0.3458450590001121,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 319033856
+    },
+    {
+      "name": "eval_ii_c3dgs_ft0",
+      "status": "ok",
+      "time_s": 7.9271520100001,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 1866978816
+    },
+    {
+      "name": "load_ply_ft5000",
+      "status": "ok",
+      "time_s": 0.33735428299996784,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 319053312
+    },
+    {
+      "name": "eval_ii_c3dgs_ft5000",
+      "status": "ok",
+      "time_s": 8.095616331000201,
+      "error": null,
+      "reason": null,
+      "cuda_peak_allocated": 1866988032
+    }
+  ]
+}

@@ -1,0 +1,1093 @@
+{
+  "scene": "train",
+  "timings_s": {
+    "job": 1676.4085914839998
+  },
+  "dataset": "tandt",
+  "scene_set": "development",
+  "data_factor": 1,
+  "finetune_iterations": [
+    0,
+    5000
+  ],
+  "gsplat_commit": "b712567393d0",
+  "env": {
+    "python": "3.12.13",
+    "torch": "2.10.0+cu128",
+    "torch_cuda": "12.8",
+    "cudnn": 91002,
+    "packages": {
+      "gsplat": "1.6.0",
+      "torchpq": null,
+      "cupy-cuda12x": "14.0.1",
+      "plas": null,
+      "torchmetrics": "1.8.2",
+      "numpy": "2.0.2",
+      "pycolmap": "4.2.0",
+      "remotezip": "0.12.6"
+    },
+    "gpu": {
+      "name": "Tesla T4",
+      "capability": "7.5",
+      "total_memory": 15636037632,
+      "count": 1
+    },
+    "nvidia_smi": "Tesla T4, 580.159.04, 15360 MiB\nTesla T4, 580.159.04, 15360 MiB",
+    "nvcc": [
+      "Build cuda_12.8.r12.8/compiler.35583870_0"
+    ]
+  },
+  "published": {
+    "source": "Niedermayr et al., Compressed 3D Gaussian Splatting for Accelerated Novel View Synthesis, arXiv 2401.02436v2, Table 9 (Tanks&Temples results), row train",
+    "c3dgs": {
+      "PSNR": 21.863,
+      "SSIM": 0.798,
+      "LPIPS": 0.226,
+      "size_MiB": 13.249,
+      "ratio": 18.324
+    },
+    "3dgs": {
+      "PSNR": 21.77,
+      "SSIM": 0.805,
+      "LPIPS": 0.217,
+      "size_MiB": 242.782
+    }
+  },
+  "c3dgs_commit": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+  "steps": [
+    {
+      "name": "fetch_inria",
+      "timestamp": "2026-09-28T19:40:37",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 4.294804585999827,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 794787840
+    },
+    {
+      "name": "layout_model",
+      "timestamp": "2026-09-28T19:40:42",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.00026940399993691244,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 794787840
+    },
+    {
+      "name": "download_dataset",
+      "timestamp": "2026-09-28T19:40:42",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 351.96194066199996,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 851943424
+    },
+    {
+      "name": "c3dgs_build",
+      "timestamp": "2026-09-28T19:46:34",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 204.28988847000005,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 851943424
+    },
+    {
+      "name": "c3dgs_compress_ft0",
+      "finetune_iterations": 0,
+      "timestamp": "2026-09-28T19:49:58",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 354.62361433399974,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 851943424
+    },
+    {
+      "name": "npz2ply_ft0",
+      "timestamp": "2026-09-28T19:55:53",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 11.873190681000324,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 851943424
+    },
+    {
+      "name": "c3dgs_compress_ft5000",
+      "finetune_iterations": 5000,
+      "timestamp": "2026-09-28T19:56:04",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 669.1256287759998,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 851943424
+    },
+    {
+      "name": "npz2ply_ft5000",
+      "timestamp": "2026-09-28T20:07:14",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 11.817366945999765,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 851943424
+    },
+    {
+      "name": "build_runner",
+      "timestamp": "2026-09-28T20:07:26",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 42.525134807000086,
+      "cuda_peak": {
+        "allocated": 337296896,
+        "reserved": 360710144,
+        "allocated_over_start": 337296896
+      },
+      "host_max_rss_bytes": 3219615744
+    },
+    {
+      "name": "protocol_ii_views",
+      "timestamp": "2026-09-28T20:08:08",
+      "cuda_start": {
+        "allocated": 310493184,
+        "reserved": 360710144,
+        "free": 15148580864,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.005379349000122602,
+      "cuda_peak": {
+        "allocated": 310493184,
+        "reserved": 360710144,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 3219615744
+    },
+    {
+      "name": "eval_ii_uncompressed",
+      "timestamp": "2026-09-28T20:08:08",
+      "cuda_start": {
+        "allocated": 310493184,
+        "reserved": 360710144,
+        "free": 15148580864,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 8.35661763600001,
+      "cuda_peak": {
+        "allocated": 1652295680,
+        "reserved": 1751121920,
+        "allocated_over_start": 1341802496
+      },
+      "host_max_rss_bytes": 3219615744
+    },
+    {
+      "name": "load_ply_ft0",
+      "timestamp": "2026-09-28T20:08:17",
+      "cuda_start": {
+        "allocated": 319033856,
+        "reserved": 1751121920,
+        "free": 13707837440,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.3458450590001121,
+      "cuda_peak": {
+        "allocated": 319033856,
+        "reserved": 1751121920,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 3219615744
+    },
+    {
+      "name": "eval_ii_c3dgs_ft0",
+      "timestamp": "2026-09-28T20:08:17",
+      "cuda_start": {
+        "allocated": 533938176,
+        "reserved": 1751121920,
+        "free": 13707837440,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 7.9271520100001,
+      "cuda_peak": {
+        "allocated": 1866978816,
+        "reserved": 1944059904,
+        "allocated_over_start": 1333040640
+      },
+      "host_max_rss_bytes": 3219615744
+    },
+    {
+      "name": "load_ply_ft5000",
+      "timestamp": "2026-09-28T20:08:25",
+      "cuda_start": {
+        "allocated": 319053312,
+        "reserved": 1944059904,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.33735428299996784,
+      "cuda_peak": {
+        "allocated": 319053312,
+        "reserved": 1944059904,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 3219615744
+    },
+    {
+      "name": "eval_ii_c3dgs_ft5000",
+      "timestamp": "2026-09-28T20:08:25",
+      "cuda_start": {
+        "allocated": 533957632,
+        "reserved": 1944059904,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 8.095616331000201,
+      "cuda_peak": {
+        "allocated": 1866988032,
+        "reserved": 1944059904,
+        "allocated_over_start": 1333030400
+      },
+      "host_max_rss_bytes": 3219615744
+    }
+  ],
+  "inria": {
+    "url": "https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip",
+    "directory_checked": true,
+    "directory_time_s": 3.7018000099999426,
+    "members": {
+      "ply": {
+        "name": "train/point_cloud/iteration_30000/point_cloud.ply",
+        "path": "/kaggle/working/e3p_inria/train/point_cloud.ply",
+        "bytes_pinned": 254575516,
+        "crc32_pinned": "85d6d4ca",
+        "compressed_bytes": 219441845,
+        "header_offset": 12052819184,
+        "source": "present",
+        "bytes": 254575516,
+        "crc32": "85d6d4ca",
+        "sha1": "187b6095ffe3135c7769d73a9caefcd03a5273d8",
+        "time_s": 0.5923049800001081
+      },
+      "cameras": {
+        "name": "train/cameras.json",
+        "path": "/kaggle/working/e3p_inria/train/cameras.json",
+        "bytes_pinned": 120800,
+        "crc32_pinned": "9940f310",
+        "compressed_bytes": 38454,
+        "header_offset": 12050023231,
+        "source": "present",
+        "bytes": 120800,
+        "crc32": "9940f310",
+        "sha1": "79ee8c10b5991f634545557ca401cd2e31a31f75",
+        "time_s": 0.000414197000054628
+      },
+      "cfg_args": {
+        "name": "train/cfg_args",
+        "path": "/kaggle/working/e3p_inria/train/cfg_args",
+        "bytes_pinned": 162,
+        "crc32_pinned": "cbf086a8",
+        "compressed_bytes": 130,
+        "header_offset": 12050061733,
+        "source": "present",
+        "bytes": 162,
+        "crc32": "cbf086a8",
+        "sha1": "7b4e85d00695394a1decc4300c0904be7a912d6c",
+        "time_s": 4.4377999984135386e-05
+      }
+    },
+    "time_s": 4.2946102649998465,
+    "http_requests": 4
+  },
+  "inria_cfg_args": {
+    "eval": true,
+    "images": "images",
+    "model_path": "./eval/train",
+    "resolution": 1,
+    "sh_degree": 3,
+    "source_path": "f:/bkerbl/Downloads/tandt/train",
+    "white_background": false
+  },
+  "cfg_args_mismatch": [],
+  "c3dgs_build": {
+    "repo": "https://github.com/KeKsBoTer/c3dgs.git",
+    "commit": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+    "python": "/usr/bin/python3",
+    "steps": [
+      {
+        "name": "clone",
+        "cmd": "git clone --recursive https://github.com/KeKsBoTer/c3dgs.git /tmp/c3dgs",
+        "cwd": null,
+        "returncode": 0,
+        "time_s": 7.327077865600586,
+        "tail": [
+          "Submodule path 'submodules/diff-gaussian-rasterization/third_party/glm': checked out '673a963a0f1eb82f5fcef00b7b873371555e5814'",
+          "Cloning into '/tmp/c3dgs'...",
+          "Submodule 'submodules/diff-gaussian-rasterization/third_party/glm' (https://github.com/g-truc/glm.git) registered for path 'submodules/diff-gaussian-rasterization/third_party/glm'",
+          "Cloning into '/tmp/c3dgs/submodules/diff-gaussian-rasterization/third_party/glm'..."
+        ],
+        "output_lines": 4
+      },
+      {
+        "name": "checkout",
+        "cmd": "git -C /tmp/c3dgs checkout -q 2a234af55fbe8b90c8829c1436ce80088c4b622b && git -C /tmp/c3dgs submodule update --init --recursive",
+        "cwd": null,
+        "returncode": 0,
+        "time_s": 0.4070708751678467,
+        "tail": [],
+        "output_lines": 0
+      },
+      {
+        "name": "plyfile",
+        "cmd": "/usr/bin/python3 -m pip install -q --no-deps plyfile==0.8.1",
+        "cwd": null,
+        "returncode": 0,
+        "time_s": 1.319481372833252,
+        "tail": [],
+        "output_lines": 0
+      },
+      {
+        "name": "plyfile_check",
+        "cmd": "/usr/bin/python3 -c 'import numpy as np, plyfile, tempfile, os\na = np.zeros(4, dtype=[('\"'\"'x'\"'\"', '\"'\"'f4'\"'\"'), ('\"'\"'y'\"'\"', '\"'\"'f4'\"'\"')]); a['\"'\"'x'\"'\"'] = [1, 2, 3, 4]\np = os.path.join(tempfile.mkdtemp(), '\"'\"'t.ply'\"'\"')\nplyfile.PlyData([plyfile.PlyElement.describe(a, '\"'\"'vertex'\"'\"')]).write(p)\nb = plyfile.PlyData.read(p)['\"'\"'vertex'\"'\"']['\"'\"'x'\"'\"']\nassert list(b) == [1, 2, 3, 4]\nprint('\"'\"'PLYFILE_OK'\"'\"', getattr(plyfile, '\"'\"'__version__'\"'\"', '\"'\"''\"'\"'))\n'",
+        "cwd": null,
+        "returncode": 0,
+        "time_s": 0.17370128631591797,
+        "tail": [
+          "PLYFILE_OK "
+        ],
+        "output_lines": 1
+      },
+      {
+        "name": "tqdm",
+        "cmd": "/usr/bin/python3 -c 'import tqdm'",
+        "cwd": null,
+        "returncode": 0,
+        "time_s": 0.10037875175476074,
+        "tail": [],
+        "output_lines": 0,
+        "note": "already in the session"
+      },
+      {
+        "name": "torch_scatter",
+        "cmd": "/usr/bin/python3 -m pip install -v --no-deps --no-build-isolation torch-scatter -f https://data.pyg.org/whl/torch-2.10.0+cu128.html",
+        "cwd": null,
+        "returncode": 0,
+        "time_s": 1.9454970359802246,
+        "tail": [
+          "Using pip 24.1.2 from /usr/local/lib/python3.12/dist-packages/pip (python 3.12)",
+          "Looking in links: https://data.pyg.org/whl/torch-2.10.0+cu128.html",
+          "Collecting torch-scatter",
+          "  Downloading https://data.pyg.org/whl/torch-2.10.0%2Bcu128/torch_scatter-2.1.2%2Bpt210cu128-cp312-cp312-linux_x86_64.whl (10.9 MB)",
+          "     \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501 10.9/10.9 MB 95.7 MB/s eta 0:00:00",
+          "Installing collected packages: torch-scatter",
+          "Successfully installed torch-scatter-2.1.2+pt210cu128"
+        ],
+        "output_lines": 7,
+        "built_from_source": false
+      },
+      {
+        "name": "diff_gaussian_rasterization",
+        "cmd": "/usr/bin/python3 -m pip install -v --no-deps --no-build-isolation /tmp/c3dgs/submodules/diff-gaussian-rasterization",
+        "cwd": null,
+        "returncode": 0,
+        "time_s": 113.46501564979553,
+        "tail": [
+          "  /tmp/c3dgs/submodules/diff-gaussian-rasterization/cuda_rasterizer/auxiliary.h(151): warning #177-D: variable \"p_proj\" was declared but never referenced",
+          "     float3 p_proj = { p_hom.x * p_w, p_hom.y * p_w, p_hom.z * p_w };",
+          "            ^",
+          "",
+          "  Remark: The warnings can be suppressed with \"-diag-suppress <warning-number>\"",
+          "",
+          "  [5/8] /usr/local/cuda/bin/nvcc --generate-dependencies-with-compile --dependency-output /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/cuda_rasterizer/rasterizer_impl.o.d -I/usr/local/lib/python3.12/dist-packages/torch/include -I/usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda/include -I/usr/include/python3.12 -c -c /tmp/c3dgs/submodules/diff-gaussian-rasterization/cuda_rasterizer/rasterizer_impl.cu -o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/cuda_rasterizer/rasterizer_impl.o -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options ''\"'\"'-fPIC'\"'\"'' -I/tmp/c3dgs/submodules/diff-gaussian-rasterization/third_party/glm/ -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=_C -gencode=arch=compute_75,code=sm_75 -std=c++17",
+          "  /tmp/c3dgs/submodules/diff-gaussian-rasterization/cuda_rasterizer/auxiliary.h(151): warning #177-D: variable \"p_proj\" was declared but never referenced",
+          "     float3 p_proj = { p_hom.x * p_w, p_hom.y * p_w, p_hom.z * p_w };",
+          "            ^",
+          "",
+          "  Remark: The warnings can be suppressed with \"-diag-suppress <warning-number>\"",
+          "",
+          "  [6/8] c++ -MMD -MF /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/ext.o.d -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O2 -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2 -fPIC -I/usr/local/lib/python3.12/dist-packages/torch/include -I/usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda/include -I/usr/include/python3.12 -c -c /tmp/c3dgs/submodules/diff-gaussian-rasterization/ext.cpp -o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/ext.o -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=_C -std=c++17",
+          "  [7/8] /usr/local/cuda/bin/nvcc --generate-dependencies-with-compile --dependency-output /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/rasterize_points.o.d -I/usr/local/lib/python3.12/dist-packages/torch/include -I/usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda/include -I/usr/include/python3.12 -c -c /tmp/c3dgs/submodules/diff-gaussian-rasterization/rasterize_points.cu -o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/rasterize_points.o -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options ''\"'\"'-fPIC'\"'\"'' -I/tmp/c3dgs/submodules/diff-gaussian-rasterization/third_party/glm/ -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=_C -gencode=arch=compute_75,code=sm_75 -std=c++17",
+          "  [8/8] /usr/local/cuda/bin/nvcc --generate-dependencies-with-compile --dependency-output /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/rasterize_points_indexed.o.d -I/usr/local/lib/python3.12/dist-packages/torch/include -I/usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda/include -I/usr/include/python3.12 -c -c /tmp/c3dgs/submodules/diff-gaussian-rasterization/rasterize_points_indexed.cu -o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/rasterize_points_indexed.o -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options ''\"'\"'-fPIC'\"'\"'' -I/tmp/c3dgs/submodules/diff-gaussian-rasterization/third_party/glm/ -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=_C -gencode=arch=compute_75,code=sm_75 -std=c++17",
+          "  x86_64-linux-gnu-g++ -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O2 -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2 -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -g -fwrapv -O2 /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/cuda_rasterizer/backward.o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/cuda_rasterizer/backward_indexed.o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/cuda_rasterizer/forward.o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/cuda_rasterizer/forward_indexed.o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/cuda_rasterizer/rasterizer_impl.o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/ext.o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/rasterize_points.o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/rasterize_points_indexed.o -L/usr/local/lib/python3.12/dist-packages/torch/lib -L/usr/local/cuda/lib64 -L/usr/lib/x86_64-linux-gnu -lc10 -ltorch -ltorch_cpu -ltorch_python -lcudart -lc10_cuda -ltorch_cuda -o build/lib.linux-x86_64-cpython-312/diff_gaussian_rasterization/_C.cpython-312-x86_64-linux-gnu.so",
+          "  /usr/local/lib/python3.12/dist-packages/setuptools/_distutils/cmd.py:90: SetuptoolsDeprecationWarning: setup.py install is deprecated.",
+          "  !!",
+          "",
+          "          ********************************************************************************",
+          "          Please avoid running ``setup.py`` directly.",
+          "          Instead, use pypa/build, pypa/installer or other",
+          "          standards-based tools.",
+          "",
+          "          This deprecation is overdue, please update your project and remove deprecated",
+          "          calls to avoid build errors in the future.",
+          "",
+          "          See https://blog.ganssle.io/articles/2021/10/setup-py-deprecated.html for details.",
+          "          ********************************************************************************",
+          "",
+          "  !!",
+          "    self.initialize_options()",
+          "  installing to build/bdist.linux-x86_64/wheel",
+          "  running install",
+          "  running install_lib",
+          "  creating build/bdist.linux-x86_64/wheel",
+          "  creating build/bdist.linux-x86_64/wheel/diff_gaussian_rasterization",
+          "  copying build/lib.linux-x86_64-cpython-312/diff_gaussian_rasterization/__init__.py -> build/bdist.linux-x86_64/wheel/./diff_gaussian_rasterization",
+          "  copying build/lib.linux-x86_64-cpython-312/diff_gaussian_rasterization/_C.cpython-312-x86_64-linux-gnu.so -> build/bdist.linux-x86_64/wheel/./diff_gaussian_rasterization",
+          "  running install_egg_info",
+          "  running egg_info",
+          "  creating diff_gaussian_rasterization.egg-info",
+          "  writing diff_gaussian_rasterization.egg-info/PKG-INFO",
+          "  writing dependency_links to diff_gaussian_rasterization.egg-info/dependency_links.txt",
+          "  writing top-level names to diff_gaussian_rasterization.egg-info/top_level.txt",
+          "  writing manifest file 'diff_gaussian_rasterization.egg-info/SOURCES.txt'",
+          "  reading manifest file 'diff_gaussian_rasterization.egg-info/SOURCES.txt'",
+          "  writing manifest file 'diff_gaussian_rasterization.egg-info/SOURCES.txt'",
+          "  Copying diff_gaussian_rasterization.egg-info to build/bdist.linux-x86_64/wheel/./diff_gaussian_rasterization-0.0.0-py3.12.egg-info",
+          "  running install_scripts",
+          "  creating build/bdist.linux-x86_64/wheel/diff_gaussian_rasterization-0.0.0.dist-info/WHEEL",
+          "  creating '/tmp/pip-wheel-k1ctt32e/diff_gaussian_rasterization-0.0.0-cp312-cp312-linux_x86_64.whl' and adding 'build/bdist.linux-x86_64/wheel' to it",
+          "  adding 'diff_gaussian_rasterization/_C.cpython-312-x86_64-linux-gnu.so'",
+          "  adding 'diff_gaussian_rasterization/__init__.py'",
+          "  adding 'diff_gaussian_rasterization-0.0.0.dist-info/METADATA'",
+          "  adding 'diff_gaussian_rasterization-0.0.0.dist-info/WHEEL'",
+          "  adding 'diff_gaussian_rasterization-0.0.0.dist-info/top_level.txt'",
+          "  adding 'diff_gaussian_rasterization-0.0.0.dist-info/RECORD'",
+          "  removing build/bdist.linux-x86_64/wheel"
+        ],
+        "output_lines": 113
+      },
+      {
+        "name": "weighted_distance",
+        "cmd": "/usr/bin/python3 -m pip install -v --no-deps --no-build-isolation /tmp/c3dgs/submodules/weighted_distance",
+        "cwd": null,
+        "returncode": 0,
+        "time_s": 70.77496862411499,
+        "tail": [
+          "  running egg_info",
+          "  creating /tmp/pip-pip-egg-info-dqk4d95y/weighted_distance.egg-info",
+          "  writing /tmp/pip-pip-egg-info-dqk4d95y/weighted_distance.egg-info/PKG-INFO",
+          "  writing dependency_links to /tmp/pip-pip-egg-info-dqk4d95y/weighted_distance.egg-info/dependency_links.txt",
+          "  writing top-level names to /tmp/pip-pip-egg-info-dqk4d95y/weighted_distance.egg-info/top_level.txt",
+          "  writing manifest file '/tmp/pip-pip-egg-info-dqk4d95y/weighted_distance.egg-info/SOURCES.txt'",
+          "  reading manifest file '/tmp/pip-pip-egg-info-dqk4d95y/weighted_distance.egg-info/SOURCES.txt'",
+          "  writing manifest file '/tmp/pip-pip-egg-info-dqk4d95y/weighted_distance.egg-info/SOURCES.txt'",
+          "  Running command python setup.py bdist_wheel",
+          "  running bdist_wheel",
+          "  running build",
+          "  running build_ext",
+          "  W0928 19:48:45.029000 713 torch/utils/cpp_extension.py:535] There are no x86_64-linux-gnu-g++ version bounds defined for CUDA version 12.8",
+          "  building 'weighted_distance._C' extension",
+          "  creating /tmp/c3dgs/submodules/weighted_distance/build/temp.linux-x86_64-cpython-312",
+          "  [1/2] c++ -MMD -MF /tmp/c3dgs/submodules/weighted_distance/build/temp.linux-x86_64-cpython-312/ext.o.d -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O2 -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2 -fPIC -I/usr/local/lib/python3.12/dist-packages/torch/include -I/usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda/include -I/usr/include/python3.12 -c -c /tmp/c3dgs/submodules/weighted_distance/ext.cpp -o /tmp/c3dgs/submodules/weighted_distance/build/temp.linux-x86_64-cpython-312/ext.o -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=_C -std=c++17",
+          "  [2/2] /usr/local/cuda/bin/nvcc --generate-dependencies-with-compile --dependency-output /tmp/c3dgs/submodules/weighted_distance/build/temp.linux-x86_64-cpython-312/weighted_distance.o.d -I/usr/local/lib/python3.12/dist-packages/torch/include -I/usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda/include -I/usr/include/python3.12 -c -c /tmp/c3dgs/submodules/weighted_distance/weighted_distance.cu -o /tmp/c3dgs/submodules/weighted_distance/build/temp.linux-x86_64-cpython-312/weighted_distance.o -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options ''\"'\"'-fPIC'\"'\"'' -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=_C -gencode=arch=compute_75,code=sm_75 -std=c++17",
+          "  creating build/lib.linux-x86_64-cpython-312/weighted_distance",
+          "  x86_64-linux-gnu-g++ -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O2 -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2 -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -g -fwrapv -O2 /tmp/c3dgs/submodules/weighted_distance/build/temp.linux-x86_64-cpython-312/ext.o /tmp/c3dgs/submodules/weighted_distance/build/temp.linux-x86_64-cpython-312/weighted_distance.o -L/usr/local/lib/python3.12/dist-packages/torch/lib -L/usr/local/cuda/lib64 -L/usr/lib/x86_64-linux-gnu -lc10 -ltorch -ltorch_cpu -ltorch_python -lcudart -lc10_cuda -ltorch_cuda -o build/lib.linux-x86_64-cpython-312/weighted_distance/_C.cpython-312-x86_64-linux-gnu.so",
+          "  /usr/local/lib/python3.12/dist-packages/setuptools/_distutils/cmd.py:90: SetuptoolsDeprecationWarning: setup.py install is deprecated.",
+          "  !!",
+          "",
+          "          ********************************************************************************",
+          "          Please avoid running ``setup.py`` directly.",
+          "          Instead, use pypa/build, pypa/installer or other",
+          "          standards-based tools.",
+          "",
+          "          This deprecation is overdue, please update your project and remove deprecated",
+          "          calls to avoid build errors in the future.",
+          "",
+          "          See https://blog.ganssle.io/articles/2021/10/setup-py-deprecated.html for details.",
+          "          ********************************************************************************",
+          "",
+          "  !!",
+          "    self.initialize_options()",
+          "  installing to build/bdist.linux-x86_64/wheel",
+          "  running install",
+          "  running install_lib",
+          "  creating build/bdist.linux-x86_64/wheel",
+          "  creating build/bdist.linux-x86_64/wheel/weighted_distance",
+          "  copying build/lib.linux-x86_64-cpython-312/weighted_distance/_C.cpython-312-x86_64-linux-gnu.so -> build/bdist.linux-x86_64/wheel/./weighted_distance",
+          "  running install_egg_info",
+          "  running egg_info",
+          "  creating weighted_distance.egg-info",
+          "  writing weighted_distance.egg-info/PKG-INFO",
+          "  writing dependency_links to weighted_distance.egg-info/dependency_links.txt",
+          "  writing top-level names to weighted_distance.egg-info/top_level.txt",
+          "  writing manifest file 'weighted_distance.egg-info/SOURCES.txt'",
+          "  reading manifest file 'weighted_distance.egg-info/SOURCES.txt'",
+          "  writing manifest file 'weighted_distance.egg-info/SOURCES.txt'",
+          "  Copying weighted_distance.egg-info to build/bdist.linux-x86_64/wheel/./weighted_distance-0.0.0-py3.12.egg-info",
+          "  running install_scripts",
+          "  creating build/bdist.linux-x86_64/wheel/weighted_distance-0.0.0.dist-info/WHEEL",
+          "  creating '/tmp/pip-wheel-b8oeqnxq/weighted_distance-0.0.0-cp312-cp312-linux_x86_64.whl' and adding 'build/bdist.linux-x86_64/wheel' to it",
+          "  adding 'weighted_distance/_C.cpython-312-x86_64-linux-gnu.so'",
+          "  adding 'weighted_distance-0.0.0.dist-info/METADATA'",
+          "  adding 'weighted_distance-0.0.0.dist-info/WHEEL'",
+          "  adding 'weighted_distance-0.0.0.dist-info/top_level.txt'",
+          "  adding 'weighted_distance-0.0.0.dist-info/RECORD'",
+          "  removing build/bdist.linux-x86_64/wheel"
+        ],
+        "output_lines": 73
+      },
+      {
+        "name": "imports",
+        "cmd": "/usr/bin/python3 -c 'import importlib, json\nres = {}\nfor m in ['\"'\"'torch'\"'\"', '\"'\"'torchvision'\"'\"', '\"'\"'torch_scatter'\"'\"', '\"'\"'plyfile'\"'\"', '\"'\"'tqdm'\"'\"', '\"'\"'diff_gaussian_rasterization'\"'\"', '\"'\"'diff_gaussian_rasterization._C'\"'\"', '\"'\"'weighted_distance._C'\"'\"', '\"'\"'compression.vq'\"'\"', '\"'\"'gaussian_renderer'\"'\"']:\n    try:\n        mod = importlib.import_module(m)\n        res[m] = {'\"'\"'ok'\"'\"': True, '\"'\"'file'\"'\"': getattr(mod, '\"'\"'__file__'\"'\"', None), '\"'\"'version'\"'\"': getattr(mod, '\"'\"'__version__'\"'\"', None)}\n    except Exception as e:\n        res[m] = {'\"'\"'ok'\"'\"': False, '\"'\"'error'\"'\"': repr(e)[:800]}\nprint('\"'\"'C3DGS_IMPORTS '\"'\"' + json.dumps(res))\n'",
+        "cwd": "/tmp/c3dgs",
+        "returncode": 0,
+        "time_s": 8.709871053695679,
+        "tail": [
+          "C3DGS_IMPORTS {\"torch\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/torch/__init__.py\", \"version\": \"2.10.0+cu128\"}, \"torchvision\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/torchvision/__init__.py\", \"version\": \"0.25.0+cu128\"}, \"torch_scatter\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/torch_scatter/__init__.py\", \"version\": \"2.1.2+pt210cu128\"}, \"plyfile\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/plyfile.py\", \"version\": null}, \"tqdm\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/tqdm/__init__.py\", \"version\": \"4.67.3\"}, \"diff_gaussian_rasterization\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/diff_gaussian_rasterization/__init__.py\", \"version\": null}, \"diff_gaussian_rasterization._C\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/diff_gaussian_rasterization/_C.cpython-312-x86_64-linux-gnu.so\", \"version\": null}, \"weighted_distance._C\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/weighted_distance/_C.cpython-312-x86_64-linux-gnu.so\", \"version\": null}, \"compression.vq\": {\"ok\": true, \"file\": \"/tmp/c3dgs/compression/vq.py\", \"version\": null}, \"gaussian_renderer\": {\"ok\": true, \"file\": \"/tmp/c3dgs/gaussian_renderer/__init__.py\", \"version\": null}}"
+        ],
+        "output_lines": 1
+      }
+    ],
+    "deviations": [
+      "installed into the session's Python environment with pip, not a conda environment from environment.yml (Amendment 13 b: Kaggle's Python lacks ensurepip, so no venv either)",
+      "--no-deps on every pip install, so the session's torch, torchvision and CUDA toolkit stay as they are",
+      "torch-scatter from pip (the PyG wheel index for the session's torch), not conda's pytorch-scatter",
+      "--source_path given on the command line: the checkpoint's cfg_args names its authors' local paths",
+      "the model directory laid out from the three pinned archive members (cfg_args, cameras.json, the 30k point_cloud.ply), without the archive's input.ply and 7k iteration",
+      "the session's torch 2.10.0+cu128 (CUDA 12.8) and CUDA toolkit, not pytorch-cuda=12.1 and cuda-toolkit=12.1; the session's Python, not python=3.8"
+    ],
+    "ok": true,
+    "failed_step": null,
+    "torch": {
+      "version": "2.10.0+cu128",
+      "cuda": "12.8",
+      "base": "2.10.0",
+      "cu": "cu128",
+      "pyg_index": "https://data.pyg.org/whl/torch-2.10.0+cu128.html"
+    },
+    "head": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+    "submodules": [
+      "673a963a0f1eb82f5fcef00b7b873371555e5814 submodules/diff-gaussian-rasterization/third_party/glm (0.9.5.3-2833-g673a963a)"
+    ],
+    "build_time_s": 186.18548130989075,
+    "imports": {
+      "torch": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/torch/__init__.py",
+        "version": "2.10.0+cu128"
+      },
+      "torchvision": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/torchvision/__init__.py",
+        "version": "0.25.0+cu128"
+      },
+      "torch_scatter": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/torch_scatter/__init__.py",
+        "version": "2.1.2+pt210cu128"
+      },
+      "plyfile": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/plyfile.py",
+        "version": null
+      },
+      "tqdm": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/tqdm/__init__.py",
+        "version": "4.67.3"
+      },
+      "diff_gaussian_rasterization": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/diff_gaussian_rasterization/__init__.py",
+        "version": null
+      },
+      "diff_gaussian_rasterization._C": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/diff_gaussian_rasterization/_C.cpython-312-x86_64-linux-gnu.so",
+        "version": null
+      },
+      "weighted_distance._C": {
+        "ok": true,
+        "file": "/usr/local/lib/python3.12/dist-packages/weighted_distance/_C.cpython-312-x86_64-linux-gnu.so",
+        "version": null
+      },
+      "compression.vq": {
+        "ok": true,
+        "file": "/tmp/c3dgs/compression/vq.py",
+        "version": null
+      },
+      "gaussian_renderer": {
+        "ok": true,
+        "file": "/tmp/c3dgs/gaussian_renderer/__init__.py",
+        "version": null
+      }
+    },
+    "total_time_s": 204.28971219062805
+  },
+  "c3dgs_runs": {
+    "0": {
+      "finetune_iterations": 0,
+      "cmd": "/usr/bin/python3 /tmp/gsplat/kaggle/e3q_c3dgs_run.py --c3dgs_dir /tmp/c3dgs --out_json /kaggle/working/gn3q_work/train/c3dgs_ft0_wrapper.json -- --model_path /kaggle/working/gn3q_work/train/model --source_path /tmp/data/train --data_device cuda --output_vq /kaggle/working/gn3q_work/train/c3dgs_ft0 --finetune_iterations 0",
+      "returncode": 0,
+      "time_s": 354.62286019325256,
+      "ok": true,
+      "wrapper": {
+        "argv": [
+          "compress.py",
+          "--model_path",
+          "/kaggle/working/gn3q_work/train/model",
+          "--source_path",
+          "/tmp/data/train",
+          "--data_device",
+          "cuda",
+          "--output_vq",
+          "/kaggle/working/gn3q_work/train/c3dgs_ft0",
+          "--finetune_iterations",
+          "0"
+        ],
+        "status": "ok",
+        "error": null,
+        "deviations": [
+          "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+        ],
+        "wall_s": 351.60628509521484,
+        "linalg_patch": {
+          "installed": true,
+          "ops": [
+            "torch.linalg.eigh",
+            "torch.Tensor.det"
+          ],
+          "max_batch": 8192,
+          "check_sample": 4096,
+          "check_seed": 0,
+          "n_chunked_calls": {
+            "eigh": 1,
+            "det": 1
+          },
+          "n_passthrough_calls": {
+            "eigh": 0,
+            "det": 0
+          },
+          "calls": [
+            {
+              "op": "linalg_eigh",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.1423492431640625,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_eigenvalue_diff": 1.4362356512975794e-06,
+                "max_abs_eigenvalue": 16.204586557936885,
+                "max_abs_reconstruction_residual": 2.7731983891499112e-06,
+                "nonfinite_in_sample": 0
+              }
+            },
+            {
+              "op": "det",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 1.0667283535003662,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_det_diff": 2.1952856099627382e-07,
+                "max_abs_det": 1.0000006579118148,
+                "nonfinite_in_sample": 0
+              }
+            }
+          ],
+          "fallbacks": [],
+          "working_batches": {
+            "linalg_eigh": 8192,
+            "det": 8192
+          },
+          "deviation": "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+        },
+        "max_memory_allocated": 4550748160,
+        "max_memory_reserved": 4808769536,
+        "device": "Tesla T4"
+      },
+      "results": {
+        "ours_30000": {
+          "SSIM": 0.7900350689888,
+          "PSNR": 21.508447647094727,
+          "LPIPS": 0.2352815866470337,
+          "size": 13.181769371032715
+        }
+      },
+      "times": {
+        "sensitivity_calculation": 16.025534868240356,
+        "clustering": 257.68043518066406,
+        "encode": 1.6520426273345947,
+        "total": 275.358012676239
+      },
+      "npz": "/kaggle/working/gn3q_work/train/c3dgs_ft0/point_cloud/iteration_30000/point_cloud.npz",
+      "npz_bytes": 13822087,
+      "size_MiB": 13.181769371032715,
+      "size_MB": 13.822087,
+      "tail": [
+        "Rendering progress:  26%|\u2588\u2588\u258b       | 10/38 [00:20<00:45,  1.64s/it]",
+        "Rendering progress:  29%|\u2588\u2588\u2589       | 11/38 [00:21<00:43,  1.63s/it]",
+        "Rendering progress:  32%|\u2588\u2588\u2588\u258f      | 12/38 [00:23<00:42,  1.64s/it]",
+        "Rendering progress:  34%|\u2588\u2588\u2588\u258d      | 13/38 [00:25<00:41,  1.65s/it]",
+        "Rendering progress:  37%|\u2588\u2588\u2588\u258b      | 14/38 [00:26<00:39,  1.65s/it]",
+        "Rendering progress:  39%|\u2588\u2588\u2588\u2589      | 15/38 [00:28<00:38,  1.65s/it]",
+        "Rendering progress:  42%|\u2588\u2588\u2588\u2588\u258f     | 16/38 [00:30<00:36,  1.66s/it]",
+        "Rendering progress:  45%|\u2588\u2588\u2588\u2588\u258d     | 17/38 [00:31<00:34,  1.62s/it]",
+        "Rendering progress:  47%|\u2588\u2588\u2588\u2588\u258b     | 18/38 [00:33<00:31,  1.60s/it]",
+        "Rendering progress:  50%|\u2588\u2588\u2588\u2588\u2588     | 19/38 [00:34<00:31,  1.66s/it]",
+        "Rendering progress:  53%|\u2588\u2588\u2588\u2588\u2588\u258e    | 20/38 [00:36<00:29,  1.65s/it]",
+        "Rendering progress:  55%|\u2588\u2588\u2588\u2588\u2588\u258c    | 21/38 [00:38<00:28,  1.66s/it]",
+        "Rendering progress:  58%|\u2588\u2588\u2588\u2588\u2588\u258a    | 22/38 [00:39<00:26,  1.63s/it]",
+        "Rendering progress:  61%|\u2588\u2588\u2588\u2588\u2588\u2588    | 23/38 [00:41<00:24,  1.60s/it]",
+        "Rendering progress:  63%|\u2588\u2588\u2588\u2588\u2588\u2588\u258e   | 24/38 [00:42<00:22,  1.60s/it]",
+        "Rendering progress:  66%|\u2588\u2588\u2588\u2588\u2588\u2588\u258c   | 25/38 [00:44<00:20,  1.59s/it]",
+        "Rendering progress:  68%|\u2588\u2588\u2588\u2588\u2588\u2588\u258a   | 26/38 [00:46<00:19,  1.61s/it]",
+        "Rendering progress:  71%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588   | 27/38 [00:47<00:17,  1.59s/it]",
+        "Rendering progress:  74%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e  | 28/38 [00:49<00:15,  1.58s/it]",
+        "Rendering progress:  76%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b  | 29/38 [00:50<00:14,  1.60s/it]",
+        "Rendering progress:  79%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589  | 30/38 [00:52<00:12,  1.62s/it]",
+        "Rendering progress:  82%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 31/38 [00:54<00:11,  1.63s/it]",
+        "Rendering progress:  84%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d | 32/38 [00:55<00:09,  1.65s/it]",
+        "Rendering progress:  87%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b | 33/38 [00:57<00:08,  1.65s/it]",
+        "Rendering progress:  89%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589 | 34/38 [00:59<00:06,  1.65s/it]",
+        "Rendering progress:  92%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 35/38 [01:00<00:04,  1.66s/it]",
+        "Rendering progress:  95%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d| 36/38 [01:02<00:03,  1.63s/it]",
+        "Rendering progress:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 37/38 [01:04<00:01,  1.63s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [01:05<00:00,  1.62s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [01:05<00:00,  1.73s/it]"
+      ],
+      "npz2ply": {
+        "cmd": "/usr/bin/python3 npz2ply.py /kaggle/working/gn3q_work/train/c3dgs_ft0/point_cloud/iteration_30000/point_cloud.npz --ply_file /kaggle/working/gn3q_work/train/c3dgs_ft0/decoded.ply",
+        "cwd": "/tmp/c3dgs",
+        "returncode": 0,
+        "time_s": 11.873019695281982,
+        "tail": [
+          "loading '/kaggle/working/gn3q_work/train/c3dgs_ft0/point_cloud/iteration_30000/point_cloud.npz'",
+          "saving to '/kaggle/working/gn3q_work/train/c3dgs_ft0/decoded.ply'",
+          "WARNING: indexed colors/gaussians are not supported for ply files and are converted to dense attributes",
+          "done"
+        ],
+        "output_lines": 4,
+        "ok": true,
+        "ply": "/kaggle/working/gn3q_work/train/c3dgs_ft0/decoded.ply"
+      }
+    },
+    "5000": {
+      "finetune_iterations": 5000,
+      "cmd": "/usr/bin/python3 /tmp/gsplat/kaggle/e3q_c3dgs_run.py --c3dgs_dir /tmp/c3dgs --out_json /kaggle/working/gn3q_work/train/c3dgs_ft5000_wrapper.json -- --model_path /kaggle/working/gn3q_work/train/model --source_path /tmp/data/train --data_device cuda --output_vq /kaggle/working/gn3q_work/train/c3dgs_ft5000 --finetune_iterations 5000",
+      "returncode": 0,
+      "time_s": 669.1249260902405,
+      "ok": true,
+      "wrapper": {
+        "argv": [
+          "compress.py",
+          "--model_path",
+          "/kaggle/working/gn3q_work/train/model",
+          "--source_path",
+          "/tmp/data/train",
+          "--data_device",
+          "cuda",
+          "--output_vq",
+          "/kaggle/working/gn3q_work/train/c3dgs_ft5000",
+          "--finetune_iterations",
+          "5000"
+        ],
+        "status": "ok",
+        "error": null,
+        "deviations": [
+          "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+        ],
+        "wall_s": 666.3933515548706,
+        "linalg_patch": {
+          "installed": true,
+          "ops": [
+            "torch.linalg.eigh",
+            "torch.Tensor.det"
+          ],
+          "max_batch": 8192,
+          "check_sample": 4096,
+          "check_seed": 0,
+          "n_chunked_calls": {
+            "eigh": 1,
+            "det": 1
+          },
+          "n_passthrough_calls": {
+            "eigh": 0,
+            "det": 0
+          },
+          "calls": [
+            {
+              "op": "linalg_eigh",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.053249359130859375,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_eigenvalue_diff": 2.1729225103683802e-06,
+                "max_abs_eigenvalue": 38.985818661987665,
+                "max_abs_reconstruction_residual": 1.093553504105671e-05,
+                "nonfinite_in_sample": 0
+              }
+            },
+            {
+              "op": "det",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.018174171447753906,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_det_diff": 2.1952856099627382e-07,
+                "max_abs_det": 1.0000006579118148,
+                "nonfinite_in_sample": 0
+              }
+            }
+          ],
+          "fallbacks": [],
+          "working_batches": {
+            "linalg_eigh": 8192,
+            "det": 8192
+          },
+          "deviation": "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+        },
+        "max_memory_allocated": 4551455744,
+        "max_memory_reserved": 4957667328,
+        "device": "Tesla T4"
+      },
+      "results": {
+        "ours_35000": {
+          "SSIM": 0.8008813858032227,
+          "PSNR": 21.843338012695312,
+          "LPIPS": 0.2261238396167755,
+          "size": 13.266730308532715
+        }
+      },
+      "times": {
+        "sensitivity_calculation": 16.637410163879395,
+        "clustering": 257.1475987434387,
+        "finetune": 317.8930685520172,
+        "encode": 1.6787302494049072,
+        "total": 593.3568077087402
+      },
+      "npz": "/kaggle/working/gn3q_work/train/c3dgs_ft5000/point_cloud/iteration_35000/point_cloud.npz",
+      "npz_bytes": 13911175,
+      "size_MiB": 13.266730308532715,
+      "size_MB": 13.911175,
+      "tail": [
+        "Rendering progress:  26%|\u2588\u2588\u258b       | 10/38 [00:16<00:47,  1.69s/it]",
+        "Rendering progress:  29%|\u2588\u2588\u2589       | 11/38 [00:18<00:45,  1.68s/it]",
+        "Rendering progress:  32%|\u2588\u2588\u2588\u258f      | 12/38 [00:20<00:43,  1.68s/it]",
+        "Rendering progress:  34%|\u2588\u2588\u2588\u258d      | 13/38 [00:21<00:42,  1.68s/it]",
+        "Rendering progress:  37%|\u2588\u2588\u2588\u258b      | 14/38 [00:23<00:40,  1.69s/it]",
+        "Rendering progress:  39%|\u2588\u2588\u2588\u2589      | 15/38 [00:25<00:38,  1.68s/it]",
+        "Rendering progress:  42%|\u2588\u2588\u2588\u2588\u258f     | 16/38 [00:26<00:36,  1.65s/it]",
+        "Rendering progress:  45%|\u2588\u2588\u2588\u2588\u258d     | 17/38 [00:28<00:34,  1.64s/it]",
+        "Rendering progress:  47%|\u2588\u2588\u2588\u2588\u258b     | 18/38 [00:30<00:32,  1.62s/it]",
+        "Rendering progress:  50%|\u2588\u2588\u2588\u2588\u2588     | 19/38 [00:31<00:30,  1.62s/it]",
+        "Rendering progress:  53%|\u2588\u2588\u2588\u2588\u2588\u258e    | 20/38 [00:33<00:29,  1.63s/it]",
+        "Rendering progress:  55%|\u2588\u2588\u2588\u2588\u2588\u258c    | 21/38 [00:34<00:27,  1.62s/it]",
+        "Rendering progress:  58%|\u2588\u2588\u2588\u2588\u2588\u258a    | 22/38 [00:36<00:26,  1.64s/it]",
+        "Rendering progress:  61%|\u2588\u2588\u2588\u2588\u2588\u2588    | 23/38 [00:38<00:24,  1.66s/it]",
+        "Rendering progress:  63%|\u2588\u2588\u2588\u2588\u2588\u2588\u258e   | 24/38 [00:39<00:22,  1.63s/it]",
+        "Rendering progress:  66%|\u2588\u2588\u2588\u2588\u2588\u2588\u258c   | 25/38 [00:41<00:21,  1.66s/it]",
+        "Rendering progress:  68%|\u2588\u2588\u2588\u2588\u2588\u2588\u258a   | 26/38 [00:43<00:19,  1.66s/it]",
+        "Rendering progress:  71%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588   | 27/38 [00:44<00:18,  1.64s/it]",
+        "Rendering progress:  74%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e  | 28/38 [00:46<00:16,  1.63s/it]",
+        "Rendering progress:  76%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b  | 29/38 [00:48<00:14,  1.66s/it]",
+        "Rendering progress:  79%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589  | 30/38 [00:49<00:13,  1.66s/it]",
+        "Rendering progress:  82%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 31/38 [00:51<00:11,  1.65s/it]",
+        "Rendering progress:  84%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d | 32/38 [00:53<00:09,  1.66s/it]",
+        "Rendering progress:  87%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b | 33/38 [00:54<00:08,  1.64s/it]",
+        "Rendering progress:  89%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589 | 34/38 [00:56<00:06,  1.65s/it]",
+        "Rendering progress:  92%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 35/38 [00:58<00:04,  1.66s/it]",
+        "Rendering progress:  95%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d| 36/38 [00:59<00:03,  1.67s/it]",
+        "Rendering progress:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 37/38 [01:01<00:01,  1.68s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [01:03<00:00,  1.68s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [01:03<00:00,  1.66s/it]"
+      ],
+      "npz2ply": {
+        "cmd": "/usr/bin/python3 npz2ply.py /kaggle/working/gn3q_work/train/c3dgs_ft5000/point_cloud/iteration_35000/point_cloud.npz --ply_file /kaggle/working/gn3q_work/train/c3dgs_ft5000/decoded.ply",
+        "cwd": "/tmp/c3dgs",
+        "returncode": 0,
+        "time_s": 11.817203521728516,
+        "tail": [
+          "loading '/kaggle/working/gn3q_work/train/c3dgs_ft5000/point_cloud/iteration_35000/point_cloud.npz'",
+          "saving to '/kaggle/working/gn3q_work/train/c3dgs_ft5000/decoded.ply'",
+          "WARNING: indexed colors/gaussians are not supported for ply files and are converted to dense attributes",
+          "done"
+        ],
+        "output_lines": 4,
+        "ok": true,
+        "ply": "/kaggle/working/gn3q_work/train/c3dgs_ft5000/decoded.ply"
+      }
+    }
+  },
+  "camera_frame_check": {
+    "n_runner": 301,
+    "n_cameras_json": 301,
+    "n_matched": 301,
+    "max_position_diff": 1.7763568394002505e-15,
+    "max_rotation_diff": 3.3306690738754696e-16,
+    "tol": 0.0001,
+    "pass": true
+  },
+  "split_check": {
+    "n_test": 38,
+    "test_names": [
+      "00001",
+      "00009",
+      "00017",
+      "00025",
+      "00033",
+      "00041",
+      "00049",
+      "00057",
+      "00065",
+      "00073",
+      "00081",
+      "00089",
+      "00097",
+      "00105",
+      "00113",
+      "00121",
+      "00129",
+      "00137",
+      "00145",
+      "00153",
+      "00161",
+      "00169",
+      "00177",
+      "00185",
+      "00193",
+      "00201",
+      "00209",
+      "00217",
+      "00225",
+      "00233",
+      "00241",
+      "00249",
+      "00257",
+      "00265",
+      "00273",
+      "00281",
+      "00289",
+      "00297"
+    ],
+    "equals_cameras_json_head": true
+  },
+  "rows_ok": [
+    "c3dgs_ft0",
+    "c3dgs_ft5000",
+    "uncompressed"
+  ],
+  "missing_or_failed": [],
+  "failed_steps": [],
+  "skipped_steps": [],
+  "done": true,
+  "data_deleted": true
+}
