@@ -214,14 +214,23 @@ def layout_model(inria_dir: str, model_dir: str, iteration: int = 30000) -> str:
 
 
 def run_compress(py: str, c3dgs_dir: str, model_dir: str, source_path: str, out_dir: str, finetune_iterations: int,
-                 wrapper: str, timeout: float = 7200.0, load_iteration: int = 30000) -> Dict:
+                 wrapper: str, timeout: float = 7200.0, load_iteration: int = 30000, data_device: str = "cuda",
+                 extra_args: str = "", wrapper_args: str = "") -> Dict:
     """One run of C3DGS's ``compress.py`` through ``wrapper``: its outputs and timings, the npz's size in bytes,
-    MiB and MB, and the wrapper's peak GPU memory. Never raises; ``ok`` says whether it produced everything."""
+    MiB and MB, and the wrapper's peak GPU memory. Never raises; ``ok`` says whether it produced everything.
+    E3r (Amendment 14) adds ``extra_args`` for ``compress.py`` (``--color_codebook_size``, ...), ``wrapper_args``
+    (``--observe``, ``--record``, ``--inject``) and ``data_device`` (its out-of-memory fallback is ``cpu``); the
+    defaults give E3q's command."""
     shutil.rmtree(out_dir, ignore_errors=True)
     mem_json = out_dir.rstrip("/\\") + "_wrapper.json"
-    args = (f"--model_path {shlex.quote(model_dir)} --source_path {shlex.quote(source_path)} --data_device cuda "
+    if os.path.exists(mem_json):
+        os.remove(mem_json)
+    args = (f"--model_path {shlex.quote(model_dir)} --source_path {shlex.quote(source_path)} --data_device {data_device} "
             f"--output_vq {shlex.quote(out_dir)} --finetune_iterations {int(finetune_iterations)}")
-    cmd = f"{py} {shlex.quote(wrapper)} --c3dgs_dir {shlex.quote(c3dgs_dir)} --out_json {shlex.quote(mem_json)} -- {args}"
+    if extra_args:
+        args += " " + extra_args
+    w = f" {wrapper_args}" if wrapper_args else ""
+    cmd = f"{py} {shlex.quote(wrapper)} --c3dgs_dir {shlex.quote(c3dgs_dir)} --out_json {shlex.quote(mem_json)}{w} -- {args}"
     res = run_command(cmd, timeout=timeout)
     out = {"finetune_iterations": int(finetune_iterations), "cmd": cmd, "returncode": res["returncode"],
            "time_s": res["time_s"], "tail": res["tail"], "ok": False}

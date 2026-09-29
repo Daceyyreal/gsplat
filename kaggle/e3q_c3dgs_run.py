@@ -16,6 +16,10 @@ codebook plus every kept splat, up to 1,030,604 on train) was refused by cuSOLVE
 reduction recorded. C3DGS's source is not edited. Each matrix is decomposed on its own, so chunking changes nothing
 that is computed; it is still recorded as a deviation. Each chunked call also gets a report-only check against a
 float64 CPU reference on a sample of its actual input matrices.
+
+E3r (Amendment 14) adds ``--observe``, ``--record PATH`` and ``--inject CONFIG``, which install
+``kaggle/e3r_hooks.py`` after the chdir, before ``compress.py`` runs; their report is ``"e3r"``. An injection that
+cannot be installed, or that never happens, is an error: C3DGS's own codebook is never reported as an injected one.
 """
 
 import argparse
@@ -199,7 +203,16 @@ def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--c3dgs_dir", required=True)
     p.add_argument("--out_json", required=True)
+    # E3r (Amendment 14): kaggle/e3r_hooks.py in this process; without these flags the wrapper is E3q's
+    p.add_argument("--observe", action="store_true", help="E3r: count and record, change nothing")
+    p.add_argument("--record", default=None, help="E3r: write the colour VQ's input and outputs here (the probe run)")
+    p.add_argument("--inject", default=None, help="E3r: a JSON config; GN-VQ replaces C3DGS's colour codebook")
+    p.add_argument("--seed", type=int, default=None,
+                   help="E3r (Amendment 14 f): seed random, numpy and torch as C3DGS's own safe_state does, before "
+                        "compress.py (which seeds nothing)")
     a = p.parse_args(argv[:argv.index("--")] if "--" in argv else argv)
+    record = os.path.abspath(a.record) if a.record else None
+    inject = os.path.abspath(a.inject) if a.inject else None
     import torch
 
     cuda = torch.cuda.is_available()
@@ -210,13 +223,39 @@ def main() -> int:
     sys.path.insert(0, a.c3dgs_dir)
     sys.argv = ["compress.py"] + rest
     rec = {"argv": sys.argv, "status": "ok", "error": None, "deviations": [DEVIATION]}
+    hooks = None
+    if a.observe or record or inject:
+        try:
+            import e3r_hooks
+
+            hooks = e3r_hooks.install(record=record, inject=inject)
+        except BaseException as e:  # noqa: B902
+            rec["e3r_install_error"] = f"{type(e).__name__}: {str(e)[:800]}"
+            if inject:  # never let C3DGS's own codebook pass for an injected one
+                rec.update(status="error", error=f"E3r injection hooks not installed: {rec['e3r_install_error']}")
+    if a.seed is not None:  # C3DGS's utils/general_utils.py safe_state: random, numpy and torch (all devices)
+        import random
+
+        import numpy as np
+
+        random.seed(a.seed)
+        np.random.seed(a.seed)
+        torch.manual_seed(a.seed)
+        rec["seed"] = a.seed
+        rec["deviations"].append(f"random, numpy and torch seeded with {a.seed} before compress.py, as C3DGS's own "
+                                 "safe_state seeds them (compress.py seeds nothing; PREREG_GN.md Amendment 14 f)")
     t0 = time.time()
-    try:
-        runpy.run_path("compress.py", run_name="__main__")
-    except BaseException as e:  # noqa: B902 (recorded, then the exit code says so)
-        rec.update(status="error", error=f"{type(e).__name__}: {str(e)[:800]}", traceback=traceback.format_exc()[-6000:])
+    if rec["status"] == "ok":
+        try:
+            runpy.run_path("compress.py", run_name="__main__")
+        except BaseException as e:  # noqa: B902 (recorded, then the exit code says so)
+            rec.update(status="error", error=f"{type(e).__name__}: {str(e)[:800]}", traceback=traceback.format_exc()[-6000:])
     rec["wall_s"] = time.time() - t0
     rec["linalg_patch"] = patch.record()
+    if hooks is not None:
+        rec["e3r"] = hooks.report()
+        if inject and rec["status"] == "ok" and "inject" not in rec["e3r"]:
+            rec.update(status="error", error="E3r: compress.py finished but the colour codebook was never injected")
     if cuda:
         rec.update(max_memory_allocated=torch.cuda.max_memory_allocated(),
                    max_memory_reserved=torch.cuda.max_memory_reserved(), device=torch.cuda.get_device_name(0))

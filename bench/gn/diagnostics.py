@@ -287,8 +287,9 @@ def measure_dmse(
 
 def _x3(x: Tensor) -> Tensor:
     """``[N, 45]`` (index ``k * 3 + channel``, as ``shN.reshape(N, -1)``) or ``[N, 15, 3]`` ->
-    ``[N, 15, 3]``, gsplat's shN layout."""
-    return x.reshape(x.shape[0], D, 3)
+    ``[N, 15, 3]``, gsplat's shN layout. With DC (E3r, Amendment 14 b), ``[N, 48]`` -> ``[N, 16, 3]``: the
+    coefficient count is the width over 3."""
+    return x.reshape(x.shape[0], -1, 3)
 
 
 def shortlist_l2(x: Tensor, C: Tensor, topk: int = 64, chunk: int = 4096) -> Tensor:
@@ -309,7 +310,7 @@ def lifted_u(x3: Tensor, M_packed: Tensor) -> Tensor:
     """``[n, 165]`` float64: ``[-2 M c^R, -2 M c^G, -2 M c^B, triu(M) with off-diagonals x2]``."""
     m = M_packed.double()
     mc = torch.einsum("nab,nbc->nac", gm.unpack(m), x3.double())
-    w = gm.frobenius_weights(M_packed.device, torch.float64)
+    w = gm.frobenius_weights(M_packed.device, torch.float64, gm.dim_of_packed(M_packed.shape[1]))
     return torch.cat(
         [-2.0 * mc[:, :, 0], -2.0 * mc[:, :, 1], -2.0 * mc[:, :, 2], m * w], dim=1
     )
@@ -544,13 +545,15 @@ def update_centroids(
     """Per cluster, per channel, float64, with ``mu = eps * tr(sum M) / 15``:
     ridge ``q = (sum M + mu I)^-1 sum M c``; prox ``q = (sum M + mu I)^-1 (sum M c + mu q_old)``.
     Clusters with ``tr(sum M) = 0`` (empty, or all members unseen) keep ``q_old`` in both variants.
-    Returns (centroids like ``C_prev``, n kept)."""
+    Returns (centroids like ``C_prev``, n kept). The dimension is the metric's (15, or 16 with DC: then
+    ``mu = eps * tr(sum M) / 16``, Amendment 14 b)."""
     if variant not in REFINE_VARIANTS:
         raise ValueError(f"unknown refine variant {variant!r}")
     K = C_prev.shape[0]
     dev = C_prev.device
-    A = torch.zeros(K, gm.N_PACKED, dtype=torch.float64, device=dev)
-    B = torch.zeros(K, D, 3, dtype=torch.float64, device=dev)
+    d = gm.dim_of_packed(M_packed.shape[1])
+    A = torch.zeros(K, M_packed.shape[1], dtype=torch.float64, device=dev)
+    B = torch.zeros(K, d, 3, dtype=torch.float64, device=dev)
     x3 = _x3(x)
     for start in range(0, x3.shape[0], chunk):
         sl = slice(start, start + chunk)
@@ -564,8 +567,8 @@ def update_centroids(
     ok = tr > 0
     new = C_prev.clone()
     if bool(ok.any()):
-        mu = eps * tr[ok] / D
-        eye = torch.eye(D, dtype=torch.float64, device=dev)
+        mu = eps * tr[ok] / d
+        eye = torch.eye(d, dtype=torch.float64, device=dev)
         rhs = B[ok]
         if variant == "prox":
             rhs = rhs + mu[:, None, None] * _x3(C_prev).double()[ok]

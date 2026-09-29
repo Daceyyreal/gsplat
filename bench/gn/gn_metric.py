@@ -10,6 +10,11 @@ Per splat i, over the train views v where it is visible:
 ``d_iv = normalize(mean_i - campos_v)``. Both come from one render of zero features ``[N, 17]`` with
 ``sh_degree=None`` and the eval's rasterize settings: backpropagating Rademacher +-1 on channels 0-15
 and 1 on channel 16 gives ``sum_p w_ip r_p`` per channel.
+
+``with_dc=True`` (E3r, PREREG_GN.md Amendment 14 b) takes ``y`` as all 16 basis values, bands 0-3: the same
+render, probes and ``s_iv``, a 16 x 16 metric (136 packed values) whose lower-right 15 x 15 block is the one
+above, entry for entry. The packed helpers read the dimension from their input's width (120 -> 15,
+136 -> 16), so every 15 x 15 caller is unchanged.
 """
 
 import hashlib
@@ -39,39 +44,77 @@ DIAG = (TRIU_I == TRIU_J).nonzero(as_tuple=True)[
     0
 ]  # positions of the diagonal in the packing
 CACHE_VERSION = 1
+D_DC = sb.N_BASIS  # 16: bands 0-3 (Amendment 14 b)
+_TRIU = {D: (TRIU_I, TRIU_J)}
 
 
-# ------------------------------------------------------------------ packed 15 x 15 matrices
+# ------------------------------------------------------------------ packed 15 x 15 (or 16 x 16) matrices
+
+
+def triu(d: int):
+    """The upper-triangle row and column indices of a ``d x d`` matrix, row-major (``TRIU_I``, ``TRIU_J`` for
+    ``d = 15``)."""
+    if d not in _TRIU:
+        _TRIU[d] = tuple(torch.triu_indices(d, d))
+    return _TRIU[d]
+
+
+def dim_of_packed(width: int) -> int:
+    """``d`` with ``d (d + 1) / 2 = width``: 120 -> 15, 136 -> 16."""
+    d = (math.isqrt(8 * int(width) + 1) - 1) // 2
+    if d * (d + 1) // 2 != width:
+        raise ValueError(f"{width} is not a packed upper-triangle width")
+    return d
+
+
+def diag_positions(d: int) -> Tensor:
+    """Positions of the diagonal in the packing of a ``d x d`` matrix (``DIAG`` for ``d = 15``)."""
+    if d == D:
+        return DIAG
+    i, j = triu(d)
+    return (i == j).nonzero(as_tuple=True)[0]
 
 
 def pack_outer(y: Tensor) -> Tensor:
-    """Upper triangle of ``y y^T`` per row: ``[n, 15] -> [n, 120]``."""
-    i, j = TRIU_I.to(y.device), TRIU_J.to(y.device)
+    """Upper triangle of ``y y^T`` per row: ``[n, d] -> [n, d (d + 1) / 2]`` (``[n, 15] -> [n, 120]``)."""
+    i, j = triu(y.shape[1])
+    i, j = i.to(y.device), j.to(y.device)
     return y[:, i] * y[:, j]
 
 
 def unpack(packed: Tensor) -> Tensor:
-    """``[n, 120] -> [n, 15, 15]`` symmetric."""
-    i, j = TRIU_I.to(packed.device), TRIU_J.to(packed.device)
-    full = packed.new_zeros(packed.shape[0], D, D)
+    """``[n, 120] -> [n, 15, 15]`` symmetric (``[n, 136] -> [n, 16, 16]``)."""
+    d = dim_of_packed(packed.shape[1])
+    i, j = triu(d)
+    i, j = i.to(packed.device), j.to(packed.device)
+    full = packed.new_zeros(packed.shape[0], d, d)
     full[:, i, j] = packed
     full[:, j, i] = packed
     return full
 
 
 def pack(full: Tensor) -> Tensor:
-    """``[n, 15, 15] -> [n, 120]`` (upper triangle)."""
-    i, j = TRIU_I.to(full.device), TRIU_J.to(full.device)
+    """``[n, 15, 15] -> [n, 120]`` (upper triangle; ``[n, 16, 16] -> [n, 136]``)."""
+    i, j = triu(full.shape[-1])
+    i, j = i.to(full.device), j.to(full.device)
     return full[:, i, j]
 
 
 def trace_packed(packed: Tensor) -> Tensor:
-    return packed[:, DIAG.to(packed.device)].sum(dim=-1)
+    return packed[:, diag_positions(dim_of_packed(packed.shape[1])).to(packed.device)].sum(dim=-1)
 
 
-def frobenius_weights(device, dtype=torch.float32) -> Tensor:
+def frobenius_weights(device, dtype=torch.float32, d: int = D) -> Tensor:
     """``<A, B>_F = sum(w * pack(A) * pack(B))`` for symmetric A, B: 1 on the diagonal, 2 off it."""
-    return torch.where(TRIU_I == TRIU_J, 1.0, 2.0).to(device=device, dtype=dtype)
+    i, j = triu(d)
+    return torch.where(i == j, 1.0, 2.0).to(device=device, dtype=dtype)
+
+
+def ac_block(packed16: Tensor) -> Tensor:
+    """The lower-right 15 x 15 block (bands 1-3) of packed 16 x 16 matrices, packed as ``[n, 120]``."""
+    i, j = triu(D_DC)
+    keep = ((i >= 1) & (j >= 1)).nonzero(as_tuple=True)[0].to(packed16.device)
+    return packed16[:, keep]
 
 
 # ------------------------------------------------------------------------- rendering
@@ -218,13 +261,15 @@ def probe_view(
 
 
 class GNAccumulator:
-    """Per-splat sums over views: M (packed, fp32), F, the C3DGS-style |f y_k| sums, visibility."""
+    """Per-splat sums over views: M (packed, fp32), F, the C3DGS-style |f y_k| sums, visibility. ``with_dc``
+    takes all 16 basis values (Amendment 14 b) instead of bands 1-3."""
 
-    def __init__(self, n: int, device, chunk: int = 262144):
-        self.n, self.device, self.chunk = n, device, chunk
-        self.M = torch.zeros(n, N_PACKED, dtype=torch.float32, device=device)
+    def __init__(self, n: int, device, chunk: int = 262144, with_dc: bool = False):
+        self.n, self.device, self.chunk, self.with_dc = n, device, chunk, with_dc
+        d = D_DC if with_dc else D
+        self.M = torch.zeros(n, d * (d + 1) // 2, dtype=torch.float32, device=device)
         self.F = torch.zeros(n, dtype=torch.float64, device=device)
-        self.c3_abs = torch.zeros(n, D, dtype=torch.float32, device=device)
+        self.c3_abs = torch.zeros(n, d, dtype=torch.float32, device=device)
         self.s_sum = torch.zeros(n, dtype=torch.float64, device=device)
         self.n_vis = torch.zeros(n, dtype=torch.int32, device=device)
         self.clamp_neg = 0
@@ -249,7 +294,7 @@ class GNAccumulator:
         )
         for part in idx.split(self.chunk):
             basis = sb.sh_basis(means[part] - campos, 3)  # [c, 16], normalized inside
-            y = basis[:, 1:]
+            y = basis if self.with_dc else basis[:, 1:]
             self.M.index_add_(0, part, s[part, None] * pack_outer(y))
             self.F.index_add_(0, part, f[part].double())
             self.c3_abs.index_add_(0, part, (f[part, None] * y).abs())
@@ -274,6 +319,7 @@ class GNAccumulator:
             "clamp_neg": self.clamp_neg,
             "clamp_total": self.clamp_total,
             "clamp_fraction": self.clamp_neg / max(self.clamp_total, 1),
+            "bands": "0-3" if self.with_dc else "1-3",
         }
 
 
@@ -286,17 +332,19 @@ def compute_gn(
     chunk: int = 262144,
     log: Optional[Callable[[str], None]] = print,
     log_every: int = 20,
+    with_dc: bool = False,
 ) -> Dict:
     """Accumulate the GN metric over ``views`` (dicts with ``camtoworld [4, 4]``, ``K [3, 3]``,
     ``width``, ``height``). ``render(act, colors, camtoworld, K, width, height, settings)`` must
-    return ``([H, W, C], info)``; None means ``gsplat_render`` (looked up at call time)."""
+    return ``([H, W, C], info)``; None means ``gsplat_render`` (looked up at call time). ``with_dc``: the
+    16 x 16 metric of bands 0-3 (Amendment 14 b); the renders and probes are the same."""
     render = render or gsplat_render
     act = activated(splats)
     n = act["means"].shape[0]
     device = act["means"].device
     coeffs = torch.cat([splats["sh0"], splats["shN"]], dim=1).detach()
     gen = torch.Generator(device=device).manual_seed(seed)
-    acc = GNAccumulator(n, device, chunk)
+    acc = GNAccumulator(n, device, chunk, with_dc=with_dc)
     t0 = time.perf_counter()
     for k, view in enumerate(views):
         c2w = view["camtoworld"].to(device)

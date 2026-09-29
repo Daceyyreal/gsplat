@@ -90,17 +90,19 @@ RULE_PSNR = (
 def floored_metric(M_packed, rho: float):
     """``M_i + rho * tr(M_i) / 15 * I`` for every splat, packed ``[N, 120]`` like ``M_packed``. At
     ``rho = 0`` the input itself is returned, so that variant is E2's GN-VQ bit for bit. The floor is
-    added in float64 and stored in ``M_packed``'s dtype; rows with ``tr(M_i) = 0`` stay zero."""
+    added in float64 and stored in ``M_packed``'s dtype; rows with ``tr(M_i) = 0`` stay zero. A packed
+    16 x 16 metric (``[N, 136]``, E3r) gets ``M_i + rho * tr(M_i) / 16 * I`` (Amendment 14 b)."""
     import gn_metric as gm
 
     if rho == 0:
         return M_packed
     if rho < 0:
         raise ValueError(f"rho must be >= 0, got {rho}")
-    diag = gm.DIAG.to(M_packed.device)
+    d = gm.dim_of_packed(M_packed.shape[1])
+    diag = gm.diag_positions(d).to(M_packed.device)
     tr = gm.trace_packed(M_packed.double())
     out = M_packed.clone()
-    out[:, diag] = (M_packed[:, diag].double() + (rho * tr / gm.D)[:, None]).to(M_packed.dtype)
+    out[:, diag] = (M_packed[:, diag].double() + (rho * tr / d)[:, None]).to(M_packed.dtype)
     return out
 
 

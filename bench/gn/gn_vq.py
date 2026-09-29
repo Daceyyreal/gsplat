@@ -158,6 +158,7 @@ def gn_vq(
     topk: int = 64,
     log: Optional[Callable[[str], None]] = print,
     report_metrics: Optional[Dict[str, Tuple[Tensor, int]]] = None,
+    quantizer=None,
 ) -> Tuple[Tensor, Tensor, Dict]:
     """GN-VQ (Amendment 5). Returns (float centroids for the writer, labels, report).
 
@@ -168,14 +169,20 @@ def gn_vq(
     ``report_metrics`` (name -> (packed metric, total pixels)) only adds reporting: the objective under
     each of those metrics, with the same centroids and labels as ``objective_before_quantization`` and
     ``objective_after_quantization``, goes to ``report["objectives_under"]``. E2b (Amendment 9 b) runs
-    GN-VQ on a floored metric and reports the unfloored one this way. Nothing else changes."""
+    GN-VQ on a floored metric and reports the unfloored one this way. Nothing else changes.
+
+    ``quantizer`` is the codec's quantizer; None is gsplat's (``codec_range`` / ``quantized_codebook``), and
+    every earlier experiment ran with None. Another codec passes an object with ``range(C) -> dict`` and
+    ``quantize(C) -> (dequantized centroids, codes, range)``: E3r's C3DGS int8 table quantizer (Amendment 14 b)."""
+    range_fn = codec_range if quantizer is None else quantizer.range
+    quantize_fn = quantized_codebook if quantizer is None else quantizer.quantize
     lo, hi = float(C0.detach().float().min()), float(C0.detach().float().max())
     C, labels = C0.clone(), labels0.clone()
     obj = gd.gn_objective(x, C, labels, M_packed, total_pixels)
     history = [{"iter": 0, "step": "start", "objective": obj}]
     warm = {
         "range": [lo, hi],
-        "quantizer": codec_range(C0),
+        "quantizer": range_fn(C0),
         "objective": obj,
         "n_clusters": int(C0.shape[0]),
     }
@@ -227,7 +234,7 @@ def gn_vq(
     before_under = {
         name: gd.gn_objective(x, C, labels, m, px) for name, (m, px) in (report_metrics or {}).items()
     }
-    Cq, codes, rng = quantized_codebook(C)
+    Cq, codes, rng = quantize_fn(C)
     changed = 0.0
     if final_quantized_assignment:
         new_labels, info_q = gd.assign_exact(x, M_packed, Cq, labels)

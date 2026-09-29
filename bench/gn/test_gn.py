@@ -3098,3 +3098,235 @@ def test_findings_section_14_numbers_recheck_from_the_repo():
 
     res = check_s14.run()
     assert res["fails"] == [] and res["n_numbers"] > 40
+
+
+# --------------------------------------------------------------------------------- E3r (Amendment 14)
+
+
+def test_e3r_16x16_metric_block_is_the_frozen_metric():
+    """Amendment 14 b: the same render, probes and s_iv; the 16 x 16 metric's lower-right 15 x 15 block is the frozen
+    metric entry for entry, and its DC row is C0 times the first moments (C0^2 sum_v s_iv on the diagonal)."""
+    splats = gm.toy_scene(64, seed=3)
+    cam = gm.toy_camera()
+    views = [cam, {**cam, "camtoworld": torch.tensor([[1.0, 0, 0, 0.1], [0, 1, 0, -0.1], [0, 0, 1, 0.2], [0, 0, 0, 1]])}]
+    settings = gm.RenderSettings(False, "classic", "pinhole", False, False, 0.01, 1e10, 3)
+    m15 = gm.compute_gn(splats, views, settings, seed=0, render=tr.render_bruteforce, log=None)
+    m16 = gm.compute_gn(splats, views, settings, seed=0, render=tr.render_bruteforce, log=None, with_dc=True)
+    assert m15["M_packed"].shape == (64, 120) and m16["M_packed"].shape == (64, 136)
+    assert m15["bands"] == "1-3" and m16["bands"] == "0-3"
+    assert torch.equal(gm.ac_block(m16["M_packed"]), m15["M_packed"])
+    full = gm.unpack(m16["M_packed"]).double()
+    c0 = 0.2820947917738781
+    assert torch.allclose(full[:, 0, 0], c0 ** 2 * m16["s_sum"], rtol=1e-5, atol=1e-10)
+    assert torch.equal(m16["s_sum"], m15["s_sum"]) and torch.equal(m16["F"], m15["F"])
+    # the packed helpers read the width: round trips, traces and the diagonal at 15 and 16
+    for d in (15, 16):
+        a = torch.randn(5, d, d, dtype=torch.float64)
+        a = a + a.transpose(1, 2)
+        p = gm.pack(a)
+        assert gm.dim_of_packed(p.shape[1]) == d and torch.equal(gm.unpack(p), a)
+        assert torch.allclose(gm.trace_packed(p), torch.diagonal(a, dim1=1, dim2=2).sum(1))
+    assert gm.dim_of_packed(120) == 15 and gm.dim_of_packed(136) == 16 and gm.diag_positions(15) is gm.DIAG
+    with pytest.raises(ValueError):
+        gm.dim_of_packed(121)
+
+
+def _psd16(n, seed=0):
+    g = torch.Generator().manual_seed(seed)
+    a = torch.randn(n, 16, 5, generator=g, dtype=torch.float64)
+    return gm.pack(a @ a.transpose(1, 2)).float()
+
+
+def test_e3r_generic_dimension_floor_update_and_assignment():
+    """At 16 the floor is tr / 16, the ridge update solves the 16 x 16 systems, the lifted assignment equals the
+    exhaustive one; at 15 nothing changed (the rest of this file)."""
+    import e2b
+
+    M = _psd16(300)
+    Mf = e2b.floored_metric(M, 0.3)
+    tr = gm.trace_packed(M.double())
+    d = gm.diag_positions(16)
+    assert torch.allclose(Mf[:, d].double(), M[:, d].double() + (0.3 * tr / 16)[:, None], rtol=1e-6)
+    off = torch.ones(136, dtype=torch.bool)
+    off[d] = False
+    assert torch.equal(Mf[:, off], M[:, off]) and e2b.floored_metric(M, 0.0) is M
+    g = torch.Generator().manual_seed(1)
+    x = torch.randn(300, 48, generator=g)
+    C = torch.randn(12, 48, generator=g)
+    lab = gd.lifted_argmin(x, M, C)
+    dmin, arg = gd.brute_force_min(x, M, C)
+    assert torch.allclose(gd.direct_distance(x, M, C, lab), dmin, rtol=1e-5, atol=1e-6)
+    labels = arg
+    new, _ = gd.update_centroids(x, labels, M, C, "ridge", eps=1e-2)
+    k = int(labels[0])
+    mem = labels == k
+    A = gm.unpack(M[mem].double()).sum(0)
+    mu = 1e-2 * float(torch.trace(A)) / 16
+    q = torch.linalg.solve(A + mu * torch.eye(16, dtype=torch.float64),
+                           torch.einsum("nab,nbc->ac", gm.unpack(M[mem].double()), x[mem].double().reshape(-1, 16, 3)))
+    assert torch.allclose(new[k].double(), q.reshape(-1), rtol=1e-4, atol=1e-6)
+
+
+def test_e3r_quantizer_is_c3dgs_int8_table_quantizer():
+    """C3DGSQuantizer gives what C3DGS's fake quantizers render and what its save_npz writes, DC and AC apart."""
+    import e3r
+
+    g = torch.Generator().manual_seed(2)
+    C = torch.randn(64, 48, generator=g) * 0.4
+    fq_dc = torch.ao.quantization.FakeQuantize(dtype=torch.qint8)
+    fq_rest = torch.ao.quantization.FakeQuantize(dtype=torch.qint8)
+    fq_dc(C[:, :3].reshape(64, 1, 3))
+    fq_rest(C[:, 3:].reshape(64, 15, 3) * 1.5)  # an observer range wider than this codebook's
+    q = e3r.C3DGSQuantizer(float(fq_dc.scale), int(fq_dc.zero_point), float(fq_rest.scale), int(fq_rest.zero_point))
+    Cq, codes, rng = q.quantize(C)
+    fq_dc.disable_observer()
+    fq_rest.disable_observer()
+    want = torch.cat([fq_dc(C[:, :3].reshape(64, 1, 3)), fq_rest(C[:, 3:].reshape(64, 15, 3))], 1).reshape(64, 48)
+    assert torch.equal(Cq, want) and codes.dtype == torch.int8
+    written = torch.quantize_per_tensor(C[:, 3:].reshape(64, 15, 3), fq_rest.scale, fq_rest.zero_point, torch.qint8).int_repr()
+    assert torch.equal(codes[:, 3:], written.reshape(64, 45))
+    assert rng["dc"]["scale"] == float(fq_dc.scale) and rng["rest"]["zero_point"] == int(fq_rest.zero_point)
+
+
+def test_e3r_gn_vq_16x16_runs_and_does_not_raise_the_objective():
+    import e3r
+
+    g = torch.Generator().manual_seed(4)
+    n, k = 400, 16
+    x = torch.randn(n, 48, generator=g) * 0.3
+    M = _psd16(n, seed=5)
+    C0 = x[torch.randperm(n, generator=g)[:k]].clone()
+    L0 = torch.cdist(x, C0).argmin(1)
+    q = e3r.C3DGSQuantizer(0.01, 0, 0.005, 0)
+    warm = gd.gn_objective(x, C0, L0, M, 1000)
+    for rho in (0.0, 0.1):
+        C, L, rep = e3r.run_gn_vq(x, C0, L0, M, rho, 1000, q, log=None)
+        assert C.shape == (k, 48) and L.shape == (n,) and int(L.max()) < k
+        assert rep["floor"].endswith("/ 16 * I") and rep["metric_dim"] == 16 and rep["quantizer"]["dtype"] == "qint8"
+        if rho == 0:
+            assert rep["objective_before_quantization"] <= warm * (1 + 1e-9)
+    with pytest.raises(ValueError):
+        e3r.run_gn_vq(x[:, :45], C0[:, :45], L0, M, 0.0, 1000, q, log=None)
+    share = e3r.trace_shares(M, torch.arange(100))
+    tr16 = gm.trace_packed(M.double())
+    assert math.isclose(share["16x16"]["share"], float(tr16[:100].sum() / tr16.sum()), rel_tol=1e-12)
+    assert 0 < share["15x15"]["share"] < 1
+
+
+def _fake_model(tmp_path, n=600, seed=0):
+    """A small model directory (INRIA layout) for the fake C3DGS, and its splats."""
+    import e3p_inria as ei
+
+    g = torch.Generator().manual_seed(seed)
+    s = {"means": torch.randn(n, 3, generator=g), "quats": torch.randn(n, 4, generator=g),
+         "scales": torch.randn(n, 3, generator=g) * 0.2 - 3, "opacities": torch.randn(n, generator=g),
+         "sh0": torch.randn(n, 1, 3, generator=g) * 0.5, "shN": torch.randn(n, 15, 3, generator=g) * 0.2}
+    d = tmp_path / "model" / "point_cloud" / "iteration_30000"
+    d.mkdir(parents=True)
+    ei.write_inria_ply(str(d / "point_cloud.ply"), s)
+    return str(tmp_path / "model"), s
+
+
+def _run_fake(tmp_path, c3d, model, name, flags=(), ft=0, k=16, env=None):
+    import subprocess as sp
+
+    wrapper = os.path.join(os.path.dirname(HERE), "..", "kaggle", "e3q_c3dgs_run.py")
+    out = tmp_path / name
+    js = tmp_path / f"{name}.json"
+    e = {**os.environ, "E3R_FAKE_KAGGLE": os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle"), **(env or {})}
+    p = sp.run([sys.executable, wrapper, "--c3dgs_dir", c3d, "--out_json", str(js), "--seed", "0", *flags, "--", "--model_path", model,
+                "--source_path", "x", "--output_vq", str(out), "--finetune_iterations", str(ft),
+                "--color_codebook_size", str(k)], env=e, capture_output=True, text=True)
+    rec = json.load(open(js))
+    npz = out / "point_cloud" / f"iteration_{30000 + ft}" / "point_cloud.npz"
+    arrays = None
+    if npz.exists():  # the arrays, not the zip's bytes (its entries carry timestamps)
+        import numpy as np
+
+        with np.load(npz) as z:
+            arrays = {k: z[k].tobytes() for k in sorted(z.files)}
+    return p, rec, arrays, out
+
+
+def test_e3r_hooks_observe_record_and_inject_in_a_fake_c3dgs(tmp_path):
+    """The hooks in C3DGS's process (a stand-in with its structure, fake quantizers and random streams): observe and
+    record change nothing C3DGS writes and never call get_features; the probe record holds the colour VQ's input;
+    injection keeps the random streams paired (the same geometry), replaces the labels with GN-VQ's, records the set
+    against the probe's, and the labels survive a fine-tune; a missing metric is an error, never C3DGS's own codebook."""
+    import shutil
+
+    import e3r
+
+    c3d = str(tmp_path / "c3dgs")
+    shutil.copytree(os.path.join(HERE, "dryrun", "fake_c3dgs"), c3d)
+    model, s = _fake_model(tmp_path)
+    p0, r0, b0, o0 = _run_fake(tmp_path, c3d, model, "plain")
+    assert p0.returncode == 0, p0.stderr[-2000:]
+    rec_path = str(tmp_path / "probe.pt")
+    p1, r1, b1, o1 = _run_fake(tmp_path, c3d, model, "probe", ["--observe", "--record", rec_path])
+    assert p1.returncode == 0 and b1 == b0, p1.stderr[-2000:]  # nothing C3DGS writes changed
+    calls = [json.load(open(o / "fake_calls.json"))["get_features_calls"] for o in (o0, o1)]
+    assert calls[0] == calls[1]
+    e = r1["e3r"]
+    c = e["counts"]
+    assert c["n_ckpt"] == 600 and c["n_pruned"] == 67 and c["n_kept_colour"] + c["n_colour_quantized"] == 600 - 67
+    assert e["errors"] == [] and "geometry_sha1" in e and e["qa_at_colour_vq"]["dc_scale"] > 0
+    rec = torch.load(rec_path, weights_only=False)
+    assert rec["x"].shape == (c["n_colour_quantized"], 48) and rec["codebook"].shape == (16, 48)
+    assert rec["vq_ids"].numel() == c["n_colour_quantized"] and not bool((torch.arange(600) % 9 == 0)[rec["vq_ids"]].any())
+    # a metric for every checkpoint splat, as the harness's cache file holds it
+    m_path = str(tmp_path / "full16.pt")
+    torch.save({"M_packed": _psd16(600, seed=7), "total_pixels": 10000, "key": "k"}, m_path)
+    cfg = tmp_path / "inject_cfg.json"
+    cfg.write_text(json.dumps({"m_path": m_path, "rho": 0.1, "probe_record": rec_path, "n_lifted_check": 200}))
+    p2, r2, b2, o2 = _run_fake(tmp_path, c3d, model, "inject", ["--observe", "--inject", str(cfg)])
+    assert p2.returncode == 0 and r2["status"] == "ok", (p2.stderr[-3000:], r2.get("error"))
+    inj = r2["e3r"]["inject"]
+    assert inj["set_vs_probe"]["same_set"] and inj["set_vs_probe"]["features_equal"]
+    assert inj["gn_vq"]["floor"].endswith("/ 16 * I") and inj["lifted_check"]["n_sample"] == min(200, c["n_colour_quantized"])
+    assert r2["e3r"]["geometry_sha1"] == e["geometry_sha1"]  # the random streams stayed paired
+    assert r2["e3r"]["save_check"]["labels_survived"] and b2 != b1
+    # with fine-tuning: the indices survive, the table moves
+    p3, r3, _, _ = _run_fake(tmp_path, c3d, model, "inject_ft", ["--observe", "--inject", str(cfg)], ft=5000)
+    sc = r3["e3r"]["save_check"]
+    assert p3.returncode == 0 and sc["labels_survived"] and sc["n_labels_changed"] == 0 and sc["codebook_max_abs_change"] > 0
+    # no metric: an error, and nothing is reported as injected
+    cfg.write_text(json.dumps({"m_path": str(tmp_path / "missing.pt"), "rho": 0.1}))
+    p4, r4, b4, _ = _run_fake(tmp_path, c3d, model, "broken", ["--observe", "--inject", str(cfg)])
+    assert p4.returncode == 1 and r4["status"] == "error" and b4 is None and "inject" not in r4["e3r"]
+    assert e3r.C3DGSQuantizer.from_state(e["qa_at_colour_vq"]).state() == e["qa_at_colour_vq"]
+
+
+def test_e3r_job_constants_and_the_estimate():
+    """Amendment 14's grids and scenes; the thresholds 0.6e-6 x 3^j; (ii) and the fine-tuned run on train only;
+    the pre-run estimate's numbers as the amendment quotes them; refusals."""
+    import re
+
+    import e3r_estimate
+    import gn_e3r_scene as job
+
+    assert set(job.SCENES) == {"train", "bicycle"} and job.KS == (1024, 4096, 16384, 65536) and job.K_DEFAULT == 4096
+    assert job.THRESHOLD_SCENES == ("train",) and job.FT5000_SCENES == ("train",)
+    assert [job.threshold_value(j) for j in (-2, -1, 0, 1, 2)] == pytest.approx([0.6e-6 / 9, 0.2e-6, 0.6e-6, 1.8e-6, 5.4e-6])
+    tr_specs, bi_specs = job.run_specs("train"), job.run_specs("bicycle")
+    assert [s["name"] for s in tr_specs] == ["c3dgs_k4096", "gnvq_k4096", "gnvq_k4096_ft5000", "c3dgs_k1024", "c3dgs_k16384",
+                                            "c3dgs_k65536", "c3dgs_k4096_j-2", "c3dgs_k4096_j-1", "c3dgs_k4096_j+1",
+                                            "c3dgs_k4096_j+2"]
+    assert [s["name"] for s in bi_specs] == ["c3dgs_k4096", "gnvq_k4096", "c3dgs_k1024", "c3dgs_k16384", "c3dgs_k65536"]
+    assert len(job.wanted_configs("train")) == 1 + 7 + 10 and len(set(job.COLUMNS)) == len(job.COLUMNS)
+    e = e3r_estimate.estimate()
+    repo = os.path.dirname(os.path.dirname(HERE))
+    a14 = re.sub(r"\s+", " ", open(os.path.join(repo, "kaggle", "PREREG_GN.md"), encoding="utf-8").read())
+    a14 = a14[a14.index("## Amendment 14"):]
+    f = lambda t: f"{t[0]:,.0f}-{t[1]:,.0f} s"  # noqa: E731
+    assert f"| train | {f(e['train'])} |" in a14
+    assert f"| bicycle, (ii) included | {f(e['bicycle_with_thresholds'])} ({e['bicycle_with_thresholds'][0] / 3600:.1f}-" \
+           f"{e['bicycle_with_thresholds'][1] / 3600:.1f} h) |" in a14
+    assert f"| bicycle, without (ii) | {f(e['bicycle_without_thresholds'])} |" in a14
+    assert f"| session setup (restore, install, build) | {e['setup_s']:,.0f} s |" in a14
+    assert f"{e['session'][0] / 3600:.1f}-{e['session'][1] / 3600:.1f} h" in a14
+    assert e["exceeds_one_session_with_thresholds_on_both"] and e["thresholds_on"] == list(job.THRESHOLD_SCENES)
+    with pytest.raises(ValueError, match="not an E3r scene"):
+        job.main(["--scene", "room", "--c3dgs_dir", "x", "--out_dir", "x"])
+    with pytest.raises(RuntimeError, match="not an E3r result file"):
+        job.assert_e3r_csv(os.path.join(repo, "kaggle", "gn_e3q", "attempt2", "gn3q", "gn3q_results_train.csv"))
