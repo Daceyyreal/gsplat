@@ -1,0 +1,3805 @@
+{
+  "scene": "train",
+  "timings_s": {
+    "job": 7483.617806664
+  },
+  "runs": {
+    "c3dgs_k4096": {
+      "finetune_iterations": 0,
+      "cmd": "/usr/bin/python3 /tmp/gsplat/kaggle/e3q_c3dgs_run.py --c3dgs_dir /tmp/c3dgs --out_json /kaggle/working/gn3r_work/train/c3dgs_k4096_wrapper.json --seed 0 --observe --record /kaggle/working/gn3r_work/train/probe_record.pt -- --model_path /kaggle/working/gn3r_work/train/model --source_path /tmp/data/train --data_device cuda --output_vq /kaggle/working/gn3r_work/train/c3dgs_k4096 --finetune_iterations 0 --color_codebook_size 4096 --color_importance_include 6e-07",
+      "returncode": 0,
+      "time_s": 350.9459619522095,
+      "ok": true,
+      "wrapper": {
+        "argv": [
+          "compress.py",
+          "--model_path",
+          "/kaggle/working/gn3r_work/train/model",
+          "--source_path",
+          "/tmp/data/train",
+          "--data_device",
+          "cuda",
+          "--output_vq",
+          "/kaggle/working/gn3r_work/train/c3dgs_k4096",
+          "--finetune_iterations",
+          "0",
+          "--color_codebook_size",
+          "4096",
+          "--color_importance_include",
+          "6e-07"
+        ],
+        "status": "ok",
+        "error": null,
+        "deviations": [
+          "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change",
+          "random, numpy and torch seeded with 0 before compress.py, as C3DGS's own safe_state seeds them (compress.py seeds nothing; PREREG_GN.md Amendment 14 f)"
+        ],
+        "seed": 0,
+        "wall_s": 346.03461837768555,
+        "linalg_patch": {
+          "installed": true,
+          "ops": [
+            "torch.linalg.eigh",
+            "torch.Tensor.det"
+          ],
+          "max_batch": 8192,
+          "check_sample": 4096,
+          "check_seed": 0,
+          "n_chunked_calls": {
+            "eigh": 1,
+            "det": 1
+          },
+          "n_passthrough_calls": {
+            "eigh": 0,
+            "det": 0
+          },
+          "calls": [
+            {
+              "op": "linalg_eigh",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.10801887512207031,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_eigenvalue_diff": 0.00016012785363272997,
+                "max_abs_eigenvalue": 1683.5081406533964,
+                "max_abs_reconstruction_residual": 0.0002636622765521679,
+                "nonfinite_in_sample": 0
+              }
+            },
+            {
+              "op": "det",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 1.2065727710723877,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_det_diff": 2.1952856099627382e-07,
+                "max_abs_det": 1.0000006579118148,
+                "nonfinite_in_sample": 0
+              }
+            }
+          ],
+          "fallbacks": [],
+          "working_batches": {
+            "linalg_eigh": 8192,
+            "det": 8192
+          },
+          "deviation": "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+        },
+        "e3r": {
+          "mode": "record",
+          "errors": [],
+          "counts": {
+            "n_ckpt": 1026508,
+            "n_pruned": 115907,
+            "n_after_prune": 910601,
+            "prune_threshold": 0.0,
+            "n_kept_colour": 107525,
+            "n_colour_quantized": 803076,
+            "color_codebook_size": 4096,
+            "color_importance_include": 6e-07,
+            "color_compress_non_dir": true
+          },
+          "qa_at_colour_vq": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          },
+          "record": {
+            "path": "/kaggle/working/gn3r_work/train/probe_record.pt",
+            "bytes": 191271933,
+            "n_colour_quantized": 803076,
+            "n_kept_colour": 107525
+          },
+          "geometry_sha1": "8f72f4ea18e104f32b2461a99deea1b46afc352d",
+          "qa_at_save": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          }
+        },
+        "max_memory_allocated": 4712849408,
+        "max_memory_reserved": 5377097728,
+        "device": "Tesla T4"
+      },
+      "results": {
+        "ours_30000": {
+          "SSIM": 0.7907703518867493,
+          "PSNR": 21.5151309967041,
+          "LPIPS": 0.23464064300060272,
+          "size": 13.234596252441406
+        }
+      },
+      "times": {
+        "sensitivity_calculation": 15.78968596458435,
+        "clustering": 257.7092318534851,
+        "encode": 1.6420512199401855,
+        "total": 275.14096903800964
+      },
+      "npz": "/kaggle/working/gn3r_work/train/c3dgs_k4096/point_cloud/iteration_30000/point_cloud.npz",
+      "npz_bytes": 13877480,
+      "size_MiB": 13.234596252441406,
+      "size_MB": 13.87748,
+      "tail": [
+        "Rendering progress:  26%|\u2588\u2588\u258b       | 10/38 [00:15<00:43,  1.55s/it]",
+        "Rendering progress:  29%|\u2588\u2588\u2589       | 11/38 [00:17<00:41,  1.54s/it]",
+        "Rendering progress:  32%|\u2588\u2588\u2588\u258f      | 12/38 [00:18<00:39,  1.53s/it]",
+        "Rendering progress:  34%|\u2588\u2588\u2588\u258d      | 13/38 [00:20<00:38,  1.54s/it]",
+        "Rendering progress:  37%|\u2588\u2588\u2588\u258b      | 14/38 [00:21<00:36,  1.53s/it]",
+        "Rendering progress:  39%|\u2588\u2588\u2588\u2589      | 15/38 [00:23<00:34,  1.52s/it]",
+        "Rendering progress:  42%|\u2588\u2588\u2588\u2588\u258f     | 16/38 [00:24<00:33,  1.51s/it]",
+        "Rendering progress:  45%|\u2588\u2588\u2588\u2588\u258d     | 17/38 [00:26<00:31,  1.51s/it]",
+        "Rendering progress:  47%|\u2588\u2588\u2588\u2588\u258b     | 18/38 [00:27<00:30,  1.50s/it]",
+        "Rendering progress:  50%|\u2588\u2588\u2588\u2588\u2588     | 19/38 [00:29<00:28,  1.52s/it]",
+        "Rendering progress:  53%|\u2588\u2588\u2588\u2588\u2588\u258e    | 20/38 [00:31<00:27,  1.55s/it]",
+        "Rendering progress:  55%|\u2588\u2588\u2588\u2588\u2588\u258c    | 21/38 [00:32<00:26,  1.54s/it]",
+        "Rendering progress:  58%|\u2588\u2588\u2588\u2588\u2588\u258a    | 22/38 [00:34<00:24,  1.52s/it]",
+        "Rendering progress:  61%|\u2588\u2588\u2588\u2588\u2588\u2588    | 23/38 [00:35<00:22,  1.51s/it]",
+        "Rendering progress:  63%|\u2588\u2588\u2588\u2588\u2588\u2588\u258e   | 24/38 [00:37<00:20,  1.50s/it]",
+        "Rendering progress:  66%|\u2588\u2588\u2588\u2588\u2588\u2588\u258c   | 25/38 [00:38<00:19,  1.49s/it]",
+        "Rendering progress:  68%|\u2588\u2588\u2588\u2588\u2588\u2588\u258a   | 26/38 [00:40<00:18,  1.50s/it]",
+        "Rendering progress:  71%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588   | 27/38 [00:41<00:16,  1.50s/it]",
+        "Rendering progress:  74%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e  | 28/38 [00:43<00:14,  1.50s/it]",
+        "Rendering progress:  76%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b  | 29/38 [00:44<00:13,  1.51s/it]",
+        "Rendering progress:  79%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589  | 30/38 [00:46<00:12,  1.51s/it]",
+        "Rendering progress:  82%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 31/38 [00:48<00:12,  1.79s/it]",
+        "Rendering progress:  84%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d | 32/38 [00:50<00:10,  1.76s/it]",
+        "Rendering progress:  87%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b | 33/38 [00:51<00:08,  1.74s/it]",
+        "Rendering progress:  89%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589 | 34/38 [00:53<00:06,  1.73s/it]",
+        "Rendering progress:  92%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 35/38 [00:55<00:05,  1.71s/it]",
+        "Rendering progress:  95%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d| 36/38 [00:56<00:03,  1.69s/it]",
+        "Rendering progress:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 37/38 [00:58<00:01,  1.68s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [01:00<00:00,  1.68s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [01:00<00:00,  1.59s/it]"
+      ],
+      "data_device": "cuda",
+      "retried_on_cpu": false,
+      "deviations": [],
+      "status": "ok"
+    },
+    "gnvq_k4096": {
+      "finetune_iterations": 0,
+      "cmd": "/usr/bin/python3 /tmp/gsplat/kaggle/e3q_c3dgs_run.py --c3dgs_dir /tmp/c3dgs --out_json /kaggle/working/gn3r_work/train/gnvq_k4096_wrapper.json --seed 0 --observe --inject /kaggle/working/gn3r_work/train/gnvq_k4096_inject.json -- --model_path /kaggle/working/gn3r_work/train/model --source_path /tmp/data/train --data_device cuda --output_vq /kaggle/working/gn3r_work/train/gnvq_k4096 --finetune_iterations 0 --color_codebook_size 4096 --color_importance_include 6e-07",
+      "returncode": 0,
+      "time_s": 446.80976152420044,
+      "ok": true,
+      "wrapper": {
+        "argv": [
+          "compress.py",
+          "--model_path",
+          "/kaggle/working/gn3r_work/train/model",
+          "--source_path",
+          "/tmp/data/train",
+          "--data_device",
+          "cuda",
+          "--output_vq",
+          "/kaggle/working/gn3r_work/train/gnvq_k4096",
+          "--finetune_iterations",
+          "0",
+          "--color_codebook_size",
+          "4096",
+          "--color_importance_include",
+          "6e-07"
+        ],
+        "status": "ok",
+        "error": null,
+        "deviations": [
+          "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change",
+          "random, numpy and torch seeded with 0 before compress.py, as C3DGS's own safe_state seeds them (compress.py seeds nothing; PREREG_GN.md Amendment 14 f)"
+        ],
+        "seed": 0,
+        "wall_s": 443.96201062202454,
+        "linalg_patch": {
+          "installed": true,
+          "ops": [
+            "torch.linalg.eigh",
+            "torch.Tensor.det"
+          ],
+          "max_batch": 8192,
+          "check_sample": 4096,
+          "check_seed": 0,
+          "n_chunked_calls": {
+            "eigh": 1,
+            "det": 1
+          },
+          "n_passthrough_calls": {
+            "eigh": 0,
+            "det": 0
+          },
+          "calls": [
+            {
+              "op": "linalg_eigh",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.1193532943725586,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_eigenvalue_diff": 0.00016012785363272997,
+                "max_abs_eigenvalue": 1683.5081406533964,
+                "max_abs_reconstruction_residual": 0.0002636622765521679,
+                "nonfinite_in_sample": 0
+              }
+            },
+            {
+              "op": "det",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.030167341232299805,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_det_diff": 2.1952856099627382e-07,
+                "max_abs_det": 1.0000006579118148,
+                "nonfinite_in_sample": 0
+              }
+            }
+          ],
+          "fallbacks": [],
+          "working_batches": {
+            "linalg_solve": 2506,
+            "linalg_eigh": 8192,
+            "det": 8192
+          },
+          "deviation": "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+        },
+        "e3r": {
+          "mode": "inject",
+          "errors": [],
+          "counts": {
+            "n_ckpt": 1026508,
+            "n_pruned": 115907,
+            "n_after_prune": 910601,
+            "prune_threshold": 0.0,
+            "n_kept_colour": 107525,
+            "n_colour_quantized": 803076,
+            "color_codebook_size": 4096,
+            "color_importance_include": 6e-07,
+            "color_compress_non_dir": true
+          },
+          "qa_at_colour_vq": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          },
+          "inject": {
+            "rho": 0.01,
+            "n_colour_quantized": 803076,
+            "metric_path": "/tmp/gn3r_cache/train_full16.pt",
+            "total_pixels": 140468300,
+            "quantizer_at_injection": {
+              "dc_scale": 0.054016318172216415,
+              "dc_zero_point": -81,
+              "rest_scale": 0.0068830568343400955,
+              "rest_zero_point": -4
+            },
+            "set_vs_probe": {
+              "n_probe": 803076,
+              "n_injected": 803076,
+              "only_probe": 0,
+              "only_injected": 0,
+              "same_set": true,
+              "features_equal": true
+            },
+            "metric_device_bytes": 436873344,
+            "gn_vq": {
+              "variant": "gn_vq",
+              "clip": true,
+              "final_quantized_assignment": true,
+              "max_iters": 20,
+              "rel_tol": 0.001,
+              "ridge_eps": 0.01,
+              "iterations": 20,
+              "stopped_because": "max_iters",
+              "warm_start": {
+                "range": [
+                  -1.822845697402954,
+                  4.9012227058410645
+                ],
+                "quantizer": {
+                  "bits": 8,
+                  "dtype": "qint8",
+                  "step": 0.0068830568343400955,
+                  "dc": {
+                    "scale": 0.054016318172216415,
+                    "zero_point": -81,
+                    "grid_min": -2.5387669540941715,
+                    "grid_max": 11.235394179821014,
+                    "codebook_min": -1.822845697402954,
+                    "codebook_max": 4.9012227058410645
+                  },
+                  "rest": {
+                    "scale": 0.0068830568343400955,
+                    "zero_point": -4,
+                    "grid_min": -0.8534990474581718,
+                    "grid_max": 0.9016804452985525,
+                    "codebook_min": -0.6210802793502808,
+                    "codebook_max": 0.623580813407898
+                  }
+                },
+                "objective": 0.0001924129350850995,
+                "n_clusters": 4096
+              },
+              "quantizer": {
+                "bits": 8,
+                "dtype": "qint8",
+                "step": 0.0068830568343400955,
+                "dc": {
+                  "scale": 0.054016318172216415,
+                  "zero_point": -81,
+                  "grid_min": -2.5387669540941715,
+                  "grid_max": 11.235394179821014,
+                  "codebook_min": -1.7836960554122925,
+                  "codebook_max": 3.733497142791748
+                },
+                "rest": {
+                  "scale": 0.0068830568343400955,
+                  "zero_point": -4,
+                  "grid_min": -0.8534990474581718,
+                  "grid_max": 0.9016804452985525,
+                  "codebook_min": -0.9108601808547974,
+                  "codebook_max": 1.3948237895965576
+                }
+              },
+              "fraction_outside_warm_range_final": 0.0,
+              "clusters_rejected_by_clip_total": 36383,
+              "final_assignment_labels_changed_fraction": 0.0869195443519667,
+              "objective_before_quantization": 6.738326884263013e-05,
+              "objective_after_quantization": 6.785238444736455e-05,
+              "objectives_under": {
+                "M": {
+                  "objective_before_quantization": 6.273550549629271e-05,
+                  "objective_after_quantization": 6.320027325453322e-05
+                }
+              },
+              "rho": 0.01,
+              "floor": "M_i + rho * tr(M_i) / 16 * I",
+              "metric_dim": 16,
+              "n_splats": 803076,
+              "n_clusters": 4096,
+              "time_s": 97.95815233200028,
+              "history": [
+                {
+                  "iter": 19,
+                  "step": "update",
+                  "objective": 6.755317145147274e-05,
+                  "fraction_outside_warm_range": 0.0,
+                  "clusters_rejected_by_clip": 2241,
+                  "clusters_kept_zero_M": 1515,
+                  "relative_drop": 0.0027613690111907697
+                },
+                {
+                  "iter": 20,
+                  "step": "assign",
+                  "objective": 6.750055931018934e-05,
+                  "kept_current_by_guard": 6,
+                  "zero_trace": 38
+                },
+                {
+                  "iter": 20,
+                  "step": "update",
+                  "objective": 6.738326884263013e-05,
+                  "fraction_outside_warm_range": 0.0,
+                  "clusters_rejected_by_clip": 2283,
+                  "clusters_kept_zero_M": 1513,
+                  "relative_drop": 0.0025150944832347793
+                }
+              ]
+            },
+            "lifted_check": {
+              "criterion_version": 2,
+              "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+              "tol_rel": 0.0001,
+              "n_sample": 10000,
+              "n_zero_trace_in_sample": 0,
+              "n": 10000,
+              "sum_excess_over_sum_dmin": 3.016367282299082e-18,
+              "max_excess_over_scale": 4.336559643300648e-17,
+              "n_excess_over_tol_scale": 0,
+              "aggregate_pass": true,
+              "per_splat_pass": true,
+              "pass": true,
+              "n_dmin_below_1e-3_scale": 9595,
+              "n_dmin_zero": 0,
+              "max_excess_over_dmin": 1.7143884136651597e-15,
+              "same_index_fraction": 1.0,
+              "max_codebook_sq_dist_from_mean": 44.01842228279056
+            },
+            "time_s": 101.33884177499976
+          },
+          "geometry_sha1": "f8641bfbf4892374a81c426c3f453d22465ede80",
+          "qa_at_save": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          },
+          "save_check": {
+            "labels_survived": true,
+            "n_labels_changed": 0,
+            "codebook_max_abs_change": 0.0,
+            "kept_rows_max_abs_change": 0.0
+          }
+        },
+        "max_memory_allocated": 4714224640,
+        "max_memory_reserved": 5377097728,
+        "device": "Tesla T4"
+      },
+      "results": {
+        "ours_30000": {
+          "SSIM": 0.7978138327598572,
+          "PSNR": 21.6336727142334,
+          "LPIPS": 0.22659973800182343,
+          "size": 13.43112850189209
+        }
+      },
+      "times": {
+        "sensitivity_calculation": 16.394620895385742,
+        "clustering": 358.0108280181885,
+        "encode": 1.6410343647003174,
+        "total": 376.04648327827454
+      },
+      "npz": "/kaggle/working/gn3r_work/train/gnvq_k4096/point_cloud/iteration_30000/point_cloud.npz",
+      "npz_bytes": 14083559,
+      "size_MiB": 13.43112850189209,
+      "size_MB": 14.083559,
+      "tail": [
+        "Rendering progress:  26%|\u2588\u2588\u258b       | 10/38 [00:15<00:42,  1.52s/it]",
+        "Rendering progress:  29%|\u2588\u2588\u2589       | 11/38 [00:17<00:41,  1.56s/it]",
+        "Rendering progress:  32%|\u2588\u2588\u2588\u258f      | 12/38 [00:18<00:40,  1.54s/it]",
+        "Rendering progress:  34%|\u2588\u2588\u2588\u258d      | 13/38 [00:20<00:38,  1.54s/it]",
+        "Rendering progress:  37%|\u2588\u2588\u2588\u258b      | 14/38 [00:21<00:36,  1.53s/it]",
+        "Rendering progress:  39%|\u2588\u2588\u2588\u2589      | 15/38 [00:23<00:35,  1.53s/it]",
+        "Rendering progress:  42%|\u2588\u2588\u2588\u2588\u258f     | 16/38 [00:24<00:33,  1.52s/it]",
+        "Rendering progress:  45%|\u2588\u2588\u2588\u2588\u258d     | 17/38 [00:26<00:31,  1.52s/it]",
+        "Rendering progress:  47%|\u2588\u2588\u2588\u2588\u258b     | 18/38 [00:27<00:30,  1.53s/it]",
+        "Rendering progress:  50%|\u2588\u2588\u2588\u2588\u2588     | 19/38 [00:29<00:28,  1.52s/it]",
+        "Rendering progress:  53%|\u2588\u2588\u2588\u2588\u2588\u258e    | 20/38 [00:30<00:27,  1.52s/it]",
+        "Rendering progress:  55%|\u2588\u2588\u2588\u2588\u2588\u258c    | 21/38 [00:32<00:25,  1.53s/it]",
+        "Rendering progress:  58%|\u2588\u2588\u2588\u2588\u2588\u258a    | 22/38 [00:33<00:24,  1.52s/it]",
+        "Rendering progress:  61%|\u2588\u2588\u2588\u2588\u2588\u2588    | 23/38 [00:35<00:22,  1.53s/it]",
+        "Rendering progress:  63%|\u2588\u2588\u2588\u2588\u2588\u2588\u258e   | 24/38 [00:36<00:21,  1.53s/it]",
+        "Rendering progress:  66%|\u2588\u2588\u2588\u2588\u2588\u2588\u258c   | 25/38 [00:38<00:19,  1.53s/it]",
+        "Rendering progress:  68%|\u2588\u2588\u2588\u2588\u2588\u2588\u258a   | 26/38 [00:40<00:18,  1.54s/it]",
+        "Rendering progress:  71%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588   | 27/38 [00:41<00:16,  1.53s/it]",
+        "Rendering progress:  74%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e  | 28/38 [00:43<00:15,  1.53s/it]",
+        "Rendering progress:  76%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b  | 29/38 [00:44<00:13,  1.53s/it]",
+        "Rendering progress:  79%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589  | 30/38 [00:46<00:12,  1.53s/it]",
+        "Rendering progress:  82%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 31/38 [00:47<00:10,  1.54s/it]",
+        "Rendering progress:  84%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d | 32/38 [00:49<00:09,  1.54s/it]",
+        "Rendering progress:  87%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b | 33/38 [00:50<00:07,  1.53s/it]",
+        "Rendering progress:  89%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589 | 34/38 [00:52<00:06,  1.53s/it]",
+        "Rendering progress:  92%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 35/38 [00:53<00:04,  1.53s/it]",
+        "Rendering progress:  95%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d| 36/38 [00:55<00:03,  1.52s/it]",
+        "Rendering progress:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 37/38 [00:56<00:01,  1.53s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:58<00:00,  1.54s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:58<00:00,  1.54s/it]"
+      ],
+      "data_device": "cuda",
+      "retried_on_cpu": false,
+      "deviations": [],
+      "status": "ok"
+    },
+    "gnvq_k4096_ft5000": {
+      "finetune_iterations": 5000,
+      "cmd": "/usr/bin/python3 /tmp/gsplat/kaggle/e3q_c3dgs_run.py --c3dgs_dir /tmp/c3dgs --out_json /kaggle/working/gn3r_work/train/gnvq_k4096_ft5000_wrapper.json --seed 0 --observe --inject /kaggle/working/gn3r_work/train/gnvq_k4096_ft5000_inject.json -- --model_path /kaggle/working/gn3r_work/train/model --source_path /tmp/data/train --data_device cuda --output_vq /kaggle/working/gn3r_work/train/gnvq_k4096_ft5000 --finetune_iterations 5000 --color_codebook_size 4096 --color_importance_include 6e-07",
+      "returncode": 0,
+      "time_s": 760.3999965190887,
+      "ok": true,
+      "wrapper": {
+        "argv": [
+          "compress.py",
+          "--model_path",
+          "/kaggle/working/gn3r_work/train/model",
+          "--source_path",
+          "/tmp/data/train",
+          "--data_device",
+          "cuda",
+          "--output_vq",
+          "/kaggle/working/gn3r_work/train/gnvq_k4096_ft5000",
+          "--finetune_iterations",
+          "5000",
+          "--color_codebook_size",
+          "4096",
+          "--color_importance_include",
+          "6e-07"
+        ],
+        "status": "ok",
+        "error": null,
+        "deviations": [
+          "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change",
+          "random, numpy and torch seeded with 0 before compress.py, as C3DGS's own safe_state seeds them (compress.py seeds nothing; PREREG_GN.md Amendment 14 f)"
+        ],
+        "seed": 0,
+        "wall_s": 757.7684245109558,
+        "linalg_patch": {
+          "installed": true,
+          "ops": [
+            "torch.linalg.eigh",
+            "torch.Tensor.det"
+          ],
+          "max_batch": 8192,
+          "check_sample": 4096,
+          "check_seed": 0,
+          "n_chunked_calls": {
+            "eigh": 1,
+            "det": 1
+          },
+          "n_passthrough_calls": {
+            "eigh": 0,
+            "det": 0
+          },
+          "calls": [
+            {
+              "op": "linalg_eigh",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.05092811584472656,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_eigenvalue_diff": 0.00016012785363272997,
+                "max_abs_eigenvalue": 1683.5081406533964,
+                "max_abs_reconstruction_residual": 0.0002636622765521679,
+                "nonfinite_in_sample": 0
+              }
+            },
+            {
+              "op": "det",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.015053987503051758,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_det_diff": 2.1952856099627382e-07,
+                "max_abs_det": 1.0000006579118148,
+                "nonfinite_in_sample": 0
+              }
+            }
+          ],
+          "fallbacks": [],
+          "working_batches": {
+            "linalg_solve": 2497,
+            "linalg_eigh": 8192,
+            "det": 8192
+          },
+          "deviation": "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+        },
+        "e3r": {
+          "mode": "inject",
+          "errors": [],
+          "counts": {
+            "n_ckpt": 1026508,
+            "n_pruned": 115907,
+            "n_after_prune": 910601,
+            "prune_threshold": 0.0,
+            "n_kept_colour": 107525,
+            "n_colour_quantized": 803076,
+            "color_codebook_size": 4096,
+            "color_importance_include": 6e-07,
+            "color_compress_non_dir": true
+          },
+          "qa_at_colour_vq": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          },
+          "inject": {
+            "rho": 0.01,
+            "n_colour_quantized": 803076,
+            "metric_path": "/tmp/gn3r_cache/train_full16.pt",
+            "total_pixels": 140468300,
+            "quantizer_at_injection": {
+              "dc_scale": 0.054016318172216415,
+              "dc_zero_point": -81,
+              "rest_scale": 0.0068830568343400955,
+              "rest_zero_point": -4
+            },
+            "set_vs_probe": {
+              "n_probe": 803076,
+              "n_injected": 803076,
+              "only_probe": 0,
+              "only_injected": 0,
+              "same_set": true,
+              "features_equal": true
+            },
+            "metric_device_bytes": 436873344,
+            "gn_vq": {
+              "variant": "gn_vq",
+              "clip": true,
+              "final_quantized_assignment": true,
+              "max_iters": 20,
+              "rel_tol": 0.001,
+              "ridge_eps": 0.01,
+              "iterations": 20,
+              "stopped_because": "max_iters",
+              "warm_start": {
+                "range": [
+                  -1.823155403137207,
+                  4.90042781829834
+                ],
+                "quantizer": {
+                  "bits": 8,
+                  "dtype": "qint8",
+                  "step": 0.0068830568343400955,
+                  "dc": {
+                    "scale": 0.054016318172216415,
+                    "zero_point": -81,
+                    "grid_min": -2.5387669540941715,
+                    "grid_max": 11.235394179821014,
+                    "codebook_min": -1.823155403137207,
+                    "codebook_max": 4.90042781829834
+                  },
+                  "rest": {
+                    "scale": 0.0068830568343400955,
+                    "zero_point": -4,
+                    "grid_min": -0.8534990474581718,
+                    "grid_max": 0.9016804452985525,
+                    "codebook_min": -0.5591908693313599,
+                    "codebook_max": 0.5737599730491638
+                  }
+                },
+                "objective": 0.00019209820785681586,
+                "n_clusters": 4096
+              },
+              "quantizer": {
+                "bits": 8,
+                "dtype": "qint8",
+                "step": 0.0068830568343400955,
+                "dc": {
+                  "scale": 0.054016318172216415,
+                  "zero_point": -81,
+                  "grid_min": -2.5387669540941715,
+                  "grid_max": 11.235394179821014,
+                  "codebook_min": -1.7837215662002563,
+                  "codebook_max": 3.7725226879119873
+                },
+                "rest": {
+                  "scale": 0.0068830568343400955,
+                  "zero_point": -4,
+                  "grid_min": -0.8534990474581718,
+                  "grid_max": 0.9016804452985525,
+                  "codebook_min": -0.920212984085083,
+                  "codebook_max": 1.3394007682800293
+                }
+              },
+              "fraction_outside_warm_range_final": 0.0,
+              "clusters_rejected_by_clip_total": 36854,
+              "final_assignment_labels_changed_fraction": 0.08599061608116791,
+              "objective_before_quantization": 6.726102499653076e-05,
+              "objective_after_quantization": 6.771173465947177e-05,
+              "objectives_under": {
+                "M": {
+                  "objective_before_quantization": 6.262551562630694e-05,
+                  "objective_after_quantization": 6.307202298153087e-05
+                }
+              },
+              "rho": 0.01,
+              "floor": "M_i + rho * tr(M_i) / 16 * I",
+              "metric_dim": 16,
+              "n_splats": 803076,
+              "n_clusters": 4096,
+              "time_s": 98.01208580100001,
+              "history": [
+                {
+                  "iter": 19,
+                  "step": "update",
+                  "objective": 6.74073350336858e-05,
+                  "fraction_outside_warm_range": 0.0,
+                  "clusters_rejected_by_clip": 2290,
+                  "clusters_kept_zero_M": 1513,
+                  "relative_drop": 0.0024190336812214973
+                },
+                {
+                  "iter": 20,
+                  "step": "assign",
+                  "objective": 6.736464429199343e-05,
+                  "kept_current_by_guard": 5,
+                  "zero_trace": 38
+                },
+                {
+                  "iter": 20,
+                  "step": "update",
+                  "objective": 6.726102499653076e-05,
+                  "fraction_outside_warm_range": 0.0,
+                  "clusters_rejected_by_clip": 2314,
+                  "clusters_kept_zero_M": 1509,
+                  "relative_drop": 0.002170535848686586
+                }
+              ]
+            },
+            "lifted_check": {
+              "criterion_version": 2,
+              "criterion": "sum(excess) / sum(d_min) <= tol_rel and excess_i <= tol_rel * scale_i for every splat, scale_i = |c_i - m|^2_M_i + tr(M_i) * max_k |q_k - m|^2, m = codebook mean",
+              "tol_rel": 0.0001,
+              "n_sample": 10000,
+              "n_zero_trace_in_sample": 0,
+              "n": 10000,
+              "sum_excess_over_sum_dmin": 8.310549290831432e-19,
+              "max_excess_over_scale": 1.8741896546320193e-17,
+              "n_excess_over_tol_scale": 0,
+              "aggregate_pass": true,
+              "per_splat_pass": true,
+              "pass": true,
+              "n_dmin_below_1e-3_scale": 9629,
+              "n_dmin_zero": 0,
+              "max_excess_over_dmin": 2.3708102279221206e-15,
+              "same_index_fraction": 1.0,
+              "max_codebook_sq_dist_from_mean": 45.013319613089394
+            },
+            "time_s": 101.46967596400009
+          },
+          "geometry_sha1": "009deebd01a83eb59ce998cfb78c717ecaf57967",
+          "qa_at_save": {
+            "dc_scale": 0.037292227149009705,
+            "dc_zero_point": -60,
+            "rest_scale": 0.008814905770123005,
+            "rest_zero_point": -25
+          },
+          "save_check": {
+            "labels_survived": true,
+            "n_labels_changed": 0,
+            "codebook_max_abs_change": 1.0272008180618286,
+            "kept_rows_max_abs_change": 1.1344810724258423
+          }
+        },
+        "max_memory_allocated": 4714224640,
+        "max_memory_reserved": 5377097728,
+        "device": "Tesla T4"
+      },
+      "results": {
+        "ours_35000": {
+          "SSIM": 0.8023826479911804,
+          "PSNR": 21.718345642089844,
+          "LPIPS": 0.22326986491680145,
+          "size": 13.307318687438965
+        }
+      },
+      "times": {
+        "sensitivity_calculation": 16.64721441268921,
+        "clustering": 357.6234710216522,
+        "finetune": 314.1601138114929,
+        "encode": 1.6459310054779053,
+        "total": 690.0767302513123
+      },
+      "npz": "/kaggle/working/gn3r_work/train/gnvq_k4096_ft5000/point_cloud/iteration_35000/point_cloud.npz",
+      "npz_bytes": 13953735,
+      "size_MiB": 13.307318687438965,
+      "size_MB": 13.953735,
+      "tail": [
+        "Rendering progress:  26%|\u2588\u2588\u258b       | 10/38 [00:15<00:42,  1.52s/it]",
+        "Rendering progress:  29%|\u2588\u2588\u2589       | 11/38 [00:17<00:41,  1.53s/it]",
+        "Rendering progress:  32%|\u2588\u2588\u2588\u258f      | 12/38 [00:18<00:39,  1.53s/it]",
+        "Rendering progress:  34%|\u2588\u2588\u2588\u258d      | 13/38 [00:20<00:38,  1.53s/it]",
+        "Rendering progress:  37%|\u2588\u2588\u2588\u258b      | 14/38 [00:21<00:36,  1.53s/it]",
+        "Rendering progress:  39%|\u2588\u2588\u2588\u2589      | 15/38 [00:23<00:34,  1.52s/it]",
+        "Rendering progress:  42%|\u2588\u2588\u2588\u2588\u258f     | 16/38 [00:24<00:33,  1.52s/it]",
+        "Rendering progress:  45%|\u2588\u2588\u2588\u2588\u258d     | 17/38 [00:26<00:31,  1.52s/it]",
+        "Rendering progress:  47%|\u2588\u2588\u2588\u2588\u258b     | 18/38 [00:27<00:30,  1.53s/it]",
+        "Rendering progress:  50%|\u2588\u2588\u2588\u2588\u2588     | 19/38 [00:29<00:29,  1.53s/it]",
+        "Rendering progress:  53%|\u2588\u2588\u2588\u2588\u2588\u258e    | 20/38 [00:30<00:27,  1.53s/it]",
+        "Rendering progress:  55%|\u2588\u2588\u2588\u2588\u2588\u258c    | 21/38 [00:32<00:25,  1.52s/it]",
+        "Rendering progress:  58%|\u2588\u2588\u2588\u2588\u2588\u258a    | 22/38 [00:33<00:24,  1.52s/it]",
+        "Rendering progress:  61%|\u2588\u2588\u2588\u2588\u2588\u2588    | 23/38 [00:35<00:22,  1.52s/it]",
+        "Rendering progress:  63%|\u2588\u2588\u2588\u2588\u2588\u2588\u258e   | 24/38 [00:36<00:21,  1.53s/it]",
+        "Rendering progress:  66%|\u2588\u2588\u2588\u2588\u2588\u2588\u258c   | 25/38 [00:38<00:19,  1.53s/it]",
+        "Rendering progress:  68%|\u2588\u2588\u2588\u2588\u2588\u2588\u258a   | 26/38 [00:39<00:18,  1.53s/it]",
+        "Rendering progress:  71%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588   | 27/38 [00:41<00:16,  1.54s/it]",
+        "Rendering progress:  74%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e  | 28/38 [00:43<00:15,  1.53s/it]",
+        "Rendering progress:  76%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b  | 29/38 [00:44<00:13,  1.53s/it]",
+        "Rendering progress:  79%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589  | 30/38 [00:46<00:12,  1.53s/it]",
+        "Rendering progress:  82%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 31/38 [00:47<00:10,  1.54s/it]",
+        "Rendering progress:  84%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d | 32/38 [00:49<00:09,  1.53s/it]",
+        "Rendering progress:  87%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b | 33/38 [00:50<00:07,  1.53s/it]",
+        "Rendering progress:  89%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589 | 34/38 [00:52<00:06,  1.53s/it]",
+        "Rendering progress:  92%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 35/38 [00:53<00:04,  1.52s/it]",
+        "Rendering progress:  95%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d| 36/38 [00:55<00:03,  1.53s/it]",
+        "Rendering progress:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 37/38 [00:56<00:01,  1.54s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:58<00:00,  1.53s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:58<00:00,  1.54s/it]"
+      ],
+      "data_device": "cuda",
+      "retried_on_cpu": false,
+      "deviations": [],
+      "status": "ok"
+    },
+    "c3dgs_k1024": {
+      "finetune_iterations": 0,
+      "cmd": "/usr/bin/python3 /tmp/gsplat/kaggle/e3q_c3dgs_run.py --c3dgs_dir /tmp/c3dgs --out_json /kaggle/working/gn3r_work/train/c3dgs_k1024_wrapper.json --seed 0 --observe -- --model_path /kaggle/working/gn3r_work/train/model --source_path /tmp/data/train --data_device cuda --output_vq /kaggle/working/gn3r_work/train/c3dgs_k1024 --finetune_iterations 0 --color_codebook_size 1024 --color_importance_include 6e-07",
+      "returncode": 0,
+      "time_s": 247.10524678230286,
+      "ok": true,
+      "wrapper": {
+        "argv": [
+          "compress.py",
+          "--model_path",
+          "/kaggle/working/gn3r_work/train/model",
+          "--source_path",
+          "/tmp/data/train",
+          "--data_device",
+          "cuda",
+          "--output_vq",
+          "/kaggle/working/gn3r_work/train/c3dgs_k1024",
+          "--finetune_iterations",
+          "0",
+          "--color_codebook_size",
+          "1024",
+          "--color_importance_include",
+          "6e-07"
+        ],
+        "status": "ok",
+        "error": null,
+        "deviations": [
+          "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change",
+          "random, numpy and torch seeded with 0 before compress.py, as C3DGS's own safe_state seeds them (compress.py seeds nothing; PREREG_GN.md Amendment 14 f)"
+        ],
+        "seed": 0,
+        "wall_s": 244.48052406311035,
+        "linalg_patch": {
+          "installed": true,
+          "ops": [
+            "torch.linalg.eigh",
+            "torch.Tensor.det"
+          ],
+          "max_batch": 8192,
+          "check_sample": 4096,
+          "check_seed": 0,
+          "n_chunked_calls": {
+            "eigh": 1,
+            "det": 1
+          },
+          "n_passthrough_calls": {
+            "eigh": 0,
+            "det": 0
+          },
+          "calls": [
+            {
+              "op": "linalg_eigh",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.052025556564331055,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_eigenvalue_diff": 6.73605188694637e-06,
+                "max_abs_eigenvalue": 39.74036321713631,
+                "max_abs_reconstruction_residual": 1.0105217029376945e-05,
+                "nonfinite_in_sample": 0
+              }
+            },
+            {
+              "op": "det",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.015352249145507812,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_det_diff": 2.1952856099627382e-07,
+                "max_abs_det": 1.0000006579118148,
+                "nonfinite_in_sample": 0
+              }
+            }
+          ],
+          "fallbacks": [],
+          "working_batches": {
+            "linalg_eigh": 8192,
+            "det": 8192
+          },
+          "deviation": "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+        },
+        "e3r": {
+          "mode": "observe",
+          "errors": [],
+          "counts": {
+            "n_ckpt": 1026508,
+            "n_pruned": 115907,
+            "n_after_prune": 910601,
+            "prune_threshold": 0.0,
+            "n_kept_colour": 107525,
+            "n_colour_quantized": 803076,
+            "color_codebook_size": 1024,
+            "color_importance_include": 6e-07,
+            "color_compress_non_dir": true
+          },
+          "qa_at_colour_vq": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          },
+          "geometry_sha1": "a3e9e04b183bbf57741ea329f3bdfa5ce794360e",
+          "qa_at_save": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          }
+        },
+        "max_memory_allocated": 4712461824,
+        "max_memory_reserved": 5377097728,
+        "device": "Tesla T4"
+      },
+      "results": {
+        "ours_30000": {
+          "SSIM": 0.789138913154602,
+          "PSNR": 21.48076820373535,
+          "LPIPS": 0.23626136779785156,
+          "size": 13.097987174987793
+        }
+      },
+      "times": {
+        "sensitivity_calculation": 16.825815439224243,
+        "clustering": 159.63212394714355,
+        "encode": 1.542161226272583,
+        "total": 178.00010061264038
+      },
+      "npz": "/kaggle/working/gn3r_work/train/c3dgs_k1024/point_cloud/iteration_30000/point_cloud.npz",
+      "npz_bytes": 13734235,
+      "size_MiB": 13.097987174987793,
+      "size_MB": 13.734235,
+      "tail": [
+        "Rendering progress:  26%|\u2588\u2588\u258b       | 10/38 [00:15<00:41,  1.49s/it]",
+        "Rendering progress:  29%|\u2588\u2588\u2589       | 11/38 [00:16<00:40,  1.49s/it]",
+        "Rendering progress:  32%|\u2588\u2588\u2588\u258f      | 12/38 [00:18<00:38,  1.49s/it]",
+        "Rendering progress:  34%|\u2588\u2588\u2588\u258d      | 13/38 [00:19<00:37,  1.49s/it]",
+        "Rendering progress:  37%|\u2588\u2588\u2588\u258b      | 14/38 [00:21<00:35,  1.49s/it]",
+        "Rendering progress:  39%|\u2588\u2588\u2588\u2589      | 15/38 [00:22<00:34,  1.49s/it]",
+        "Rendering progress:  42%|\u2588\u2588\u2588\u2588\u258f     | 16/38 [00:24<00:32,  1.49s/it]",
+        "Rendering progress:  45%|\u2588\u2588\u2588\u2588\u258d     | 17/38 [00:25<00:31,  1.49s/it]",
+        "Rendering progress:  47%|\u2588\u2588\u2588\u2588\u258b     | 18/38 [00:27<00:29,  1.49s/it]",
+        "Rendering progress:  50%|\u2588\u2588\u2588\u2588\u2588     | 19/38 [00:28<00:28,  1.51s/it]",
+        "Rendering progress:  53%|\u2588\u2588\u2588\u2588\u2588\u258e    | 20/38 [00:30<00:27,  1.50s/it]",
+        "Rendering progress:  55%|\u2588\u2588\u2588\u2588\u2588\u258c    | 21/38 [00:31<00:25,  1.50s/it]",
+        "Rendering progress:  58%|\u2588\u2588\u2588\u2588\u2588\u258a    | 22/38 [00:33<00:23,  1.50s/it]",
+        "Rendering progress:  61%|\u2588\u2588\u2588\u2588\u2588\u2588    | 23/38 [00:34<00:22,  1.49s/it]",
+        "Rendering progress:  63%|\u2588\u2588\u2588\u2588\u2588\u2588\u258e   | 24/38 [00:36<00:20,  1.49s/it]",
+        "Rendering progress:  66%|\u2588\u2588\u2588\u2588\u2588\u2588\u258c   | 25/38 [00:37<00:19,  1.49s/it]",
+        "Rendering progress:  68%|\u2588\u2588\u2588\u2588\u2588\u2588\u258a   | 26/38 [00:39<00:18,  1.50s/it]",
+        "Rendering progress:  71%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588   | 27/38 [00:40<00:16,  1.50s/it]",
+        "Rendering progress:  74%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e  | 28/38 [00:42<00:14,  1.49s/it]",
+        "Rendering progress:  76%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b  | 29/38 [00:43<00:13,  1.49s/it]",
+        "Rendering progress:  79%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589  | 30/38 [00:45<00:11,  1.49s/it]",
+        "Rendering progress:  82%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 31/38 [00:46<00:10,  1.49s/it]",
+        "Rendering progress:  84%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d | 32/38 [00:48<00:08,  1.49s/it]",
+        "Rendering progress:  87%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b | 33/38 [00:49<00:07,  1.51s/it]",
+        "Rendering progress:  89%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589 | 34/38 [00:51<00:06,  1.51s/it]",
+        "Rendering progress:  92%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 35/38 [00:52<00:04,  1.49s/it]",
+        "Rendering progress:  95%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d| 36/38 [00:54<00:02,  1.50s/it]",
+        "Rendering progress:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 37/38 [00:55<00:01,  1.50s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:57<00:00,  1.50s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:57<00:00,  1.50s/it]"
+      ],
+      "data_device": "cuda",
+      "retried_on_cpu": false,
+      "deviations": [],
+      "status": "ok"
+    },
+    "c3dgs_k16384": {
+      "finetune_iterations": 0,
+      "cmd": "/usr/bin/python3 /tmp/gsplat/kaggle/e3q_c3dgs_run.py --c3dgs_dir /tmp/c3dgs --out_json /kaggle/working/gn3r_work/train/c3dgs_k16384_wrapper.json --seed 0 --observe -- --model_path /kaggle/working/gn3r_work/train/model --source_path /tmp/data/train --data_device cuda --output_vq /kaggle/working/gn3r_work/train/c3dgs_k16384 --finetune_iterations 0 --color_codebook_size 16384 --color_importance_include 6e-07",
+      "returncode": 0,
+      "time_s": 737.2686698436737,
+      "ok": true,
+      "wrapper": {
+        "argv": [
+          "compress.py",
+          "--model_path",
+          "/kaggle/working/gn3r_work/train/model",
+          "--source_path",
+          "/tmp/data/train",
+          "--data_device",
+          "cuda",
+          "--output_vq",
+          "/kaggle/working/gn3r_work/train/c3dgs_k16384",
+          "--finetune_iterations",
+          "0",
+          "--color_codebook_size",
+          "16384",
+          "--color_importance_include",
+          "6e-07"
+        ],
+        "status": "ok",
+        "error": null,
+        "deviations": [
+          "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change",
+          "random, numpy and torch seeded with 0 before compress.py, as C3DGS's own safe_state seeds them (compress.py seeds nothing; PREREG_GN.md Amendment 14 f)"
+        ],
+        "seed": 0,
+        "wall_s": 734.6084423065186,
+        "linalg_patch": {
+          "installed": true,
+          "ops": [
+            "torch.linalg.eigh",
+            "torch.Tensor.det"
+          ],
+          "max_batch": 8192,
+          "check_sample": 4096,
+          "check_seed": 0,
+          "n_chunked_calls": {
+            "eigh": 1,
+            "det": 1
+          },
+          "n_passthrough_calls": {
+            "eigh": 0,
+            "det": 0
+          },
+          "calls": [
+            {
+              "op": "linalg_eigh",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.0525052547454834,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_eigenvalue_diff": 3.115492893357441e-05,
+                "max_abs_eigenvalue": 308.7805169407742,
+                "max_abs_reconstruction_residual": 6.254298078545162e-05,
+                "nonfinite_in_sample": 0
+              }
+            },
+            {
+              "op": "det",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.016012907028198242,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_det_diff": 2.1952856099627382e-07,
+                "max_abs_det": 1.0000007080107705,
+                "nonfinite_in_sample": 0
+              }
+            }
+          ],
+          "fallbacks": [],
+          "working_batches": {
+            "linalg_eigh": 8192,
+            "det": 8192
+          },
+          "deviation": "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+        },
+        "e3r": {
+          "mode": "observe",
+          "errors": [],
+          "counts": {
+            "n_ckpt": 1026508,
+            "n_pruned": 115907,
+            "n_after_prune": 910601,
+            "prune_threshold": 0.0,
+            "n_kept_colour": 107525,
+            "n_colour_quantized": 803076,
+            "color_codebook_size": 16384,
+            "color_importance_include": 6e-07,
+            "color_compress_non_dir": true
+          },
+          "qa_at_colour_vq": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          },
+          "geometry_sha1": "740b2ae9fdefc32b141677f10a857e94362939fc",
+          "qa_at_save": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          }
+        },
+        "max_memory_allocated": 4717894656,
+        "max_memory_reserved": 5377097728,
+        "device": "Tesla T4"
+      },
+      "results": {
+        "ours_30000": {
+          "SSIM": 0.7914084792137146,
+          "PSNR": 21.527385711669922,
+          "LPIPS": 0.23394639790058136,
+          "size": 13.323112487792969
+        }
+      },
+      "times": {
+        "sensitivity_calculation": 16.6834397315979,
+        "clustering": 647.3796203136444,
+        "encode": 1.5744152069091797,
+        "total": 665.6374752521515
+      },
+      "npz": "/kaggle/working/gn3r_work/train/c3dgs_k16384/point_cloud/iteration_30000/point_cloud.npz",
+      "npz_bytes": 13970296,
+      "size_MiB": 13.323112487792969,
+      "size_MB": 13.970296,
+      "tail": [
+        "Rendering progress:  26%|\u2588\u2588\u258b       | 10/38 [00:15<00:43,  1.54s/it]",
+        "Rendering progress:  29%|\u2588\u2588\u2589       | 11/38 [00:17<00:41,  1.54s/it]",
+        "Rendering progress:  32%|\u2588\u2588\u2588\u258f      | 12/38 [00:18<00:40,  1.55s/it]",
+        "Rendering progress:  34%|\u2588\u2588\u2588\u258d      | 13/38 [00:20<00:38,  1.55s/it]",
+        "Rendering progress:  37%|\u2588\u2588\u2588\u258b      | 14/38 [00:21<00:36,  1.54s/it]",
+        "Rendering progress:  39%|\u2588\u2588\u2588\u2589      | 15/38 [00:23<00:35,  1.54s/it]",
+        "Rendering progress:  42%|\u2588\u2588\u2588\u2588\u258f     | 16/38 [00:24<00:33,  1.54s/it]",
+        "Rendering progress:  45%|\u2588\u2588\u2588\u2588\u258d     | 17/38 [00:26<00:32,  1.54s/it]",
+        "Rendering progress:  47%|\u2588\u2588\u2588\u2588\u258b     | 18/38 [00:27<00:30,  1.54s/it]",
+        "Rendering progress:  50%|\u2588\u2588\u2588\u2588\u2588     | 19/38 [00:29<00:29,  1.53s/it]",
+        "Rendering progress:  53%|\u2588\u2588\u2588\u2588\u2588\u258e    | 20/38 [00:31<00:27,  1.54s/it]",
+        "Rendering progress:  55%|\u2588\u2588\u2588\u2588\u2588\u258c    | 21/38 [00:32<00:26,  1.54s/it]",
+        "Rendering progress:  58%|\u2588\u2588\u2588\u2588\u2588\u258a    | 22/38 [00:34<00:24,  1.53s/it]",
+        "Rendering progress:  61%|\u2588\u2588\u2588\u2588\u2588\u2588    | 23/38 [00:35<00:22,  1.53s/it]",
+        "Rendering progress:  63%|\u2588\u2588\u2588\u2588\u2588\u2588\u258e   | 24/38 [00:37<00:21,  1.53s/it]",
+        "Rendering progress:  66%|\u2588\u2588\u2588\u2588\u2588\u2588\u258c   | 25/38 [00:38<00:19,  1.53s/it]",
+        "Rendering progress:  68%|\u2588\u2588\u2588\u2588\u2588\u2588\u258a   | 26/38 [00:40<00:18,  1.54s/it]",
+        "Rendering progress:  71%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588   | 27/38 [00:41<00:16,  1.54s/it]",
+        "Rendering progress:  74%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e  | 28/38 [00:43<00:15,  1.55s/it]",
+        "Rendering progress:  76%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b  | 29/38 [00:44<00:13,  1.55s/it]",
+        "Rendering progress:  79%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589  | 30/38 [00:46<00:12,  1.55s/it]",
+        "Rendering progress:  82%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 31/38 [00:48<00:10,  1.55s/it]",
+        "Rendering progress:  84%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d | 32/38 [00:49<00:09,  1.55s/it]",
+        "Rendering progress:  87%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b | 33/38 [00:51<00:07,  1.55s/it]",
+        "Rendering progress:  89%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589 | 34/38 [00:52<00:06,  1.55s/it]",
+        "Rendering progress:  92%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 35/38 [00:54<00:04,  1.55s/it]",
+        "Rendering progress:  95%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d| 36/38 [00:55<00:03,  1.54s/it]",
+        "Rendering progress:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 37/38 [00:57<00:01,  1.54s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:58<00:00,  1.54s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:58<00:00,  1.55s/it]"
+      ],
+      "data_device": "cuda",
+      "retried_on_cpu": false,
+      "deviations": [],
+      "status": "ok"
+    },
+    "c3dgs_k65536": {
+      "finetune_iterations": 0,
+      "cmd": "/usr/bin/python3 /tmp/gsplat/kaggle/e3q_c3dgs_run.py --c3dgs_dir /tmp/c3dgs --out_json /kaggle/working/gn3r_work/train/c3dgs_k65536_wrapper.json --seed 0 --observe -- --model_path /kaggle/working/gn3r_work/train/model --source_path /tmp/data/train --data_device cuda --output_vq /kaggle/working/gn3r_work/train/c3dgs_k65536 --finetune_iterations 0 --color_codebook_size 65536 --color_importance_include 6e-07",
+      "returncode": 0,
+      "time_s": 2330.2458760738373,
+      "ok": true,
+      "wrapper": {
+        "argv": [
+          "compress.py",
+          "--model_path",
+          "/kaggle/working/gn3r_work/train/model",
+          "--source_path",
+          "/tmp/data/train",
+          "--data_device",
+          "cuda",
+          "--output_vq",
+          "/kaggle/working/gn3r_work/train/c3dgs_k65536",
+          "--finetune_iterations",
+          "0",
+          "--color_codebook_size",
+          "65536",
+          "--color_importance_include",
+          "6e-07"
+        ],
+        "status": "ok",
+        "error": null,
+        "deviations": [
+          "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change",
+          "random, numpy and torch seeded with 0 before compress.py, as C3DGS's own safe_state seeds them (compress.py seeds nothing; PREREG_GN.md Amendment 14 f)"
+        ],
+        "seed": 0,
+        "wall_s": 2327.578751564026,
+        "linalg_patch": {
+          "installed": true,
+          "ops": [
+            "torch.linalg.eigh",
+            "torch.Tensor.det"
+          ],
+          "max_batch": 8192,
+          "check_sample": 4096,
+          "check_seed": 0,
+          "n_chunked_calls": {
+            "eigh": 1,
+            "det": 1
+          },
+          "n_passthrough_calls": {
+            "eigh": 0,
+            "det": 0
+          },
+          "calls": [
+            {
+              "op": "linalg_eigh",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.051670074462890625,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_eigenvalue_diff": 7.319956620222001e-05,
+                "max_abs_eigenvalue": 487.720870038579,
+                "max_abs_reconstruction_residual": 9.37038057600148e-05,
+                "nonfinite_in_sample": 0
+              }
+            },
+            {
+              "op": "det",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.016259193420410156,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_det_diff": 2.1952856099627382e-07,
+                "max_abs_det": 1.0000006579118148,
+                "nonfinite_in_sample": 0
+              }
+            }
+          ],
+          "fallbacks": [],
+          "working_batches": {
+            "linalg_eigh": 8192,
+            "det": 8192
+          },
+          "deviation": "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+        },
+        "e3r": {
+          "mode": "observe",
+          "errors": [],
+          "counts": {
+            "n_ckpt": 1026508,
+            "n_pruned": 115907,
+            "n_after_prune": 910601,
+            "prune_threshold": 0.0,
+            "n_kept_colour": 107525,
+            "n_colour_quantized": 803076,
+            "color_codebook_size": 65536,
+            "color_importance_include": 6e-07,
+            "color_compress_non_dir": true
+          },
+          "qa_at_colour_vq": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          },
+          "geometry_sha1": "358892298b53c701966e9db58dbdcb1ec53d779d",
+          "qa_at_save": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          }
+        },
+        "max_memory_allocated": 4736830976,
+        "max_memory_reserved": 5377097728,
+        "device": "Tesla T4"
+      },
+      "results": {
+        "ours_30000": {
+          "SSIM": 0.7917066812515259,
+          "PSNR": 21.533676147460938,
+          "LPIPS": 0.2336934506893158,
+          "size": 13.406402587890625
+        }
+      },
+      "times": {
+        "sensitivity_calculation": 16.581490993499756,
+        "clustering": 2241.2038543224335,
+        "encode": 1.5778193473815918,
+        "total": 2259.363164663315
+      },
+      "npz": "/kaggle/working/gn3r_work/train/c3dgs_k65536/point_cloud/iteration_30000/point_cloud.npz",
+      "npz_bytes": 14057632,
+      "size_MiB": 13.406402587890625,
+      "size_MB": 14.057632,
+      "tail": [
+        "Rendering progress:  26%|\u2588\u2588\u258b       | 10/38 [00:15<00:43,  1.54s/it]",
+        "Rendering progress:  29%|\u2588\u2588\u2589       | 11/38 [00:17<00:41,  1.54s/it]",
+        "Rendering progress:  32%|\u2588\u2588\u2588\u258f      | 12/38 [00:18<00:40,  1.54s/it]",
+        "Rendering progress:  34%|\u2588\u2588\u2588\u258d      | 13/38 [00:20<00:38,  1.54s/it]",
+        "Rendering progress:  37%|\u2588\u2588\u2588\u258b      | 14/38 [00:21<00:36,  1.53s/it]",
+        "Rendering progress:  39%|\u2588\u2588\u2588\u2589      | 15/38 [00:23<00:35,  1.54s/it]",
+        "Rendering progress:  42%|\u2588\u2588\u2588\u2588\u258f     | 16/38 [00:24<00:33,  1.54s/it]",
+        "Rendering progress:  45%|\u2588\u2588\u2588\u2588\u258d     | 17/38 [00:26<00:32,  1.54s/it]",
+        "Rendering progress:  47%|\u2588\u2588\u2588\u2588\u258b     | 18/38 [00:28<00:30,  1.54s/it]",
+        "Rendering progress:  50%|\u2588\u2588\u2588\u2588\u2588     | 19/38 [00:29<00:29,  1.53s/it]",
+        "Rendering progress:  53%|\u2588\u2588\u2588\u2588\u2588\u258e    | 20/38 [00:31<00:27,  1.53s/it]",
+        "Rendering progress:  55%|\u2588\u2588\u2588\u2588\u2588\u258c    | 21/38 [00:32<00:26,  1.54s/it]",
+        "Rendering progress:  58%|\u2588\u2588\u2588\u2588\u2588\u258a    | 22/38 [00:34<00:24,  1.55s/it]",
+        "Rendering progress:  61%|\u2588\u2588\u2588\u2588\u2588\u2588    | 23/38 [00:35<00:23,  1.55s/it]",
+        "Rendering progress:  63%|\u2588\u2588\u2588\u2588\u2588\u2588\u258e   | 24/38 [00:37<00:21,  1.54s/it]",
+        "Rendering progress:  66%|\u2588\u2588\u2588\u2588\u2588\u2588\u258c   | 25/38 [00:38<00:20,  1.54s/it]",
+        "Rendering progress:  68%|\u2588\u2588\u2588\u2588\u2588\u2588\u258a   | 26/38 [00:40<00:18,  1.53s/it]",
+        "Rendering progress:  71%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588   | 27/38 [00:41<00:16,  1.53s/it]",
+        "Rendering progress:  74%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e  | 28/38 [00:43<00:15,  1.54s/it]",
+        "Rendering progress:  76%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b  | 29/38 [00:44<00:13,  1.54s/it]",
+        "Rendering progress:  79%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589  | 30/38 [00:46<00:12,  1.53s/it]",
+        "Rendering progress:  82%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 31/38 [00:47<00:10,  1.53s/it]",
+        "Rendering progress:  84%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d | 32/38 [00:49<00:09,  1.53s/it]",
+        "Rendering progress:  87%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b | 33/38 [00:51<00:07,  1.53s/it]",
+        "Rendering progress:  89%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589 | 34/38 [00:52<00:06,  1.54s/it]",
+        "Rendering progress:  92%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 35/38 [00:54<00:04,  1.54s/it]",
+        "Rendering progress:  95%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d| 36/38 [00:55<00:03,  1.54s/it]",
+        "Rendering progress:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 37/38 [00:57<00:01,  1.54s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:58<00:00,  1.53s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:58<00:00,  1.55s/it]"
+      ],
+      "data_device": "cuda",
+      "retried_on_cpu": false,
+      "deviations": [],
+      "status": "ok"
+    },
+    "c3dgs_k4096_j-2": {
+      "finetune_iterations": 0,
+      "cmd": "/usr/bin/python3 /tmp/gsplat/kaggle/e3q_c3dgs_run.py --c3dgs_dir /tmp/c3dgs --out_json /kaggle/working/gn3r_work/train/c3dgs_k4096_j-2_wrapper.json --seed 0 --observe -- --model_path /kaggle/working/gn3r_work/train/model --source_path /tmp/data/train --data_device cuda --output_vq /kaggle/working/gn3r_work/train/c3dgs_k4096_j-2 --finetune_iterations 0 --color_codebook_size 4096 --color_importance_include 6.666666666666665e-08",
+      "returncode": 0,
+      "time_s": 345.09110474586487,
+      "ok": true,
+      "wrapper": {
+        "argv": [
+          "compress.py",
+          "--model_path",
+          "/kaggle/working/gn3r_work/train/model",
+          "--source_path",
+          "/tmp/data/train",
+          "--data_device",
+          "cuda",
+          "--output_vq",
+          "/kaggle/working/gn3r_work/train/c3dgs_k4096_j-2",
+          "--finetune_iterations",
+          "0",
+          "--color_codebook_size",
+          "4096",
+          "--color_importance_include",
+          "6.666666666666665e-08"
+        ],
+        "status": "ok",
+        "error": null,
+        "deviations": [
+          "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change",
+          "random, numpy and torch seeded with 0 before compress.py, as C3DGS's own safe_state seeds them (compress.py seeds nothing; PREREG_GN.md Amendment 14 f)"
+        ],
+        "seed": 0,
+        "wall_s": 342.4350402355194,
+        "linalg_patch": {
+          "installed": true,
+          "ops": [
+            "torch.linalg.eigh",
+            "torch.Tensor.det"
+          ],
+          "max_batch": 8192,
+          "check_sample": 4096,
+          "check_seed": 0,
+          "n_chunked_calls": {
+            "eigh": 1,
+            "det": 1
+          },
+          "n_passthrough_calls": {
+            "eigh": 0,
+            "det": 0
+          },
+          "calls": [
+            {
+              "op": "linalg_eigh",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.05236983299255371,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_eigenvalue_diff": 0.00016012785363272997,
+                "max_abs_eigenvalue": 1683.5081406533964,
+                "max_abs_reconstruction_residual": 0.0002636622765521679,
+                "nonfinite_in_sample": 0
+              }
+            },
+            {
+              "op": "det",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.015627622604370117,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_det_diff": 2.1952856099627382e-07,
+                "max_abs_det": 1.0000006579118148,
+                "nonfinite_in_sample": 0
+              }
+            }
+          ],
+          "fallbacks": [],
+          "working_batches": {
+            "linalg_eigh": 8192,
+            "det": 8192
+          },
+          "deviation": "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+        },
+        "e3r": {
+          "mode": "observe",
+          "errors": [],
+          "counts": {
+            "n_ckpt": 1026508,
+            "n_pruned": 115907,
+            "n_after_prune": 910601,
+            "prune_threshold": 0.0,
+            "n_kept_colour": 474552,
+            "n_colour_quantized": 436049,
+            "color_codebook_size": 4096,
+            "color_importance_include": 6.666666666666665e-08,
+            "color_compress_non_dir": true
+          },
+          "qa_at_colour_vq": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          },
+          "geometry_sha1": "bbb5b0cdb9d37d75eb5f5c7e9de91f03cece42c8",
+          "qa_at_save": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          }
+        },
+        "max_memory_allocated": 4709744640,
+        "max_memory_reserved": 5377097728,
+        "device": "Tesla T4"
+      },
+      "results": {
+        "ours_30000": {
+          "SSIM": 0.8020409941673279,
+          "PSNR": 21.698366165161133,
+          "LPIPS": 0.22207391262054443,
+          "size": 25.128509521484375
+        }
+      },
+      "times": {
+        "sensitivity_calculation": 16.60750412940979,
+        "clustering": 255.179949760437,
+        "encode": 2.507395029067993,
+        "total": 274.2948489189148
+      },
+      "npz": "/kaggle/working/gn3r_work/train/c3dgs_k4096_j-2/point_cloud/iteration_30000/point_cloud.npz",
+      "npz_bytes": 26349152,
+      "size_MiB": 25.128509521484375,
+      "size_MB": 26.349152,
+      "tail": [
+        "Rendering progress:  26%|\u2588\u2588\u258b       | 10/38 [00:15<00:43,  1.54s/it]",
+        "Rendering progress:  29%|\u2588\u2588\u2589       | 11/38 [00:17<00:41,  1.54s/it]",
+        "Rendering progress:  32%|\u2588\u2588\u2588\u258f      | 12/38 [00:18<00:39,  1.54s/it]",
+        "Rendering progress:  34%|\u2588\u2588\u2588\u258d      | 13/38 [00:20<00:38,  1.54s/it]",
+        "Rendering progress:  37%|\u2588\u2588\u2588\u258b      | 14/38 [00:21<00:36,  1.54s/it]",
+        "Rendering progress:  39%|\u2588\u2588\u2588\u2589      | 15/38 [00:23<00:35,  1.54s/it]",
+        "Rendering progress:  42%|\u2588\u2588\u2588\u2588\u258f     | 16/38 [00:24<00:33,  1.53s/it]",
+        "Rendering progress:  45%|\u2588\u2588\u2588\u2588\u258d     | 17/38 [00:26<00:32,  1.53s/it]",
+        "Rendering progress:  47%|\u2588\u2588\u2588\u2588\u258b     | 18/38 [00:27<00:30,  1.54s/it]",
+        "Rendering progress:  50%|\u2588\u2588\u2588\u2588\u2588     | 19/38 [00:29<00:29,  1.54s/it]",
+        "Rendering progress:  53%|\u2588\u2588\u2588\u2588\u2588\u258e    | 20/38 [00:31<00:27,  1.54s/it]",
+        "Rendering progress:  55%|\u2588\u2588\u2588\u2588\u2588\u258c    | 21/38 [00:32<00:26,  1.54s/it]",
+        "Rendering progress:  58%|\u2588\u2588\u2588\u2588\u2588\u258a    | 22/38 [00:34<00:24,  1.53s/it]",
+        "Rendering progress:  61%|\u2588\u2588\u2588\u2588\u2588\u2588    | 23/38 [00:35<00:22,  1.53s/it]",
+        "Rendering progress:  63%|\u2588\u2588\u2588\u2588\u2588\u2588\u258e   | 24/38 [00:37<00:21,  1.53s/it]",
+        "Rendering progress:  66%|\u2588\u2588\u2588\u2588\u2588\u2588\u258c   | 25/38 [00:38<00:19,  1.53s/it]",
+        "Rendering progress:  68%|\u2588\u2588\u2588\u2588\u2588\u2588\u258a   | 26/38 [00:40<00:18,  1.53s/it]",
+        "Rendering progress:  71%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588   | 27/38 [00:41<00:16,  1.53s/it]",
+        "Rendering progress:  74%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e  | 28/38 [00:43<00:15,  1.53s/it]",
+        "Rendering progress:  76%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b  | 29/38 [00:44<00:13,  1.53s/it]",
+        "Rendering progress:  79%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589  | 30/38 [00:46<00:12,  1.53s/it]",
+        "Rendering progress:  82%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 31/38 [00:47<00:10,  1.54s/it]",
+        "Rendering progress:  84%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d | 32/38 [00:49<00:09,  1.53s/it]",
+        "Rendering progress:  87%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b | 33/38 [00:50<00:07,  1.53s/it]",
+        "Rendering progress:  89%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589 | 34/38 [00:52<00:06,  1.56s/it]",
+        "Rendering progress:  92%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 35/38 [00:54<00:04,  1.55s/it]",
+        "Rendering progress:  95%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d| 36/38 [00:55<00:03,  1.55s/it]",
+        "Rendering progress:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 37/38 [00:57<00:01,  1.55s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:58<00:00,  1.55s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:58<00:00,  1.54s/it]"
+      ],
+      "data_device": "cuda",
+      "retried_on_cpu": false,
+      "deviations": [],
+      "status": "ok"
+    },
+    "c3dgs_k4096_j-1": {
+      "finetune_iterations": 0,
+      "cmd": "/usr/bin/python3 /tmp/gsplat/kaggle/e3q_c3dgs_run.py --c3dgs_dir /tmp/c3dgs --out_json /kaggle/working/gn3r_work/train/c3dgs_k4096_j-1_wrapper.json --seed 0 --observe -- --model_path /kaggle/working/gn3r_work/train/model --source_path /tmp/data/train --data_device cuda --output_vq /kaggle/working/gn3r_work/train/c3dgs_k4096_j-1 --finetune_iterations 0 --color_codebook_size 4096 --color_importance_include 2e-07",
+      "returncode": 0,
+      "time_s": 344.8913428783417,
+      "ok": true,
+      "wrapper": {
+        "argv": [
+          "compress.py",
+          "--model_path",
+          "/kaggle/working/gn3r_work/train/model",
+          "--source_path",
+          "/tmp/data/train",
+          "--data_device",
+          "cuda",
+          "--output_vq",
+          "/kaggle/working/gn3r_work/train/c3dgs_k4096_j-1",
+          "--finetune_iterations",
+          "0",
+          "--color_codebook_size",
+          "4096",
+          "--color_importance_include",
+          "2e-07"
+        ],
+        "status": "ok",
+        "error": null,
+        "deviations": [
+          "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change",
+          "random, numpy and torch seeded with 0 before compress.py, as C3DGS's own safe_state seeds them (compress.py seeds nothing; PREREG_GN.md Amendment 14 f)"
+        ],
+        "seed": 0,
+        "wall_s": 342.197802066803,
+        "linalg_patch": {
+          "installed": true,
+          "ops": [
+            "torch.linalg.eigh",
+            "torch.Tensor.det"
+          ],
+          "max_batch": 8192,
+          "check_sample": 4096,
+          "check_seed": 0,
+          "n_chunked_calls": {
+            "eigh": 1,
+            "det": 1
+          },
+          "n_passthrough_calls": {
+            "eigh": 0,
+            "det": 0
+          },
+          "calls": [
+            {
+              "op": "linalg_eigh",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.05309152603149414,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_eigenvalue_diff": 0.00016012785363272997,
+                "max_abs_eigenvalue": 1683.5081406533964,
+                "max_abs_reconstruction_residual": 0.0002636622765521679,
+                "nonfinite_in_sample": 0
+              }
+            },
+            {
+              "op": "det",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.01766681671142578,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_det_diff": 2.1952856099627382e-07,
+                "max_abs_det": 1.0000006579118148,
+                "nonfinite_in_sample": 0
+              }
+            }
+          ],
+          "fallbacks": [],
+          "working_batches": {
+            "linalg_eigh": 8192,
+            "det": 8192
+          },
+          "deviation": "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+        },
+        "e3r": {
+          "mode": "observe",
+          "errors": [],
+          "counts": {
+            "n_ckpt": 1026508,
+            "n_pruned": 115907,
+            "n_after_prune": 910601,
+            "prune_threshold": 0.0,
+            "n_kept_colour": 274436,
+            "n_colour_quantized": 636165,
+            "color_codebook_size": 4096,
+            "color_importance_include": 2e-07,
+            "color_compress_non_dir": true
+          },
+          "qa_at_colour_vq": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          },
+          "geometry_sha1": "0c97d6daf3f4761ecbf74f9d55c01faf3a3f876b",
+          "qa_at_save": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          }
+        },
+        "max_memory_allocated": 4712026112,
+        "max_memory_reserved": 5377097728,
+        "device": "Tesla T4"
+      },
+      "results": {
+        "ours_30000": {
+          "SSIM": 0.7989691495895386,
+          "PSNR": 21.652326583862305,
+          "LPIPS": 0.22559896111488342,
+          "size": 18.639838218688965
+        }
+      },
+      "times": {
+        "sensitivity_calculation": 16.58456015586853,
+        "clustering": 255.01421093940735,
+        "encode": 1.989588975906372,
+        "total": 273.58836007118225
+      },
+      "npz": "/kaggle/working/gn3r_work/train/c3dgs_k4096_j-1/point_cloud/iteration_30000/point_cloud.npz",
+      "npz_bytes": 19545287,
+      "size_MiB": 18.639838218688965,
+      "size_MB": 19.545287,
+      "tail": [
+        "Rendering progress:  26%|\u2588\u2588\u258b       | 10/38 [00:15<00:43,  1.55s/it]",
+        "Rendering progress:  29%|\u2588\u2588\u2589       | 11/38 [00:17<00:41,  1.55s/it]",
+        "Rendering progress:  32%|\u2588\u2588\u2588\u258f      | 12/38 [00:18<00:40,  1.55s/it]",
+        "Rendering progress:  34%|\u2588\u2588\u2588\u258d      | 13/38 [00:20<00:38,  1.54s/it]",
+        "Rendering progress:  37%|\u2588\u2588\u2588\u258b      | 14/38 [00:21<00:37,  1.54s/it]",
+        "Rendering progress:  39%|\u2588\u2588\u2588\u2589      | 15/38 [00:23<00:35,  1.55s/it]",
+        "Rendering progress:  42%|\u2588\u2588\u2588\u2588\u258f     | 16/38 [00:24<00:34,  1.55s/it]",
+        "Rendering progress:  45%|\u2588\u2588\u2588\u2588\u258d     | 17/38 [00:26<00:32,  1.55s/it]",
+        "Rendering progress:  47%|\u2588\u2588\u2588\u2588\u258b     | 18/38 [00:28<00:30,  1.55s/it]",
+        "Rendering progress:  50%|\u2588\u2588\u2588\u2588\u2588     | 19/38 [00:29<00:29,  1.55s/it]",
+        "Rendering progress:  53%|\u2588\u2588\u2588\u2588\u2588\u258e    | 20/38 [00:31<00:27,  1.55s/it]",
+        "Rendering progress:  55%|\u2588\u2588\u2588\u2588\u2588\u258c    | 21/38 [00:32<00:26,  1.55s/it]",
+        "Rendering progress:  58%|\u2588\u2588\u2588\u2588\u2588\u258a    | 22/38 [00:34<00:24,  1.55s/it]",
+        "Rendering progress:  61%|\u2588\u2588\u2588\u2588\u2588\u2588    | 23/38 [00:35<00:23,  1.55s/it]",
+        "Rendering progress:  63%|\u2588\u2588\u2588\u2588\u2588\u2588\u258e   | 24/38 [00:37<00:21,  1.55s/it]",
+        "Rendering progress:  66%|\u2588\u2588\u2588\u2588\u2588\u2588\u258c   | 25/38 [00:38<00:20,  1.55s/it]",
+        "Rendering progress:  68%|\u2588\u2588\u2588\u2588\u2588\u2588\u258a   | 26/38 [00:40<00:18,  1.55s/it]",
+        "Rendering progress:  71%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588   | 27/38 [00:41<00:17,  1.55s/it]",
+        "Rendering progress:  74%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e  | 28/38 [00:43<00:15,  1.56s/it]",
+        "Rendering progress:  76%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b  | 29/38 [00:45<00:14,  1.56s/it]",
+        "Rendering progress:  79%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589  | 30/38 [00:46<00:12,  1.56s/it]",
+        "Rendering progress:  82%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 31/38 [00:48<00:10,  1.55s/it]",
+        "Rendering progress:  84%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d | 32/38 [00:49<00:09,  1.56s/it]",
+        "Rendering progress:  87%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b | 33/38 [00:51<00:07,  1.55s/it]",
+        "Rendering progress:  89%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589 | 34/38 [00:52<00:06,  1.57s/it]",
+        "Rendering progress:  92%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 35/38 [00:54<00:04,  1.56s/it]",
+        "Rendering progress:  95%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d| 36/38 [00:56<00:03,  1.56s/it]",
+        "Rendering progress:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 37/38 [00:57<00:01,  1.56s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:59<00:00,  1.56s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:59<00:00,  1.56s/it]"
+      ],
+      "data_device": "cuda",
+      "retried_on_cpu": false,
+      "deviations": [],
+      "status": "ok"
+    },
+    "c3dgs_k4096_j+1": {
+      "finetune_iterations": 0,
+      "cmd": "/usr/bin/python3 /tmp/gsplat/kaggle/e3q_c3dgs_run.py --c3dgs_dir /tmp/c3dgs --out_json /kaggle/working/gn3r_work/train/c3dgs_k4096_j+1_wrapper.json --seed 0 --observe -- --model_path /kaggle/working/gn3r_work/train/model --source_path /tmp/data/train --data_device cuda --output_vq /kaggle/working/gn3r_work/train/c3dgs_k4096_j+1 --finetune_iterations 0 --color_codebook_size 4096 --color_importance_include 1.8e-06",
+      "returncode": 0,
+      "time_s": 344.45846343040466,
+      "ok": true,
+      "wrapper": {
+        "argv": [
+          "compress.py",
+          "--model_path",
+          "/kaggle/working/gn3r_work/train/model",
+          "--source_path",
+          "/tmp/data/train",
+          "--data_device",
+          "cuda",
+          "--output_vq",
+          "/kaggle/working/gn3r_work/train/c3dgs_k4096_j+1",
+          "--finetune_iterations",
+          "0",
+          "--color_codebook_size",
+          "4096",
+          "--color_importance_include",
+          "1.8e-06"
+        ],
+        "status": "ok",
+        "error": null,
+        "deviations": [
+          "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change",
+          "random, numpy and torch seeded with 0 before compress.py, as C3DGS's own safe_state seeds them (compress.py seeds nothing; PREREG_GN.md Amendment 14 f)"
+        ],
+        "seed": 0,
+        "wall_s": 341.79310607910156,
+        "linalg_patch": {
+          "installed": true,
+          "ops": [
+            "torch.linalg.eigh",
+            "torch.Tensor.det"
+          ],
+          "max_batch": 8192,
+          "check_sample": 4096,
+          "check_seed": 0,
+          "n_chunked_calls": {
+            "eigh": 1,
+            "det": 1
+          },
+          "n_passthrough_calls": {
+            "eigh": 0,
+            "det": 0
+          },
+          "calls": [
+            {
+              "op": "linalg_eigh",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.052849769592285156,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_eigenvalue_diff": 0.00016012785363272997,
+                "max_abs_eigenvalue": 1683.5081406533964,
+                "max_abs_reconstruction_residual": 0.0002636622765521679,
+                "nonfinite_in_sample": 0
+              }
+            },
+            {
+              "op": "det",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.016274690628051758,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_det_diff": 2.1952856099627382e-07,
+                "max_abs_det": 1.0000006904011678,
+                "nonfinite_in_sample": 0
+              }
+            }
+          ],
+          "fallbacks": [],
+          "working_batches": {
+            "linalg_eigh": 8192,
+            "det": 8192
+          },
+          "deviation": "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+        },
+        "e3r": {
+          "mode": "observe",
+          "errors": [],
+          "counts": {
+            "n_ckpt": 1026508,
+            "n_pruned": 115907,
+            "n_after_prune": 910601,
+            "prune_threshold": 0.0,
+            "n_kept_colour": 31950,
+            "n_colour_quantized": 878651,
+            "color_codebook_size": 4096,
+            "color_importance_include": 1.8e-06,
+            "color_compress_non_dir": true
+          },
+          "qa_at_colour_vq": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          },
+          "geometry_sha1": "88a0a8eebcdca019cfd3272ef6c17d10b282c03d",
+          "qa_at_save": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          }
+        },
+        "max_memory_allocated": 4712977920,
+        "max_memory_reserved": 5377097728,
+        "device": "Tesla T4"
+      },
+      "results": {
+        "ours_30000": {
+          "SSIM": 0.7816837430000305,
+          "PSNR": 21.336132049560547,
+          "LPIPS": 0.24446284770965576,
+          "size": 10.804130554199219
+        }
+      },
+      "times": {
+        "sensitivity_calculation": 16.520965337753296,
+        "clustering": 256.6454367637634,
+        "encode": 1.344125509262085,
+        "total": 274.5105276107788
+      },
+      "npz": "/kaggle/working/gn3r_work/train/c3dgs_k4096_j+1/point_cloud/iteration_30000/point_cloud.npz",
+      "npz_bytes": 11328952,
+      "size_MiB": 10.804130554199219,
+      "size_MB": 11.328952,
+      "tail": [
+        "Rendering progress:  26%|\u2588\u2588\u258b       | 10/38 [00:15<00:42,  1.52s/it]",
+        "Rendering progress:  29%|\u2588\u2588\u2589       | 11/38 [00:17<00:41,  1.52s/it]",
+        "Rendering progress:  32%|\u2588\u2588\u2588\u258f      | 12/38 [00:18<00:39,  1.52s/it]",
+        "Rendering progress:  34%|\u2588\u2588\u2588\u258d      | 13/38 [00:20<00:37,  1.52s/it]",
+        "Rendering progress:  37%|\u2588\u2588\u2588\u258b      | 14/38 [00:21<00:36,  1.51s/it]",
+        "Rendering progress:  39%|\u2588\u2588\u2588\u2589      | 15/38 [00:23<00:34,  1.51s/it]",
+        "Rendering progress:  42%|\u2588\u2588\u2588\u2588\u258f     | 16/38 [00:24<00:33,  1.51s/it]",
+        "Rendering progress:  45%|\u2588\u2588\u2588\u2588\u258d     | 17/38 [00:26<00:31,  1.50s/it]",
+        "Rendering progress:  47%|\u2588\u2588\u2588\u2588\u258b     | 18/38 [00:27<00:30,  1.51s/it]",
+        "Rendering progress:  50%|\u2588\u2588\u2588\u2588\u2588     | 19/38 [00:29<00:28,  1.51s/it]",
+        "Rendering progress:  53%|\u2588\u2588\u2588\u2588\u2588\u258e    | 20/38 [00:30<00:27,  1.51s/it]",
+        "Rendering progress:  55%|\u2588\u2588\u2588\u2588\u2588\u258c    | 21/38 [00:32<00:25,  1.51s/it]",
+        "Rendering progress:  58%|\u2588\u2588\u2588\u2588\u2588\u258a    | 22/38 [00:33<00:24,  1.51s/it]",
+        "Rendering progress:  61%|\u2588\u2588\u2588\u2588\u2588\u2588    | 23/38 [00:35<00:22,  1.51s/it]",
+        "Rendering progress:  63%|\u2588\u2588\u2588\u2588\u2588\u2588\u258e   | 24/38 [00:36<00:21,  1.50s/it]",
+        "Rendering progress:  66%|\u2588\u2588\u2588\u2588\u2588\u2588\u258c   | 25/38 [00:38<00:19,  1.51s/it]",
+        "Rendering progress:  68%|\u2588\u2588\u2588\u2588\u2588\u2588\u258a   | 26/38 [00:39<00:18,  1.51s/it]",
+        "Rendering progress:  71%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588   | 27/38 [00:41<00:16,  1.51s/it]",
+        "Rendering progress:  74%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e  | 28/38 [00:42<00:15,  1.51s/it]",
+        "Rendering progress:  76%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b  | 29/38 [00:44<00:13,  1.50s/it]",
+        "Rendering progress:  79%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589  | 30/38 [00:45<00:12,  1.50s/it]",
+        "Rendering progress:  82%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 31/38 [00:47<00:10,  1.51s/it]",
+        "Rendering progress:  84%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d | 32/38 [00:48<00:09,  1.51s/it]",
+        "Rendering progress:  87%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b | 33/38 [00:50<00:07,  1.51s/it]",
+        "Rendering progress:  89%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589 | 34/38 [00:51<00:06,  1.51s/it]",
+        "Rendering progress:  92%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 35/38 [00:53<00:04,  1.52s/it]",
+        "Rendering progress:  95%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d| 36/38 [00:54<00:03,  1.51s/it]",
+        "Rendering progress:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 37/38 [00:56<00:01,  1.51s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:57<00:00,  1.52s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:57<00:00,  1.52s/it]"
+      ],
+      "data_device": "cuda",
+      "retried_on_cpu": false,
+      "deviations": [],
+      "status": "ok"
+    },
+    "c3dgs_k4096_j+2": {
+      "finetune_iterations": 0,
+      "cmd": "/usr/bin/python3 /tmp/gsplat/kaggle/e3q_c3dgs_run.py --c3dgs_dir /tmp/c3dgs --out_json /kaggle/working/gn3r_work/train/c3dgs_k4096_j+2_wrapper.json --seed 0 --observe -- --model_path /kaggle/working/gn3r_work/train/model --source_path /tmp/data/train --data_device cuda --output_vq /kaggle/working/gn3r_work/train/c3dgs_k4096_j+2 --finetune_iterations 0 --color_codebook_size 4096 --color_importance_include 5.4e-06",
+      "returncode": 0,
+      "time_s": 345.8418233394623,
+      "ok": true,
+      "wrapper": {
+        "argv": [
+          "compress.py",
+          "--model_path",
+          "/kaggle/working/gn3r_work/train/model",
+          "--source_path",
+          "/tmp/data/train",
+          "--data_device",
+          "cuda",
+          "--output_vq",
+          "/kaggle/working/gn3r_work/train/c3dgs_k4096_j+2",
+          "--finetune_iterations",
+          "0",
+          "--color_codebook_size",
+          "4096",
+          "--color_importance_include",
+          "5.4e-06"
+        ],
+        "status": "ok",
+        "error": null,
+        "deviations": [
+          "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change",
+          "random, numpy and torch seeded with 0 before compress.py, as C3DGS's own safe_state seeds them (compress.py seeds nothing; PREREG_GN.md Amendment 14 f)"
+        ],
+        "seed": 0,
+        "wall_s": 343.1498017311096,
+        "linalg_patch": {
+          "installed": true,
+          "ops": [
+            "torch.linalg.eigh",
+            "torch.Tensor.det"
+          ],
+          "max_batch": 8192,
+          "check_sample": 4096,
+          "check_seed": 0,
+          "n_chunked_calls": {
+            "eigh": 1,
+            "det": 1
+          },
+          "n_passthrough_calls": {
+            "eigh": 0,
+            "det": 0
+          },
+          "calls": [
+            {
+              "op": "linalg_eigh",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.05231308937072754,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_eigenvalue_diff": 0.00016012785363272997,
+                "max_abs_eigenvalue": 1683.5081406533964,
+                "max_abs_reconstruction_residual": 0.0002636622765521679,
+                "nonfinite_in_sample": 0
+              }
+            },
+            {
+              "op": "det",
+              "n": 281237,
+              "shape": [
+                281237,
+                3,
+                3
+              ],
+              "dtype": "torch.float32",
+              "device": "cuda:0",
+              "start_batch": 8192,
+              "reductions": 0,
+              "time_s": 0.01584315299987793,
+              "check": {
+                "n_sampled": 4096,
+                "seed": 0,
+                "reference": "float64, CPU, the original op",
+                "max_abs_det_diff": 2.1952856099627382e-07,
+                "max_abs_det": 1.0000006579118148,
+                "nonfinite_in_sample": 0
+              }
+            }
+          ],
+          "fallbacks": [],
+          "working_batches": {
+            "linalg_eigh": 8192,
+            "det": 8192
+          },
+          "deviation": "torch.linalg.eigh and torch.Tensor.det were replaced in the wrapper's process, before compress.py ran, by chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix is decomposed independently, so what is computed does not change"
+        },
+        "e3r": {
+          "mode": "observe",
+          "errors": [],
+          "counts": {
+            "n_ckpt": 1026508,
+            "n_pruned": 115907,
+            "n_after_prune": 910601,
+            "prune_threshold": 0.0,
+            "n_kept_colour": 9058,
+            "n_colour_quantized": 901543,
+            "color_codebook_size": 4096,
+            "color_importance_include": 5.4e-06,
+            "color_compress_non_dir": true
+          },
+          "qa_at_colour_vq": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          },
+          "geometry_sha1": "99c319178c469dc8f7d0d29cd5d547fe788574ee",
+          "qa_at_save": {
+            "dc_scale": 0.054016318172216415,
+            "dc_zero_point": -81,
+            "rest_scale": 0.0068830568343400955,
+            "rest_zero_point": -4
+          }
+        },
+        "max_memory_allocated": 4714152448,
+        "max_memory_reserved": 5377097728,
+        "device": "Tesla T4"
+      },
+      "results": {
+        "ours_30000": {
+          "SSIM": 0.7768521308898926,
+          "PSNR": 21.204200744628906,
+          "LPIPS": 0.24975772202014923,
+          "size": 10.07693862915039
+        }
+      },
+      "times": {
+        "sensitivity_calculation": 16.585423469543457,
+        "clustering": 256.51776027679443,
+        "encode": 1.2761895656585693,
+        "total": 274.37937331199646
+      },
+      "npz": "/kaggle/working/gn3r_work/train/c3dgs_k4096_j+2/point_cloud/iteration_30000/point_cloud.npz",
+      "npz_bytes": 10566436,
+      "size_MiB": 10.07693862915039,
+      "size_MB": 10.566436,
+      "tail": [
+        "Rendering progress:  26%|\u2588\u2588\u258b       | 10/38 [00:15<00:43,  1.55s/it]",
+        "Rendering progress:  29%|\u2588\u2588\u2589       | 11/38 [00:17<00:42,  1.57s/it]",
+        "Rendering progress:  32%|\u2588\u2588\u2588\u258f      | 12/38 [00:18<00:40,  1.56s/it]",
+        "Rendering progress:  34%|\u2588\u2588\u2588\u258d      | 13/38 [00:20<00:38,  1.56s/it]",
+        "Rendering progress:  37%|\u2588\u2588\u2588\u258b      | 14/38 [00:21<00:37,  1.55s/it]",
+        "Rendering progress:  39%|\u2588\u2588\u2588\u2589      | 15/38 [00:23<00:35,  1.56s/it]",
+        "Rendering progress:  42%|\u2588\u2588\u2588\u2588\u258f     | 16/38 [00:25<00:34,  1.56s/it]",
+        "Rendering progress:  45%|\u2588\u2588\u2588\u2588\u258d     | 17/38 [00:26<00:32,  1.55s/it]",
+        "Rendering progress:  47%|\u2588\u2588\u2588\u2588\u258b     | 18/38 [00:28<00:31,  1.56s/it]",
+        "Rendering progress:  50%|\u2588\u2588\u2588\u2588\u2588     | 19/38 [00:29<00:29,  1.55s/it]",
+        "Rendering progress:  53%|\u2588\u2588\u2588\u2588\u2588\u258e    | 20/38 [00:31<00:27,  1.55s/it]",
+        "Rendering progress:  55%|\u2588\u2588\u2588\u2588\u2588\u258c    | 21/38 [00:32<00:26,  1.55s/it]",
+        "Rendering progress:  58%|\u2588\u2588\u2588\u2588\u2588\u258a    | 22/38 [00:34<00:24,  1.55s/it]",
+        "Rendering progress:  61%|\u2588\u2588\u2588\u2588\u2588\u2588    | 23/38 [00:35<00:23,  1.56s/it]",
+        "Rendering progress:  63%|\u2588\u2588\u2588\u2588\u2588\u2588\u258e   | 24/38 [00:37<00:21,  1.55s/it]",
+        "Rendering progress:  66%|\u2588\u2588\u2588\u2588\u2588\u2588\u258c   | 25/38 [00:39<00:20,  1.55s/it]",
+        "Rendering progress:  68%|\u2588\u2588\u2588\u2588\u2588\u2588\u258a   | 26/38 [00:40<00:18,  1.55s/it]",
+        "Rendering progress:  71%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588   | 27/38 [00:42<00:16,  1.55s/it]",
+        "Rendering progress:  74%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e  | 28/38 [00:43<00:15,  1.55s/it]",
+        "Rendering progress:  76%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b  | 29/38 [00:45<00:13,  1.55s/it]",
+        "Rendering progress:  79%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589  | 30/38 [00:46<00:12,  1.54s/it]",
+        "Rendering progress:  82%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 31/38 [00:48<00:10,  1.54s/it]",
+        "Rendering progress:  84%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d | 32/38 [00:49<00:09,  1.54s/it]",
+        "Rendering progress:  87%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b | 33/38 [00:51<00:07,  1.54s/it]",
+        "Rendering progress:  89%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589 | 34/38 [00:52<00:06,  1.55s/it]",
+        "Rendering progress:  92%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 35/38 [00:54<00:04,  1.55s/it]",
+        "Rendering progress:  95%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d| 36/38 [00:56<00:03,  1.54s/it]",
+        "Rendering progress:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 37/38 [00:57<00:01,  1.55s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:59<00:00,  1.55s/it]",
+        "Rendering progress: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 38/38 [00:59<00:00,  1.56s/it]"
+      ],
+      "data_device": "cuda",
+      "retried_on_cpu": false,
+      "deviations": [],
+      "status": "ok"
+    }
+  },
+  "dataset": "tandt",
+  "scene_set": "development",
+  "data_factor": 1,
+  "ks": [
+    1024,
+    4096,
+    16384,
+    65536
+  ],
+  "k_default": 4096,
+  "thresholds": {
+    "0": 6e-07,
+    "-2": 6.666666666666665e-08,
+    "-1": 2e-07,
+    "1": 1.8e-06,
+    "2": 5.4e-06
+  },
+  "threshold_scenes": [
+    "train"
+  ],
+  "c3dgs_scenes": [
+    "train"
+  ],
+  "gn_only": false,
+  "rhos": [
+    0.0,
+    0.001,
+    0.01,
+    0.1,
+    0.3,
+    1.0,
+    3.0
+  ],
+  "gsplat_commit": "b27e1421c2d0",
+  "env": {
+    "python": "3.12.13",
+    "torch": "2.10.0+cu128",
+    "torch_cuda": "12.8",
+    "cudnn": 91002,
+    "packages": {
+      "gsplat": "1.6.0",
+      "torchpq": null,
+      "cupy-cuda12x": "14.0.1",
+      "plas": null,
+      "torchmetrics": "1.8.2",
+      "numpy": "2.0.2",
+      "pycolmap": "4.2.1",
+      "remotezip": "0.12.6"
+    },
+    "gpu": {
+      "name": "Tesla T4",
+      "capability": "7.5",
+      "total_memory": 15636037632,
+      "count": 1
+    },
+    "nvidia_smi": "Tesla T4, 580.159.04, 15360 MiB\nTesla T4, 580.159.04, 15360 MiB",
+    "nvcc": [
+      "Build cuda_12.8.r12.8/compiler.35583870_0"
+    ]
+  },
+  "c3dgs_commit": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+  "deadline": 1790810978.0,
+  "reserve_s": 1800.0,
+  "gn_vq": {
+    "eps": 0.01,
+    "max_iters": 20,
+    "rel_tol": 0.001,
+    "floor": "M_i + rho * tr(M_i) / 16 * I",
+    "metric": "16 x 16, bands 0-3 (Amendment 14 b)",
+    "quantizer": "C3DGS's int8 colour table quantizer, DC and AC scales at injection",
+    "cv_scoring": "SH-only: odd-train-view dMSE, clamped, gsplat renders (Amendment 14 b)"
+  },
+  "steps": [
+    {
+      "name": "fetch_inria",
+      "timestamp": "2026-09-30T12:06:21",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 2.885393135999948,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 796262400
+    },
+    {
+      "name": "layout_model",
+      "timestamp": "2026-09-30T12:06:24",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.0002696589999686694,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 796262400
+    },
+    {
+      "name": "download_dataset",
+      "timestamp": "2026-09-30T12:06:24",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 219.92676435600004,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 852996096
+    },
+    {
+      "name": "c3dgs_c3dgs_k4096",
+      "K": 4096,
+      "threshold": 6e-07,
+      "ft": 0,
+      "timestamp": "2026-09-30T12:10:04",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 350.94670200099995,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 852996096
+    },
+    {
+      "name": "build_runner",
+      "timestamp": "2026-09-30T12:15:55",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 39.93907825300016,
+      "cuda_peak": {
+        "allocated": 337296896,
+        "reserved": 360710144,
+        "allocated_over_start": 337296896
+      },
+      "host_max_rss_bytes": 3201327104
+    },
+    {
+      "name": "protocol_ii_views",
+      "timestamp": "2026-09-30T12:16:35",
+      "cuda_start": {
+        "allocated": 310493184,
+        "reserved": 360710144,
+        "free": 15148580864,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.005093686999998681,
+      "cuda_peak": {
+        "allocated": 310493184,
+        "reserved": 360710144,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 3201327104
+    },
+    {
+      "name": "eval_ii_uncompressed",
+      "timestamp": "2026-09-30T12:16:35",
+      "cuda_start": {
+        "allocated": 310493184,
+        "reserved": 360710144,
+        "free": 15148580864,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 8.10119467100003,
+      "cuda_peak": {
+        "allocated": 1652295680,
+        "reserved": 1751121920,
+        "allocated_over_start": 1341802496
+      },
+      "host_max_rss_bytes": 3201327104
+    },
+    {
+      "name": "gn_pass16_full",
+      "n_views": 263,
+      "timestamp": "2026-09-30T12:16:45",
+      "cuda_start": {
+        "allocated": 319033856,
+        "reserved": 1751121920,
+        "free": 13707837440,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 18.152651636999963,
+      "cuda_peak": {
+        "allocated": 1645363200,
+        "reserved": 2464153600,
+        "allocated_over_start": 1326329344
+      },
+      "host_max_rss_bytes": 3401158656
+    },
+    {
+      "name": "gn_cache_write16_full",
+      "timestamp": "2026-09-30T12:17:04",
+      "cuda_start": {
+        "allocated": 319033856,
+        "reserved": 2464153600,
+        "free": 12994805760,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.4907510559999082,
+      "cuda_peak": {
+        "allocated": 319033856,
+        "reserved": 2464153600,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 3401289728
+    },
+    {
+      "name": "pruned_trace_check",
+      "timestamp": "2026-09-30T12:17:04",
+      "cuda_start": {
+        "allocated": 319033856,
+        "reserved": 2464153600,
+        "free": 12994805760,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.07794919100001607,
+      "cuda_peak": {
+        "allocated": 319033856,
+        "reserved": 2464153600,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 3471413248
+    },
+    {
+      "name": "colour_share",
+      "timestamp": "2026-09-30T12:17:04",
+      "cuda_start": {
+        "allocated": 319033856,
+        "reserved": 2464153600,
+        "free": 12994805760,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 1.24500454300005,
+      "cuda_peak": {
+        "allocated": 319033856,
+        "reserved": 2464153600,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4033818624
+    },
+    {
+      "name": "gn_pass16_even",
+      "n_views": 132,
+      "timestamp": "2026-09-30T12:17:06",
+      "cuda_start": {
+        "allocated": 319033856,
+        "reserved": 2464153600,
+        "free": 12994805760,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 9.34607991200005,
+      "cuda_peak": {
+        "allocated": 1644856832,
+        "reserved": 2464153600,
+        "allocated_over_start": 1325822976
+      },
+      "host_max_rss_bytes": 4033818624
+    },
+    {
+      "name": "gn_cache_write16_even",
+      "timestamp": "2026-09-30T12:17:15",
+      "cuda_start": {
+        "allocated": 319033856,
+        "reserved": 2464153600,
+        "free": 12994805760,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.4983452799999668,
+      "cuda_peak": {
+        "allocated": 319033856,
+        "reserved": 2464153600,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4033818624
+    },
+    {
+      "name": "gn_vq_cv_rho0",
+      "timestamp": "2026-09-30T12:17:16",
+      "cuda_start": {
+        "allocated": 678181376,
+        "reserved": 2464153600,
+        "free": 12994805760,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 98.87692942199988,
+      "cuda_peak": {
+        "allocated": 2199855104,
+        "reserved": 3823108096,
+        "allocated_over_start": 1521673728
+      },
+      "host_max_rss_bytes": 4033818624
+    },
+    {
+      "name": "dmse_cv_rho0",
+      "timestamp": "2026-09-30T12:18:55",
+      "cuda_start": {
+        "allocated": 686441472,
+        "reserved": 3823108096,
+        "free": 11633754112,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 3.777810036999881,
+      "cuda_peak": {
+        "allocated": 1224898560,
+        "reserved": 3823108096,
+        "allocated_over_start": 538457088
+      },
+      "host_max_rss_bytes": 4118532096
+    },
+    {
+      "name": "gn_vq_cv_rho1e-3",
+      "timestamp": "2026-09-30T12:18:59",
+      "cuda_start": {
+        "allocated": 686441472,
+        "reserved": 3823108096,
+        "free": 11633754112,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 98.35779504699985,
+      "cuda_peak": {
+        "allocated": 2207066624,
+        "reserved": 3823108096,
+        "allocated_over_start": 1520625152
+      },
+      "host_max_rss_bytes": 4118532096
+    },
+    {
+      "name": "dmse_cv_rho1e-3",
+      "timestamp": "2026-09-30T12:20:37",
+      "cuda_start": {
+        "allocated": 693652992,
+        "reserved": 3823108096,
+        "free": 11633754112,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 3.7739249510000263,
+      "cuda_peak": {
+        "allocated": 1233118208,
+        "reserved": 3823108096,
+        "allocated_over_start": 539465216
+      },
+      "host_max_rss_bytes": 4119371776
+    },
+    {
+      "name": "gn_vq_cv_rho1e-2",
+      "timestamp": "2026-09-30T12:20:41",
+      "cuda_start": {
+        "allocated": 693652992,
+        "reserved": 3823108096,
+        "free": 11633754112,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 98.36626307699999,
+      "cuda_peak": {
+        "allocated": 2214278144,
+        "reserved": 3823108096,
+        "allocated_over_start": 1520625152
+      },
+      "host_max_rss_bytes": 4119371776
+    },
+    {
+      "name": "dmse_cv_rho1e-2",
+      "timestamp": "2026-09-30T12:22:19",
+      "cuda_start": {
+        "allocated": 700864512,
+        "reserved": 3823108096,
+        "free": 11633754112,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 3.7695685899998352,
+      "cuda_peak": {
+        "allocated": 1240011776,
+        "reserved": 3823108096,
+        "allocated_over_start": 539147264
+      },
+      "host_max_rss_bytes": 4119384064
+    },
+    {
+      "name": "gn_vq_cv_rho1e-1",
+      "timestamp": "2026-09-30T12:22:23",
+      "cuda_start": {
+        "allocated": 700864512,
+        "reserved": 3823108096,
+        "free": 11633754112,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 98.3572999800001,
+      "cuda_peak": {
+        "allocated": 2221489664,
+        "reserved": 3823108096,
+        "allocated_over_start": 1520625152
+      },
+      "host_max_rss_bytes": 4119384064
+    },
+    {
+      "name": "dmse_cv_rho1e-1",
+      "timestamp": "2026-09-30T12:24:01",
+      "cuda_start": {
+        "allocated": 708076032,
+        "reserved": 3823108096,
+        "free": 11633754112,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 3.7816255190000447,
+      "cuda_peak": {
+        "allocated": 1246875648,
+        "reserved": 3823108096,
+        "allocated_over_start": 538799616
+      },
+      "host_max_rss_bytes": 4119384064
+    },
+    {
+      "name": "gn_vq_cv_rho3e-1",
+      "timestamp": "2026-09-30T12:24:05",
+      "cuda_start": {
+        "allocated": 708076032,
+        "reserved": 3823108096,
+        "free": 11633754112,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 98.337488377,
+      "cuda_peak": {
+        "allocated": 2228701184,
+        "reserved": 3823108096,
+        "allocated_over_start": 1520625152
+      },
+      "host_max_rss_bytes": 4119384064
+    },
+    {
+      "name": "dmse_cv_rho3e-1",
+      "timestamp": "2026-09-30T12:25:43",
+      "cuda_start": {
+        "allocated": 715287552,
+        "reserved": 3823108096,
+        "free": 11633754112,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 3.769958869999982,
+      "cuda_peak": {
+        "allocated": 1253328384,
+        "reserved": 3823108096,
+        "allocated_over_start": 538040832
+      },
+      "host_max_rss_bytes": 4120059904
+    },
+    {
+      "name": "gn_vq_cv_rho1",
+      "timestamp": "2026-09-30T12:25:47",
+      "cuda_start": {
+        "allocated": 715287552,
+        "reserved": 3823108096,
+        "free": 11633754112,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 98.34168958300006,
+      "cuda_peak": {
+        "allocated": 2235912704,
+        "reserved": 3825205248,
+        "allocated_over_start": 1520625152
+      },
+      "host_max_rss_bytes": 4120059904
+    },
+    {
+      "name": "dmse_cv_rho1",
+      "timestamp": "2026-09-30T12:27:26",
+      "cuda_start": {
+        "allocated": 722499072,
+        "reserved": 3825205248,
+        "free": 11631656960,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 3.7774433489998955,
+      "cuda_peak": {
+        "allocated": 1260828160,
+        "reserved": 3825205248,
+        "allocated_over_start": 538329088
+      },
+      "host_max_rss_bytes": 4130988032
+    },
+    {
+      "name": "gn_vq_cv_rho3",
+      "timestamp": "2026-09-30T12:27:29",
+      "cuda_start": {
+        "allocated": 722499072,
+        "reserved": 3825205248,
+        "free": 11631656960,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 98.3637398589999,
+      "cuda_peak": {
+        "allocated": 2243124224,
+        "reserved": 3825205248,
+        "allocated_over_start": 1520625152
+      },
+      "host_max_rss_bytes": 4130988032
+    },
+    {
+      "name": "dmse_cv_rho3",
+      "timestamp": "2026-09-30T12:29:08",
+      "cuda_start": {
+        "allocated": 729710592,
+        "reserved": 3825205248,
+        "free": 11631656960,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 3.764903970999967,
+      "cuda_peak": {
+        "allocated": 1267692544,
+        "reserved": 3825205248,
+        "allocated_over_start": 537981952
+      },
+      "host_max_rss_bytes": 4131774464
+    },
+    {
+      "name": "calibration",
+      "timestamp": "2026-09-30T12:29:12",
+      "cuda_start": {
+        "allocated": 729710592,
+        "reserved": 3825205248,
+        "free": 11631656960,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 4.4759327810002105,
+      "cuda_peak": {
+        "allocated": 2349947392,
+        "reserved": 3825205248,
+        "allocated_over_start": 1620236800
+      },
+      "host_max_rss_bytes": 4131905536
+    },
+    {
+      "name": "c3dgs_gnvq_k4096",
+      "K": 4096,
+      "threshold": 6e-07,
+      "ft": 0,
+      "timestamp": "2026-09-30T12:29:16",
+      "cuda_start": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "free": 15421210624,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 446.8106412430002,
+      "cuda_peak": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4131905536
+    },
+    {
+      "name": "c3dgs_gnvq_k4096_ft5000",
+      "K": 4096,
+      "threshold": 6e-07,
+      "ft": 5000,
+      "timestamp": "2026-09-30T12:36:43",
+      "cuda_start": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "free": 15421210624,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 760.400818004,
+      "cuda_peak": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4131905536
+    },
+    {
+      "name": "c3dgs_c3dgs_k1024",
+      "K": 1024,
+      "threshold": 6e-07,
+      "ft": 0,
+      "timestamp": "2026-09-30T12:49:24",
+      "cuda_start": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "free": 15421210624,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 247.10589600999992,
+      "cuda_peak": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4131905536
+    },
+    {
+      "name": "c3dgs_c3dgs_k16384",
+      "K": 16384,
+      "threshold": 6e-07,
+      "ft": 0,
+      "timestamp": "2026-09-30T12:53:31",
+      "cuda_start": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "free": 15421210624,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 737.2693839060003,
+      "cuda_peak": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4131905536
+    },
+    {
+      "name": "c3dgs_c3dgs_k65536",
+      "K": 65536,
+      "threshold": 6e-07,
+      "ft": 0,
+      "timestamp": "2026-09-30T13:05:48",
+      "cuda_start": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "free": 15421210624,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 2330.246575174,
+      "cuda_peak": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4131905536
+    },
+    {
+      "name": "c3dgs_c3dgs_k4096_j-2",
+      "K": 4096,
+      "threshold": 6.666666666666665e-08,
+      "ft": 0,
+      "timestamp": "2026-09-30T13:44:38",
+      "cuda_start": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "free": 15421210624,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 345.0918145730002,
+      "cuda_peak": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4131905536
+    },
+    {
+      "name": "c3dgs_c3dgs_k4096_j-1",
+      "K": 4096,
+      "threshold": 2e-07,
+      "ft": 0,
+      "timestamp": "2026-09-30T13:50:23",
+      "cuda_start": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "free": 15421210624,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 344.8920370469996,
+      "cuda_peak": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4131905536
+    },
+    {
+      "name": "c3dgs_c3dgs_k4096_j+1",
+      "K": 4096,
+      "threshold": 1.8e-06,
+      "ft": 0,
+      "timestamp": "2026-09-30T13:56:08",
+      "cuda_start": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "free": 15421210624,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 344.45912500400027,
+      "cuda_peak": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4131905536
+    },
+    {
+      "name": "c3dgs_c3dgs_k4096_j+2",
+      "K": 4096,
+      "threshold": 5.4e-06,
+      "ft": 0,
+      "timestamp": "2026-09-30T14:01:53",
+      "cuda_start": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "free": 15421210624,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 345.84251371499977,
+      "cuda_peak": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4131905536
+    },
+    {
+      "name": "npz2ply_c3dgs_k4096",
+      "timestamp": "2026-09-30T14:07:39",
+      "cuda_start": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "free": 15421210624,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 11.594134228999792,
+      "cuda_peak": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4131905536
+    },
+    {
+      "name": "load_ply_c3dgs_k4096",
+      "timestamp": "2026-09-30T14:07:50",
+      "cuda_start": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "free": 15421210624,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.3104540599997563,
+      "cuda_peak": {
+        "allocated": 9568256,
+        "reserved": 35651584,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4131905536
+    },
+    {
+      "name": "build_runner",
+      "timestamp": "2026-09-30T14:07:51",
+      "cuda_start": {
+        "allocated": 224582656,
+        "reserved": 241172480,
+        "free": 15215689728,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 6.199482635000095,
+      "cuda_peak": {
+        "allocated": 562631680,
+        "reserved": 585105408,
+        "allocated_over_start": 338049024
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "protocol_ii_views",
+      "timestamp": "2026-09-30T14:07:57",
+      "cuda_start": {
+        "allocated": 535634432,
+        "reserved": 585105408,
+        "free": 14871756800,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.004940756999531004,
+      "cuda_peak": {
+        "allocated": 535634432,
+        "reserved": 585105408,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "eval_ii_c3dgs_k4096",
+      "timestamp": "2026-09-30T14:07:57",
+      "cuda_start": {
+        "allocated": 535634432,
+        "reserved": 585105408,
+        "free": 14871756800,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 7.715085615000135,
+      "cuda_peak": {
+        "allocated": 1868584448,
+        "reserved": 1941962752,
+        "allocated_over_start": 1332950016
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "npz2ply_gnvq_k4096",
+      "timestamp": "2026-09-30T14:08:05",
+      "cuda_start": {
+        "allocated": 320641024,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 11.692127493000044,
+      "cuda_peak": {
+        "allocated": 320641024,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "load_ply_gnvq_k4096",
+      "timestamp": "2026-09-30T14:08:17",
+      "cuda_start": {
+        "allocated": 320641024,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.306771567999931,
+      "cuda_peak": {
+        "allocated": 320641024,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "eval_ii_gnvq_k4096",
+      "timestamp": "2026-09-30T14:08:17",
+      "cuda_start": {
+        "allocated": 535655424,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 7.745121220999863,
+      "cuda_peak": {
+        "allocated": 1868603904,
+        "reserved": 1941962752,
+        "allocated_over_start": 1332948480
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "npz2ply_gnvq_k4096_ft5000",
+      "timestamp": "2026-09-30T14:08:25",
+      "cuda_start": {
+        "allocated": 320660480,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 11.536035019000337,
+      "cuda_peak": {
+        "allocated": 320660480,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "load_ply_gnvq_k4096_ft5000",
+      "timestamp": "2026-09-30T14:08:36",
+      "cuda_start": {
+        "allocated": 320660480,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.3066874279993499,
+      "cuda_peak": {
+        "allocated": 320660480,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "eval_ii_gnvq_k4096_ft5000",
+      "timestamp": "2026-09-30T14:08:37",
+      "cuda_start": {
+        "allocated": 535674880,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 7.751841057000092,
+      "cuda_peak": {
+        "allocated": 1868623360,
+        "reserved": 1941962752,
+        "allocated_over_start": 1332948480
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "npz2ply_c3dgs_k1024",
+      "timestamp": "2026-09-30T14:08:44",
+      "cuda_start": {
+        "allocated": 320679936,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 11.718824817000495,
+      "cuda_peak": {
+        "allocated": 320679936,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "load_ply_c3dgs_k1024",
+      "timestamp": "2026-09-30T14:08:56",
+      "cuda_start": {
+        "allocated": 320679936,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.3053053359999467,
+      "cuda_peak": {
+        "allocated": 320679936,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "eval_ii_c3dgs_k1024",
+      "timestamp": "2026-09-30T14:08:57",
+      "cuda_start": {
+        "allocated": 535694336,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 7.840891601999829,
+      "cuda_peak": {
+        "allocated": 1868642816,
+        "reserved": 1941962752,
+        "allocated_over_start": 1332948480
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "npz2ply_c3dgs_k16384",
+      "timestamp": "2026-09-30T14:09:04",
+      "cuda_start": {
+        "allocated": 320699392,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 11.625573158000407,
+      "cuda_peak": {
+        "allocated": 320699392,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "load_ply_c3dgs_k16384",
+      "timestamp": "2026-09-30T14:09:16",
+      "cuda_start": {
+        "allocated": 320699392,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.32002849000036804,
+      "cuda_peak": {
+        "allocated": 320699392,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "eval_ii_c3dgs_k16384",
+      "timestamp": "2026-09-30T14:09:16",
+      "cuda_start": {
+        "allocated": 535713792,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 7.820872450999559,
+      "cuda_peak": {
+        "allocated": 1868662272,
+        "reserved": 1941962752,
+        "allocated_over_start": 1332948480
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "npz2ply_c3dgs_k65536",
+      "timestamp": "2026-09-30T14:09:24",
+      "cuda_start": {
+        "allocated": 320718848,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 11.627421324000352,
+      "cuda_peak": {
+        "allocated": 320718848,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "load_ply_c3dgs_k65536",
+      "timestamp": "2026-09-30T14:09:36",
+      "cuda_start": {
+        "allocated": 320718848,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.3088761010003509,
+      "cuda_peak": {
+        "allocated": 320718848,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "eval_ii_c3dgs_k65536",
+      "timestamp": "2026-09-30T14:09:36",
+      "cuda_start": {
+        "allocated": 535733248,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 7.706328631999895,
+      "cuda_peak": {
+        "allocated": 1868681728,
+        "reserved": 1941962752,
+        "allocated_over_start": 1332948480
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "npz2ply_c3dgs_k4096_j-2",
+      "timestamp": "2026-09-30T14:09:44",
+      "cuda_start": {
+        "allocated": 320738304,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 11.717060364000645,
+      "cuda_peak": {
+        "allocated": 320738304,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "load_ply_c3dgs_k4096_j-2",
+      "timestamp": "2026-09-30T14:09:56",
+      "cuda_start": {
+        "allocated": 320738304,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.3042197800004942,
+      "cuda_peak": {
+        "allocated": 320738304,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "eval_ii_c3dgs_k4096_j-2",
+      "timestamp": "2026-09-30T14:09:56",
+      "cuda_start": {
+        "allocated": 535752704,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 7.78088152700002,
+      "cuda_peak": {
+        "allocated": 1868701184,
+        "reserved": 1941962752,
+        "allocated_over_start": 1332948480
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "npz2ply_c3dgs_k4096_j-1",
+      "timestamp": "2026-09-30T14:10:04",
+      "cuda_start": {
+        "allocated": 320757760,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 11.854121157999543,
+      "cuda_peak": {
+        "allocated": 320757760,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "load_ply_c3dgs_k4096_j-1",
+      "timestamp": "2026-09-30T14:10:16",
+      "cuda_start": {
+        "allocated": 320757760,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.3112904259996867,
+      "cuda_peak": {
+        "allocated": 320757760,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "eval_ii_c3dgs_k4096_j-1",
+      "timestamp": "2026-09-30T14:10:16",
+      "cuda_start": {
+        "allocated": 535772160,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 7.798884993000684,
+      "cuda_peak": {
+        "allocated": 1868720640,
+        "reserved": 1941962752,
+        "allocated_over_start": 1332948480
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "npz2ply_c3dgs_k4096_j+1",
+      "timestamp": "2026-09-30T14:10:24",
+      "cuda_start": {
+        "allocated": 320777216,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 11.564755552999486,
+      "cuda_peak": {
+        "allocated": 320777216,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "load_ply_c3dgs_k4096_j+1",
+      "timestamp": "2026-09-30T14:10:36",
+      "cuda_start": {
+        "allocated": 320777216,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.30520664200048486,
+      "cuda_peak": {
+        "allocated": 320777216,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "eval_ii_c3dgs_k4096_j+1",
+      "timestamp": "2026-09-30T14:10:36",
+      "cuda_start": {
+        "allocated": 535791616,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 7.845292955998957,
+      "cuda_peak": {
+        "allocated": 1868740096,
+        "reserved": 1941962752,
+        "allocated_over_start": 1332948480
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "npz2ply_c3dgs_k4096_j+2",
+      "timestamp": "2026-09-30T14:10:44",
+      "cuda_start": {
+        "allocated": 320796672,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 11.50126177600032,
+      "cuda_peak": {
+        "allocated": 320796672,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "load_ply_c3dgs_k4096_j+2",
+      "timestamp": "2026-09-30T14:10:55",
+      "cuda_start": {
+        "allocated": 320796672,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.30712427199978265,
+      "cuda_peak": {
+        "allocated": 320796672,
+        "reserved": 1941962752,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4369555456
+    },
+    {
+      "name": "eval_ii_c3dgs_k4096_j+2",
+      "timestamp": "2026-09-30T14:10:56",
+      "cuda_start": {
+        "allocated": 535811072,
+        "reserved": 1941962752,
+        "free": 13514899456,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 7.8365096830002585,
+      "cuda_peak": {
+        "allocated": 1868759552,
+        "reserved": 1941962752,
+        "allocated_over_start": 1332948480
+      },
+      "host_max_rss_bytes": 4369555456
+    }
+  ],
+  "inria": {
+    "url": "https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip",
+    "directory_checked": true,
+    "directory_time_s": 2.298931312999912,
+    "members": {
+      "ply": {
+        "name": "train/point_cloud/iteration_30000/point_cloud.ply",
+        "path": "/kaggle/working/e3p_inria/train/point_cloud.ply",
+        "bytes_pinned": 254575516,
+        "crc32_pinned": "85d6d4ca",
+        "compressed_bytes": 219441845,
+        "header_offset": 12052819184,
+        "source": "present",
+        "bytes": 254575516,
+        "crc32": "85d6d4ca",
+        "sha1": "187b6095ffe3135c7769d73a9caefcd03a5273d8",
+        "time_s": 0.5858012620000181
+      },
+      "cameras": {
+        "name": "train/cameras.json",
+        "path": "/kaggle/working/e3p_inria/train/cameras.json",
+        "bytes_pinned": 120800,
+        "crc32_pinned": "9940f310",
+        "compressed_bytes": 38454,
+        "header_offset": 12050023231,
+        "source": "present",
+        "bytes": 120800,
+        "crc32": "9940f310",
+        "sha1": "79ee8c10b5991f634545557ca401cd2e31a31f75",
+        "time_s": 0.00038798699995368224
+      },
+      "cfg_args": {
+        "name": "train/cfg_args",
+        "path": "/kaggle/working/e3p_inria/train/cfg_args",
+        "bytes_pinned": 162,
+        "crc32_pinned": "cbf086a8",
+        "compressed_bytes": 130,
+        "header_offset": 12050061733,
+        "source": "present",
+        "bytes": 162,
+        "crc32": "cbf086a8",
+        "sha1": "7b4e85d00695394a1decc4300c0904be7a912d6c",
+        "time_s": 4.05790000286288e-05
+      }
+    },
+    "time_s": 2.885225122999941,
+    "http_requests": 4
+  },
+  "inria_cfg_args": {
+    "eval": true,
+    "images": "images",
+    "model_path": "./eval/train",
+    "resolution": 1,
+    "sh_degree": 3,
+    "source_path": "f:/bkerbl/Downloads/tandt/train",
+    "white_background": false
+  },
+  "cfg_args_mismatch": [],
+  "c3dgs_build": {
+    "path": "/kaggle/working/gn3r/gn3r_c3dgs_build.json",
+    "ok": true,
+    "failed_step": null,
+    "missing": false
+  },
+  "camera_frame_check": {
+    "n_runner": 301,
+    "n_cameras_json": 301,
+    "n_matched": 301,
+    "max_position_diff": 1.7763568394002505e-15,
+    "max_rotation_diff": 3.3306690738754696e-16,
+    "tol": 0.0001,
+    "pass": true
+  },
+  "split_check": {
+    "n_test": 38,
+    "test_names": [
+      "00001",
+      "00009",
+      "00017",
+      "00025",
+      "00033",
+      "00041",
+      "00049",
+      "00057",
+      "00065",
+      "00073",
+      "00081",
+      "00089",
+      "00097",
+      "00105",
+      "00113",
+      "00121",
+      "00129",
+      "00137",
+      "00145",
+      "00153",
+      "00161",
+      "00169",
+      "00177",
+      "00185",
+      "00193",
+      "00201",
+      "00209",
+      "00217",
+      "00225",
+      "00233",
+      "00241",
+      "00249",
+      "00257",
+      "00265",
+      "00273",
+      "00281",
+      "00289",
+      "00297"
+    ],
+    "equals_cameras_json_head": true
+  },
+  "n_train_views": 263,
+  "n_even_views": 132,
+  "n_odd_views": 131,
+  "total_train_pixels": 140468300,
+  "even_pixels": 70501200,
+  "settings": {
+    "packed": false,
+    "rasterize_mode": "classic",
+    "camera_model": "pinhole",
+    "with_ut": false,
+    "with_eval3d": false,
+    "near_plane": 0.01,
+    "far_plane": 10000000000.0,
+    "sh_degree": 3
+  },
+  "gn": {
+    "full": {
+      "source": "computed",
+      "cache_key": "v1|187b6095ffe3135c7769d73a9caefcd03a5273d8|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views263|seed0|bands0-3",
+      "M_shape": [
+        1026508,
+        136
+      ],
+      "M_bytes": 558420352,
+      "n_views": 263,
+      "total_pixels": 140468300,
+      "time_s": 17.67693154099993,
+      "bands": "0-3",
+      "clamp_fraction": 0.11818357432473094,
+      "splats_zero_trace": 102318
+    },
+    "even": {
+      "source": "computed",
+      "cache_key": "v1|187b6095ffe3135c7769d73a9caefcd03a5273d8|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views132|seed0|bands0-3|even",
+      "M_shape": [
+        1026508,
+        136
+      ],
+      "M_bytes": 558420352,
+      "n_views": 132,
+      "total_pixels": 70501200,
+      "time_s": 8.89066644400009,
+      "bands": "0-3",
+      "clamp_fraction": 0.1182215101482071,
+      "splats_zero_trace": 102839
+    }
+  },
+  "pruned_trace_check": {
+    "status": "ok",
+    "n_splats": 1026508,
+    "n_pruned": 115907,
+    "n_pruned_tr0": 102280,
+    "n_tr0_all": 102318,
+    "mask_source": "probe",
+    "trace": "float32 trace of the stored packed 16 x 16 metric, == 0 exactly"
+  },
+  "colour_share": {
+    "n_rows": 1026508,
+    "n_selected": 803076,
+    "16x16": {
+      "total_trace": 19517109.468576014,
+      "selected_trace": 4147617.4015976824,
+      "share": 0.21251186853645784
+    },
+    "15x15": {
+      "total_trace": 18297289.980868198,
+      "selected_trace": 3888391.2837892342,
+      "share": 0.2125118685802635
+    },
+    "n_ckpt": 1026508,
+    "n_pruned": 115907,
+    "n_kept_colour": 107525,
+    "n_colour_quantized": 803076
+  },
+  "metric_store": {
+    "device_bytes": 436873344
+  },
+  "cv_odd_scores": {
+    "0": 0.00010929354667593506,
+    "1e-3": 0.00010739471325742965,
+    "1e-2": 0.0001041751936842333,
+    "1e-1": 0.00010542830143779884,
+    "3e-1": 0.00011405479593472627,
+    "1": 0.0001372236680766175,
+    "3": 0.00017541218717380202
+  },
+  "rho_cv": 0.01,
+  "calibration": {
+    "rho": 0.01,
+    "predicted": 6.140647124823988e-05,
+    "measured_even_raw": 8.760546507862027e-05,
+    "measured_even_clamped": 8.54710429880049e-05,
+    "ratio_raw": 0.7009433851316413,
+    "n_views": 132,
+    "report_only": true
+  },
+  "rows_ok": [
+    "c3dgs_k1024",
+    "c3dgs_k16384",
+    "c3dgs_k4096",
+    "c3dgs_k4096_j+1",
+    "c3dgs_k4096_j+2",
+    "c3dgs_k4096_j-1",
+    "c3dgs_k4096_j-2",
+    "c3dgs_k65536",
+    "gnvq_cv_rho0",
+    "gnvq_cv_rho1",
+    "gnvq_cv_rho1e-1",
+    "gnvq_cv_rho1e-2",
+    "gnvq_cv_rho1e-3",
+    "gnvq_cv_rho3",
+    "gnvq_cv_rho3e-1",
+    "gnvq_k4096",
+    "gnvq_k4096_ft5000",
+    "uncompressed"
+  ],
+  "missing_or_failed": [],
+  "failed_steps": [],
+  "skipped_steps": [],
+  "done": true,
+  "data_deleted": true
+}

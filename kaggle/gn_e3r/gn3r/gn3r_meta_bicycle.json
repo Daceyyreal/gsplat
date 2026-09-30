@@ -1,0 +1,427 @@
+{
+  "scene": "bicycle",
+  "timings_s": {
+    "job": 594.6530970419999
+  },
+  "runs": {},
+  "dataset": "mipnerf360",
+  "scene_set": "development",
+  "data_factor": 4,
+  "ks": [
+    1024,
+    4096,
+    16384,
+    65536
+  ],
+  "k_default": 4096,
+  "thresholds": {
+    "0": 6e-07,
+    "-2": 6.666666666666665e-08,
+    "-1": 2e-07,
+    "1": 1.8e-06,
+    "2": 5.4e-06
+  },
+  "threshold_scenes": [
+    "train"
+  ],
+  "c3dgs_scenes": [
+    "train"
+  ],
+  "gn_only": true,
+  "rhos": [
+    0.0,
+    0.001,
+    0.01,
+    0.1,
+    0.3,
+    1.0,
+    3.0
+  ],
+  "gsplat_commit": "b27e1421c2d0",
+  "env": {
+    "python": "3.12.13",
+    "torch": "2.10.0+cu128",
+    "torch_cuda": "12.8",
+    "cudnn": 91002,
+    "packages": {
+      "gsplat": "1.6.0",
+      "torchpq": null,
+      "cupy-cuda12x": "14.0.1",
+      "plas": null,
+      "torchmetrics": "1.8.2",
+      "numpy": "2.0.2",
+      "pycolmap": "4.2.1",
+      "remotezip": "0.12.6"
+    },
+    "gpu": {
+      "name": "Tesla T4",
+      "capability": "7.5",
+      "total_memory": 15636037632,
+      "count": 1
+    },
+    "nvidia_smi": "Tesla T4, 580.159.04, 15360 MiB\nTesla T4, 580.159.04, 15360 MiB",
+    "nvcc": [
+      "Build cuda_12.8.r12.8/compiler.35583870_0"
+    ]
+  },
+  "c3dgs_commit": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+  "deadline": 1790810978.0,
+  "reserve_s": 1800.0,
+  "gn_vq": {
+    "eps": 0.01,
+    "max_iters": 20,
+    "rel_tol": 0.001,
+    "floor": "M_i + rho * tr(M_i) / 16 * I",
+    "metric": "16 x 16, bands 0-3 (Amendment 14 b)",
+    "quantizer": "C3DGS's int8 colour table quantizer, DC and AC scales at injection",
+    "cv_scoring": "SH-only: odd-train-view dMSE, clamped, gsplat renders (Amendment 14 b)"
+  },
+  "steps": [
+    {
+      "name": "fetch_inria",
+      "timestamp": "2026-09-30T12:06:24",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 5.035377651999966,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 796323840
+    },
+    {
+      "name": "layout_model",
+      "timestamp": "2026-09-30T12:06:29",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.00028153499999916676,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 796323840
+    },
+    {
+      "name": "download_dataset",
+      "timestamp": "2026-09-30T12:06:29",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 290.90868596100006,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 864739328
+    },
+    {
+      "name": "build_runner",
+      "timestamp": "2026-09-30T12:11:22",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 208.02751940899998,
+      "cuda_peak": {
+        "allocated": 1557184000,
+        "reserved": 1595932672,
+        "allocated_over_start": 1557184000
+      },
+      "host_max_rss_bytes": 4389339136
+    },
+    {
+      "name": "protocol_ii_views",
+      "timestamp": "2026-09-30T12:14:50",
+      "cuda_start": {
+        "allocated": 1556747264,
+        "reserved": 1595932672,
+        "free": 13913358336,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.003521755999827292,
+      "cuda_peak": {
+        "allocated": 1556747264,
+        "reserved": 1595932672,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4389339136
+    },
+    {
+      "name": "eval_ii_uncompressed",
+      "timestamp": "2026-09-30T12:14:50",
+      "cuda_start": {
+        "allocated": 1556747264,
+        "reserved": 1595932672,
+        "free": 13913358336,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 10.127368082999965,
+      "cuda_peak": {
+        "allocated": 4101465088,
+        "reserved": 4334813184,
+        "allocated_over_start": 2544717824
+      },
+      "host_max_rss_bytes": 4389339136
+    },
+    {
+      "name": "gn_pass16_full",
+      "n_views": 169,
+      "timestamp": "2026-09-30T12:15:07",
+      "cuda_start": {
+        "allocated": 1565281280,
+        "reserved": 4334813184,
+        "free": 11124146176,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 28.6046335850001,
+      "cuda_peak": {
+        "allocated": 8411909632,
+        "reserved": 8908701696,
+        "allocated_over_start": 6846628352
+      },
+      "host_max_rss_bytes": 6084087808
+    },
+    {
+      "name": "gn_cache_write16_full",
+      "timestamp": "2026-09-30T12:15:36",
+      "cuda_start": {
+        "allocated": 1565281280,
+        "reserved": 8908701696,
+        "free": 6550257664,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 3.1625486940001792,
+      "cuda_peak": {
+        "allocated": 1565281280,
+        "reserved": 8908701696,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 6084407296
+    },
+    {
+      "name": "gn_pass16_even",
+      "n_views": 85,
+      "timestamp": "2026-09-30T12:15:40",
+      "cuda_start": {
+        "allocated": 1565281280,
+        "reserved": 8908701696,
+        "free": 6550257664,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 16.161279606000107,
+      "cuda_peak": {
+        "allocated": 8409951744,
+        "reserved": 8908701696,
+        "allocated_over_start": 6844670464
+      },
+      "host_max_rss_bytes": 6501625856
+    },
+    {
+      "name": "gn_cache_write16_even",
+      "timestamp": "2026-09-30T12:15:56",
+      "cuda_start": {
+        "allocated": 1565281280,
+        "reserved": 8908701696,
+        "free": 6550257664,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 17.201494740000044,
+      "cuda_peak": {
+        "allocated": 1565281280,
+        "reserved": 8908701696,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 6501625856
+    }
+  ],
+  "inria": {
+    "url": "https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip",
+    "directory_checked": true,
+    "directory_time_s": 1.6439554899999393,
+    "members": {
+      "ply": {
+        "name": "bicycle/point_cloud/iteration_30000/point_cloud.ply",
+        "path": "/kaggle/working/e3p_inria/bicycle/point_cloud.ply",
+        "bytes_pinned": 1520726124,
+        "crc32_pinned": "ebf2474a",
+        "compressed_bytes": 1353363151,
+        "header_offset": 1470979,
+        "source": "present",
+        "bytes": 1520726124,
+        "crc32": "ebf2474a",
+        "sha1": "a05ba7756af3b3eed9e92d266af9ba025f84dc15",
+        "time_s": 3.3908596089999037
+      },
+      "cameras": {
+        "name": "bicycle/cameras.json",
+        "path": "/kaggle/working/e3p_inria/bicycle/cameras.json",
+        "bytes_pinned": 77427,
+        "crc32_pinned": "fd1d74d3",
+        "compressed_bytes": 25147,
+        "header_offset": 38,
+        "source": "present",
+        "bytes": 77427,
+        "crc32": "fd1d74d3",
+        "sha1": "12f9fe39e8694d5941bb9cbb13ffb449641f1593",
+        "time_s": 0.00031982999996671424
+      },
+      "cfg_args": {
+        "name": "bicycle/cfg_args",
+        "path": "/kaggle/working/e3p_inria/bicycle/cfg_args",
+        "bytes_pinned": 169,
+        "crc32_pinned": "ae8c42ba",
+        "compressed_bytes": 137,
+        "header_offset": 25235,
+        "source": "present",
+        "bytes": 169,
+        "crc32": "ae8c42ba",
+        "sha1": "9af19ee53f1368b07c7d2b31756c3c3a2e3c94ad",
+        "time_s": 3.989300000739604e-05
+      }
+    },
+    "time_s": 5.035218270999962,
+    "http_requests": 4
+  },
+  "inria_cfg_args": {
+    "eval": true,
+    "images": "images_4",
+    "model_path": "./eval/bicycle",
+    "resolution": 1,
+    "sh_degree": 3,
+    "source_path": "f:/bkerbl/Downloads/360_v2/bicycle",
+    "white_background": false
+  },
+  "cfg_args_mismatch": [],
+  "c3dgs_build": {
+    "path": "/kaggle/working/gn3r/gn3r_c3dgs_build.json",
+    "ok": true,
+    "failed_step": null,
+    "missing": false
+  },
+  "pruned_trace_check": {
+    "status": "not_applicable",
+    "reason": "no C3DGS run on this scene (Amendment 14 g)",
+    "mask_source": "probe"
+  },
+  "camera_frame_check": {
+    "n_runner": 194,
+    "n_cameras_json": 194,
+    "n_matched": 194,
+    "max_position_diff": 1.3322676295501878e-15,
+    "max_rotation_diff": 3.3306690738754696e-16,
+    "tol": 0.0001,
+    "pass": true
+  },
+  "split_check": {
+    "n_test": 25,
+    "test_names": [
+      "_DSC8679",
+      "_DSC8687",
+      "_DSC8695",
+      "_DSC8703",
+      "_DSC8711",
+      "_DSC8719",
+      "_DSC8727",
+      "_DSC8735",
+      "_DSC8744",
+      "_DSC8752",
+      "_DSC8760",
+      "_DSC8768",
+      "_DSC8776",
+      "_DSC8784",
+      "_DSC8792",
+      "_DSC8800",
+      "_DSC8808",
+      "_DSC8816",
+      "_DSC8824",
+      "_DSC8832",
+      "_DSC8840",
+      "_DSC8848",
+      "_DSC8856",
+      "_DSC8864",
+      "_DSC8872"
+    ],
+    "equals_cameras_json_head": true
+  },
+  "n_train_views": 169,
+  "n_even_views": 85,
+  "n_odd_views": 84,
+  "total_train_pixels": 171702648,
+  "even_pixels": 86359320,
+  "settings": {
+    "packed": false,
+    "rasterize_mode": "classic",
+    "camera_model": "pinhole",
+    "with_ut": false,
+    "with_eval3d": false,
+    "near_plane": 0.01,
+    "far_plane": 10000000000.0,
+    "sh_degree": 3
+  },
+  "gn": {
+    "full": {
+      "source": "computed",
+      "cache_key": "v1|a05ba7756af3b3eed9e92d266af9ba025f84dc15|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views169|seed0|bands0-3",
+      "M_shape": [
+        6131954,
+        136
+      ],
+      "M_bytes": 3335782976,
+      "n_views": 169,
+      "total_pixels": 171702648,
+      "time_s": 25.616139320000002,
+      "bands": "0-3",
+      "clamp_fraction": 0.10506012277420583,
+      "splats_zero_trace": 694162
+    },
+    "even": {
+      "source": "computed",
+      "cache_key": "v1|a05ba7756af3b3eed9e92d266af9ba025f84dc15|[('camera_model', 'pinhole'), ('far_plane', 10000000000.0), ('near_plane', 0.01), ('packed', False), ('rasterize_mode', 'classic'), ('sh_degree', 3), ('with_eval3d', False), ('with_ut', False)]|views85|seed0|bands0-3|even",
+      "M_shape": [
+        6131954,
+        136
+      ],
+      "M_bytes": 3335782976,
+      "n_views": 85,
+      "total_pixels": 86359320,
+      "time_s": 13.116777314000046,
+      "bands": "0-3",
+      "clamp_fraction": 0.10471031171357083,
+      "splats_zero_trace": 762896
+    }
+  },
+  "rows_ok": [
+    "uncompressed"
+  ],
+  "missing_or_failed": [],
+  "failed_steps": [],
+  "skipped_steps": [],
+  "done": true,
+  "data_deleted": true
+}
