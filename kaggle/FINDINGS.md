@@ -72,6 +72,16 @@ compiling (no `ensurepip` for a venv).
   say why.
 - **Cost:** each run took 351.6 s without fine-tuning and 666.4 s with it.
 
+**E3r (section 15, branch `bench/gn-vq`): exploratory pilot of the C3DGS host, no verdicts (Amendment 14).**
+- **The runs:** every step ran on train and bicycle, and nothing failed. Bicycle measured only its 16 x 16 GN passes
+  (Amendment 14 g).
+- **The rate knobs on train:** the colour threshold spans 2.49x in `.npz` bytes (protocol ii 20.733-21.205 dB), K
+  only 1.02x (20.971-21.024 dB).
+- **GN-VQ injected into C3DGS's own run** completed end to end, with and without fine-tuning; `rho_cv` was 1e-2, and
+  all 9 GN-VQ runs stopped at the 20-iteration cap.
+- **The injected row** read +0.127 dB in protocol ii at +1.485% bytes against the probe run. It cannot be read as
+  GN-VQ's effect: seeded C3DGS runs are not reproduced on the GPU, so the geometry and C3DGS's own colour codebook differ too.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -130,6 +140,13 @@ compiling (no `ensurepip` for a venv).
   2401.02436v2, Table 9, row train), E3p's rows and its protocol gap (`kaggle/gn_e3p/gn3p/`, section 13), and the
   note on `load_npz` / `save_ply`, which was read from C3DGS's source at `2a234af5`. Every number was recomputed
   from those files by a script and checked against the text.
+- Section 15: every number comes from `kaggle/gn_e3r/gn3r/` (`9c28cc89`; one Kaggle session on 2x T4, rows timestamped
+  2026-09-30T12:15 to 14:11, gsplat commit `b27e1421`, a restored wheel and E3p's fetched members reused), unpacked
+  unchanged. The exceptions are E3p's and E3q's rows (`kaggle/gn_e3p/gn3p/`, `kaggle/gn_e3q/attempt2/gn3q/`), E2c's
+  iteration counts (`kaggle/gn_e2c/gn2c/`), the memory check (`kaggle/gn_e3r_memory/e3r_memory.json`), the runtime
+  estimate (`bench/gn/e3r_estimate.py`), and the geometry diagnosis, read from this repository's hooks, wrapper and
+  `bench/gn/` and from C3DGS's source at `2a234af5`. `bench/gn/check_s15.py` recomputes every number in the section
+  from those files and checks each against the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -2331,3 +2348,319 @@ No criterion attaches to the comparison.
   - how many splats keep their own colour, which the files do not record.
 
   Nothing about GN-VQ inside C3DGS is settled either.
+
+## 15. E3r: the C3DGS host pilot on train and bicycle (exploratory) — every step ran; the colour-threshold knob spans 2.49x in bytes, K 1.02x
+
+**E3r is an engineering pilot of the C3DGS host and has no verdicts** (Amendment 14 a, `693a6a4b`, written before any
+E3r code). Three notes govern it, each written before any E3r run:
+- **f** (`a850c4ea`): every run is seeded with 0, as C3DGS's own `safe_state` seeds;
+- **g** (`b06f9293`): a memory check restricts every C3DGS step to train, so bicycle measures only its 16 x 16 GN
+  passes;
+- **h** (`e1e0309e`): a report-only count of pruned splats with zero trace.
+
+E3r measures what the C3DGS arm's pre-registration needs:
+- C3DGS's rate range under two knobs;
+- the share of the metric the colour-quantized splats carry;
+- whether GN-VQ with the floored 16 x 16 metric runs inside C3DGS's own run, and what it costs.
+
+Nothing below is a result about the method. Every number comes from `kaggle/gn_e3r/gn3r/`, except where another
+committed file is named. Items marked **post hoc** were read from the files after the fact.
+
+**What ran:**
+- **Both jobs completed** and exited with code 0; neither was skipped by the start cutoff. Train wrote all 18 rows
+  with status `ok`, and bicycle its one `uncompressed` row.
+- **Nothing failed:** no failed, skipped or missing step or row on either scene.
+- **No retry:** all 10 C3DGS runs ran with `--data_device cuda`, and none was retried on the CPU.
+- **The C3DGS arm's pieces all ran on train:** the probe run, the 16 x 16 GN passes, the cross-validation, both
+  injected runs (with and without fine-tuning), the other K and the four other thresholds.
+
+### Inputs and checks
+
+| Check | bicycle | train |
+|---|---|---|
+| Session | torch 2.10.0+cu128 (CUDA 12.8), driver 580.159.04, cuDNN 91002, Python 3.12.13, 2x Tesla T4; gsplat commit `b27e1421`, the restored wheel (install 149.9 s) | the same session |
+| INRIA members | E3p's attached copies (`present`), all 3 matching the pins in size and CRC32; `point_cloud.ply` SHA-1 `a05ba775`, E3p's | the same; SHA-1 `187b6095`, E3p's |
+| `cfg_args` against E3p's pin | no mismatch | no mismatch |
+| Camera frame against `cameras.json` | pass: 194 of 194, largest differences 1.33e-15 (position), 3.33e-16 (rotation) | pass: 301 of 301, 1.78e-15, 3.33e-16 |
+| Test split against `cameras.json` | equal, 25 test views | equal, 38 test views |
+| Uncompressed model, protocol ii (PSNR / SSIM / LPIPS) | 25.196 / 0.7604 / 0.2117 at 1237x822 | 21.293 / 0.7926 / 0.2170 at 980x545 |
+
+- **The uncompressed rows equal E3p's** (`kaggle/gn_e3p/gn3p/`) in every digit the CSVs hold, on both scenes.
+- **The C3DGS build** (`gn3r_c3dgs_build.json`): ok in 198.0 s, head `2a234af5` with glm `673a963a`, 10 of 10 imports.
+  The two extensions took 110.2 s and 69.1 s, and `torch-scatter` came from a PyG wheel (2.0 s). No fallback was used,
+  and the deviations are Amendment 13 b's six.
+- **The chunked linear algebra** (Amendment 13 g): every C3DGS run made one chunked `eigh` and one chunked `det` call,
+  each on 281,237 float32 3x3 matrices. No chunk was refused, `fallbacks` is empty, and the batch stayed at 8,192. The
+  report-only float64 check on 4,096 sampled matrices gave:
+  - `eigh`: largest eigenvalue differences from 6.74e-06 to 1.60e-04, against largest eigenvalues of 39.74 to 1683.51;
+  - `det`: 2.20e-07 in every run.
+
+### C3DGS's baseline on train
+
+C3DGS's evaluation is its own `render_and_eval`. Protocol ii is this project's (Amendment 12 a), on the `.ply` that
+`npz2ply.py` decoded. Sizes are the `.npz`'s bytes; MiB is 2^20 bytes (C3DGS's own "MB"), and MB is 10^6 bytes. The
+threshold is `color_importance_include` = 0.6e-6 x 3^j (Amendment 14 c.ii). None of these runs fine-tunes.
+
+| Config | K | Threshold (j) | Pruned / kept / quantized | `.npz` bytes | MiB | MB | C3DGS: PSNR / SSIM / LPIPS | Protocol ii: PSNR / SSIM / LPIPS |
+|---|---|---|---|---|---|---|---|---|
+| `c3dgs_k1024` | 1,024 | 6e-7 (0) | 115,907 / 107,525 / 803,076 | 13,734,235 | 13.098 | 13.734 | 21.481 / 0.7891 / 0.2363 | 20.971 / 0.7730 / 0.2377 |
+| `c3dgs_k4096` (the probe run) | 4,096 | 6e-7 (0) | 115,907 / 107,525 / 803,076 | 13,877,480 | 13.235 | 13.877 | 21.515 / 0.7908 / 0.2346 | 21.003 / 0.7746 / 0.2359 |
+| `c3dgs_k16384` | 16,384 | 6e-7 (0) | 115,907 / 107,525 / 803,076 | 13,970,296 | 13.323 | 13.970 | 21.527 / 0.7914 / 0.2339 | 21.017 / 0.7753 / 0.2352 |
+| `c3dgs_k65536` | 65,536 | 6e-7 (0) | 115,907 / 107,525 / 803,076 | 14,057,632 | 13.406 | 14.058 | 21.534 / 0.7917 / 0.2337 | 21.024 / 0.7756 / 0.2350 |
+| `c3dgs_k4096_j-2` | 4,096 | 6.67e-8 (-2) | 115,907 / 474,552 / 436,049 | 26,349,152 | 25.129 | 26.349 | 21.698 / 0.8020 / 0.2221 | 21.205 / 0.7866 / 0.2233 |
+| `c3dgs_k4096_j-1` | 4,096 | 2e-7 (-1) | 115,907 / 274,436 / 636,165 | 19,545,287 | 18.640 | 19.545 | 21.652 / 0.7990 / 0.2256 | 21.149 / 0.7833 / 0.2268 |
+| `c3dgs_k4096_j+1` | 4,096 | 1.8e-6 (+1) | 115,907 / 31,950 / 878,651 | 11,328,952 | 10.804 | 11.329 | 21.336 / 0.7817 / 0.2445 | 20.845 / 0.7661 / 0.2457 |
+| `c3dgs_k4096_j+2` | 4,096 | 5.4e-6 (+2) | 115,907 / 9,058 / 901,543 | 10,566,436 | 10.077 | 10.566 | 21.204 / 0.7769 / 0.2498 | 20.733 / 0.7616 / 0.2508 |
+
+**The two knobs** (`gn3r_summary.json`, `knob_K` and `knob_threshold`; the probe run is a point of both):
+
+| Knob | Points | `.npz` bytes | Max / min | Protocol ii PSNR (dB) | C3DGS's PSNR (dB) |
+|---|---|---|---|---|---|
+| K, 1,024-65,536 | 4 | 13,734,235-14,057,632 | 1.024 | 20.971-21.024 | 21.481-21.534 |
+| threshold, j = -2 to +2 | 5 | 10,566,436-26,349,152 | 2.494 | 20.733-21.205 | 21.204-21.698 |
+
+- **Both knobs are monotone:** bytes and both PSNRs rise together, with K and as the threshold falls.
+- **The threshold moves the rate by moving splats between the codebook and their own colours:** from 9,058 splats
+  keeping their own colour at j = +2 to 474,552 at j = -2. Pruning is the same 115,907 splats in every run.
+- **C3DGS's clustering time per K** (`times.json`): 159.6 s at K = 1,024, 257.7 s at 4,096, 647.4 s at 16,384 and
+  2,241.2 s at 65,536. The four other thresholds took 255.0-256.6 s at K = 4,096.
+  - **Post hoc:** that is 0.62, 2.51 and 8.70 times the K = 4,096 time for K 4 times smaller, 4 and 16 times larger.
+- **No criterion attaches to these ranges** (Amendment 14 c.ii). The arm's pre-registration chooses the knob.
+
+### The colour-quantized splats
+
+In the probe run, C3DGS pruned 115,907 of train's 1,026,508 splats. Of the rest, 107,525 kept their own colour and
+803,076 (78.23% of the checkpoint) were colour-quantized. Under the full-train-view 16 x 16 metric, those 803,076
+splats carry a share of 0.21251187 of the checkpoint's total `tr(M_i)`.
+
+| Metric | Total trace | Trace of the quantized splats | Share |
+|---|---|---|---|
+| 16 x 16 (bands 0-3) | 19,517,109.47 | 4,147,617.40 | 0.2125118685 |
+| 15 x 15 (bands 1-3, the frozen metric) | 18,297,289.98 | 3,888,391.28 | 0.2125118686 |
+
+- **Why they agree.** Per band, the squared real SH basis values sum to `(2l + 1) / 4 pi` in any direction (the
+  addition theorem). So `tr(M16_i) = (16 / 15) tr(M15_i)` for every splat, and a ratio of traces is the same under
+  both metrics. This was known before any data (HANDOFF, E3r decisions); the pair is a check.
+- **Measured:** the two shares differ by 4.4e-11. The total traces' ratio is 16/15 times (1 + 8.0e-9), and the
+  quantized splats' 16/15 times (1 + 7.8e-9), from the float32 sums.
+
+### The pruned-splat trace count (Amendment 14 h)
+
+`pruned_trace_check` on train, `ok`, with the probe run's prune mask against `tr(M16_i) == 0` exactly on the stored
+float32 trace:
+
+| `n_splats` | `n_pruned` | `n_pruned_tr0` | `n_tr0_all` |
+|---|---|---|---|
+| 1,026,508 | 115,907 | 102,280 | 102,318 |
+
+- **Pruned by C3DGS, zero trace in gsplat's GN pass:** 102,280 of the 115,907 pruned splats (88.24%).
+- **Pruned by C3DGS, nonzero trace:** 13,627.
+- **Not pruned, zero trace:** 38 (`n_tr0_all - n_pruned_tr0`).
+- **What limits the count** (the note's own two limits):
+  - C3DGS's sensitivity pass renders its int8-fake-quantized opacity and scales, not the stored checkpoint that
+    gsplat's pass renders;
+  - gsplat's per-view weight is a 16-probe Hutchinson estimate, which could in principle vanish without every weight
+    being zero.
+- **The trace share of the 13,627 is not recoverable from the bundle:** the metric cache (`/tmp/gn3r_cache`) was not
+  bundled, by design.
+- Bicycle's check is `not_applicable`: it ran no C3DGS step.
+
+### GN-VQ inside C3DGS (train, K = 4,096, the default threshold)
+
+**The cross-validation** (Amendment 14 b): GN-VQ on the 803,076 probe-run splats with the even-view 16 x 16 metric
+(132 views) floored at each `rho`, from the probe run's codebook, scored by the clamped dMSE of gsplat's renders on the
+131 odd-indexed train views.
+
+| dMSE, odd train views | `rho` = 0 | `rho` = 1e-3 | `rho` = 1e-2 | `rho` = 1e-1 | `rho` = 3e-1 | `rho` = 1 | `rho` = 3 |
+|---|---|---|---|---|---|---|---|
+| clamped (the score) | 1.0929e-04 | 1.0739e-04 | **1.0418e-04** | 1.0543e-04 | 1.1405e-04 | 1.3722e-04 | 1.7541e-04 |
+| unclamped | 1.1198e-04 | 1.0988e-04 | 1.0649e-04 | 1.0773e-04 | 1.1652e-04 | 1.4025e-04 | 1.7946e-04 |
+
+- **`rho_cv` is 1e-2,** ahead of 1e-1 by 1.20% of its score.
+- **Context, not like-for-like:** E3p's train selection was 1e-1 (section 13), with the 15 x 15 metric, K = 65,536
+  and a `lloyd_wopa_area` warm start.
+
+**Iterations.** All 9 GN-VQ runs (the 7 CV runs and both injected runs) ran 20 iterations and stopped at
+`max_iters`, not at the 1e-3 relative-drop rule:
+- **The last relative drops** were 1.50e-3 to 2.93e-3 in the CV runs, and 2.52e-3 and 2.17e-3 in the two injected
+  runs. The objective was still falling when the runs stopped.
+- **The first iteration** cut the floored objective by 9.0% (`rho` = 3) to 56.7% (`rho` = 0). At `rho_cv` it cut
+  it by 55.3% (1.9203e-04 to 8.5822e-05), and 20 iterations reached 6.5602e-05. So C3DGS's codebook starts far from
+  the GN optimum.
+- **Context, not like-for-like** (other metrics, warm starts, splat counts and K):
+  - E3p's train runs at K = 65,536 took 8-9 iterations, all stopping at the relative-drop rule (section 13);
+  - E2c at K = 4,096 took 13-19 iterations in its CV runs and 15-18 in its final runs, all stopping at the rule;
+  - E2c at K = 1,024: all 5 final runs stopped at 20 (`kaggle/gn_e2c/gn2c/`).
+
+**The injected runs** (`gnvq_k4096`, `gnvq_k4096_ft5000`):
+
+| | `gnvq_k4096` | `gnvq_k4096_ft5000` |
+|---|---|---|
+| Quantized set against the probe's | same set (0 only in the probe, 0 only injected); quantizer input bit-identical (`features_equal`) | the same |
+| Injection (GN-VQ itself) | 101.3 s (98.0 s) | 101.5 s (98.0 s) |
+| Floored objective: C3DGS's own codebook, then GN-VQ's before and after the table quantizer | 1.9241e-04, 6.7383e-05, 6.7852e-05 | 1.9210e-04, 6.7261e-05, 6.7712e-05 |
+| Labels changed by the final quantized assignment | 8.69% | 8.60% |
+| Lifted check, 10,000 splats (Amendment 3, criterion v2) | pass: sum excess / sum d_min 3.02e-18, same index 1.0 | pass: 8.31e-19, 1.0 |
+
+- **The metric on the device:** 436,873,344 bytes, one copy for the 803,076 quantized splats (544 bytes each).
+- **The quantizer at injection** is C3DGS's own at its colour VQ, the same in all 10 runs:
+  - DC: scale 0.054016, zero point -81;
+  - AC: scale 0.0068831, zero point -4.
+
+  Without fine-tuning, the scales C3DGS writes are the same.
+- **The calibration** (report only; `rho_cv`'s CV codebook, the even train views):
+  - `P` = 6.1406e-05 against the measured unclamped dMSE of 8.7605e-05 (clamped 8.5471e-05), a ratio of 0.701;
+  - **post hoc:** inside the 0.5-2x band that E0 reported as calibrated.
+
+### The injected row against the probe run: an engineering number, not a comparison
+
+| `gnvq_k4096` minus `c3dgs_k4096` | Protocol ii | C3DGS's evaluation |
+|---|---|---|
+| PSNR (dB) | +0.1268 | +0.1185 |
+| SSIM | +0.0075 | +0.0070 |
+| LPIPS | -0.0082 | -0.0080 |
+| `.npz` bytes | +206,079 (+1.485%) | |
+
+**Amendment 14 a makes this an engineering number, not a comparison. And the files show it cannot be read as
+GN-VQ's effect.** The two runs differ in more than the colour codebook:
+- **The geometry differs.** The geometry SHA-1s differ: `8f72f4ea` (probe) against `f8641bfb` (`gnvq_k4096`); the
+  fine-tuned injected run has `009deebd`. All 10 runs' SHA-1s differ from each other.
+  - The SHA-1 covers C3DGS's geometry indices, rotations and scales (`kaggle/e3r_hooks.py:150-160`). It is taken as
+    C3DGS's covariance compression returns, before any fine-tuning (C3DGS `compress.py:178-188` against `:207-221`).
+- **C3DGS's own colour codebook, the warm start, differs, from a bit-identical input.** Its DC range:
+
+  | Run | DC range of C3DGS's colour codebook |
+  |---|---|
+  | `c3dgs_k4096` (probe; its record, via the CV reports) | [-1.823148, 4.900445] |
+  | `gnvq_k4096` | [-1.822846, 4.901223] |
+  | `gnvq_k4096_ft5000` | [-1.823155, 4.900428] |
+
+  Its floored objective under the same metric also differs between the two injected runs (table above). Nothing but
+  C3DGS's own code has computed anything by that point.
+
+**Why: not the injection, but nondeterminism on the GPU.** Read from the code (this repository's hooks, wrapper and
+`bench/gn/`; C3DGS's source at `2a234af5`), not run:
+- **C3DGS's VQ draws from three global streams:** `kaiming_uniform_` (CPU, `compression/vq.py:27`), `rand_like` on the
+  device codebook (CUDA, `:35`) and `torch.randint` (CPU, `:98`).
+- **Between the colour VQ's return (`:116`) and the geometry VQ (`:210`), nothing draws from a global stream:**
+  - C3DGS itself draws nothing there (`:187-192`, `:200-206`).
+  - The hooks run C3DGS's own `vq_features` first (`kaggle/e3r_hooks.py:137`), then only read state.
+  - The injection (`:195-239`) calls no global generator. Every random call under `bench/gn/` passes its own
+    generator, and the lifted check draws from a private seeded one (`bench/gn/diagnostics.py:442-443`).
+  - The wrapper seeds after installing the hooks (`kaggle/e3q_c3dgs_run.py:227-243`). Its float64 check draws from a
+    private generator (`:165-166`), after the geometry VQ.
+- **The three K = 4,096 default-threshold runs draw the same number of values:** the same 803,076 colour splats at
+  K = 4,096, and a geometry batch of 281,237 in each. The other runs change K or the quantized set, so their draws
+  differ.
+- **The two injected runs execute identical code up to the point the SHA-1 is taken** (fine-tuning comes after it,
+  `compress.py:178-188` against `:207-221`) **and still differ** (`f8641bfb` against `009deebd`). A draw on the inject
+  path would have shifted both alike.
+
+**What the files cannot separate:** `torch_scatter`'s atomic sums in C3DGS's codebook update (`vq.py:40-52`), or the
+atomics in its sensitivity backward pass, which feeds the importance weights. The importance values are not recorded.
+
+**Consequences:**
+- **Amendment 14 f's pairing does not hold on the GPU.** Seeding pairs the random streams, but not the results.
+- **The seeded baseline's run-to-run spread is unmeasured.** E3r ran each configuration once.
+- **Context only** (another session, unseeded, E3q attempt 2's `c3dgs_ft0`, `kaggle/gn_e3q/attempt2/gn3q/`): the probe
+  run is 55,393 bytes larger (+0.40%) and reads +0.018 dB in protocol ii and +0.007 dB in C3DGS's evaluation.
+
+### Fine-tuning (train)
+
+`gnvq_k4096_ft5000` is the injected run followed by C3DGS's 5,000 fine-tuning iterations (314.2 s).
+- **The labels survived:** C3DGS's colour indices just before it writes equal the injected ones (0 changed).
+- **The table moved:** the codebook rows changed by up to 1.0272 and the kept rows by up to 1.1345.
+- **C3DGS's colour quantizers moved** between its colour VQ and the write:
+  - DC: scale 0.054016 to 0.037292, zero point -81 to -60;
+  - AC: scale 0.0068831 to 0.0088149, zero point -4 to -25.
+- **The row:** 13,953,735 bytes (13.307 MiB, 13.954 MB); C3DGS's evaluation 21.718 / 0.8024 / 0.2233; protocol ii
+  21.326 / 0.7868 / 0.2243.
+- **Post hoc, context only, not comparisons:**
+  - against the injected run without fine-tuning, +0.195 dB in protocol ii at 129,824 fewer bytes. Fine-tuning is
+    5,000 more training iterations, and the two runs also differ as above;
+  - E3q's unseeded fine-tuned baseline (another session): 13,911,175 bytes and 21.434 dB in protocol ii.
+
+### Time and memory
+
+Seconds of wall time and the peak allocated GPU memory of each step, in GB (10^9 bytes; `meta["steps"]`):
+
+| Step | bicycle: s | bicycle: peak GB | train: s | train: peak GB |
+|---|---|---|---|---|
+| INRIA members (re-checked) | 5.0 | 0.00 | 2.9 | 0.00 |
+| dataset download | 290.9 | 0.00 | 219.9 | 0.00 |
+| runner | 208.0 | 1.56 | 39.9, and 6.2 for protocol ii | 0.34, 0.56 |
+| uncompressed, protocol ii | 10.1 | 4.10 | 8.1 | 1.65 |
+| GN pass 16 x 16, all train views | 28.6 | 8.41 | 18.2 | 1.65 |
+| GN pass 16 x 16, even views | 16.2 | 8.41 | 9.3 | 1.64 |
+| the two GN cache writes | 3.2 and 17.2 | - | 0.5 and 0.5 | - |
+| CV: GN-VQ, 7 runs | - | - | 98.3-98.9 each, 689.0 in all | 2.20-2.24 |
+| CV: dMSE, 7 rows | - | - | 3.8 each | 1.22-1.27 |
+| calibration | - | - | 4.5 | 2.35 |
+| per decoded row: `npz2ply.py` / protocol ii | - | - | 11.5-11.9 / 7.7-7.8 | - / 1.87 |
+
+The C3DGS runs (train; wall time in the wrapper, C3DGS's `times.json` parts, peak allocated GPU memory):
+
+| Run | Wall s | Sensitivity | Clustering | Fine-tuning | Encode | Peak GB |
+|---|---|---|---|---|---|---|
+| `c3dgs_k1024` | 244.5 | 16.8 | 159.6 | - | 1.5 | 4.71 |
+| `c3dgs_k4096` | 346.0 | 15.8 | 257.7 | - | 1.6 | 4.71 |
+| `c3dgs_k16384` | 734.6 | 16.7 | 647.4 | - | 1.6 | 4.72 |
+| `c3dgs_k65536` | 2,327.6 | 16.6 | 2,241.2 | - | 1.6 | 4.74 |
+| `c3dgs_k4096_j-2` / `j-1` / `j+1` / `j+2` | 342.4 / 342.2 / 341.8 / 343.1 | 16.5-16.6 | 255.0-256.6 | - | 1.3-2.5 | 4.71 |
+| `gnvq_k4096` | 444.0 | 16.4 | 358.0 | - | 1.6 | 4.71 |
+| `gnvq_k4096_ft5000` | 757.8 | 16.6 | 357.6 | 314.2 | 1.6 | 4.71 |
+
+- **The injection sits inside C3DGS's clustering:** the injected runs' clustering took 358.0 s and 357.6 s, against
+  the probe's 257.7 s.
+- **C3DGS's peak** was 4.71-4.74 GB allocated in every run, and 5.38 GB reserved.
+  - **Post hoc:** E3q measured 4.55 GB for the unhooked run; that run was also unseeded and in another session; the
+    files do not attribute the difference.
+- **Bicycle's GN passes against the memory check** (`kaggle/gn_e3r_memory/e3r_memory.json`, Amendment 14 g):
+  - the full-view pass peaked at 8,411,909,632 bytes against the predicted 8,411,293,256 (+616,376 bytes);
+  - the even-view pass peaked at 8,409,951,744;
+  - the allocator reserved 8.91 GB;
+  - the metric is 3,335,782,976 bytes (544 per splat), as predicted.
+- **Post hoc, train's GN pass against the memory check:** 1.65 GB against a predicted 1.41 GB. The check scaled
+  bicycle's measured peak by the splat count, and train's fixed costs do not scale.
+- **Post hoc, splats with zero trace:** 694,162 of bicycle's 6,131,954 splats (11.32%) have zero trace over all 169
+  train views (762,896 over the 85 even ones), and 102,318 of train's 1,026,508 (9.97%) over its 263 (`gn.full`,
+  `splats_zero_trace`). This does not contradict Amendment 14 g's count that 6,131,774 of bicycle's splats (and all
+  1,026,508 of train's) touch a tile in some train view: that count is of tile instances, and touching a tile is not
+  a non-zero blending weight, which is what the trace counts.
+
+**The jobs against Amendment 14 g's estimate** (`bench/gn/e3r_estimate.py`, `estimate_g`):
+- **Train:** 7,483.6 s by its own clock (7,500.3 s in the queue), inside the estimated 5,362-8,309 s.
+- **Setup:** restore, install and build took 396.0 s against 385 s. With the train job, that is 7,896.3 s (2.2 h),
+  inside the session estimate of 5,747-8,694 s.
+- **Bicycle:** 594.7 s (600.0 s in the queue), above the estimated 492-498 s. The estimate includes the download, as
+  E3p's 256.8 s. The excess:
+  - the download took 290.9 s, 34.1 s more than E3p's;
+  - the runner took 208.0 s against E3p's 182.6 s;
+  - steps the estimate does not count: the two cache writes (20.4 s) and the member re-check (5.0 s);
+  - 15.4 s of the job outside its steps.
+
+  Protocol ii (10.1 s against 9.5 s) and the GN passes (44.8 s against 43.4-49.2 s) were as estimated.
+- The rows are timestamped 2026-09-30T12:15:00 (bicycle) and 12:16:43 to 14:11:04 (train).
+
+### What E3r settles, and what it does not
+
+- **The colour threshold is the knob with rate range:** 2.49x in `.npz` bytes on train, against 1.02x for K.
+  Both are monotone in bytes and PSNR.
+- **The host runs end to end with GN-VQ injected,** with and without fine-tuning:
+  - C3DGS's own `vq_features` runs first, and the quantized set equals the probe's;
+  - the lifted check passes;
+  - the labels survive fine-tuning;
+  - no step ran out of memory.
+- **The 16 x 16 GN pass at 6.13M splats is measured:** 8.41 GB, within 616,376 bytes of Amendment 14 g's prediction.
+- **Not settled:**
+  - GN-VQ's effect in this host: the injected row differs from the probe in geometry and warm start as well;
+  - the seeded baseline's run-to-run spread;
+  - GN-VQ's convergence from C3DGS's warm start: all 9 runs stopped at the 20-iteration cap;
+  - C3DGS on any scene larger than train, bicycle included;
+  - how the 13,627 pruned splats with a nonzero trace split.
+- **What the arm's pre-registration must settle** (listed, not decided):
+  - the rate-distortion knob, and its grid;
+  - how to handle GPU nondeterminism: repeat runs to measure the spread, or a geometry shared between the baseline and
+    GN-VQ;
+  - GN-VQ's warm start and its iteration cap;
+  - C3DGS's fine-tuning as a secondary.
