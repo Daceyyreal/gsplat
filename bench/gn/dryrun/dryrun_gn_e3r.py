@@ -347,7 +347,12 @@ assert "OutOfMemoryError" in meta["runs"]["c3dgs_k8"]["first_error"] and meta["r
 assert all(rr[c]["data_device"] == "cuda" for c in rr if c.startswith(("c3dgs_k16", "c3dgs_k32", "gnvq_k")))
 summ = job.summarize(os.path.join(OUT, "gn3r"), ("train",))["scenes"]["train"]
 assert summ["knob_K"]["n_points"] == 4 and summ["knob_threshold"]["n_points"] == 5 and summ["rho_cv"] == meta["rho_cv"]
-print(f"(2) train: {len(rr)} rows ok; probe record, colour share {share['16x16']['share']:.3f} (15 x 15: "
+ptc = meta["pruned_trace_check"]  # Amendment 14 h
+assert ptc["status"] == "ok" and ptc["mask_source"] == "probe" and ptc["n_splats"] == N_MODEL
+assert ptc["n_pruned"] == int(probe["n_pruned"]) and 0 <= ptc["n_pruned_tr0"] <= min(ptc["n_pruned"], ptc["n_tr0_all"])
+assert summ["pruned_trace_check"] == ptc and "pruned_trace_check" in [s_["name"] for s_ in meta["steps"]]
+print(f"(2) train: {len(rr)} rows ok; pruned_trace_check ok ({ptc['n_pruned']} pruned, {ptc['n_pruned_tr0']} with "
+      f"tr = 0, {ptc['n_tr0_all']} zero traces in all); probe record, colour share {share['16x16']['share']:.3f} (15 x 15: "
       f"{share['15x15']['share']:.3f}), 7 CV rows, rho_cv {meta['rho_cv']}, calibration; the injected set = the probe's "
       "and the same geometry SHA-1 (seeded), labels surviving the fine-tune, thresholds monotone, a run out of GPU "
       "memory retried once with --data_device cpu (a deviation), protocol ii recomputed independently: ok")
@@ -361,7 +366,10 @@ rb = rows_of(OUT, "bicycle")
 assert set(rb) == {"uncompressed"} and rb["uncompressed"]["status"] == "ok" and n_wrapper_calls() == n0
 assert mb["gn_only"] and mb["done"] and mb["gn"]["full"]["M_shape"][1] == 136 and mb["gn"]["even"]["bands"] == "0-3"
 assert "colour_share" not in mb and mb.get("rho_cv") is None and mb["runs"] == {}
-print("(3) bicycle: no C3DGS run, the uncompressed row and the two 16 x 16 GN passes: ok")
+assert mb["pruned_trace_check"]["status"] == "not_applicable"
+assert job.summarize(os.path.join(OUT, "gn3r"), ("bicycle",))["scenes"]["bicycle"]["pruned_trace_check"]["status"] == "not_applicable"
+print("(3) bicycle: no C3DGS run, the uncompressed row and the two 16 x 16 GN passes; pruned_trace_check "
+      "not_applicable: ok")
 
 # (4) resume
 n_calls, n_builds = n_wrapper_calls(), BUILDS["n"]
@@ -394,6 +402,7 @@ for label in ("build", "deadline"):
     want = "torch_scatter" if label == "build" else "deadline"
     assert all(r["status"] == "failed" and want in r["reason"] for r in c3rows), [(r["config"], r["reason"]) for r in c3rows]
     assert "colour_share" not in m and m.get("rho_cv") is None and not m["done"]
+    assert m["pruned_trace_check"]["status"] == "not_computed" and "probe record" in m["pruned_trace_check"]["reason"]
 print("(5) failures: a failed build (every C3DGS row failed with the step named, the uncompressed row done), a passed "
       "deadline (no C3DGS run started, the reason recorded): ok")
 

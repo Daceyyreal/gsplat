@@ -147,3 +147,19 @@ def trace_shares(M16: Tensor, ids: Tensor, chunk: int = 1 << 18) -> Dict:
         tot, sel = float(tr.sum()), float(tr[ids].sum())
         out[name] = {"total_trace": tot, "selected_trace": sel, "share": sel / tot if tot > 0 else float("nan")}
     return out
+
+
+def pruned_trace_check(M16: Tensor, non_prune: Tensor, chunk: int = 1 << 18) -> Dict:
+    """Amendment 14 h (report-only): among C3DGS's pruned splats (``~non_prune``, the probe run's mask, indexed like
+    the checkpoint's vertices and so like ``M16``'s rows), how many have ``tr(M16_i) == 0`` exactly, on the float32
+    trace of the stored packed metric; and how many splats have a zero trace at all. Read in chunks from host memory."""
+    if M16.shape[0] != non_prune.shape[0]:
+        raise ValueError(f"the metric has {M16.shape[0]} rows, the prune mask {non_prune.shape[0]}")
+    pruned = ~non_prune.cpu().bool()
+    n_pruned_tr0, n_tr0_all = 0, 0
+    for s in range(0, M16.shape[0], chunk):
+        zero = gm.trace_packed(M16[s:s + chunk].cpu()) == 0
+        n_tr0_all += int(zero.sum())
+        n_pruned_tr0 += int((zero & pruned[s:s + chunk]).sum())
+    return {"n_splats": int(M16.shape[0]), "n_pruned": int(pruned.sum()), "n_pruned_tr0": n_pruned_tr0,
+            "n_tr0_all": n_tr0_all}

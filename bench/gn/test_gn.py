@@ -3248,6 +3248,41 @@ def e2b_floor(M, rho):
     return e2b.floored_metric(M, rho)
 
 
+def test_e3r_pruned_trace_check():
+    """Amendment 14 h: on a scene with hand-set zero-weight splats (behind the camera), some pruned and some not, the
+    counts are exact; the zero traces are exactly the zero-weight splats; bicycle is not_applicable, a missing probe
+    record or metric not_computed; the field is no CSV column."""
+    import e3r
+    import gn_e3r_scene as job
+
+    splats = gm.toy_scene(64, seed=3)
+    splats["means"][:6, 2] = -3.0  # splats 0-5 behind the camera: zero blending weight in every view
+    cam = gm.toy_camera()
+    views = [cam, {**cam, "camtoworld": torch.tensor([[1.0, 0, 0, 0.1], [0, 1, 0, -0.1], [0, 0, 1, 0.2], [0, 0, 0, 1]])}]
+    settings = gm.RenderSettings(False, "classic", "pinhole", False, False, 0.01, 1e10, 3)
+    g = gm.compute_gn(splats, views, settings, seed=0, render=tr.render_bruteforce, log=None, with_dc=True)
+    zero_w = g["F"] == 0  # the all-ones channel: exact sum of weights
+    zero_tr = gm.trace_packed(g["M_packed"]) == 0
+    assert torch.equal(zero_w, zero_tr) and bool(zero_w[:6].all())
+    n_zero = int(zero_w.sum())
+    non_prune = torch.ones(64, dtype=torch.bool)
+    non_prune[[0, 1, 2, 10, 11]] = False  # three zero-weight splats pruned, two visible ones pruned; 3-5 kept
+    assert not bool(zero_w[10]) and not bool(zero_w[11])
+    got = e3r.pruned_trace_check(g["M_packed"], non_prune, chunk=7)
+    assert got == {"n_splats": 64, "n_pruned": 5, "n_pruned_tr0": 3, "n_tr0_all": n_zero}
+    with pytest.raises(ValueError):
+        e3r.pruned_trace_check(g["M_packed"], non_prune[:10])
+    rec = {"non_prune": non_prune}
+    ok = job.pruned_trace_record("train", rec, g["M_packed"])
+    assert ok["status"] == "ok" and ok["n_pruned_tr0"] == 3 and ok["mask_source"] == "probe"
+    assert job.pruned_trace_record("bicycle", rec, g["M_packed"])["status"] == "not_applicable"
+    miss = job.pruned_trace_record("train", None, g["M_packed"])
+    assert miss["status"] == "not_computed" and "probe record" in miss["reason"]
+    nom = job.pruned_trace_record("train", rec, None, "no metric")
+    assert nom == {"status": "not_computed", "reason": "no metric", "mask_source": "probe"}
+    assert not {"pruned_trace_check", "n_pruned_tr0", "n_tr0_all"} & set(job.COLUMNS)
+
+
 def test_e3r_memory_tiles_and_the_committed_check():
     """The tile count follows the rasterizer's formulas on a splat whose footprint is known by hand; the committed
     memory check (kaggle/gn_e3r_memory/e3r_memory.json) is what report() computes from its tiles, and Amendment 14 g

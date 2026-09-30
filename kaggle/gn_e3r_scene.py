@@ -154,6 +154,21 @@ def is_oom_run(run: Optional[Dict]) -> bool:
     return any(m in text for m in OOM_MARKERS)
 
 
+def pruned_trace_record(scene: str, rec: Optional[Dict], M16: Optional[torch.Tensor], why_no_metric: str = "") -> Dict:
+    """Amendment 14 h's ``pruned_trace_check`` for a scene: ``not_applicable`` where no C3DGS runs (14 g),
+    ``not_computed`` with the reason when the probe record or the full-train-view metric is missing, else the counts
+    (``e3r.pruned_trace_check`` on the probe run's prune mask)."""
+    base = {"mask_source": "probe"}
+    if scene not in C3DGS_SCENES:
+        return {"status": "not_applicable", "reason": "no C3DGS run on this scene (Amendment 14 g)", **base}
+    if rec is None:
+        return {"status": "not_computed", "reason": "no probe record (the probe run did not finish)", **base}
+    if M16 is None:
+        return {"status": "not_computed", "reason": why_no_metric or "no full-train-view 16 x 16 metric", **base}
+    return {"status": "ok", **e3r.pruned_trace_check(M16, rec["non_prune"]), **base,
+            "trace": "float32 trace of the stored packed 16 x 16 metric, == 0 exactly"}
+
+
 def build_only(args) -> int:
     """Amendment 14 a: C3DGS once per session, before the scene jobs (E3q's build)."""
     os.makedirs(args.out_dir, exist_ok=True)
@@ -217,7 +232,8 @@ def main(argv=None):
     specs = run_specs(scene)
     gn_only = scene not in C3DGS_SCENES
     gn_measured = all(k in meta.get("gn", {}) for k in ("full", "even"))
-    if not [c for c in wanted_configs(scene) if c not in done_configs()] and (gn_measured or not gn_only):
+    ptc_ok = gn_only or (meta.get("pruned_trace_check") or {}).get("status") == "ok"
+    if not [c for c in wanted_configs(scene) if c not in done_configs()] and (gn_measured or not gn_only) and ptc_ok:
         log(scene, "all rows exist")
         meta["done"] = True
         save()
@@ -385,14 +401,16 @@ def main(argv=None):
     injected = [s for s in specs if s["kind"] == "injected"]
     if gn_only:  # Amendment 14 g: the GN passes alone, measured
         cv_names = {}
+        meta["pruned_trace_check"] = pruned_trace_record(scene, None, None)
+    need_ptc = not gn_only and (meta.get("pruned_trace_check") or {}).get("status") != "ok"  # Amendment 14 h
     need_cv = any(n not in done_configs() for n in cv_names.values())
     need_share = "colour_share" not in meta and not gn_only
     need_calib = "calibration" not in meta and not gn_only
     need_full = any(s["name"] not in done_configs() for s in injected)
-    if need_cv or need_share or need_calib or need_full or (gn_only and not gn_measured):
+    if need_cv or need_share or need_calib or need_full or need_ptc or (gn_only and not gn_measured):
         harness_phase(args, scene, steps, meta, save, csv_path, common, get_runner, uncompressed_row, probe_record,
                       full_cache, even_cache, cv_names, need_cv, need_share, need_calib, need_full, dev, done_configs,
-                      gn_only=gn_only)
+                      gn_only=gn_only, need_ptc=need_ptc)
     else:
         uncompressed_row()
     drop_runner()
@@ -448,13 +466,22 @@ def main(argv=None):
 
 def harness_phase(args, scene, steps, meta, save, csv_path, common, get_runner, uncompressed_row, probe_record,
                   full_cache, even_cache, cv_names, need_cv, need_share, need_calib, need_full, dev, done_configs,
-                  gn_only: bool = False):
-    """Step 3: the runner, the uncompressed model, the 16 x 16 GN passes, the trace share, the SH-only
-    cross-validation and the calibration (Amendment 14 b-c). ``gn_only`` (Amendment 14 g): the two GN passes alone."""
+                  gn_only: bool = False, need_ptc: bool = False):
+    """Step 3: the runner, the uncompressed model, the 16 x 16 GN passes, the trace share, the pruned-splat trace count
+    (Amendment 14 h), the SH-only cross-validation and the calibration (Amendment 14 b-c). ``gn_only``
+    (Amendment 14 g): the two GN passes alone."""
+
+    def ptc_not_computed(reason: str) -> None:
+        if need_ptc:
+            meta["pruned_trace_check"] = {"status": "not_computed", "reason": reason, "mask_source": "probe"}
+            save()
+
+
     runner = get_runner()
     uncompressed_row()
     if runner is None:
         steps.skip("gn_passes", "no harness runner")
+        ptc_not_computed("no harness runner, so no GN pass")
         return
     splats_raw = {k: v.detach() for k, v in runner.splats.items()}
     settings = gm.RenderSettings.from_cfg(runner.cfg)
@@ -498,7 +525,16 @@ def harness_phase(args, scene, steps, meta, save, csv_path, common, get_runner, 
     rec = torch.load(probe_record, map_location="cpu", weights_only=False) if os.path.exists(probe_record) else None
     if rec is None:
         steps.skip("colour_share", "no probe record (the probe run did not finish)")
-    g_full = gn16("full", train_views, full_cache) if (need_share or need_full) else None
+    g_full = gn16("full", train_views, full_cache) if (need_share or need_full or need_ptc) else None
+    if need_ptc:  # Amendment 14 h: report-only, from host memory, never stops the job
+        ptc = steps.run("pruned_trace_check", lambda: pruned_trace_record(
+            scene, rec, None if g_full is None else g_full["M_packed"],
+            "no full-train-view 16 x 16 metric (the GN pass did not finish)"))
+        if ptc is None:
+            ptc_not_computed("the count raised (see the meta's steps)")
+        else:
+            meta["pruned_trace_check"] = ptc
+            save()
     if g_full is not None and rec is not None and need_share:
         share = steps.run("colour_share", lambda: e3r.trace_shares(g_full["M_packed"], rec["vq_ids"]))
         if share is not None:
@@ -716,6 +752,7 @@ def summarize(out_dir: str, scenes=tuple(SCENES)) -> Dict:
             "rows": rows, "knob_K": knob_ranges(k_rows), "knob_threshold": knob_ranges(t_rows) if t_rows else None,
             "colour_share": meta.get("colour_share"), "rho_cv": meta.get("rho_cv"), "cv_odd_scores": meta.get("cv_odd_scores"),
             "calibration": meta.get("calibration"), "gn": meta.get("gn"),
+            "pruned_trace_check": meta.get("pruned_trace_check"),
             "injected": {n: {f: r.get(f) for f in ("status", "reason", "rho", "npz_bytes", "c3dgs_PSNR", "PSNR_ii",
                                                   "set_same_as_probe", "set_only_probe", "set_only_injected",
                                                   "lifted_check_pass", "labels_survived", "codebook_max_abs_change",
