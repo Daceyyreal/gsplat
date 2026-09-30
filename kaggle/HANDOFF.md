@@ -15,8 +15,10 @@ refusal (`kaggle/gn_e3q/attempt1/`). With the fix (Amendment 13 g: the wrapper c
 `torch.Tensor.det`), **attempt 2 ran both C3DGS runs, and E3q is closed** (`kaggle/gn_e3q/attempt2/`, FINDINGS
 section 14). **E3r**, a pilot of the C3DGS host on train and bicycle before the C3DGS arm's pre-registration
 (Amendment 14, with its notes f, g and h), **ran on Kaggle on 2026-09-30** ("E3r C3DGS pilot", imported at tip
-`b27e1421`). Its bundle `E3r_bundle.zip` is in `~/Downloads` and **not yet committed**; nothing from it has been read
-or quoted. The arm's pre-registration follows its results.
+`b27e1421`) **and is closed**: its bundle is committed (`kaggle/gn_e3r/gn3r/`, `9c28cc89`) and FINDINGS section 15
+quotes it (`2eb091f9`, checked by `bench/gn/check_s15.py`, `5fda2ea7`). Every step ran; the colour threshold spans
+2.49x in bytes, K 1.02x; seeded C3DGS runs are not reproduced on the GPU. **Next: the C3DGS arm's pre-registration**
+from `kaggle/E3_C3DGS_DESIGN.md` and section 15, before any of its code.
 
 ## Context and rules
 
@@ -47,7 +49,7 @@ Upstream main at the time of this work: `28e794c`.
 | `feat/png-tile-quantization` (`3ff67e8`) | `PngCompression(tile_size=, bits=)` | benchmark said no PR; leave alone |
 | `feat/png-weighted-kmeans` (`61cd1baf`) | `gsplat/compression/kmeans.py` + `kmeans_backend` / `kmeans_weighting` / `kmeans_chunk_size`, off upstream main `28e794c`; `tests/test_kmeans.py`. Commits `9348e32` (backend + options), `a4c31082` (`kmeans_chunk_size`), `61cd1baf` (default flip, droppable) | **upstream PR [#1063](https://github.com/nerfstudio-project/gsplat/pull/1063), open** (opened 2026-09-18), measured by run 5. Keep this branch clean: library only (3 files). Upstream main had not moved on 2026-09-18. |
 | `bench/tilequant` | both feat branches merged + benchmark code and results; never goes upstream | runs 1-5 done; head = `git log -1 fork/bench/tilequant`. The blog post links its FINDINGS, so keep those numbers stable. |
-| `bench/gn-vq` | off `bench/tilequant` (`12f912eb`): the E0 / E1 / E2 / E2b / E2c pre-registration (Amendments 1-11), `bench/gn/` (GN metric, diagnostics, G0 / G1 / G2 rules, GN-VQ, E2b's and E2c's rules, the BD sensitivity script, smoke tests, scene fixtures), the E0, E1, E2, E2b and E2c jobs and notebooks, and E0's, E1's, E2's and E2b's results; never goes upstream | **E0 done: G0 passed** (2026-09-20, `kaggle/gn_e0/gn/`, FINDINGS section 8). **E1 done: G1 failed** on the size rule (`kaggle/gn_e1/gn1/`, FINDINGS section 9). **E2 done: G2a passed** (`kaggle/gn_e2/gn2/`, FINDINGS section 10). **E2b done** (Amendments 9-10, exploratory): fidelity criterion `works`, garden control held, PSNR criterion `does not work` (`kaggle/gn_e2b/gn2b/`, FINDINGS section 11). **E2c done: G2c passed** (Amendment 11; `kaggle/gn_e2c/gn2c/`, FINDINGS section 12); the method `gn_vq_cvfloor` is frozen. **E3p done** (Amendment 12, exploratory pilot; `kaggle/gn_e3p/gn3p/`, FINDINGS section 13). **E3q done** (Amendment 13, C3DGS smoke test): attempt 1 failed in cuSOLVER (`kaggle/gn_e3q/attempt1/gn3q/`, `59303486`), and attempt 2, with Amendment 13 g's fix, ran both runs (`kaggle/gn_e3q/attempt2/gn3q/`, `a6c6f725`; FINDINGS section 14). **E3r (Amendment 14 with notes f, g and h, C3DGS-host pilot; C3DGS steps on train only, bicycle's 16 x 16 GN passes): ran on Kaggle 2026-09-30 from `b27e1421`; bundle in `~/Downloads`, not committed.** E3: the C3DGS arm's integration design is in `kaggle/E3_C3DGS_DESIGN.md`; its pre-registration waits for E3r. `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
+| `bench/gn-vq` | off `bench/tilequant` (`12f912eb`): the E0 / E1 / E2 / E2b / E2c pre-registration (Amendments 1-11), `bench/gn/` (GN metric, diagnostics, G0 / G1 / G2 rules, GN-VQ, E2b's and E2c's rules, the BD sensitivity script, smoke tests, scene fixtures), the E0, E1, E2, E2b and E2c jobs and notebooks, and E0's, E1's, E2's and E2b's results; never goes upstream | **E0 done: G0 passed** (2026-09-20, `kaggle/gn_e0/gn/`, FINDINGS section 8). **E1 done: G1 failed** on the size rule (`kaggle/gn_e1/gn1/`, FINDINGS section 9). **E2 done: G2a passed** (`kaggle/gn_e2/gn2/`, FINDINGS section 10). **E2b done** (Amendments 9-10, exploratory): fidelity criterion `works`, garden control held, PSNR criterion `does not work` (`kaggle/gn_e2b/gn2b/`, FINDINGS section 11). **E2c done: G2c passed** (Amendment 11; `kaggle/gn_e2c/gn2c/`, FINDINGS section 12); the method `gn_vq_cvfloor` is frozen. **E3p done** (Amendment 12, exploratory pilot; `kaggle/gn_e3p/gn3p/`, FINDINGS section 13). **E3q done** (Amendment 13, C3DGS smoke test): attempt 1 failed in cuSOLVER (`kaggle/gn_e3q/attempt1/gn3q/`, `59303486`), and attempt 2, with Amendment 13 g's fix, ran both runs (`kaggle/gn_e3q/attempt2/gn3q/`, `a6c6f725`; FINDINGS section 14). **E3r done** (Amendment 14 with notes f, g and h, C3DGS-host pilot; C3DGS steps on train only, bicycle's 16 x 16 GN passes; ran on Kaggle 2026-09-30 from `b27e1421`; `kaggle/gn_e3r/gn3r/`, `9c28cc89`; FINDINGS section 15, `2eb091f9`). E3: the C3DGS arm's integration design is in `kaggle/E3_C3DGS_DESIGN.md`; its pre-registration is next. `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
 
 Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): `PR_DRAFT_weighted_kmeans.md`,
 `PR_DRAFT_empty_tensor.md`, `ISSUE_566_COMMENT.md`, `ISSUE_787_COMMENT.md`.
@@ -77,6 +79,7 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `gn_e3q/attempt1/gn3q/` | E3q attempt 1's bundle (`gn3q_bundle.zip`), unpacked as downloaded (6 files, `59303486`): C3DGS built, both runs failed in cuSOLVER; the uncompressed row is its only result |
 | `gn_e3q/attempt2/gn3q/` | E3q attempt 2's bundle (`E3q_bundle_2.zip`), unpacked as downloaded (6 files, `a6c6f725`): all three rows `ok`; FINDINGS section 14 quotes both attempts |
 | `gn_e3r_scene.py` | E3r, one scene per process (Amendment 14): `--build_only` builds C3DGS once per session (E3q's build); a scene job runs the probe run (C3DGS at K = 4,096 with its colour VQ recorded), the harness phase (runner, protocol ii of the uncompressed model, the 16 x 16 GN passes, the colour-quantized trace share, the SH-only cross-validation over 7 `rho`, the calibration), the injected run(s) at `rho_cv`, the other K and (train) the thresholds, then protocol ii of every decoded row one `.ply` at a time; an out-of-memory C3DGS run retried once on the CPU data device; a deadline; any error caught (E3q's `Steps`); `summarize` writes the notebook's summary |
+| `gn_e3r/gn3r/` | the E3r bundle (`E3r_bundle.zip`, 61,230 bytes, SHA-1 `e108184f480479a475e31feca10220cf5a2e8c57`), unpacked as downloaded (17 files, `9c28cc89`); FINDINGS section 15 quotes it |
 | `gn_e3r_memory/e3r_memory.json` | E3r's GPU-memory check (Amendment 14 g), computed locally by `bench/gn/e3r_memory.py` from the pinned train and bicycle checkpoints (SHA-1s equal to E3p's): tile instances per train view by the rasterizer's formulas, the tie to E3q's train peak, the bicycle projections, E3r's step budgets |
 | `e3r_hooks.py` | E3r's hooks inside C3DGS's process, installed by E3q's wrapper (`--observe`, `--record`, `--inject`): counts, quantizer state, the geometry SHA-1; the probe record; GN-VQ injected in place of C3DGS's colour codebook after C3DGS's own `vq_features` ran; the save check (labels survive, table drift). Never calls `get_features` (its observers) |
 | `build_gn_e3r_bench.py` / `gn_e3r_bench.ipynb` | E3r notebook, Kaggle title "E3r C3DGS pilot" (build output; edit the builder, never the JSON); bundle `E3r_bundle.zip`. E0's-E3q's notebooks are left exactly as they ran |
@@ -100,7 +103,7 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `build_gn_e1_bench.py` / `gn_e1_bench.ipynb` | E1 notebook (build output; edit the builder, never the JSON). E0's notebook is left exactly as it ran |
 | `gn_e0_scene.py` | E0, one scene per process: render parity, GN pass (`gn_cache/<scene>.pt`), spectrum, Spearman, the 9 G0 codebooks (predicted vs measured, test and train GT metrics, reproduction fields at K = 65,536), the lifted-assignment check (gates only the refines), the ridge / proximal refines (a proximal rise marks that row invalid). Resumable per (scene, config, K, seed). |
 | `build_gn_bench.py` / `gn_bench.ipynb` | E0 notebook (build output; edit the builder, never the JSON) |
-| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check; since E3r the coefficient count is read from the metric's packed width, 15 or 16, and nothing changed at 15), `e3r.py` (E3r: C3DGS's int8 colour-table quantizer, GN-VQ with the floored 16 x 16 metric, the colour dMSE, the trace shares), `e3r_estimate.py` (Amendment 14 e's pre-run estimate and g's), `e3r_memory.py` (Amendment 14 g's memory check), `dryrun/fake_c3dgs/` (a CPU stand-in with C3DGS's call structure, for E3r's tests and dry run), `g0.py` / `g1.py` / `g2.py` (the G0, G1 and G2a / H2b rules as code), `gn_vq.py` (E1's variant and the codec's quantizer; `report_metrics` adds reporting only), `e2b.py` (E2b's floored metric, selection, the fidelity and PSNR criteria, the rho = 0 reproduction check and the Spearman), `e2c.py` (E2c's grid, `rho_cv`, G2c and its reported items), `metric_store.py` (E3p's one-GPU-copy layout of `M`, Amendment 12 a: host metrics, one floored device buffer, `HostMetric` reads for `quad_form`; bit-identical to E2c's path on the CPU), `bd_sensitivity.py` (E2's BD measures reproduced, the 50-digit exact cubic, PCHIP, the shN stream), `check_s11.py` / `check_s12.py` / `check_s13.py` / `check_s14.py` (re-check every number in FINDINGS sections 11-14 against the committed E2b, E2c, E2, E3p and E3q bundles; exit 0 = no failure; all run by pytest), `e3p_estimate.py` (FINDINGS section 13's post-hoc cost estimate for the frozen method at 4 K on the 13 INRIA scenes, from E3p's, E2c's and E2's files), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (117 CPU tests), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1, E2, E2b, E2c, E3p, E3q and E3r dry runs, the writer-parity check and `check_chunked_distance.py`, E2c's path with the chunked `direct_distance`; not collected by pytest) |
+| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check; since E3r the coefficient count is read from the metric's packed width, 15 or 16, and nothing changed at 15), `e3r.py` (E3r: C3DGS's int8 colour-table quantizer, GN-VQ with the floored 16 x 16 metric, the colour dMSE, the trace shares), `e3r_estimate.py` (Amendment 14 e's pre-run estimate and g's), `e3r_memory.py` (Amendment 14 g's memory check), `dryrun/fake_c3dgs/` (a CPU stand-in with C3DGS's call structure, for E3r's tests and dry run), `g0.py` / `g1.py` / `g2.py` (the G0, G1 and G2a / H2b rules as code), `gn_vq.py` (E1's variant and the codec's quantizer; `report_metrics` adds reporting only), `e2b.py` (E2b's floored metric, selection, the fidelity and PSNR criteria, the rho = 0 reproduction check and the Spearman), `e2c.py` (E2c's grid, `rho_cv`, G2c and its reported items), `metric_store.py` (E3p's one-GPU-copy layout of `M`, Amendment 12 a: host metrics, one floored device buffer, `HostMetric` reads for `quad_form`; bit-identical to E2c's path on the CPU), `bd_sensitivity.py` (E2's BD measures reproduced, the 50-digit exact cubic, PCHIP, the shN stream), `check_s11.py` / `check_s12.py` / `check_s13.py` / `check_s14.py` / `check_s15.py` (re-check every number in FINDINGS sections 11-15 against the committed E2b, E2c, E2, E3p, E3q and E3r bundles; exit 0 = no failure; all run by pytest), `e3p_estimate.py` (FINDINGS section 13's post-hoc cost estimate for the frozen method at 4 K on the 13 INRIA scenes, from E3p's, E2c's and E2's files), `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (118 CPU tests), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1, E2, E2b, E2c, E3p, E3q and E3r dry runs, the writer-parity check and `check_chunked_distance.py`, E2c's path with the chunked `direct_distance`; not collected by pytest) |
 | `.gitignore` | ignores only the 64 run-5 bundle files that were unpacked flat into `kaggle/` by hand (anchored names; nothing deleted; the committed copy is `run5/tilequant/`) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
@@ -1156,8 +1159,20 @@ Rebuild the notebook with `python kaggle/build_gn_e3q_bench.py` first.
 
 ## E3r notebook (`bench/gn-vq`, `kaggle/gn_e3r_bench.ipynb`, Kaggle title "E3r C3DGS pilot")
 
-**Ran on Kaggle on 2026-09-30** (imported at tip `b27e1421`); `E3r_bundle.zip` is in `~/Downloads`, not yet
-committed, and nothing in it has been read. E3r is **pre-registered in `PREREG_GN.md` Amendment 14** (`693a6a4b`, docs only, before any E3r
+**Done: ran on Kaggle on 2026-09-30** (imported at tip `b27e1421`) **and committed.** The bundle
+`~/Downloads/E3r_bundle.zip` (61,230 bytes, SHA-1 `e108184f480479a475e31feca10220cf5a2e8c57`) is unpacked unchanged
+in `kaggle/gn_e3r/gn3r/` (17 files, `9c28cc89`); FINDINGS section 15 quotes it (`2eb091f9`), re-checked by
+`bench/gn/check_s15.py` (`5fda2ea7`). Nothing in E3r is left to run; the notebook stays as it ran.
+
+**Measured runtime** (`timings.json`, the metas' `timings_s`):
+- setup: restore 45.0 s, install 149.9 s (the restored wheel), C3DGS build 201.1 s;
+- train job: 7,483.6 s by its own clock, 7,500.3 s in the queue, inside the estimate's 5,362-8,309 s;
+- bicycle job: 594.7 s, 600.0 s in the queue, above the estimate's 492-498 s. Its download (290.9 s against E3p's
+  256.8 s) and runner (208.0 s against 182.6 s) were slower, and the estimate counted neither the two GN cache writes
+  (20.4 s) nor the member re-check (5.0 s);
+- setup plus the train job: 7,896.3 s (2.2 h), inside the session estimate of 5,747-8,694 s.
+
+What follows is how it was run. E3r is **pre-registered in `PREREG_GN.md` Amendment 14** (`693a6a4b`, docs only, before any E3r
 code) with **note f** (`a850c4ea`: every run seeded as C3DGS's own `safe_state` seeds) and **note g** (`b06f9293`: a
 memory check restricts every C3DGS step to train). It is an **engineering pilot of the C3DGS host with no verdicts**:
 what the C3DGS arm's pre-registration needs to know. Train and bicycle (development scenes), INRIA's 30k checkpoints;
@@ -1310,6 +1325,9 @@ Rebuild the notebook with `python kaggle/build_gn_e3r_bench.py` first.
 
 No verdict exists. The injected row against the probe row is an engineering number, not a comparison
 (Amendment 14 a). Then write the C3DGS arm's pre-registration.
+
+**Done (2026-09-30):** steps 1-3 above, then FINDINGS section 15. See "E3r results, section 15 and check_s15" under
+Session decisions.
 
 ## Session decisions (E0, 2026-09-19)
 
@@ -2775,7 +2793,77 @@ then the code `8d3390c9`. No E3r data existed: no `kaggle/gn_e3r/`, no `gn3r` fi
   errors caught. It is never a CSV column, so `assert_e3r_csv` and the header are unchanged, and a test asserts
   that. `pruned_trace_record` is a pure helper, so pytest covers `ok`, `not_applicable` and `not_computed`.
 
-### Open items (E0, E1, E2, E2b, E2c, E3p, E3q: closed; E3r: ran, bundle not committed; E3: the C3DGS arm designed, not pre-registered)
+### E3r results, section 15 and check_s15 (2026-09-30)
+
+The work went in this order:
+1. the bundle, data only (`9c28cc89`);
+2. Dace's readings checked against the files, and the geometry diagnosis, both read-only and reported in chat;
+3. FINDINGS section 15, docs only (`2eb091f9`);
+4. `bench/gn/check_s15.py` and its test (`5fda2ea7`);
+5. this file.
+
+- **The bundle is committed exactly as downloaded.** `~/Downloads/E3r_bundle.zip` was the only E3r bundle there (no
+  `(1)` copy): 61,230 bytes, SHA-1 `e108184f480479a475e31feca10220cf5a2e8c57`. It was unpacked into `kaggle/gn_e3r/`
+  with its arcname `gn3r/` kept (17 files).
+  - Each file was checked byte for byte against its zip entry, on disk and as a staged blob.
+  - The 15 JSONs match exactly. The 2 CSVs carry the writer's CRLF, which `autocrlf` normalizes, so they were compared
+    CR-insensitively, as with E3p's and E3q's bundles.
+  - The zip stayed in `~/Downloads`, so nothing needed ignoring.
+- **Dace's readings (a-g) all held against the files.** Precision the files added, carried into section 15:
+  - the 16/15 trace ratio holds to about 8e-9 (float32 sums), not exactly; the two shares differ by 4.4e-11;
+  - at save, the fine-tuned run's zero points moved too (DC -81 to -60, AC -4 to -25), and its kept rows moved by up
+    to 1.1345;
+  - every GN-VQ run was still falling when it stopped at 20 iterations: last relative drops 1.50e-3 to 2.93e-3;
+  - bicycle's 594.7 s: the estimate does include the download (E3p's 256.8 s). The excess is a slower download and
+    runner, plus two steps it did not count (the cache writes, the member re-check) and 15.4 s outside any step.
+- **The geometry SHA-1 diagnosis: (ii), nondeterminism on the GPU, not the injection.** Read from the code, not run.
+  C3DGS's source was read at `2a234af5` from a scratch clone outside the repo (session `d4632a74`'s scratchpad).
+  - **What the SHA-1 hashes** (`kaggle/e3r_hooks.py:150-160`): the raw bytes of `_gaussian_indices`, `_rotation` and
+    `_scaling`, concatenated, as C3DGS's `compress_covariance` returns. That is after `set_gaussian_indexed`
+    (C3DGS `compression/vq.py:233-237`), before fine-tuning (`compress.py:178-188` against `:207-221`) and before
+    `save_npz`'s Morton sort.
+  - **C3DGS's VQ draws from global streams** at `vq.py:27` (`kaiming_uniform_`, CPU), `:35` (`rand_like`, CUDA) and
+    `:98` (`randint`, CPU).
+  - **Between the colour VQ's return (`vq.py:116`) and the geometry VQ (`:210`), nothing draws:**
+    - C3DGS itself: `:108-116`, `:187-192` (`set_color_indexed` only wraps parameters), `:200-206`;
+    - the hooks: `e3r_hooks.py:137-148` and `:130-134` only read state;
+    - the injection (`:195-239`): GN-VQ, the table quantizer, `torch.load`. The lifted check uses a private generator
+      (`bench/gn/diagnostics.py:442-443`), and a grep of every module on the path finds no call without `generator=`;
+    - the wrapper seeds after installing the hooks (`kaggle/e3q_c3dgs_run.py:227-243`); its float64 check is private
+      (`:165-166`) and runs after the geometry VQ.
+  - **The data agrees.** The three K = 4,096 runs have equal draw counts (803,076 colour splats; a geometry batch of
+    281,237 in each). The two injected runs run identical code up to the hash, and their SHA-1s still differ. And
+    C3DGS's own colour codebook already differs from a bit-identical input (`features_equal`), before any hook computes
+    anything.
+  - **Not separable from the files:** `torch_scatter`'s atomic sums in the codebook update (`vq.py:40-52`) against the
+    sensitivity backward's atomics. The importance values are not recorded.
+- **What went into section 15, beyond the request's outline:**
+  - train's GN pass against the memory check (1.65 GB measured, 1.41 GB predicted), post hoc; the check scaled
+    bicycle's peak by the splat count;
+  - C3DGS's peak (4.71-4.74 GB) against E3q's 4.55 GB, post hoc;
+  - the injected runs' warm-start objectives, which differ under the same metric, as further evidence that the warm
+    starts differ;
+  - the statement that only the three K = 4,096 default-threshold runs are shape-paired, so "all 10 SHA-1s differ" is
+    not read as evidence for the other seven.
+- **Dace's four edits to the draft, before commit:**
+  1. The summary's "That is not GN-VQ's effect" became "It cannot be read as GN-VQ's effect". The files show the
+     confound, not the absence of an effect.
+  2. The zero-trace bullet became post hoc and gained train's figure (102,318 of 1,026,508, 9.97%). A sentence was
+     added on why it does not contradict Amendment 14 g's tile count (6,131,774 of 6,131,954): touching a tile is not a
+     non-zero blending weight. Without that sentence a reader could take the two counts as inconsistent.
+  3. The C3DGS-peak comparison says E3q's run was also unseeded and in another session, and that the files do not
+     attribute the difference. The hooks are not the only difference between the runs.
+  4. "The two injected runs execute identical code" became "identical code up to the point the SHA-1 is taken
+     (fine-tuning comes after it)". The fine-tuned run's code does differ, but only after the hash.
+- **`check_s15.py`** is built in `check_s14.py`'s form: 142 recomputed numbers, 406 numeric tokens, 0 failures.
+  - It also re-reads this repository's cited lines (the hooks, the wrapper, `diagnostics.py`), so a moved line breaks
+    it. It greps the GN modules for a global draw.
+  - C3DGS's line numbers are listed constants, because its source is not in the repo.
+  - Three planted errors were each caught before commit: a baseline byte count, the bicycle zero-trace percentage
+    (post hoc), and `gnvq_k4096`'s geometry SHA-1.
+  - pytest: 118 passed.
+
+### Open items (E0, E1, E2, E2b, E2c, E3p, E3q, E3r: closed; E3: the C3DGS arm designed, not pre-registered)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -2817,36 +2905,34 @@ then the code `8d3390c9`. No E3r data existed: no `kaggle/gn_e3r/`, no `gn3r` fi
   3. Amendment 13 g (`0b11f7ab`);
   4. the wrapper's `ChunkedLinalg` for `eigh` and `det`, its tests, the dry run, and the notebook, which now
      writes `E3q_bundle_2.zip`.
-- ~~**Run E3r.**~~ **Ran on Kaggle on 2026-09-30** ("E3r C3DGS pilot", imported at tip `b27e1421`). The bundle
-  `E3r_bundle.zip` is in `~/Downloads`; it has not been read, committed or quoted.
-- **Next:**
-  1. Commit the bundle data-only into `kaggle/gn_e3r/`, with its arcname `gn3r/` kept. Check every file against its
-     zip entry.
-  2. Check Dace's readings against the files before any FINDINGS text.
-  3. Then write E3r's FINDINGS section.
-- **Open questions to answer from the files and the code** (questions only; nothing is answered yet):
-  1. **The geometry SHA-1s.** Do the probe run's (`c3dgs_k4096`) and `gnvq_k4096`'s `geometry_sha1` match? If
-     not, is the cause the inject path drawing from a global random stream (CPU, CUDA, numpy or Python) between
-     C3DGS's colour `vq_features` and its geometry VQ, or is it GPU nondeterminism (Amendment 14 f)?
-  2. **The stopping rule.** How many GN-VQ runs (the 7 CV runs, and the in-process final ones) stopped at
-     `max_iters` rather than at the relative-drop rule? How does that compare with E3p and E2c?
-  3. **`pruned_trace_check` in both directions:** pruned splats with `tr > 0` (`n_pruned - n_pruned_tr0`), and
-     unpruned splats with `tr = 0` (`n_tr0_all - n_pruned_tr0`). Is the trace share of the pruned-with-`tr > 0`
-     splats recoverable, given that the metric cache (`/tmp/gn3r_cache`) was not bundled?
-- **Then: pre-register the C3DGS arm** (Amendment 12 c) from `kaggle/E3_C3DGS_DESIGN.md` and E3r's results, in a new amendment,
-  before any of its code or data. It must settle every item of the doc's section 9, or state it as a limitation.
-  In particular:
+- ~~**Run E3r.**~~ **Done (2026-09-30):** every step ran, nothing failed (`kaggle/gn_e3r/gn3r/`, `9c28cc89`; FINDINGS
+  section 15, `2eb091f9`; `bench/gn/check_s15.py`, `5fda2ea7`). The measured runtime is under "E3r notebook". Nothing
+  in E3r is left to run.
+- ~~**E3r's open questions.**~~ **Answered in section 15** (and "E3r results, section 15 and check_s15" above):
+  1. **The geometry SHA-1s** differ in all 10 runs, the probe's (`8f72f4ea`) and `gnvq_k4096`'s (`f8641bfb`)
+     included. The cause is nondeterminism on the GPU, not the inject path: no global draw lies between the two VQs,
+     and C3DGS's own colour codebook already differs from a bit-identical input.
+  2. **The stopping rule:** all 9 GN-VQ runs (7 CV, 2 injected) stopped at `max_iters` (20), still falling. E3p's train
+     runs took 8-9 iterations, and E2c's at K = 4,096 13-19, all stopping at the rule; not like-for-like.
+  3. **`pruned_trace_check`:** 13,627 pruned splats have `tr > 0`, and 38 unpruned ones `tr = 0`. The trace share of
+     the 13,627 is not recoverable: the metric cache was not bundled.
+- **Next: pre-register the C3DGS arm** (Amendment 12 c) from `kaggle/E3_C3DGS_DESIGN.md` and FINDINGS section 15, in
+  a new amendment, before any of its code or data. It must settle every item of the doc's section 9, or state it as a
+  limitation. In particular:
   - `M_i` with DC (16x16), an extension of the frozen method;
-  - the warm start: C3DGS's own codebook or `lloyd_wopa_area`;
+  - the warm start: C3DGS's own codebook or `lloyd_wopa_area`, and GN-VQ's iteration cap (all of E3r's runs hit 20);
   - the codec's int8 table quantizer as the port's quantizer;
   - SH-only cross-validation;
-  - the RD knob;
+  - the RD knob and its grid: E3r measured the colour threshold at 2.49x in bytes and K at 1.02x;
+  - GPU nondeterminism: seeded runs do not pair (section 15), so repeat runs to measure the baseline's spread, or a
+    geometry shared between the baseline and GN-VQ;
+  - C3DGS's fine-tuning as a secondary;
   - pins for the seven gate scenes' archive members;
-  - Deep Blending's loading.
+  - Deep Blending's loading;
+  - C3DGS's memory above train's size: it has not run on anything larger (Amendment 14 g; the gate scenes reach
+    3,405,153 splats).
 
-  It must also decide whether a **pilot on the development scenes** comes first (the baseline's `.npz` rate and
-  PSNR at K = 1,024-65,536, C3DGS's clustering time at those K, and the colour-quantized splat count). That pilot
-  would need its own short amendment, like E3p and E3q.
+  The development-scene pilot that this item used to leave open was E3r itself.
 - ~~**Optional: commit a section-14 checker.**~~ **Done (2026-09-29):** `bench/gn/check_s14.py`, run by pytest (`9de1c993`).
 - **Then: E3's design beyond the C3DGS arm, not written yet** (no amendment, code or notebook; the C3DGS arm's design
   input is `kaggle/E3_C3DGS_DESIGN.md`; `kaggle/E3_SCOUTING.md` has the scouting, which recommends C3DGS as the first host and E3a, gsplat PNG on the INRIA checkpoints, as the
@@ -3047,6 +3133,7 @@ then the code `8d3390c9`. No E3r data existed: no `kaggle/gn_e3r/`, no `gn3r` fi
 | E2c (`bench/gn-vq`) | does GN-VQ with the cross-validated floor (`gn_vq_cvfloor`, `PREREG_GN.md` Amendment 11) keep GN-VQ's wins and do no harm on the five scenes no decision has used (gate G2c)? | **G2c passed** (run 2026-09-26): 5 of 5 wins against `lloyd_trace`, mean BD-rate -6.17% against `lloyd_wopa_area`, BD-PSNR against E2's `gn_vq` -0.0013 to +0.0141 dB. `rho_cv` above 0 in all 20 cells (1e-3 to 1e-1). The gain over E2's GN-VQ is clear only on room (test dMSE 0.7603 of `gn_vq`'s at K = 65,536). Method frozen. Details in FINDINGS section 12. |
 | E3p (`bench/gn-vq`) | does the frozen pipeline run at INRIA scale on a T4, and what does each step cost (`PREREG_GN.md` Amendment 12, exploratory, no verdict)? | **Ran (2026-09-27/28), no step out of memory** on bicycle (6,131,954 splats) and train: bicycle peaked at 11.51 GB allocated, its GN-VQ at 8.49 GB; its job took 19,699.0 s. Protocol ii reads the uncompressed models at 25.196 / 21.293 dB against INRIA's published 25.246 / 21.097; protocol i reads bicycle 0.598 dB lower. `rho_cv` 3e-1 (bicycle) and 1e-1 (train). The C3DGS build check failed at the venv (no `ensurepip`). Details in FINDINGS section 13. |
 | E3q (`bench/gn-vq`) | does the C3DGS host build and run its own compression on INRIA's train model (`PREREG_GN.md` Amendment 13, smoke test, no verdicts)? | **Attempt 1 (2026-09-28): C3DGS built (204.9 s) and imported; both `compress.py` runs failed** after 270.8 / 273.3 s: cuSOLVER refused `torch.linalg.eigh` on one float32 batch of 3x3 matrices in `extract_rot_scale`. Uncompressed protocol ii 21.293 dB, as in E3p. **Attempt 2 (Amendment 13 g: `eigh` and `det` chunked, 281,237 matrices per call, no refusal) ran both runs:** fine-tuned 13.267 MiB, 21.843 dB in C3DGS's own evaluation against its published 21.863 dB; protocol ii 0.410-0.523 dB lower on the compressed models; runs of 351.6 s / 666.4 s. Details in FINDINGS section 14. |
+| E3r (`bench/gn-vq`) | does the C3DGS host run with GN-VQ injected, and which knob gives C3DGS rate range (`PREREG_GN.md` Amendment 14 with notes f, g, h; pilot, no verdicts)? | **Ran (2026-09-30), every step, nothing failed.** On train the colour threshold spans 2.49x in `.npz` bytes (protocol ii 20.733-21.205 dB), K 1.02x (20.971-21.024 dB). GN-VQ ran inside C3DGS's own run with and without fine-tuning (`rho_cv` 1e-2; all 9 GN-VQ runs at the 20-iteration cap). The injected row read +0.127 dB at +1.485% bytes against the probe, which cannot be read as GN-VQ's effect: seeded runs are not reproduced on the GPU (geometry and C3DGS's own codebook differ). Bicycle's 16 x 16 GN pass peaked at 8.41 GB, 616,376 bytes above the prediction. Details in FINDINGS section 15. |
 
 ## PR plan (`feat/png-weighted-kmeans`)
 
@@ -3067,7 +3154,7 @@ then the code `8d3390c9`. No E3r data existed: no `kaggle/gn_e3r/`, no `gn3r` fi
   follow-up, only if maintainers want the default flip.
 - `lint/format-code.sh` and the tests on a CUDA machine (locally only CPU).
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
-- **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3:** see "Open items (E0, E1, E2, E2b, E2c, E3p, E3q: closed; E3r: ran, bundle not committed; E3: the C3DGS arm designed, not pre-registered)". E0 is done
+- **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3r / E3:** see "Open items (E0, E1, E2, E2b, E2c, E3p, E3q, E3r: closed; E3: the C3DGS arm designed, not pre-registered)". E0 is done
   and G0 passed (`kaggle/gn_e0/gn/`, FINDINGS section 8); E1 is done and G1 failed (`kaggle/gn_e1/gn1/`,
   FINDINGS section 9); E2 is done and G2a passed (`kaggle/gn_e2/gn2/`, FINDINGS section 10); E2b
   (Amendments 9 and 10, exploratory) is done, and works in fidelity terms but not by the PSNR criterion
@@ -3075,6 +3162,6 @@ then the code `8d3390c9`. No E3r data existed: no `kaggle/gn_e3r/`, no `gn3r` fi
   frozen (`kaggle/gn_e2c/gn2c/`, FINDINGS section 12). E3p (Amendment 12, an exploratory engineering pilot on
   INRIA's bicycle and train checkpoints) is done (`kaggle/gn_e3p/gn3p/`, FINDINGS section 13). E3q (Amendment 13,
   a C3DGS smoke test on train) failed in attempt 1 (cuSOLVER batched eigen) and ran in attempt 2 with Amendment 13 g's fix (`kaggle/gn_e3q/`,
-  FINDINGS section 14). E3r (Amendment 14, the C3DGS-host pilot) ran on Kaggle on 2026-09-30; its bundle is in
-  `~/Downloads`, not committed. The C3DGS arm's integration design is `kaggle/E3_C3DGS_DESIGN.md`; its pre-registration,
+  FINDINGS section 14). E3r (Amendment 14, the C3DGS-host pilot) is done (`kaggle/gn_e3r/gn3r/`,
+  FINDINGS section 15). The C3DGS arm's integration design is `kaggle/E3_C3DGS_DESIGN.md`; its pre-registration,
   and the rest of E3's design (other codecs, INRIA checkpoints), are not written yet.
