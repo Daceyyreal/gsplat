@@ -14,8 +14,9 @@ C3DGS host on train (Amendment 13): attempt 1 built C3DGS but both runs failed o
 refusal (`kaggle/gn_e3q/attempt1/`). With the fix (Amendment 13 g: the wrapper chunks `torch.linalg.eigh` and
 `torch.Tensor.det`), **attempt 2 ran both C3DGS runs, and E3q is closed** (`kaggle/gn_e3q/attempt2/`, FINDINGS
 section 14). **E3r**, a pilot of the C3DGS host on train and bicycle before the C3DGS arm's pre-registration
-(Amendment 14, with its note f), is **built and ready to run** (see "E3r notebook"); the arm's pre-registration
-follows its results.
+(Amendment 14, with its notes f, g and h), **ran on Kaggle on 2026-09-30** ("E3r C3DGS pilot", imported at tip
+`b27e1421`). Its bundle `E3r_bundle.zip` is in `~/Downloads` and **not yet committed**; nothing from it has been read
+or quoted. The arm's pre-registration follows its results.
 
 ## Context and rules
 
@@ -46,7 +47,7 @@ Upstream main at the time of this work: `28e794c`.
 | `feat/png-tile-quantization` (`3ff67e8`) | `PngCompression(tile_size=, bits=)` | benchmark said no PR; leave alone |
 | `feat/png-weighted-kmeans` (`61cd1baf`) | `gsplat/compression/kmeans.py` + `kmeans_backend` / `kmeans_weighting` / `kmeans_chunk_size`, off upstream main `28e794c`; `tests/test_kmeans.py`. Commits `9348e32` (backend + options), `a4c31082` (`kmeans_chunk_size`), `61cd1baf` (default flip, droppable) | **upstream PR [#1063](https://github.com/nerfstudio-project/gsplat/pull/1063), open** (opened 2026-09-18), measured by run 5. Keep this branch clean: library only (3 files). Upstream main had not moved on 2026-09-18. |
 | `bench/tilequant` | both feat branches merged + benchmark code and results; never goes upstream | runs 1-5 done; head = `git log -1 fork/bench/tilequant`. The blog post links its FINDINGS, so keep those numbers stable. |
-| `bench/gn-vq` | off `bench/tilequant` (`12f912eb`): the E0 / E1 / E2 / E2b / E2c pre-registration (Amendments 1-11), `bench/gn/` (GN metric, diagnostics, G0 / G1 / G2 rules, GN-VQ, E2b's and E2c's rules, the BD sensitivity script, smoke tests, scene fixtures), the E0, E1, E2, E2b and E2c jobs and notebooks, and E0's, E1's, E2's and E2b's results; never goes upstream | **E0 done: G0 passed** (2026-09-20, `kaggle/gn_e0/gn/`, FINDINGS section 8). **E1 done: G1 failed** on the size rule (`kaggle/gn_e1/gn1/`, FINDINGS section 9). **E2 done: G2a passed** (`kaggle/gn_e2/gn2/`, FINDINGS section 10). **E2b done** (Amendments 9-10, exploratory): fidelity criterion `works`, garden control held, PSNR criterion `does not work` (`kaggle/gn_e2b/gn2b/`, FINDINGS section 11). **E2c done: G2c passed** (Amendment 11; `kaggle/gn_e2c/gn2c/`, FINDINGS section 12); the method `gn_vq_cvfloor` is frozen. **E3p done** (Amendment 12, exploratory pilot; `kaggle/gn_e3p/gn3p/`, FINDINGS section 13). **E3q done** (Amendment 13, C3DGS smoke test): attempt 1 failed in cuSOLVER (`kaggle/gn_e3q/attempt1/gn3q/`, `59303486`), and attempt 2, with Amendment 13 g's fix, ran both runs (`kaggle/gn_e3q/attempt2/gn3q/`, `a6c6f725`; FINDINGS section 14). **E3r (Amendment 14 with notes f and g, C3DGS-host pilot; C3DGS steps on train only, bicycle's 16 x 16 GN passes): built, not run.** E3: the C3DGS arm's integration design is in `kaggle/E3_C3DGS_DESIGN.md`; its pre-registration waits for E3r. `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
+| `bench/gn-vq` | off `bench/tilequant` (`12f912eb`): the E0 / E1 / E2 / E2b / E2c pre-registration (Amendments 1-11), `bench/gn/` (GN metric, diagnostics, G0 / G1 / G2 rules, GN-VQ, E2b's and E2c's rules, the BD sensitivity script, smoke tests, scene fixtures), the E0, E1, E2, E2b and E2c jobs and notebooks, and E0's, E1's, E2's and E2b's results; never goes upstream | **E0 done: G0 passed** (2026-09-20, `kaggle/gn_e0/gn/`, FINDINGS section 8). **E1 done: G1 failed** on the size rule (`kaggle/gn_e1/gn1/`, FINDINGS section 9). **E2 done: G2a passed** (`kaggle/gn_e2/gn2/`, FINDINGS section 10). **E2b done** (Amendments 9-10, exploratory): fidelity criterion `works`, garden control held, PSNR criterion `does not work` (`kaggle/gn_e2b/gn2b/`, FINDINGS section 11). **E2c done: G2c passed** (Amendment 11; `kaggle/gn_e2c/gn2c/`, FINDINGS section 12); the method `gn_vq_cvfloor` is frozen. **E3p done** (Amendment 12, exploratory pilot; `kaggle/gn_e3p/gn3p/`, FINDINGS section 13). **E3q done** (Amendment 13, C3DGS smoke test): attempt 1 failed in cuSOLVER (`kaggle/gn_e3q/attempt1/gn3q/`, `59303486`), and attempt 2, with Amendment 13 g's fix, ran both runs (`kaggle/gn_e3q/attempt2/gn3q/`, `a6c6f725`; FINDINGS section 14). **E3r (Amendment 14 with notes f, g and h, C3DGS-host pilot; C3DGS steps on train only, bicycle's 16 x 16 GN passes): ran on Kaggle 2026-09-30 from `b27e1421`; bundle in `~/Downloads`, not committed.** E3: the C3DGS arm's integration design is in `kaggle/E3_C3DGS_DESIGN.md`; its pre-registration waits for E3r. `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
 
 Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): `PR_DRAFT_weighted_kmeans.md`,
 `PR_DRAFT_empty_tensor.md`, `ISSUE_566_COMMENT.md`, `ISSUE_787_COMMENT.md`.
@@ -1155,7 +1156,8 @@ Rebuild the notebook with `python kaggle/build_gn_e3q_bench.py` first.
 
 ## E3r notebook (`bench/gn-vq`, `kaggle/gn_e3r_bench.ipynb`, Kaggle title "E3r C3DGS pilot")
 
-**Built, not run.** E3r is **pre-registered in `PREREG_GN.md` Amendment 14** (`693a6a4b`, docs only, before any E3r
+**Ran on Kaggle on 2026-09-30** (imported at tip `b27e1421`); `E3r_bundle.zip` is in `~/Downloads`, not yet
+committed, and nothing in it has been read. E3r is **pre-registered in `PREREG_GN.md` Amendment 14** (`693a6a4b`, docs only, before any E3r
 code) with **note f** (`a850c4ea`: every run seeded as C3DGS's own `safe_state` seeds) and **note g** (`b06f9293`: a
 memory check restricts every C3DGS step to train). It is an **engineering pilot of the C3DGS host with no verdicts**:
 what the C3DGS arm's pre-registration needs to know. Train and bicycle (development scenes), INRIA's 30k checkpoints;
@@ -2760,14 +2762,20 @@ then the code `8d3390c9`. No E3r data existed: no `kaggle/gn_e3r/`, no `gn3r` fi
 
   So the mask's index and M's row are the same vertex: no crop, no reorder, no remap.
 - **Exact zero on the float32 trace.** Every diagonal entry of `M16_i` is `sum_v s_iv y_k^2 >= 0`, so the trace
-  is zero exactly when every entry is. A tolerance would mix in splats that are merely faint. The note names the
-  Hutchinson and underflow limits, so an exact zero can also, in principle, come from a cancellation.
+  is zero exactly when every entry is. A tolerance would mix in splats that are merely faint.
+- **The two limits the note adds**, both beyond the request's text:
+  - C3DGS's sensitivity pass renders its **int8-fake-quantized opacity and scales** (`compress.py`
+    `calc_importance`), not the stored checkpoint that gsplat's GN pass renders. The two rasterizers therefore see
+    slightly different geometry.
+  - gsplat's per-view weight `s_iv` is a **16-probe Hutchinson estimate**. It is zero whenever every weight is
+    zero, but a zero trace can in principle also come from a cancellation across all 16 probes, or from float32
+    underflow of tiny weights.
 - **The probe's mask, not the injected run's** (Amendment 14 f: atomics may separate them). It is computed from
   the host copy of the metric in the harness phase, after the full-view GN pass, as its own `Steps` record, with
   errors caught. It is never a CSV column, so `assert_e3r_csv` and the header are unchanged, and a test asserts
   that. `pruned_trace_record` is a pure helper, so pytest covers `ok`, `not_applicable` and `not_computed`.
 
-### Open items (E0, E1, E2, E2b, E2c, E3p, E3q: closed; E3r: built, not run; E3: the C3DGS arm designed, not pre-registered)
+### Open items (E0, E1, E2, E2b, E2c, E3p, E3q: closed; E3r: ran, bundle not committed; E3: the C3DGS arm designed, not pre-registered)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -2809,9 +2817,22 @@ then the code `8d3390c9`. No E3r data existed: no `kaggle/gn_e3r/`, no `gn3r` fi
   3. Amendment 13 g (`0b11f7ab`);
   4. the wrapper's `ChunkedLinalg` for `eigh` and `det`, its tests, the dry run, and the notebook, which now
      writes `E3q_bundle_2.zip`.
-- **Next: run E3r** ("E3r notebook"; attach "R5 tilequant" and "E3p INRIA pilot"; C3DGS steps on train only,
-  Amendment 14 g) and commit its bundle unchanged into
-  `kaggle/gn_e3r/`. Then write its FINDINGS section.
+- ~~**Run E3r.**~~ **Ran on Kaggle on 2026-09-30** ("E3r C3DGS pilot", imported at tip `b27e1421`). The bundle
+  `E3r_bundle.zip` is in `~/Downloads`; it has not been read, committed or quoted.
+- **Next:**
+  1. Commit the bundle data-only into `kaggle/gn_e3r/`, with its arcname `gn3r/` kept. Check every file against its
+     zip entry.
+  2. Check Dace's readings against the files before any FINDINGS text.
+  3. Then write E3r's FINDINGS section.
+- **Open questions to answer from the files and the code** (questions only; nothing is answered yet):
+  1. **The geometry SHA-1s.** Do the probe run's (`c3dgs_k4096`) and `gnvq_k4096`'s `geometry_sha1` match? If
+     not, is the cause the inject path drawing from a global random stream (CPU, CUDA, numpy or Python) between
+     C3DGS's colour `vq_features` and its geometry VQ, or is it GPU nondeterminism (Amendment 14 f)?
+  2. **The stopping rule.** How many GN-VQ runs (the 7 CV runs, and the in-process final ones) stopped at
+     `max_iters` rather than at the relative-drop rule? How does that compare with E3p and E2c?
+  3. **`pruned_trace_check` in both directions:** pruned splats with `tr > 0` (`n_pruned - n_pruned_tr0`), and
+     unpruned splats with `tr = 0` (`n_tr0_all - n_pruned_tr0`). Is the trace share of the pruned-with-`tr > 0`
+     splats recoverable, given that the metric cache (`/tmp/gn3r_cache`) was not bundled?
 - **Then: pre-register the C3DGS arm** (Amendment 12 c) from `kaggle/E3_C3DGS_DESIGN.md` and E3r's results, in a new amendment,
   before any of its code or data. It must settle every item of the doc's section 9, or state it as a limitation.
   In particular:
@@ -3046,7 +3067,7 @@ then the code `8d3390c9`. No E3r data existed: no `kaggle/gn_e3r/`, no `gn3r` fi
   follow-up, only if maintainers want the default flip.
 - `lint/format-code.sh` and the tests on a CUDA machine (locally only CPU).
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
-- **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3:** see "Open items (E0, E1, E2, E2b, E2c, E3p, E3q: closed; E3r: built, not run; E3: the C3DGS arm designed, not pre-registered)". E0 is done
+- **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3:** see "Open items (E0, E1, E2, E2b, E2c, E3p, E3q: closed; E3r: ran, bundle not committed; E3: the C3DGS arm designed, not pre-registered)". E0 is done
   and G0 passed (`kaggle/gn_e0/gn/`, FINDINGS section 8); E1 is done and G1 failed (`kaggle/gn_e1/gn1/`,
   FINDINGS section 9); E2 is done and G2a passed (`kaggle/gn_e2/gn2/`, FINDINGS section 10); E2b
   (Amendments 9 and 10, exploratory) is done, and works in fidelity terms but not by the PSNR criterion
@@ -3054,5 +3075,6 @@ then the code `8d3390c9`. No E3r data existed: no `kaggle/gn_e3r/`, no `gn3r` fi
   frozen (`kaggle/gn_e2c/gn2c/`, FINDINGS section 12). E3p (Amendment 12, an exploratory engineering pilot on
   INRIA's bicycle and train checkpoints) is done (`kaggle/gn_e3p/gn3p/`, FINDINGS section 13). E3q (Amendment 13,
   a C3DGS smoke test on train) failed in attempt 1 (cuSOLVER batched eigen) and ran in attempt 2 with Amendment 13 g's fix (`kaggle/gn_e3q/`,
-  FINDINGS section 14). The C3DGS arm's integration design is `kaggle/E3_C3DGS_DESIGN.md`; its pre-registration,
+  FINDINGS section 14). E3r (Amendment 14, the C3DGS-host pilot) ran on Kaggle on 2026-09-30; its bundle is in
+  `~/Downloads`, not committed. The C3DGS arm's integration design is `kaggle/E3_C3DGS_DESIGN.md`; its pre-registration,
   and the rest of E3's design (other codecs, INRIA checkpoints), are not written yet.
