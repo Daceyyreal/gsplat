@@ -1677,3 +1677,40 @@ code, what each step allocates on the GPU. The inputs are the pinned train and b
 
   Amendment 14 e's table stays as it was estimated.
 - **Everything else in Amendment 14 stands.**
+
+### h. Note (2026-09-30, before any E3r run): a pruned-splat trace count
+
+**What.** On train only, report-only, with no criterion. The count uses two things E3r already produces:
+- the probe run's recorded prune mask: C3DGS's `color_importance_n <= prune_threshold`, with `prune_threshold` 0,
+  as the hooks record it;
+- the full-train-view 16 x 16 GN metric the harness computes.
+
+From them it records:
+- `n_splats`;
+- `n_pruned`;
+- `n_pruned_tr0`, the pruned splats with `tr(M16_i) == 0` exactly, on the stored float32 trace;
+- `n_tr0_all`, all splats with `tr(M16_i) == 0`.
+
+**Why.**
+- **C3DGS's side.** C3DGS prunes the splats whose colour sensitivity is zero. Its sensitivity pass renders with
+  `clamp_color=False`, so DC's gradient is the constant basis value times the sum of the splat's blending weights.
+  It is therefore zero exactly when the splat has zero blending weight in every train view, under INRIA's
+  rasterizer.
+- **gsplat's side.** Its GN pass gives such a splat `tr(M) = 0`, under gsplat's rasterizer.
+- **What the count shows.** It bears on rasterizer parity (`kaggle/E3_C3DGS_DESIGN.md` section 9, item 2), which
+  nothing has measured. It is the agreement on which splats are visible at all, and nothing about render parity.
+- **What limits it:**
+  - C3DGS's pass renders its int8-fake-quantized opacity and scales (`compress.py` `calc_importance`), not the
+    stored checkpoint that gsplat's pass renders;
+  - gsplat's per-view weight `s_iv` is a 16-probe Hutchinson estimate. It is zero whenever every weight is zero, but
+    could in principle vanish otherwise, through a cancellation across all probes or float32 underflow.
+
+**One count suffices.** `tr(M16_i) = (16 / 15) tr(M15_i)` for every splat (the addition theorem; HANDOFF, E3r
+decisions), so a trace that is zero under one metric is zero under the other.
+
+**Where it does not run:**
+- On **bicycle** it is `not_applicable`: bicycle has no C3DGS run (Amendment 14 g).
+- If the probe run or the GN pass failed, it is `not_computed`, with the reason. It never stops the job.
+- It uses the probe run's mask, not the injected run's, because GPU atomics may separate the two (Amendment 14 f).
+
+**Nothing else in Amendment 14 changes:** no grid, order, row, step or estimate.
