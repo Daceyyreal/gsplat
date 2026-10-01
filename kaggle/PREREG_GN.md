@@ -1714,3 +1714,316 @@ decisions), so a trace that is zero under one metric is zero under the other.
 - It uses the probe run's mask, not the injected run's, because GPU atomics may separate the two (Amendment 14 f).
 
 **Nothing else in Amendment 14 changes:** no grid, order, row, step or estimate.
+
+## Amendment 15 (2026-10-01, after E3r's results and before any E4p or E4 code)
+
+E3r has closed: its bundle is committed unchanged in `kaggle/gn_e3r/gn3r/` (`9c28cc89`), and its numbers are in
+FINDINGS section 15 (`2eb091f9`, re-checked by `bench/gn/check_s15.py`, `5fda2ea7`). Two preprints that overlap GN-VQ
+have been read (`kaggle/RELATED_WORK_OGC.md`, `04577841`), and the C3DGS arm has been designed as E4
+(`kaggle/E4_DESIGN.md`, `7a954b0d`). Dace's E4 decisions (HANDOFF, "Related work, paper direction and E4 decisions
+(2026-10-01)", `6250c1d8`) supersede the design doc where the two differ. This amendment pre-registers **E4p, a pilot
+on train**, and **E4, a gated comparison inside C3DGS on seven INRIA checkpoints**. G0, G1, G2a, H2b, G2c, E2b's
+criteria and Amendments 1-14 are unchanged.
+
+### a. Scope and motivation
+
+- **The question.** Inside C3DGS, at its default operating point, does GN-VQ with the cross-validated floor
+  (`rho_cv`) give better test-view quality than:
+  1. the same GN-VQ without the floor (`rho` = 0, the unfloored Gram);
+  2. OGC's released Gram VQ?
+- **Against the unfloored Gram.** G2c passed with the floor, but E2c's gain over E2's GN-VQ was clear only on room
+  (FINDINGS section 12). Whether the floor helps on new checkpoints was left to E3 (Amendment 11 f).
+- **Against OGC.** arXiv 2609.28997 ("OGC") vector-quantizes C3DGS's colours under a per-splat Gram that equals our
+  `M_i` in expectation, with no floor and a ridge toward the cluster mean in the update. It reports its gain inside
+  C3DGS from one unseeded run per scene (`kaggle/RELATED_WORK_OGC.md` sections 2 b, 2 g and 3).
+- **OGC's code** is `github.com/moholo-founder/ogc-3dgs` at `49ccae72e75eec9877354ed72074827531f7fd79`, under PolyForm
+  Noncommercial 1.0.0. E4 uses it for noncommercial academic research.
+  - The session clones it at run time and checks the commit; a mismatch stops before any row.
+  - Its modules are imported from that clone. No file of it is copied into this repository or into a bundle.
+- **Why one forked process, repeated.** E3r found that seeded C3DGS runs are not reproduced on the GPU:
+  - all 10 runs' geometry SHA-1s differed;
+  - C3DGS's own colour codebook, the warm start, differed from a bit-identical input;
+  - so the injected row's +0.1268 dB at +1.485% bytes could not be read as GN-VQ's effect (FINDINGS section 15).
+
+  E4 therefore computes all its rows inside one forked C3DGS process, which shares the warm start, the keep mask and
+  the geometry VQ by construction (b). And it runs every scene in 3 independent processes, so that the bar (c) is
+  set against the spread between processes.
+- **Not in E4** (Dace, 2026-10-01): the held-out 90-degree arc protocol, and a ridge-toward-the-mean variant of
+  GN-VQ. Of `kaggle/E4_DESIGN.md` section 2's two OGC context rows, only `lam` = 1e-6 runs, as the report-only row
+  2b (b); the 512-entry row does not.
+
+### b. Rows: one forked C3DGS process
+
+**The process.** C3DGS at `2a234af5`, built and run as in E3r:
+- Amendment 13 b's build, E3q's wrapper with Amendment 13 g's chunked `eigh` and `det`, Amendment 14 f's seeding;
+- the scene's INRIA 30k checkpoint;
+- K = 4,096 (`--color_codebook_size`), the default colour threshold (`color_importance_include` = 0.6e-6) and
+  `--finetune_iterations 0`.
+
+C3DGS's source is not edited. The hooks extend E3r's (`kaggle/e3r_hooks.py`):
+1. C3DGS's own `vq_features` runs first, unchanged. Its codebook and labels go back to C3DGS, so C3DGS's own run
+   proceeds as row 1.
+2. At that colour call, the hooks compute rows 2-5 and 2b from the same inputs:
+   - the quantizer input (48 values per splat, int8-fake-quantized, index `k * 3 + channel`);
+   - the same quantized set;
+   - the same 16 x 16 metric.
+
+   Each row's codebook and labels are held.
+3. C3DGS's geometry VQ runs once, after the colour step. Every row shares its codebook and indices.
+4. When C3DGS's compression returns, the model, every fake quantizer's state (observers included) and the random
+   states are copied to host memory. Every row is saved before any row is evaluated (d, "When results exist"):
+   1. row 1 is saved with C3DGS's own `save_npz`, as its own run does;
+   2. each other row is installed into the restored copy with C3DGS's own `join_features` and `set_color_indexed`
+      and saved with its `save_npz`;
+   3. then each row, row 1 included, is evaluated with C3DGS's `render_and_eval`.
+5. Every row's `.npz` is decoded with `npz2ply.py` and evaluated with protocol ii (Amendment 12 a), one at a time.
+
+**Checked in every process.** A failure is a bug, and that process's rows enter nothing:
+- the keep mask and the quantized set are identical across the rows;
+- the geometry SHA-1 (E3r's) is identical at every row's save;
+- each row's colour indices just before it is written equal that row's labels.
+
+**The rows,** all at K = 4,096:
+
+| Row | Colour codebook | Start | Settings |
+|---|---|---|---|
+| 1 `c3dgs` | C3DGS's own `vq_features` | - | C3DGS's defaults |
+| 2 `ogc` | OGC's `vq.gram_kmeans` on our 16 x 16 metric | its own | its defaults, as their C3DGS host calls it (below) |
+| 3 `gnvq_rho0` | GN-VQ, unfloored | row 1's codebook and labels | `rho` = 0 |
+| 4 `scalar` | GN-VQ with `M_i` replaced by `tr(M_i) / 16 * I` | row 1's | `rho` has no effect (below) |
+| 5 `gnvq_cv` | GN-VQ with the floor | row 1's | `rho_cv` |
+| 2b `ogc_lam1e6` (context) | as row 2 | its own | as row 2, but `lam` = 1e-6 |
+
+- **GN-VQ (rows 3-5)** is the frozen method (Amendment 11 b) as Amendment 14 b ports it to this host:
+  - E2's variant: eps = 1e-2, at most 20 iterations, the 1e-3 relative-drop rule, the clip to the warm-start range
+    with per-cluster acceptance;
+  - the 16 x 16 metric floored as `M_i + rho * tr(M_i) / 16 * I`;
+  - the final exact assignment against the dequantized codebook of C3DGS's int8 colour-table quantizer at injection;
+  - one device copy of the metric (Amendment 14 g).
+
+  The cap stays at 20 iterations. All of E3r's GN-VQ runs reached it (FINDINGS section 15), so every run's iterations
+  and stopping reason are reported.
+- **Row 4.** With an isotropic metric, the floor multiplies every splat's metric and the ridge by the same 1 + `rho`.
+  That changes no assignment, centroid, acceptance or relative drop, so row 4 runs at `rho` = 0.
+- **Row 2, OGC's VQ, called as their C3DGS host calls it** (`hosts/c3dgs_run.py:50-62` at `49ccae72`):
+  `gram_kmeans(X, G, 4096, metric="gram", iters=15, device="cuda", chunk=100000)`, with `lam` and `seed` left at the
+  function's defaults, 1e-3 and 0 (`vq.py:17`).
+  - **The inputs and outputs:**
+    - `X` is the quantizer input reshaped to `[n, 3, 16]`;
+    - `G` is our 16 x 16 metric of the same splats, unpacked (`[n, 16, 16]`, float32, in host memory);
+    - the codebook goes back as `C.permute(0, 2, 1).reshape(K, 48)`, and its assignment as the labels.
+  - **As in their host,** the codebook reaches C3DGS unclipped and without a final assignment against the int8
+    table. C3DGS's quantizer acts on it at save.
+  - **Recorded why:**
+    - **`lam` = 1e-3:** every released caller leaves it at 1e-3, their C3DGS host included. The code's comment says
+      the ridge keeps codewords from saturating C3DGS's int8 quantizer (`vq.py:63-68`). The paper's text states 1e-6
+      (p. 14; `kaggle/RELATED_WORK_OGC.md` section 2 b).
+    - **15 iterations:** their host's default (`--lloyd_iters`). The function's own default is 20.
+    - **Its own init:** points sampled in proportion to `tr(G_i)` (`vq.py:31-33`). `gram_kmeans` takes no initial
+      codebook, and E4 does not modify their code. So row 2 differs from row 3 in init and stopping as well as in
+      the regulariser: row 5 against row 2 compares the two released methods, not a ridge against a floor.
+    - **Seed 0:** the function's default. It draws from its own generator, so C3DGS's global streams are untouched.
+    - **Our metric, not their `A_i`:** our 16 x 16 `M_i` equals their S2 Gram in expectation
+      (`kaggle/RELATED_WORK_OGC.md` section 3). Row 2 therefore reproduces their VQ, not their statistics pipeline.
+      E4p measures how far the two Grams differ on train (f).
+    - **CUDA and chunks of 100,000:** their host's. The function's defaults are `mps` and 150,000.
+- **Row 2b, `ogc_lam1e6`, a context row, report only.** It is row 2 with `lam` = 1e-6, the value the paper's text
+  states (p. 14), and it enters no primary difference.
+  - **Why:** which ridge produced their tables, the paper's 1e-6 or the code's 1e-3, is unknown
+    (`kaggle/RELATED_WORK_OGC.md`, open question 1).
+  - **No 512-entry row** runs.
+- **`rho_cv`, chosen once per scene from a probe run.**
+  - **The probe run** is C3DGS's own run at K = 4,096 and the default threshold, seeded 0, with E3r's `--record`. It
+    is not one of the three processes.
+  - **The selection** is Amendment 14 b's SH-only cross-validation on held-out train views:
+    - the probe run's quantized set, quantizer input and codebook;
+    - `M_even`, the 16 x 16 metric over the even-indexed train views;
+    - GN-VQ from the probe's codebook at each `rho` of {0, 1e-3, 1e-2, 1e-1, 3e-1, 1, 3} (Amendments 11 b, 12 b);
+    - each scored by the clamped render-vs-render dMSE on the odd-indexed train views.
+
+    `rho_cv` is the lowest score; a tie goes to the smaller `rho`. No test view enters the selection.
+  - **Every process uses that `rho_cv`.** Row 5's codebook is computed inside each process, from that process's
+    row 1, with the full-train-view 16 x 16 metric (Amendment 14 b).
+  - **If `rho_cv` = 0,** row 5 is row 3 by definition and is not run again. Row 3's measurements stand for row 5's
+    wherever row 5 is named.
+- **The metric** is computed once per scene by the harness (E3r's 16 x 16 GN passes, probe seed 0). Every process
+  uses it.
+- **Three processes per scene:** independent C3DGS processes seeded 0, 1 and 2. Seeding pairs nothing on the GPU
+  (FINDINGS section 15); distinct seeds make the independence explicit. Each process runs every row.
+
+### c. The primary (E4) and its bar
+
+**The measure:** protocol ii's test-view PSNR (Amendment 12 a, as E3p-E3r computed it) of the decoded `.npz`. Rows at
+K = 4,096, the default threshold, without fine-tuning.
+
+**Two co-primary differences,** within process `p` of scene `s`:
+- `D1_sp` = PSNR(`gnvq_cv`) - PSNR(`gnvq_rho0`);
+- `D2_sp` = PSNR(`gnvq_cv`) - PSNR(`ogc`).
+
+If `rho_cv` = 0 on a scene, `D1_sp` = 0 in all three of its processes, and the scene does not count as positive for
+D1.
+
+**For each difference D, over the n scenes run (d):**
+- the scene mean `D_s`: the mean of `D_sp` over the scene's 3 processes;
+- the mean over scenes `D_bar`: the mean of `D_s` over the n scenes;
+- the within-scene variance `v_s` = sum over `p` of (`D_sp` - `D_s`)^2 / 2;
+- `SD_pool` = sqrt(mean of `v_s` over the n scenes). Every scene has weight 1 (2 degrees of freedom each). A scene
+  where D1 is 0 by rule enters with `v_s` = 0;
+- `SE_noise` = `SD_pool` / sqrt(3 n).
+
+**D passes if all three hold:**
+1. `D_bar` > 0;
+2. `D_s` > 0 on at least ceil(0.7 n) scenes: 5 of 7 if all seven run (5 of 6, 4 of 5);
+3. `D_bar` > 2 x `SE_noise`.
+
+**E4 passes if D1 and D2 both pass.**
+- **At least 5 scenes:** if fewer than 5 scenes run (n < 5, after d's drops), E4 is `incomplete`, never `pass`,
+  whatever D1 and D2 show.
+- **Both are reported whatever the outcome,** with every part: each `D_sp`, `D_s` and `v_s`, `D_bar`, `SD_pool`,
+  `SE_noise` and the count of positive scenes.
+- **Rounding:** differences are rounded to 9 decimals before they are compared, as in run 4 and G2c. Every
+  comparison in this section is strict.
+- **`incomplete`:** a primary row (rows 2, 3 and 5, measured with protocol ii) missing in any process of a scene that
+  was not dropped (d), after d's one rerun, makes E4 `incomplete`. Verdict order: `incomplete` > `fail` > `pass`.
+- **What `SE_noise` measures:** the spread between processes of one scene (warm start, geometry, GPU atomics). It does
+  not treat the scenes as a sample of scenes; condition 2 is the across-scene requirement.
+
+### d. Scenes, memory and the header-read rule
+
+- **Scenes:** INRIA's official 30k checkpoints of bonsai, counter, kitchen, room, truck, drjohnson and playroom
+  (`<scene>/point_cloud/iteration_30000/point_cloud.ply`, with `cameras.json` and `cfg_args`, in Amendment 12 a's
+  archive). Each member is pinned from the archive's zip directory (offset, sizes, CRC32) and checked on fetch, as in
+  Amendment 12 a. The pins are recorded in g.2's note, before any E4p code.
+- **Disclosure.**
+  - E2 and E2c used bonsai, counter, kitchen, room and truck, and G2c gated on them, with this project's gsplat MCMC
+    1M checkpoints (Amendment 7 d, Amendment 11 a) and measurements on their test views.
+  - E4's checkpoints are INRIA's, which this project has not fetched, loaded or rendered (Amendments 12 a, 13 a,
+    14 a).
+  - Nothing in E4 is tuned on these scenes. The method was fixed in Amendment 11 before E2c ran, and E4's rows, K,
+    threshold and bars were not chosen from any result on them.
+  - drjohnson and playroom have never been used.
+- **Memory.**
+  - Every C3DGS run starts with the images on the GPU (`--data_device cuda`).
+  - A run that fails out of GPU memory is retried once with `--data_device cpu` (Amendment 14 d). The retry is
+    recorded as a deviation, and the scene's later runs start on the CPU.
+  - **A scene whose run also fails out of memory on the CPU is dropped before any of its results exist,** and n
+    shrinks. The drop is reported with the step that failed.
+- **When results exist.**
+  - A scene's results are the test-view measurements and the bytes of its processes' rows.
+  - So that a drop precedes them, each scene runs the probe run, the harness phase (the GN passes and the
+    cross-validation), and the first process's colour steps and saves before any row of that scene is evaluated.
+  - The probe run's own evaluations (C3DGS's and protocol ii) are deferred too, until after the first process's
+    colour steps and saves. The probe is then evaluated from its decoded `.npz`: C3DGS's evaluation of the loaded
+    `.npz`, and protocol ii. This differs from E3r's in-memory evaluation of its probe. Its measurements enter no
+    difference and are reported as context.
+- **Failures after results exist.** An out-of-memory failure in a scene's second or third process does not drop the
+  scene. Which failures are rerun depends on what they lose:
+  - **A failure that loses a primary row** (rows 2, 3 and 5, measured with protocol ii), out of memory or otherwise,
+    reruns that process once, whole, with the same seed. If the rerun loses a primary row too, E4 is `incomplete`
+    (c).
+  - **A failure in a secondary** (fine-tuning, row 1, row 4, row 2b, the bytes and index measures, C3DGS's own
+    evaluation) is recorded and not rerun, and it does not change the verdict.
+- **The header-read rule** (written before the read).
+  - Reading a scene's camera count, image sizes and splat count (from `cameras.json` and the `.ply` header), with no
+    pixel, splat value, render or metric, does not count as touching the scene.
+  - Deep Blending's two scenes are read this way after this amendment is committed (g.2).
+  - A dated note then records their feasibility by Amendment 14 g's memory model (`bench/gn/e3r_memory.py`'s terms,
+    as `kaggle/E4_DESIGN.md` section 6 applies them). The note changes no scene, row or bar. Whether a scene runs is
+    settled by the memory rule above.
+
+### e. Secondaries: descriptive, no bars
+
+- **Fine-tuning:** on all 3 processes of every scene, for rows 1, 2 and 5.
+  - **After the primary rows,** each of the three is restored from the copy with its own table and the copy's random
+    states, then:
+    1. fine-tuned with C3DGS's `finetune` (5,000 iterations);
+    2. saved;
+    3. evaluated by C3DGS;
+    4. decoded and evaluated with protocol ii.
+  - **Reported:** `ogc` minus `c3dgs`, and `gnvq_cv` minus `ogc`, after fine-tuning, per process, per scene and
+    pooled, each with its `SE_noise` computed as in c.
+  - **A caveat stated in advance:** resetting the random states pairs the camera order, but GPU atomics separate the
+    rows during fine-tuning. These differences therefore carry run-to-run noise that the primary's do not.
+- **Before fine-tuning,** computed as in c, each with its `SE_noise`:
+  - **`ogc` minus `c3dgs`:** the replication of arXiv 2609.28997's pre-fine-tuning gain in its C3DGS host (its
+    Table 1: +0.49 dB, the mean of 9 Mip-NeRF 360 scenes, one unseeded run each), with OGC's VQ on our metric and 3
+    processes per scene. Four of E4's scenes (bonsai, counter, kitchen, room) are among those 9 (its Table 12);
+    truck, drjohnson and playroom are scenes its host did not report;
+  - **`gnvq_cv` minus `c3dgs`;**
+  - **`ogc_lam1e6` minus `ogc`.**
+- **Gram against scalar:** `gnvq_rho0` minus `scalar`, computed as in c, with its `SE_noise`.
+- **Bytes and indices,** for every row, fine-tuned rows included:
+  - the `.npz`'s bytes, in bytes, MiB and MB;
+  - each array's compressed and uncompressed size inside the `.npz`;
+  - the zero-order entropy of the stored colour-index array, in bits per index;
+  - the number of distinct colour indices used.
+- **Also reported:**
+  - per row, the mean, SD and range over the 3 processes of protocol ii's PSNR / SSIM / LPIPS, C3DGS's own metrics
+    and the bytes;
+  - D1's and D2's SSIM, LPIPS and bytes, computed as in c;
+  - GN-VQ's logging as in E3r;
+  - each step's time and peak GPU memory.
+- **The threshold-sweep BD, in a separate session after E4's primary.** Fixed now:
+  - `color_importance_include` = 0.6e-6 x 3^j, j = -2, -1, +1, +2, at K = 4,096 without fine-tuning;
+  - one forked process per scene and point, seeded 0, with rows 1-5 and the scene's `rho_cv` reused;
+  - the j = 0 point is E4's process seeded 0;
+  - BD-rate and BD-PSNR of `gnvq_cv` against `gnvq_rho0`, `ogc` and `c3dgs` over the five points: `.npz` bytes
+    against protocol ii's PSNR, with Amendment 9 a's domain-scaled fit.
+
+### f. E4p: the pilot on train, before E4
+
+- **Train only,** a development scene (Amendment 9), with INRIA's checkpoint through E3p's pinned members.
+  - E4p is exploratory: it has no verdict, and no claim about the method rests on it.
+  - It runs before E4 (g).
+- **What it runs,** in 3 processes:
+  - everything in b;
+  - c's measurements: each `D_sp`, `D_s`, `v_s` and `SD_pool` for D1 and D2, with no verdict;
+  - e's fine-tuning, and e's other secondaries except the threshold sweep.
+- **OGC's released code against their published train row** (report only).
+  - Their paper publishes one per-scene train row, Table 19 (p. 22), uniform degree reduction of the official model,
+    test PSNR in dB:
+    - the full model: 21.79;
+    - truncation / their projection at degree 2: 21.00 / 21.73;
+    - at degree 1: 20.11 / 21.44;
+    - at degree 0: 19.48 / 20.01.
+  - E4p runs their released code for those rows (`run_exps.py`, stage `core`) on train, from the pinned clone, with
+    their evaluation, and places the numbers next to Table 19's. This checks OGC's code. The replication of their VQ
+    claim is e's pre-fine-tuning `ogc` minus `c3dgs`, not E4p.
+- **Their exact S2 Gram against our 16-probe `M` on train** (report only).
+  - **Their `A_i`:** from their released statistics code (`plugin.observation_gram`, S2 weighting, every 8th view
+    held out), from the pinned clone.
+  - **Ours:** the full-train-view 16 x 16 metric.
+  - **Reported**, over the splats with `tr(A_i) > 0`:
+    - the relative error sqrt(sum_i ||M_i - A_i||_F^2 / sum_i ||A_i||_F^2);
+    - the median, 90th and 99th percentiles of the per-splat ||M_i - A_i||_F / ||A_i||_F;
+    - the ratio of the total traces;
+    - the number of splats where exactly one of the two traces is zero.
+  - **What the error mixes:** the probes' variance with every other difference in `kaggle/RELATED_WORK_OGC.md`
+    section 3's table (rasterizer, resolution, principal point, which splats accumulate).
+- **What E4p may change.**
+  - Only two things: the number of processes per scene, upward; and bug fixes.
+  - Each such change is a dated note before any E4 code.
+  - It cannot change E4's rows, scenes, metric or bars.
+
+### g. Order
+
+1. This amendment, committed alone (docs).
+2. Deep Blending's header read (d) and its dated note, with the seven scenes' archive pins (d).
+3. E4p's code, its tests and its dry run (on the CPU stand-in, `bench/gn/dryrun/fake_c3dgs/`).
+4. The E4p run and its findings.
+5. E4.
+
+Kaggle titles: **"E4p C3DGS fork pilot"** and **"E4 C3DGS gate"**.
+
+**E4 may span several Kaggle sessions.**
+- Scenes are assigned to sessions in a dated note before any E4 run, from the feasibility note's estimates (d).
+- A scene's probe run, harness phase and 3 processes run in one session.
+
+### h. Unchanged
+
+- The frozen method (Amendment 11 b), with Amendment 14 b's 16 x 16 extension and its placement in this host.
+- Protocol ii (Amendment 12 a).
+- Amendment 14's rules, unless stated above: the build (13 b), the chunked `eigh` and `det` (13 g), the seeding
+  (14 f), the out-of-memory retry and the deadline (14 d), one device copy of the metric (14 g). A failure is
+  recorded and every step that does not need its product still runs (14 d), within the drop and `incomplete` rules of
+  c and d.
