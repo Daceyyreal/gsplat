@@ -1,0 +1,31 @@
+{
+  "name": "gn_e4p_ogc_train",
+  "log": "/kaggle/working/gn4p_work/gn_e4p_ogc_train.log",
+  "exit_code": 0,
+  "skipped_by_cutoff": false,
+  "lines_total": 21,
+  "lines_kept": 21,
+  "tail": [
+    "[Parser] 301 images, taken by 1 cameras.",
+    "",
+    "Loading EXIF exposure:   0%|          | 0/301 [00:00<?, ?it/s]",
+    "Loading EXIF exposure: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 301/301 [00:00<00:00, 19241.39it/s]",
+    "[Parser] No valid EXIF exposure data found in any image.",
+    "Scene scale: 7.490638414419265",
+    "Model initialized. Number of GS: 182686",
+    "[train] GN: 20 views, 1.7 s",
+    "[train] GN: 40 views, 3.0 s",
+    "[train] GN: 60 views, 4.6 s",
+    "[train] GN: 80 views, 5.9 s",
+    "[train] GN: 100 views, 7.2 s",
+    "[train] GN: 120 views, 8.6 s",
+    "[train] GN: 140 views, 10.0 s",
+    "[train] GN: 160 views, 11.2 s",
+    "[train] GN: 180 views, 12.5 s",
+    "[train] GN: 200 views, 13.8 s",
+    "[train] GN: 220 views, 14.8 s",
+    "[train] GN: 240 views, 16.1 s",
+    "[train] GN: 260 views, 17.6 s",
+    "[train] E4p ogc job: Table 19 ok True, exact Gram ok True, comparison {\"n_splats\": 1026508, \"n_tr_A_positive\": 924188, \"relative_error\": 0.4019694947368303, \"per_splat_relative_error\": {\"median\": 0.14468569308519363, \"p90\": 0.29011595547199265, \"p99\": 0.4777917683124543}, \"trace_ratio_M_over_A\": 0.9191436973947691, \"n_exactly_one_trace_zero\": 50, \"mixes\": \"the probes'"
+  ]
+}

@@ -1,0 +1,315 @@
+{
+  "scene": "train",
+  "clone": {
+    "url": "https://github.com/moholo-founder/ogc-3dgs.git",
+    "commit_pinned": "49ccae72e75eec9877354ed72074827531f7fd79",
+    "dest": "/tmp/ogc_ogc",
+    "licence": "PolyForm Noncommercial 1.0.0 (LICENSE at the pinned commit); used for noncommercial academic research",
+    "steps": [
+      {
+        "cmd": "git clone --quiet https://github.com/moholo-founder/ogc-3dgs.git /tmp/ogc_ogc",
+        "cwd": null,
+        "returncode": 0,
+        "time_s": 0.5873045921325684,
+        "tail": [],
+        "output_lines": 0
+      },
+      {
+        "cmd": "git -C /tmp/ogc_ogc checkout --quiet 49ccae72e75eec9877354ed72074827531f7fd79",
+        "cwd": null,
+        "returncode": 0,
+        "time_s": 0.01553201675415039,
+        "tail": [],
+        "output_lines": 0
+      }
+    ],
+    "head": "49ccae72e75eec9877354ed72074827531f7fd79",
+    "time_s": 0.6064145565032959,
+    "ok": true
+  },
+  "deps": {
+    "target": "/tmp/ogc_deps",
+    "required": [
+      "numpy",
+      "torch",
+      "plyfile",
+      "PIL",
+      "imageio",
+      "lpips"
+    ],
+    "session_site_packages_modified": false,
+    "missing_modules": [
+      "lpips"
+    ],
+    "dry_run": {
+      "cmd": "/usr/bin/python3 -m pip install --dry-run --quiet --report /kaggle/working/gn4p_work/ogc/ogc/ogc_pip_report.json lpips",
+      "cwd": null,
+      "returncode": 0,
+      "time_s": 1.5430676937103271,
+      "tail": [
+        "   \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501 53.8/53.8 kB 1.7 MB/s eta 0:00:00"
+      ],
+      "output_lines": 1
+    },
+    "would_install": [
+      "lpips==0.1.4"
+    ],
+    "install": {
+      "cmd": "/usr/bin/python3 -m pip install --no-deps --quiet --target /tmp/ogc_deps lpips==0.1.4",
+      "cwd": null,
+      "returncode": 0,
+      "time_s": 0.846250057220459,
+      "tail": [],
+      "output_lines": 0
+    },
+    "installed": [
+      "lpips==0.1.4"
+    ],
+    "target_top_level": [
+      "lpips"
+    ],
+    "shadows_session": [],
+    "ok": true,
+    "skip_table19": false,
+    "pythonpath": "/tmp/ogc_deps"
+  },
+  "ogc_data": {
+    "ogc_data": "/tmp/ogc_data",
+    "dataset_dir": "/tmp/ogc_data/tandt_db/tandt/train",
+    "how": {
+      "dataset": "symlink",
+      "cfg_args": "symlink",
+      "ply": "symlink"
+    }
+  },
+  "table19": {
+    "scene": "train",
+    "device": "cuda",
+    "steps": [
+      {
+        "cmd": "/usr/bin/python3 gram.py train --device cuda",
+        "cwd": "/tmp/ogc_ogc",
+        "returncode": 0,
+        "time_s": 474.33156275749207,
+        "tail": [
+          "train N 1026508 train 263 test 38",
+          "[1/263] 00002.jpg 3.2s contributing=401048 elapsed=3s",
+          "[11/263] 00013.jpg 1.7s contributing=233417 elapsed=19s",
+          "[21/263] 00024.jpg 1.3s contributing=236549 elapsed=36s",
+          "[31/263] 00036.jpg 1.4s contributing=271168 elapsed=51s",
+          "[41/263] 00047.jpg 1.5s contributing=357249 elapsed=67s",
+          "[51/263] 00059.jpg 1.8s contributing=476145 elapsed=85s",
+          "[61/263] 00070.jpg 1.7s contributing=155778 elapsed=103s",
+          "[71/263] 00082.jpg 2.0s contributing=207959 elapsed=124s",
+          "[81/263] 00093.jpg 2.2s contributing=128535 elapsed=143s",
+          "[91/263] 00104.jpg 2.2s contributing=177177 elapsed=161s",
+          "[101/263] 00116.jpg 1.8s contributing=302814 elapsed=181s",
+          "[111/263] 00127.jpg 1.8s contributing=222802 elapsed=199s",
+          "[121/263] 00139.jpg 1.6s contributing=217656 elapsed=215s",
+          "[131/263] 00150.jpg 1.7s contributing=246019 elapsed=231s",
+          "[141/263] 00162.jpg 1.6s contributing=220851 elapsed=247s",
+          "[151/263] 00173.jpg 1.4s contributing=135283 elapsed=263s",
+          "[161/263] 00184.jpg 1.6s contributing=145671 elapsed=280s",
+          "[171/263] 00196.jpg 1.9s contributing=260854 elapsed=297s",
+          "[181/263] 00207.jpg 2.1s contributing=213609 elapsed=316s",
+          "[191/263] 00219.jpg 2.3s contributing=203945 elapsed=337s",
+          "[201/263] 00230.jpg 2.0s contributing=139152 elapsed=357s",
+          "[211/263] 00242.jpg 1.6s contributing=66138 elapsed=374s",
+          "[221/263] 00253.jpg 1.7s contributing=147869 elapsed=390s",
+          "[231/263] 00264.jpg 1.8s contributing=140952 elapsed=408s",
+          "[241/263] 00276.jpg 1.8s contributing=130350 elapsed=429s",
+          "[251/263] 00287.jpg 1.9s contributing=335048 elapsed=448s",
+          "[261/263] 00299.jpg 1.7s contributing=405050 elapsed=466s",
+          "DONE train 469.96811413764954"
+        ],
+        "output_lines": 29
+      },
+      {
+        "cmd": "/usr/bin/python3 shfit.py train --weighting S2 --lams 1e-3 --device cuda",
+        "cwd": "/tmp/ogc_ogc",
+        "returncode": 0,
+        "time_s": 30.346606731414795,
+        "tail": [
+          "  accumulate S2: 40 views 1s",
+          "  accumulate S2: 80 views 2s",
+          "  accumulate S2: 120 views 2s",
+          "  accumulate S2: 160 views 3s",
+          "  accumulate S2: 200 views 3s",
+          "  accumulate S2: 240 views 4s",
+          "unobserved Gaussians: 102320 / 1026508",
+          "  lam=0.001 L=0: sum residual lsq=3.485e+05 trunc=5.819e+05",
+          "  lam=0.001 L=1: sum residual lsq=4.442e+04 trunc=3.926e+05",
+          "  lam=0.001 L=2: sum residual lsq=3044 trunc=1.575e+05",
+          "DONE"
+        ],
+        "output_lines": 11
+      },
+      {
+        "cmd": "/usr/bin/python3 run_exps.py train --stage core --device cuda",
+        "cwd": "/tmp/ogc_ogc",
+        "returncode": 0,
+        "time_s": 489.92648243904114,
+        "tail": [
+          "== core train",
+          "  full: psnr 21.788 ssim 0.8081 lpips 0.2152 (68s)",
+          "  [warn] implausible render of 00265.jpg (trunc0), re-rendering",
+          "  [warn] implausible render of 00265.jpg (trunc0), re-rendering",
+          "  [warn] implausible render of 00265.jpg (trunc0), re-rendering",
+          "  [warn] implausible render of 00265.jpg (trunc0), re-rendering",
+          "  [warn] view 00265.jpg (trunc0) accepted below the plausibility threshold after 4 attempts; flagged suspect",
+          "  trunc0: psnr 19.484 ssim 0.7601 lpips 0.2537 (72s)",
+          "  trunc1: psnr 20.111 ssim 0.7756 lpips 0.2415 (68s)",
+          "  trunc2: psnr 20.997 ssim 0.7942 lpips 0.2265 (68s)",
+          "  lsq_S2_lam0.001_0: psnr 20.013 ssim 0.7732 lpips 0.2418 (68s)",
+          "  lsq_S2_lam0.001_1: psnr 21.440 ssim 0.8023 lpips 0.2196 (68s)",
+          "  lsq_S2_lam0.001_2: psnr 21.729 ssim 0.8075 lpips 0.2156 (68s)",
+          "ALL DONE train",
+          "/usr/local/lib/python3.12/dist-packages/torchvision/models/_utils.py:208: UserWarning: The parameter 'pretrained' is deprecated since 0.13 and may be removed in the future, please use 'weights' instead.",
+          "  warnings.warn(",
+          "/usr/local/lib/python3.12/dist-packages/torchvision/models/_utils.py:223: UserWarning: Arguments other than a weight enum or `None` for 'weights' are deprecated since 0.13 and may be removed in the future. The current behavior is equivalent to passing `weights=VGG16_Weights.IMAGENET1K_V1`. You can also use `weights=VGG16_Weights.DEFAULT` to get the most up-to-date weights.",
+          "  warnings.warn(msg)"
+        ],
+        "output_lines": 18
+      }
+    ],
+    "source": "arXiv 2609.28997v1, Table 19 (Per-scene test PSNR of uniform degree reduction), p. 22, row train",
+    "ok": true,
+    "rows": {
+      "full": {
+        "config": "full",
+        "psnr": 21.787909708525007,
+        "ssim": 0.8081333982317072,
+        "lpips": 0.2152127317692104,
+        "published_psnr": 21.79,
+        "minus_published": -0.0020902914749925117
+      },
+      "trunc2": {
+        "config": "trunc2",
+        "psnr": 20.996629765159206,
+        "ssim": 0.7941610217094421,
+        "lpips": 0.22647513096269808,
+        "published_psnr": 21.0,
+        "minus_published": -0.0033702348407942395
+      },
+      "ours2": {
+        "config": "lsq_S2_lam0.001_2",
+        "psnr": 21.72905911897358,
+        "ssim": 0.8075125546831834,
+        "lpips": 0.2156157952390219,
+        "published_psnr": 21.73,
+        "minus_published": -0.0009408810264197598
+      },
+      "trunc1": {
+        "config": "trunc1",
+        "psnr": 20.110908056560316,
+        "ssim": 0.7755938642903378,
+        "lpips": 0.24153118266871101,
+        "published_psnr": 20.11,
+        "minus_published": 0.0009080565603163393
+      },
+      "ours1": {
+        "config": "lsq_S2_lam0.001_1",
+        "psnr": 21.439911290218955,
+        "ssim": 0.8023419427244287,
+        "lpips": 0.21964569664315173,
+        "published_psnr": 21.44,
+        "minus_published": -8.870978104624783e-05
+      },
+      "trunc0": {
+        "config": "trunc0",
+        "psnr": 19.483690864161442,
+        "ssim": 0.7600863309283006,
+        "lpips": 0.2537459523270005,
+        "published_psnr": 19.48,
+        "minus_published": 0.0036908641614417093
+      },
+      "ours0": {
+        "config": "lsq_S2_lam0.001_0",
+        "psnr": 20.013015696876927,
+        "ssim": 0.7731682203317943,
+        "lpips": 0.2417586414437545,
+        "published_psnr": 20.01,
+        "minus_published": 0.003015696876925489
+      }
+    },
+    "gram_time": {
+      "scene": "train",
+      "seconds": 469.96751523017883,
+      "n_train": 263,
+      "n_gaussians": 1026508,
+      "device": "cuda",
+      "gpu": "Tesla T4",
+      "date": "2026-10-01"
+    }
+  },
+  "exact_gram": {
+    "ok": true,
+    "returncode": 0,
+    "time_s": 474.16817259788513,
+    "tail": [
+      "1026508 Gaussians, 263 training cameras of 301",
+      "  statistics 1/263 (2s)",
+      "  statistics 21/263 (36s)",
+      "  statistics 41/263 (67s)",
+      "  statistics 61/263 (103s)",
+      "  statistics 81/263 (143s)",
+      "  statistics 101/263 (181s)",
+      "  statistics 121/263 (216s)",
+      "  statistics 141/263 (248s)",
+      "  statistics 161/263 (281s)",
+      "  statistics 181/263 (317s)",
+      "  statistics 201/263 (358s)",
+      "  statistics 221/263 (392s)",
+      "  statistics 241/263 (427s)",
+      "  statistics 261/263 (464s)",
+      "EXACT_GRAM {\"clone\": \"/tmp/ogc_ogc\", \"device\": \"cuda\", \"weighting\": \"S2\", \"holdout\": 8, \"time_s\": 471.72730898857117, \"n\": 1026508, \"shape\": [1026508, 16, 16], \"cuda_peak_allocated\": 3465971712, \"host\": {\"available\": true, \"rss_start_bytes\": 533037056, \"rss_peak_bytes\": 2579173376, \"n_samples\": 1881, \"interval_s\": 0.25, \"scope\": \"process and its children\"}}"
+    ],
+    "info": {
+      "clone": "/tmp/ogc_ogc",
+      "device": "cuda",
+      "weighting": "S2",
+      "holdout": 8,
+      "time_s": 471.72730898857117,
+      "n": 1026508,
+      "shape": [
+        1026508,
+        16,
+        16
+      ],
+      "cuda_peak_allocated": 3465971712,
+      "host": {
+        "available": true,
+        "rss_start_bytes": 533037056,
+        "rss_peak_bytes": 2579173376,
+        "n_samples": 1881,
+        "interval_s": 0.25,
+        "scope": "process and its children"
+      }
+    }
+  },
+  "comparison": {
+    "n_splats": 1026508,
+    "n_tr_A_positive": 924188,
+    "relative_error": 0.4019694947368303,
+    "per_splat_relative_error": {
+      "median": 0.14468569308519363,
+      "p90": 0.29011595547199265,
+      "p99": 0.4777917683124543
+    },
+    "trace_ratio_M_over_A": 0.9191436973947691,
+    "n_exactly_one_trace_zero": 50,
+    "mixes": "the probes' variance with the differences of kaggle/RELATED_WORK_OGC.md section 3 (rasterizer, resolution, principal point, which splats accumulate)",
+    "our_metric": {
+      "recomputed_in_this_job": true,
+      "probe_seed": 0,
+      "n_views": 263,
+      "time_s": 17.842051205999724
+    }
+  },
+  "fork_job_cache": {
+    "present": true,
+    "bit_identical": false,
+    "max_abs_diff": 0.00927734375
+  },
+  "steps_host_rss_peak": 6349049856
+}

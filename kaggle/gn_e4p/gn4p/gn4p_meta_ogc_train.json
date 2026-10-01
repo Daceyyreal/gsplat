@@ -1,0 +1,456 @@
+{
+  "scene": "train",
+  "job": "ogc",
+  "timings_s": {
+    "job": 1816.36993639
+  },
+  "dataset": "tandt",
+  "scene_set": "development",
+  "data_factor": 1,
+  "k": 4096,
+  "threshold": 6e-07,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "gsplat_commit": "2495032005c2",
+  "env": {
+    "python": "3.12.13",
+    "torch": "2.10.0+cu128",
+    "torch_cuda": "12.8",
+    "cudnn": 91002,
+    "packages": {
+      "gsplat": "1.6.0",
+      "torchpq": null,
+      "cupy-cuda12x": "14.0.1",
+      "plas": null,
+      "torchmetrics": "1.8.2",
+      "numpy": "2.0.2",
+      "pycolmap": "4.2.1",
+      "remotezip": "0.12.6"
+    },
+    "gpu": {
+      "name": "Tesla T4",
+      "capability": "7.5",
+      "total_memory": 15636037632,
+      "count": 1
+    },
+    "nvidia_smi": "Tesla T4, 580.178.04, 15360 MiB\nTesla T4, 580.178.04, 15360 MiB",
+    "nvcc": [
+      "Build cuda_12.8.r12.8/compiler.35583870_0"
+    ]
+  },
+  "session_ram": {
+    "total_bytes": 33658314752,
+    "available_bytes": 31497416704
+  },
+  "c3dgs_commit": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+  "ogc_commit": "49ccae72e75eec9877354ed72074827531f7fd79",
+  "deadline": 1790918074.0,
+  "reserve_s": 1800.0,
+  "steps": [
+    {
+      "name": "fetch_inria",
+      "timestamp": "2026-10-01T17:51:54",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 4.993195527000012,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 785870848,
+      "host_rss": {
+        "available": true,
+        "rss_start_bytes": 642195456,
+        "rss_peak_bytes": 786382848,
+        "n_samples": 22,
+        "interval_s": 0.25,
+        "scope": "process and its children"
+      }
+    },
+    {
+      "name": "download_dataset",
+      "timestamp": "2026-10-01T17:56:39",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 6.638599995767436e-05,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 785870848,
+      "host_rss": {
+        "available": true,
+        "rss_start_bytes": 752979968,
+        "rss_peak_bytes": 753037312,
+        "n_samples": 2,
+        "interval_s": 0.25,
+        "scope": "process and its children"
+      }
+    },
+    {
+      "name": "ogc_deps",
+      "timestamp": "2026-10-01T17:56:39",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 2.676857582000025,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 785870848,
+      "host_rss": {
+        "available": true,
+        "rss_start_bytes": 753037312,
+        "rss_peak_bytes": 814223360,
+        "n_samples": 12,
+        "interval_s": 0.25,
+        "scope": "process and its children"
+      }
+    },
+    {
+      "name": "ogc_data_layout",
+      "timestamp": "2026-10-01T17:56:42",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.0007025999999541455,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 785870848,
+      "host_rss": {
+        "available": true,
+        "rss_start_bytes": 753057792,
+        "rss_peak_bytes": 753131520,
+        "n_samples": 2,
+        "interval_s": 0.25,
+        "scope": "process and its children"
+      }
+    },
+    {
+      "name": "ogc_table19",
+      "timestamp": "2026-10-01T17:56:42",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 994.606989212,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 785870848,
+      "host_rss": {
+        "available": true,
+        "rss_start_bytes": 753135616,
+        "rss_peak_bytes": 6349049856,
+        "n_samples": 3963,
+        "interval_s": 0.25,
+        "scope": "process and its children"
+      }
+    },
+    {
+      "name": "ogc_exact_gram",
+      "timestamp": "2026-10-01T18:13:17",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 474.16860654599986,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 785870848,
+      "host_rss": {
+        "available": true,
+        "rss_start_bytes": 753152000,
+        "rss_peak_bytes": 3130085376,
+        "n_samples": 1890,
+        "interval_s": 0.25,
+        "scope": "process and its children"
+      }
+    },
+    {
+      "name": "build_runner",
+      "timestamp": "2026-10-01T18:21:11",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 21.933005757000046,
+      "cuda_peak": {
+        "allocated": 337296896,
+        "reserved": 360710144,
+        "allocated_over_start": 337296896
+      },
+      "host_max_rss_bytes": 3154804736,
+      "host_rss": {
+        "available": true,
+        "rss_start_bytes": 995487744,
+        "rss_peak_bytes": 3155324928,
+        "n_samples": 70,
+        "interval_s": 0.25,
+        "scope": "process and its children"
+      }
+    },
+    {
+      "name": "protocol_ii_views",
+      "timestamp": "2026-10-01T18:21:33",
+      "cuda_start": {
+        "allocated": 310493184,
+        "reserved": 360710144,
+        "free": 15148580864,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 0.005425549999927171,
+      "cuda_peak": {
+        "allocated": 310493184,
+        "reserved": 360710144,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 3154804736,
+      "host_rss": {
+        "available": true,
+        "rss_start_bytes": 2014244864,
+        "rss_peak_bytes": 2014248960,
+        "n_samples": 2,
+        "interval_s": 0.25,
+        "scope": "process and its children"
+      }
+    },
+    {
+      "name": "ogc_job_gn_pass16_full",
+      "timestamp": "2026-10-01T18:21:33",
+      "cuda_start": {
+        "allocated": 310493184,
+        "reserved": 360710144,
+        "free": 15148580864,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 20.943805426999916,
+      "cuda_peak": {
+        "allocated": 1644413440,
+        "reserved": 2065694720,
+        "allocated_over_start": 1333920256
+      },
+      "host_max_rss_bytes": 3154804736,
+      "host_rss": {
+        "available": true,
+        "rss_start_bytes": 2014248960,
+        "rss_peak_bytes": 2907987968,
+        "n_samples": 85,
+        "interval_s": 0.25,
+        "scope": "process and its children"
+      }
+    },
+    {
+      "name": "ogc_compare_gram",
+      "timestamp": "2026-10-01T18:21:55",
+      "cuda_start": {
+        "allocated": 319012864,
+        "reserved": 348127232,
+        "free": 15112929280,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 10.826796435999768,
+      "cuda_peak": {
+        "allocated": 319012864,
+        "reserved": 348127232,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 4442976256,
+      "host_rss": {
+        "available": true,
+        "rss_start_bytes": 2908180480,
+        "rss_peak_bytes": 4372152320,
+        "n_samples": 45,
+        "interval_s": 0.25,
+        "scope": "process and its children"
+      }
+    }
+  ],
+  "inria": {
+    "url": "https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip",
+    "directory_checked": true,
+    "directory_time_s": 4.4092555619999985,
+    "members": {
+      "ply": {
+        "name": "train/point_cloud/iteration_30000/point_cloud.ply",
+        "path": "/kaggle/working/e3p_inria/train/point_cloud.ply",
+        "bytes_pinned": 254575516,
+        "crc32_pinned": "85d6d4ca",
+        "compressed_bytes": 219441845,
+        "header_offset": 12052819184,
+        "source": "present",
+        "bytes": 254575516,
+        "crc32": "85d6d4ca",
+        "sha1": "187b6095ffe3135c7769d73a9caefcd03a5273d8",
+        "time_s": 0.5832187430000886
+      },
+      "cameras": {
+        "name": "train/cameras.json",
+        "path": "/kaggle/working/e3p_inria/train/cameras.json",
+        "bytes_pinned": 120800,
+        "crc32_pinned": "9940f310",
+        "compressed_bytes": 38454,
+        "header_offset": 12050023231,
+        "source": "present",
+        "bytes": 120800,
+        "crc32": "9940f310",
+        "sha1": "79ee8c10b5991f634545557ca401cd2e31a31f75",
+        "time_s": 0.0004432440000528004
+      },
+      "cfg_args": {
+        "name": "train/cfg_args",
+        "path": "/kaggle/working/e3p_inria/train/cfg_args",
+        "bytes_pinned": 162,
+        "crc32_pinned": "cbf086a8",
+        "compressed_bytes": 130,
+        "header_offset": 12050061733,
+        "source": "present",
+        "bytes": 162,
+        "crc32": "cbf086a8",
+        "sha1": "7b4e85d00695394a1decc4300c0904be7a912d6c",
+        "time_s": 5.043400005888543e-05
+      }
+    },
+    "time_s": 4.993021950999946,
+    "http_requests": 4
+  },
+  "inria_cfg_args": {
+    "eval": true,
+    "images": "images",
+    "model_path": "./eval/train",
+    "resolution": 1,
+    "sh_degree": 3,
+    "source_path": "f:/bkerbl/Downloads/tandt/train",
+    "white_background": false
+  },
+  "cfg_args_mismatch": [],
+  "ogc_clone": {
+    "url": "https://github.com/moholo-founder/ogc-3dgs.git",
+    "commit_pinned": "49ccae72e75eec9877354ed72074827531f7fd79",
+    "dest": "/tmp/ogc_ogc",
+    "licence": "PolyForm Noncommercial 1.0.0 (LICENSE at the pinned commit); used for noncommercial academic research",
+    "steps": [
+      {
+        "cmd": "git clone --quiet https://github.com/moholo-founder/ogc-3dgs.git /tmp/ogc_ogc",
+        "cwd": null,
+        "returncode": 0,
+        "time_s": 0.5873045921325684,
+        "tail": [],
+        "output_lines": 0
+      },
+      {
+        "cmd": "git -C /tmp/ogc_ogc checkout --quiet 49ccae72e75eec9877354ed72074827531f7fd79",
+        "cwd": null,
+        "returncode": 0,
+        "time_s": 0.01553201675415039,
+        "tail": [],
+        "output_lines": 0
+      }
+    ],
+    "head": "49ccae72e75eec9877354ed72074827531f7fd79",
+    "time_s": 0.6064145565032959,
+    "ok": true
+  },
+  "camera_frame_check": {
+    "n_runner": 301,
+    "n_cameras_json": 301,
+    "n_matched": 301,
+    "max_position_diff": 1.7763568394002505e-15,
+    "max_rotation_diff": 3.3306690738754696e-16,
+    "tol": 0.0001,
+    "pass": true
+  },
+  "split_check": {
+    "n_test": 38,
+    "test_names": [
+      "00001",
+      "00009",
+      "00017",
+      "00025",
+      "00033",
+      "00041",
+      "00049",
+      "00057",
+      "00065",
+      "00073",
+      "00081",
+      "00089",
+      "00097",
+      "00105",
+      "00113",
+      "00121",
+      "00129",
+      "00137",
+      "00145",
+      "00153",
+      "00161",
+      "00169",
+      "00177",
+      "00185",
+      "00193",
+      "00201",
+      "00209",
+      "00217",
+      "00225",
+      "00233",
+      "00241",
+      "00249",
+      "00257",
+      "00265",
+      "00273",
+      "00281",
+      "00289",
+      "00297"
+    ],
+    "equals_cameras_json_head": true
+  },
+  "ogc_result": "/kaggle/working/gn4p/gn4p_ogc_train.json",
+  "failed_steps": [],
+  "skipped_steps": [],
+  "data_deleted": false
+}
