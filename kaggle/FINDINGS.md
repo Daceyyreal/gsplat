@@ -82,6 +82,15 @@ compiling (no `ensurepip` for a venv).
 - **The injected row** read +0.127 dB in protocol ii at +1.485% bytes against the probe run. It cannot be read as
   GN-VQ's effect: seeded C3DGS runs are not reproduced on the GPU, so the geometry and C3DGS's own colour codebook differ too.
 
+**E4p (section 16, branch `bench/gn-vq`): exploratory pilot of E4's fork on train, no verdict (Amendment 15 f).**
+- **The fork held:** three C3DGS processes each saved nine rows from one shared state, every primary save passed its
+  keep-mask, label and geometry checks, and nothing ran out of memory (9.43 GB at the peak, OGC's assignment chunk).
+- **Inside one process, on the standard test views:** `gnvq_cv` beat C3DGS's own VQ by +0.1326 dB at +1.51% bytes. D1
+  (`rho_cv` against rho = 0) was +0.0007 dB with `SE_noise` 0.0020. D2 (against OGC's VQ) was -0.0403 dB in all three
+  processes, against a row using all 4,096 codewords to `gnvq_cv`'s 2,310-2,592 and 275,459 more bytes.
+- **OGC's released code** reproduces its Table 19 train row to two decimals; our 16-probe metric's total trace is 0.919
+  of their exact Gram's.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -147,6 +156,12 @@ compiling (no `ensurepip` for a venv).
   estimate (`bench/gn/e3r_estimate.py`), and the geometry diagnosis, read from this repository's hooks, wrapper and
   `bench/gn/` and from C3DGS's source at `2a234af5`. `bench/gn/check_s15.py` recomputes every number in the section
   from those files and checks each against the text.
+- Section 16: every number comes from `kaggle/gn_e4p/gn4p/` (`60c4839b`; one Kaggle session on 2x T4, rows timestamped
+  2026-10-01T18:02 to 20:16, gsplat commit `24950320`, a restored wheel and E3p's fetched members reused), unpacked
+  unchanged. The exceptions are the pre-run estimate (HANDOFF, "E4p notebook"), E3r's rows and section 15's numbers
+  (`kaggle/gn_e3r/gn3r/`), note i's feasibility (PREREG_GN.md Amendment 15 i) and the readings of code: this repository's
+  job, hooks, wrapper and `bench/gn/`, OGC's `vq.py` at `49ccae72` and C3DGS's source at `2a234af5`.
+  `bench/gn/check_s16.py` recomputes every number in the section from those files and checks each against the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -2664,3 +2679,431 @@ The C3DGS runs (train; wall time in the wrapper, C3DGS's `times.json` parts, pea
     GN-VQ;
   - GN-VQ's warm start and its iteration cap;
   - C3DGS's fine-tuning as a secondary.
+
+## 16. E4p: the C3DGS fork pilot on train (exploratory, no verdict) — the fork held; D1 is +0.0007 dB, D2 -0.0403 dB, and OGC uses all 4,096 codewords
+
+**E4p is a pilot on train, a development scene, and has no verdict** (Amendment 15 f, `573142ac`, with note i,
+`85b43cff`, and note ii, `fcd1914f`, all written before any E4p code). It runs E4's rows, measurements and fine-tuning
+in one forked C3DGS process, three times (seeds 0, 1 and 2), and OGC's own code in a second job. Nothing below is a
+result about the method. Every number comes from `kaggle/gn_e4p/gn4p/` (`60c4839b`), except where another committed
+file is named. Items marked **post hoc** were read from the files after the fact; Amendment 15 and its notes did not
+plan them.
+
+**What ran:**
+- **Both jobs completed** and exited with code 0; neither was skipped by the start cutoff. The fork job wrote 29 rows,
+  all `ok`: `uncompressed`, the `probe` and 27 fork rows (9 per process).
+- **Nothing failed:** no failed, skipped or missing step or row in either job, and no deviation.
+- **No retry:** each process ran once (attempt 0) with `--data_device cuda`; none ran out of memory or lost a row.
+- **One flag to read correctly:** the probe's evaluation run is recorded with `ok` false and return code 0. That flag
+  needs C3DGS's own `.npz` and `results.json` in the run's output (`kaggle/e3q_c3dgs.py:247`), and an evaluation-only
+  run writes neither. Its measurements come from the wrapper's record, whose status is `ok`.
+
+### Inputs and checks
+
+| Check | train |
+|---|---|
+| Session | torch 2.10.0+cu128 (CUDA 12.8), driver 580.178.04, cuDNN 91002, Python 3.12.13, 2x Tesla T4; gsplat commit `24950320`, the restored wheel (install 165.9 s) |
+| INRIA members | E3p's attached copies (`present`), all 3 matching the pins in size and CRC32; `point_cloud.ply` SHA-1 `187b6095`, E3p's |
+| `cfg_args` against E3p's pin | no mismatch |
+| Camera frame against `cameras.json` | pass: 301 of 301, largest differences 1.78e-15 (position), 3.33e-16 (rotation) |
+| Test split against `cameras.json` | equal, 38 test views |
+| Uncompressed model, protocol ii (PSNR / SSIM / LPIPS) | 21.293 / 0.7926 / 0.2170 at 980x545. E3p's and E3r's rows, equal to each other, differ from it by 5.0e-7 dB in PSNR and 1.8e-8 in SSIM and LPIPS, so not in every digit the CSVs hold |
+| C3DGS build (`gn4p_c3dgs_build.json`) | ok, head `2a234af5`; 192.3 s of builds, 210.3 s in all; Amendment 13 b's six deviations |
+| OGC clone | HEAD `49ccae72` in both jobs (`/tmp/ogc_fork`, `/tmp/ogc_ogc`) |
+
+### The fork
+
+**Every check held.** In each of the three processes, at the save of each of the six primary rows (rows 1-5 and 2b), the
+keep mask and quantized set, the labels and the geometry SHA-1 matched (18 of 18; `checks_failed` empty in every
+process). All rows of a process share its counts: 115,907 pruned, 107,525 keeping their own colour and 803,076
+colour-quantized, as in E3r's probe run.
+
+**The geometry SHA-1 differs between processes, as in E3r:**
+
+| Run | Geometry SHA-1 |
+|---|---|
+| probe (seed 0) | `9f55ef45` |
+| process 0 | `9275d0be` |
+| process 1 | `770e48d1` |
+| process 2 | `02cbe042` |
+
+- **Within a process it is one hash for every row,** which is the point of the fork: the warm start, keep mask and
+  geometry are shared by construction.
+- **The fine-tuned rows' SHA-1 is the process's, not re-hashed after fine-tuning.** The job writes the process report's
+  hash into every row (`kaggle/gn_e4p_scene.py:597`), and the hooks compare it only at the six primary rows' saves
+  (`kaggle/e4p_hooks.py:308`). Fine-tuning changes the geometry: in all nine fine-tuned rows the compressed `rotation`
+  array grew by 163,243-172,206 bytes and `scaling` shrank by 188,575-190,944 against the row before fine-tuning. So the
+  `geometry_sha1` column of a `*_ft` row names the process, not the geometry that row saved.
+- **Each fine-tuned row started from its source row:** its `pre_finetune_sha1` equals that row's `pre_save_sha1` in all
+  nine, and the labels survived fine-tuning in all nine.
+- **Post hoc: OGC's colour output looks identical in all three processes.** `ogc`'s `features_dc`, `features_rest` and
+  `feature_indices` have the same compressed sizes in every process (258,527, 3,277,687 and 1,820,544 bytes), as do
+  `ogc_lam1e6`'s, and the index entropies agree in every digit. That is what OGC's own seeded generator gives if its
+  inputs are the same in every process; the quantizer at the colour step was the same in all three (DC scale 0.054016,
+  zero point -81; AC scale 0.0068831, zero point -4). The `.npz` files were not bundled, so the arrays were not compared
+  byte for byte. If so, D2's spread between processes comes from the GN-VQ side and the geometry, not from OGC's
+  codebook.
+
+### `rho_cv` and the iterations
+
+The cross-validation (Amendment 14 b, run by E3r's harness phase unchanged): GN-VQ on the probe run's 803,076 splats
+with the even-view 16 x 16 metric (132 views) at each `rho`, from the probe's codebook, scored by the clamped dMSE on the
+131 odd-indexed train views.
+
+| dMSE, odd train views | `rho` = 0 | `rho` = 1e-3 | `rho` = 1e-2 | `rho` = 1e-1 | `rho` = 3e-1 | `rho` = 1 | `rho` = 3 |
+|---|---|---|---|---|---|---|---|
+| clamped (the score) | 1.0899e-04 | 1.0782e-04 | **1.0387e-04** | 1.0529e-04 | 1.1378e-04 | 1.3723e-04 | 1.7473e-04 |
+| unclamped | 1.1162e-04 | 1.1032e-04 | 1.0613e-04 | 1.0760e-04 | 1.1624e-04 | 1.4024e-04 | 1.7877e-04 |
+
+- **`rho_cv` is 1e-2,** ahead of 1e-1 by 1.37% of its score; E3r's probe gave 1e-2 too (section 15).
+- **Every GN-VQ run stopped at the 20-iteration cap:** all 16 (7 CV, and `gnvq_rho0`, `scalar` and `gnvq_cv` in each
+  process). The fork rows' last relative drops were 2.82e-3 to 3.01e-3 (`gnvq_rho0`), 2.40e-3 to 2.71e-3 (`gnvq_cv`)
+  and 1.14e-3 to 1.22e-3 (`scalar`), all above the 1e-3 rule.
+
+### The rows
+
+Protocol ii (Amendment 12 a) on each row's decoded `.npz`, and C3DGS's own evaluation. Means over the three processes,
+with the range for protocol ii's PSNR; codewords used are the distinct codebook entries among the 803,076 quantized
+splats' stored indices (K = 4,096); the index entropy is over the whole stored index array (910,601 indices).
+
+| Row | Protocol ii PSNR: mean (range) | SSIM | LPIPS | C3DGS's PSNR | `.npz` bytes | Codewords used | Index entropy (bits) |
+|---|---|---|---|---|---|---|---|
+| `c3dgs` (row 1) | 20.997 (20.995-21.002) | 0.7744 | 0.2362 | 21.508 | 13,862,916 | 2,209-2,505 | 10.34-10.44 |
+| `ogc` (2) | 21.170 (21.169-21.172) | 0.7839 | 0.2260 | 21.652 | 14,347,699 | 4,096 | 12.77 |
+| `ogc_lam1e6` (2b) | 21.136 (21.135-21.137) | 0.7827 | 0.2278 | 21.512 | 14,354,861 | 4,096 | 12.77 |
+| `gnvq_rho0` (3) | 21.129 (21.128-21.131) | 0.7820 | 0.2279 | 21.632 | 14,082,106 | 2,300-2,573 | 11.07-11.16 |
+| `scalar` (4) | 21.016 (21.010-21.021) | 0.7752 | 0.2356 | 21.524 | 13,901,622 | 2,498-2,806 | 10.58-10.68 |
+| `gnvq_cv` (5) | 21.130 (21.125-21.133) | 0.7821 | 0.2278 | 21.634 | 14,072,240 | 2,310-2,592 | 10.97-11.06 |
+| `c3dgs_ft` | 21.299 (21.270-21.327) | 0.7850 | 0.2273 | 21.749 | 13,918,937 | as `c3dgs` | as `c3dgs` |
+| `ogc_ft` | 21.306 (21.255-21.354) | 0.7873 | 0.2235 | 21.760 | 13,264,995 | 4,096 | 12.77 |
+| `gnvq_cv_ft` | 21.256 (21.167-21.335) | 0.7865 | 0.2242 | 21.734 | 13,966,725 | as `gnvq_cv` | as `gnvq_cv` |
+
+- **Context:** the uncompressed model reads 21.293 dB; the probe run, evaluated from its decoded `.npz`, 21.003 / 0.7747 /
+  0.2359 at 13,877,307 bytes (C3DGS's evaluation 21.514).
+- **Row 1's spread is C3DGS's own run-to-run spread** over seeds 0, 1 and 2, which E3r left unmeasured: an SD of 0.0041 dB in protocol ii
+  and 11,496 bytes over the three processes.
+
+### The primary components (Amendment 15 c), with no verdict
+
+Within process `p`, protocol ii's test PSNR, n = 1 scene, so `SD_pool` = sqrt(`v_s`) and `SE_noise` = `SD_pool` /
+sqrt(3):
+
+| | D1 = `gnvq_cv` - `gnvq_rho0` | D2 = `gnvq_cv` - `ogc` |
+|---|---|---|
+| `D_sp`, processes 0 / 1 / 2 (dB) | +0.0034 / +0.0018 / -0.0031 | -0.0374 / -0.0390 / -0.0446 |
+| `D_s` | +0.0007 | -0.0403 |
+| `v_s` | 1.161e-05 | 1.421e-05 |
+| `SD_pool` | 0.0034 | 0.0038 |
+| `SE_noise` | 0.0020 | 0.0022 |
+| SSIM: `D_s` (`SE_noise`) | +0.000016 (0.000008) | -0.0019 (0.00005) |
+| LPIPS | -0.00013 (0.00004) | +0.0018 (0.00007) |
+| `.npz` bytes | -9,866 (316) | -275,459 (5,250) |
+| C3DGS's evaluation, PSNR | +0.0018 (0.0003) | -0.0180 (0.0002) |
+
+- **D1 is about 0 on the standard test views:** +0.0007 dB, a third of one `SE_noise`, with one process of three
+  negative.
+- **D2 is negative in all three processes,** 18.5 times its `SE_noise`. Its rows differ in rate and in effective
+  codebook size, below.
+
+**The power check (note ii d)**, a planning number, not a test:
+
+| | D1 | D2 |
+|---|---|---|
+| `s` = sqrt(`v_s`) | 0.0034 | 0.0038 |
+| the smallest `D_bar` condition 3 passes at n = 7 with 3 processes, 2 `s` / sqrt(21) | 0.0015 | 0.0016 |
+| observed `D_s` | +0.0007 | -0.0403 |
+| proposed process count | 14 | none |
+
+- **D1:** |`D_s`| is below the threshold, so the report proposes P = 14, the smallest P with 2 `s` / sqrt(7 P) below
+  |`D_s`|. Adopting it would take a dated note before any E4 code; none was written.
+- **D2:** |`D_s`| is 24.5 times the threshold, so no count is proposed. That only says three processes resolve a
+  difference this size. D2 is negative, and condition 1 needs `D_bar` > 0, so "no proposal" does not mean D2 passes.
+
+### The secondaries (Amendment 15 e)
+
+Protocol ii's PSNR, computed as in c:
+
+| Difference | `D_sp`, processes 0 / 1 / 2 (dB) | `D_s` | `SE_noise` | `.npz` bytes, `D_s` |
+|---|---|---|---|---|
+| `ogc` - `c3dgs` | +0.1675 / +0.1767 / +0.1746 | +0.1730 | 0.0028 | +484,783 (+3.50%) |
+| `gnvq_cv` - `c3dgs` | +0.1301 / +0.1378 / +0.1300 | +0.1326 | 0.0026 | +209,324 (+1.51%) |
+| `ogc_lam1e6` - `ogc` | -0.0347 / -0.0348 / -0.0344 | -0.0346 | 0.0001 | +7,162 |
+| `gnvq_rho0` - `scalar` | +0.1073 / +0.1205 / +0.1110 | +0.1129 | 0.0039 | +180,483 |
+| after fine-tuning: `ogc` - `c3dgs` | -0.0179 / -0.0444 / +0.0838 | +0.0072 | 0.0391 | -653,942 |
+| after fine-tuning: `gnvq_cv` - `ogc` | -0.1425 / +0.0102 / -0.0196 | -0.0506 | 0.0467 | +701,730 |
+
+- **`gnvq_cv` minus C3DGS's own VQ is the paired number E3r could not give:** +0.1326 dB at +1.51% bytes, with the
+  geometry and warm start shared. E3r's unpaired injected row read +0.1268 dB at +1.485% (section 15); context, not
+  like-for-like.
+- **`ogc` minus `c3dgs`, the replication's secondary,** is +0.1730 dB at +3.50% bytes. OGC's paper reports +0.49 dB
+  before fine-tuning as the mean of 9 Mip-NeRF 360 scenes (its Table 1); train is not among them. Context only.
+- **The paper's `lam` 1e-6 reads 0.0346 dB below the code's 1e-3** in every process, on the same inputs.
+- **After fine-tuning the spreads grow** (`SD_pool` 0.0677 and 0.0810 against 0.0048 and 0.0038 before: 14.1 and 21.5
+  times), as Amendment 15 e's caveat said GPU atomics would make them. Neither fine-tuned difference is beyond its
+  `SE_noise`.
+
+**Where `ogc`'s extra bytes are** (compressed sizes inside the `.npz`; every other array is equal within a process):
+
+| Process | `features_dc` | `features_rest` | `feature_indices` | Total | Index share |
+|---|---|---|---|---|---|
+| 0 | +3,176 | +73,935 | +396,817 | +473,928 | 83.7% |
+| 1 | +3,626 | +82,088 | +406,805 | +492,519 | 82.6% |
+| 2 | +3,381 | +77,841 | +406,679 | +487,901 | 83.4% |
+
+- **`gnvq_cv` minus `c3dgs`:** `feature_indices` +192,478 / +193,884 / +196,431 of +207,931 / +208,387 / +211,653 in
+  all (92.6-93.0%), `features_rest` +15,472 / +14,510 / +15,226, `features_dc` -19 / -7 / -4.
+- **So the index stream carries most of both rows' extra bytes,** as OGC's Table 13 says for its own host
+  (`kaggle/E4_DESIGN.md`, fact 1).
+
+### Codewords used: unequal effective codebooks at equal K (post hoc)
+
+| Process | `c3dgs` | `gnvq_rho0` | `scalar` | `gnvq_cv` | `ogc`, `ogc_lam1e6` | `ogc` / `gnvq_cv` |
+|---|---|---|---|---|---|---|
+| 0 | 2,505 | 2,573 | 2,806 | 2,592 | 4,096 | 1.580 |
+| 1 | 2,209 | 2,300 | 2,498 | 2,310 | 4,096 | 1.773 |
+| 2 | 2,359 | 2,431 | 2,664 | 2,462 | 4,096 | 1.664 |
+
+- **C3DGS's own VQ leaves 1,591-1,887 of its 4,096 entries without a splat.**
+- **The GN-VQ rows start from that codebook and keep its empty entries:** an entry whose cluster has a zero summed
+  metric keeps its old value (`bench/gn/diagnostics.py:547`), 1,505-1,787 of them at `gnvq_cv`'s last iteration. They
+  end with 87-103 (`gnvq_cv`), 68-91 (`gnvq_rho0`) and 289-305 (`scalar`) more entries in use than their warm start,
+  but far from all.
+- **OGC reseeds every empty cluster** at the points of largest distortion (`vq.py:74-84` at `49ccae72`), and both OGC
+  rows use all 4,096.
+- **So at equal K the rows do not have equal effective codebooks:** OGC's is 1.58-1.77 times `gnvq_cv`'s in the same
+  process, and its `.npz` is 275,459 bytes larger. Equal K does not equalize the codebook or the rate, and D2 compares
+  rows that differ in both. Which of OGC's differences from GN-VQ (reseeding, init, ridge, iterations, no clip, no
+  final assignment against the int8 table) produces D2 is not separable from E4p's rows; no causal claim is made.
+
+### Fidelity to the uncompressed model per angle (note ii a)
+
+Mean over the 38 test cameras, each orbited about the scene's up axis through its centre, of the PSNR of each row's
+render against the uncompressed model's at the same camera; `D_s` (`SE_noise`) in dB:
+
+| Angle (degrees) | D1 | D2 | `ogc_lam1e6` - `ogc` |
+|---|---|---|---|
+| -40 | +0.1889 (0.0648) | -0.2595 (0.0363) | -1.0860 (0.0291) |
+| -20 | +0.2523 (0.0120) | -0.5180 (0.0690) | -1.0199 (0.0063) |
+| -10 | +0.0751 (0.0296) | -0.7219 (0.0522) | -0.9312 (0.0008) |
+| 0 | +0.0445 (0.0205) | -0.8341 (0.0272) | -1.0021 (0.0024) |
+| +10 | +0.0458 (0.1977) | -0.9270 (0.1607) | -0.9702 (0.0041) |
+| +20 | +0.2804 (0.0626) | -0.3564 (0.0212) | -0.7762 (0.0131) |
+| +40 | +0.3111 (0.0269) | -0.1009 (0.0375) | -0.4814 (0.0244) |
+
+- **D1 is positive at all seven angles, D2 negative at all seven.**
+- **At angle 0 the two measures differ for D1:** +0.0445 dB to the uncompressed model, +0.0007 dB to the ground truth,
+  on the same 38 cameras. Post hoc.
+- **Single orbit views (post hoc).** Each angle's mean rests on 38 renders, and one view can move it. The views whose
+  difference reaches 10 dB in some process:
+  - **`00297` at +10 degrees:** process 2's `gnvq_cv` render reads 13.83 dB against 29.53 dB (`gnvq_rho0`) and 34.91 dB
+    (`ogc`); D1's per-process differences there are -1.12 / +10.69 / -15.70 dB. Without that view D1 at +10 degrees is
+    +0.1022 instead of +0.0458, and D2 -0.6870 instead of -0.9270.
+  - **`00201` at +20 degrees:** D1 +0.49 / +1.01 / +11.21 dB; without it D1 is +0.1734 instead of +0.2804.
+  - **`00049` at +40 degrees:** `ogc_lam1e6` minus `ogc` +11.42 / +9.60 / +9.35 dB, in every process; without it that
+    difference is -0.7680 instead of -0.4814.
+- **The fine-tuned rows are farther from the uncompressed model** (28.16-29.71 dB across rows and angles, against
+  32.83-37.25 dB before fine-tuning) while reading higher in protocol ii: fine-tuning trains toward the images, not
+  toward the uncompressed model. Post hoc.
+- **The limit stated in advance** (note ii a) applies: a synthetic camera can look where no training view did.
+
+### Test views by distance to the training views (note ii b)
+
+Every test camera's smallest angle, seen from the scene centre, to a training camera's centre runs from 0.078 to 8.272
+degrees: train's test views are every 8th frame of the same capture, so the far tercile is not far. Per test camera, in
+degrees: `00001` 0.078, `00009` 0.808, `00017` 3.932, `00025` 4.282, `00033` 1.515, `00041` 1.385, `00049` 2.221,
+`00057` 2.319, `00065` 0.728, `00073` 0.427, `00081` 1.225, `00089` 1.207, `00097` 0.658, `00105` 0.105, `00113` 1.392,
+`00121` 0.940, `00129` 3.106, `00137` 3.550, `00145` 3.860, `00153` 1.379, `00161` 2.495, `00169` 0.738, `00177` 0.835,
+`00185` 3.364, `00193` 2.785, `00201` 1.074, `00209` 0.513, `00217` 1.158, `00225` 1.571, `00233` 2.263, `00241` 4.237,
+`00249` 8.272, `00257` 0.974, `00265` 0.808, `00273` 2.287, `00281` 2.249, `00289` 0.208, `00297` 0.292.
+
+| Tercile | Views | Angle (degrees) | Uncompressed PSNR | D1: `D_s` (`SE_noise`) | D2: `D_s` (`SE_noise`) |
+|---|---|---|---|---|---|
+| near | 13 | 0.078-0.940 | 21.109 | -0.0030 (0.0034) | -0.0358 (0.0027) |
+| middle | 13 | 0.974-2.263 | 21.162 | +0.0071 (0.0007) | -0.0437 (0.0012) |
+| far | 12 | 2.287-8.272 | 21.635 | -0.0022 (0.0028) | -0.0416 (0.0030) |
+
+- **D2 is negative in every tercile; D1 changes sign** and is positive only in the middle one.
+
+### The scene geometry and splat direction coverage (note ii)
+
+- **The centre's conditioning:** the smallest eigenvalue of the summed axis projectors over the 263 training cameras is
+  0.442 per camera (the others 0.578 and 0.980); the training cameras lie 1.62 to 6.41 world units from the centre (median
+  3.71); 1 of the 38 test cameras (2.63%), and so 2.63% of the 228 orbit cameras, is farther from it than the farthest
+  training camera.
+- **Coverage,** the effective rank of `M_i / tr(M_i)` (1 to 16) under the full-train-view 16 x 16 metric:
+
+| Splats | Count | `tr` = 0, left out | Min | 10th | 25th | 50th | 75th | 90th | Max | Lowest-rank tercile: splats, rank up to, trace share |
+|---|---|---|---|---|---|---|---|---|---|---|
+| all | 1,026,508 | 102,318 | 1.00 | 1.08 | 1.66 | 2.51 | 3.26 | 3.78 | 6.80 | 308,064, 1.98, 0.269 |
+| colour-quantized (probe) | 803,076 | 38 | 1.00 | 1.07 | 1.63 | 2.50 | 3.26 | 3.78 | 6.80 | 267,680, 1.96, 0.251 |
+
+- **The median splat with a nonzero trace has an effective rank of 2.51 of 16,** and the third with the lowest rank
+  carries about a quarter of the trace.
+
+### OGC's job (Amendment 15 f, report only)
+
+**Their released code against their published train row** (Table 19, uniform degree reduction, their evaluation):
+
+| Row | E4p | Published | E4p minus published |
+|---|---|---|---|
+| the full model | 21.7879 | 21.79 | -0.0021 |
+| truncation, degree 2 | 20.9966 | 21.00 | -0.0034 |
+| their projection, degree 2 | 21.7291 | 21.73 | -0.0009 |
+| truncation, degree 1 | 20.1109 | 20.11 | +0.0009 |
+| their projection, degree 1 | 21.4399 | 21.44 | -0.0001 |
+| truncation, degree 0 | 19.4837 | 19.48 | +0.0037 |
+| their projection, degree 0 | 20.0130 | 20.01 | +0.0030 |
+
+- **All seven round to the published values.** Their code reproduces their train row.
+- **Their full model reads 21.7879 dB in their evaluation and 21.293 dB in protocol ii:** two protocols, as in E3q
+  (section 14).
+- **The dependencies:** only `lpips` was missing; pip resolved it alone (`lpips==0.1.4`) and it went into the isolated
+  target, with no session package touched.
+
+**Their exact S2 Gram `A_i` against our 16-probe `M_i`** (over the 924,188 splats with `tr(A_i)` > 0):
+
+| Relative error | Per-splat: median | 90th | 99th | Total trace, M over A | Splats with exactly one trace zero |
+|---|---|---|---|---|---|
+| 0.402 | 0.145 | 0.290 | 0.478 | 0.9191 | 50 |
+
+- **The trace ratio is systematic, not probe noise:**
+  - both bases are 3DGS's real SH constants, so `tr(Y Y^T)` is the same constant in every direction (the identity of
+    section 15). The ratio of total traces therefore compares only the per-view weights, sum over splats and views
+    of `s_iv` against `S2_iv`; directions cannot move it;
+  - our `s_iv` is unbiased for `S2_iv` (`kaggle/RELATED_WORK_OGC.md` section 3), so the probes' error has mean zero
+    in every view. Summed over 924,188 splats and 263 views it does not leave our total 8.1% short; the per-splat
+    spread (median 0.145) is where the probes' variance shows;
+  - so the shortfall is a bias, from the deterministic differences of that section's table (rasterizer, resolution,
+    principal point, which splats accumulate). The files do not say which.
+- **Post hoc, the GN pass is not bit-reproducible on the GPU:** job ogc recomputed our metric with the same probe seed
+  (17.8 s), and it differs from job fork's cache by up to 0.00928 in an entry.
+
+### Time and memory
+
+**Setup:** restore 49.4 s, install 165.9 s, C3DGS build 213.7 s. **Job fork:** 8,666.6 s by its own clock (8,685.3 s in
+the queue), 2.4 h; with setup and the queue's time, 9,114.4 s (2.53 h). **Job ogc:** 1,816.4 s (1,830.2 s in the queue),
+on the other GPU.
+
+Job fork's steps (wall time, peak allocated GPU memory in the step's process, host RSS of the process and its children;
+GB are 10^9 bytes):
+
+| Step | s | GPU GB | RSS GB |
+|---|---|---|---|
+| dataset download | 285.1 | 0.00 | 0.85 |
+| probe run (C3DGS's process) | 292.2 | 4.89 | - |
+| runner (first build) | 51.1 | 0.34 | 3.17 |
+| GN passes 16 x 16, all / even views | 18.5 / 9.7 | 1.65 / 1.64 | 3.40 / 3.41 |
+| CV: GN-VQ, 7 runs | 99.4-100.4 each, 698.1 in all | 2.20-2.24 | 3.85-3.87 |
+| CV: dMSE, 7 rows | 3.9-4.0 each | 1.22-1.27 | 4.05-4.08 |
+| note ii: orbit reference renders / coverage | 4.1 / 10.2 | 0.64 / 5.71 | 3.21 / 5.31 |
+| the three forked processes | 2,162.1 / 2,164.8 / 2,167.4 | 9.43 (C3DGS's process) | 7.63-7.65 |
+| probe evaluation from its `.npz` | 73.0 | 2.86 (C3DGS's process) | 6.36 |
+| per decoded row: `npz2ply.py` / protocol ii / fidelity renders | 11.5-12.0 / 8.0-8.6 / 2.74-2.84 | - / 1.87 / 0.84 | - |
+
+The steps add up to 8,646.5 s; 20.0 s of the job lies outside them. The 27 rows' fidelity renders took 75.6 s in all.
+
+**Inside each process** (the hooks' costs; `compress.py`'s own wall time 2,159.2-2,164.5 s):
+- the six colour rows 478.0-482.4 s, the five saves 9.0-9.1 s, C3DGS's evaluation of the six rows 362.1-364.1 s;
+- the three fine-tunings with their saves 970.5-974.1 s, and their evaluations 176.0-180.9 s;
+- the rest, 158.0-159.1 s: loading, the sensitivity pass, the geometry VQ and the copy.
+
+**Per colour row (note ii e),** the range over the three processes:
+
+| Row | s | GPU peak GB | RSS at start GB | RSS peak GB |
+|---|---|---|---|---|
+| `c3dgs` (C3DGS's own VQ) | 130.5-131.1 | 2.95 | 1.90-1.95 | 1.90-1.95 |
+| `ogc` | 24.6-26.3 | 9.43 | 2.46-2.51 | 4.35-4.41 |
+| `ogc_lam1e6` | 25.0-26.5 | 9.43 | 2.91-2.97 | 4.35-4.41 |
+| `gnvq_rho0` | 99.4-99.8 | 4.27 | 2.91-2.97 | 3.10-3.15 |
+| `scalar` | 98.7-99.4 | 4.28 | 2.96-3.00 | 3.54-3.58 |
+| `gnvq_cv` | 99.2-99.4 | 4.29 | 3.39-3.44 | 3.54-3.59 |
+
+**OGC's GPU peak is its assignment chunk.** Read from `vq.py:47-49` at `49ccae72`: while chunk `s` is scored, the
+previous chunk's `cost` is still referenced, so four `[chunk, K]` float32 buffers are live at once (that `cost`,
+`vg @ Q`, `gx @ CT` and `2.0 * (gx @ CT)`), beside the chunk's inputs `vg` and `gx` and the codebook's device copies.
+At chunk 100,000 and K = 4,096:
+- the four buffers: 4 x 100,000 x 4,096 x 4 = 6,553,600,000 bytes;
+- the inputs, `[100,000, 256]` and `[100,000, 48]` float32: 121,600,000 bytes; the codebook's copies: 5,767,168 bytes;
+- in all 6,680,967,168 bytes, against the measured rise of OGC's rows above their start, 6,687,323,648-6,688,063,488
+  bytes; 6,356,480-7,096,320 bytes are not attributed.
+- **Post hoc:** note i's feasibility took OGC's chunk as 1.76 GB, one score buffer and its inputs. By the same
+  decomposition, chunk 25,000 would hold 1,674,567,168 bytes (an inference from the code, not a measurement).
+
+**A recording bug: the processes' reserved peaks.** The wrapper records `max_memory_reserved` of 4,353,687,552,
+4,399,824,896 and 4,422,893,568 bytes for the three processes, below their allocated peaks of 9.43 GB, which cannot
+both hold. The hooks reset the allocator's peak statistics at every row (`kaggle/e4p_hooks.py:139`) and fold each
+row's allocated peak into the process's (`:130`); the wrapper folds that into `max_memory_allocated`
+(`kaggle/e3q_c3dgs_run.py:308`) but reads `max_memory_reserved` as the last reset left it (`:306`). So the reserved
+figures are the last rows', and E4p has no process-level reserved peak. The probe run, with no per-row resets,
+reserved 5,377,097,728 bytes against 4,889,388,032 allocated.
+
+**Host memory:** the session had 33.66 GB, 31.58 GB available at the start. OGC's `G` for the 803,076 quantized splats
+is 822,349,824 bytes on the host. Job ogc's steps peaked at 6.35 GB (their Table 19 commands).
+
+**Job ogc's steps:** their Table 19 commands 994.6 s (`gram.py` 474.3 s, `shfit.py` 30.3 s, `run_exps.py` 489.9 s);
+their exact Gram 474.2 s, whose process peaked at 3.47 GB of GPU memory; our metric 20.9 s (1.64 GB); the comparison
+10.8 s.
+
+**Against the estimate made before the run** (HANDOFF, "E4p notebook"):
+- job fork 8,666.6 s against "about 8,700-10,000 s"; each process about 2,160 s against "about 2,440 s";
+- OGC's rows 24.6-26.5 s against "about 74 s each": their update runs on the CPU, but their rows took a quarter of a
+  GN-VQ row;
+- the fidelity renders 75.6 s and the reference renders 4.1 s against "up to about 1,260 s" and "about 55 s";
+- setup 429.0 s against "about 396 s";
+- the process's GPU peak 9.43 GB against "about 6.0 GB": OGC's chunk, above;
+- host RSS: job fork's steps peaked at 7.65 GB and job ogc's at 6.35 GB, against "roughly 12-14 GB for both jobs".
+
+### Post hoc: two mechanisms read from the code
+
+**Why `ogc_ft`'s `features_rest` is smaller (inferred, not measured).**
+- **The bytes:** fine-tuning shrank `ogc`'s `features_rest` by 1,062,299 / 1,064,519 / 1,063,763 bytes (32.4-32.5%),
+  while `c3dgs`'s grew by 76,282 / 70,395 / 72,870 and `gnvq_cv`'s shrank by 119,506 / 106,323 / 46,582. That array
+  is why `ogc_ft` is 653,942 bytes below `c3dgs_ft` on average after `ogc` was 484,783 above `c3dgs`.
+- **The mechanism:** C3DGS's colour quantizers are `torch.ao.quantization.FakeQuantize` modules (C3DGS
+  `scene/gaussian_model.py:80`, applied in `get_features` at `:183`), whose default observer, a moving-average min /
+  max, keeps updating while fine-tuning renders through them; the scale written at the save follows that range. OGC's
+  table reaches C3DGS unclipped and without an assignment against the int8 grid (Amendment 15 b). If its AC entries
+  reach further than C3DGS's own, the observer's AC range widens, the AC step grows, fewer int8 levels are used, and
+  deflate stores `features_rest` in fewer bytes.
+- **Why it is not measured:** E4p recorded the quantizer once per process, at row 1's save, and recorded no range for
+  OGC's table. E3r's fine-tuned injected run did show the AC scale moving (0.0068831 to 0.0088149, section 15). In the
+  three `gnvq_cv_ft` rows the shrink orders as the width of `gnvq_cv`'s AC codebook range (2.245, 2.112, 2.058): three
+  points, no claim.
+
+**The global clip leaves `gnvq_cv`'s AC codebook past the AC int8 grid.** `bench/gn/gn_vq.py:179` takes one minimum
+and one maximum over all 48 values of the warm start, DC included, and the clip at `:207` applies them to every
+coordinate. In C3DGS's layout the DC values set both bounds, so the AC bound is effectively DC's:
+
+| Process | Clip range (all 48 values) | Warm-start AC | `gnvq_rho0` AC | `scalar` AC | `gnvq_cv` AC |
+|---|---|---|---|---|---|
+| 0 | [-1.8232, 4.9010] | [-0.6211, 0.6236] | [-0.8783, 1.9233] | [-0.7277, 0.7293] | [-0.9101, 1.3350] |
+| 1 | [-1.8255, 4.4693] | [-0.5458, 0.5716] | [-0.9504, 2.1473] | [-0.5584, 0.5867] | [-0.6937, 1.4187] |
+| 2 | [-1.7960, 3.9965] | [-0.5522, 0.5496] | [-1.2713, 1.8695] | [-0.6338, 0.5882] | [-0.8177, 1.2405] |
+
+- **The AC int8 grid is [-0.8535, 0.9017]** (scale 0.0068831, zero point -4) in every process. `gnvq_cv`'s AC codebook
+  passes its top in all three processes and its bottom in process 0; `gnvq_rho0`'s goes further; `scalar`'s stays
+  inside. Every DC codebook stays inside the DC grid, [-2.5388, 11.2354].
+- **What happens to the excess:** the table quantizer clamps it (`torch.quantize_per_tensor`, `bench/gn/e3r.py:70`),
+  and GN-VQ's final assignment is made against that clamped table, so the labels fit the table that is saved, but the
+  codewords' AC values beyond the grid are cut to its edge.
+- **Not a bug in the frozen method:** the clip is as Amendment 5 wrote it, for gsplat's one-range quantizer. A per-part
+  clip is a variant to measure, not a fix.
+
+### What E4p settles, and what it does not
+
+- **The fork works on train:** three processes, every check at every primary save, fine-tuning with the labels
+  intact, no out-of-memory, 9.43 GB at the peak (OGC's chunk).
+- **Inside one process,** on the standard test views:
+  - `gnvq_cv` beats C3DGS's own VQ by +0.1326 dB at +1.51% bytes, `SE_noise` 0.0026;
+  - D1 is about 0: +0.0007 dB, `SE_noise` 0.0020;
+  - D2 is -0.0403 dB, negative in all three processes, but against a row that uses all 4,096 codewords to
+    `gnvq_cv`'s 2,310-2,592 and spends 275,459 more bytes.
+- **OGC's released code reproduces its Table 19 train row** to its two decimals, and our 16-probe metric's total trace
+  is 0.919 of their exact Gram's.
+- **Not settled:**
+  - anything about the method: train is a development scene, and this is one scene;
+  - D2 at equal rate or at equal effective codebook size, and which of OGC's differences produces it;
+  - OGC's `lam` chosen on held-out views rather than fixed;
+  - the fine-tuned rows' quantizer state, OGC's table range, and so the cause of `ogc_ft`'s smaller `features_rest`;
+  - which deterministic difference makes our metric's trace 8.1% short;
+  - GN-VQ's convergence from C3DGS's warm start: all 16 runs stopped at the cap.
