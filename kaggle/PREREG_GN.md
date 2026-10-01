@@ -2441,3 +2441,67 @@ E4q's code.
 - **One session:** with the scenes on the two GPUs and setup (429.0 s in E4p), 10,861-24,676 s, 3.0-6.9 h, inside
   the 11 h start cutoff; 4.7-9.9 GPU-hours.
 - **Not included:** treehill on the CPU retry, the header read, and chunk 25,000's own speed.
+
+### i. Note (2026-10-02, after Amendment 16 was committed at `1f0b7e15` and before any E4q code): treehill's header read, pins, download path and feasibility
+
+**What was read, under Amendment 15 d's rule** (b.1): counts and sizes only. Nothing else was fetched, decompressed or
+kept.
+- **INRIA's archive's zip directory** (117 entries, central directory at 14,660,617,193, 13,708 bytes; 14,660,630,999
+  bytes). It matches E3p's six pins and note i's 21 (Amendment 15 i): no mismatch.
+- **treehill's `cameras.json`,** fetched whole with `e3p_inria.fetch_member` (56,201 bytes, CRC32 `fc3331eb`, both
+  checked; SHA-1 `1dda79c011bc188d903852bc5758b0043d337316`). Only the camera count and each camera's width and height
+  were kept; the file was deleted, and its poses were not used: **141 cameras, every one 5068 x 3326**, so 18 test
+  views (every 8th).
+- **treehill's `.ply`,** inflated one output byte at a time up to and including `end_header`: INRIA's 62 float
+  properties in INRIA's order, a 1,532-byte header, **`element vertex` 3,783,761**, equal to the count
+  `kaggle/E3_SCOUTING.md` a derived from the member's size, and header plus 248 bytes per splat equals the size.
+- **Not read:** any `cfg_args` content, any image, splat value, render or metric. 10 HTTP requests to INRIA's archive.
+
+**The pins** (method 8, deflate; offsets are the local headers'):
+
+| Member | Local header offset | Compressed bytes | Bytes | CRC32 |
+|---|---|---|---|---|
+| `treehill/cameras.json` | 12,388,503,807 | 18,444 | 56,201 | `fc3331eb` |
+| `treehill/cfg_args` | 12,388,522,302 | 137 | 171 | `1e467944` |
+| `treehill/point_cloud/iteration_30000/point_cloud.ply` | 12,389,905,633 | 829,119,730 | 938,374,260 | `a9916ad2` |
+
+**The download path (b.3): treehill can be fetched through it.**
+- **From the code:** E3p, E3r and E4p fetch a scene's dataset with `gn_e2_scene.ensure_data`, which sends a MipNeRF360
+  scene to `tilequant_run4.download_scene`: only `images/`, `images_<factor>/`, `sparse/` and `poses_bounds.npy` of the
+  scene, read from the scene's zip with range requests. For treehill, `SCENE_META` names the zip `360_extra_scenes`,
+  `MIPNERF360_ZIPS` gives its URL, and `mcmc.sh` gives the factor 4. It is the function run 4 fetched treehill with.
+- **From the zip's central directory** (4,488,140,217 bytes, 1,278 entries; names and sizes only, 4 HTTP requests):
+  the downloader's own pattern selects 286 members, all with `SCENE_META`'s bytes and image count: `images/` 141 files,
+  1,288,424,692 bytes; `images_4/` 141 files, 128,303,200 bytes; `sparse/` 3 files, 39,353,154 bytes;
+  `poses_bounds.npy`, 19,304 bytes.
+
+**The loaded image size is not in what the rule lets this note read.** `cameras.json` records the full 5068 x 3326;
+INRIA's loader reads the image set `cfg_args` names. The rows below take `images_4` at `-r 1`, as bicycle's pinned
+`cfg_args` gives for a MipNeRF360 outdoor scene (`e3p_inria.CFG_ARGS`), at ceil(full / 4) = 1267 x 832, as bicycle's
+`images_4` is (4946 x 3286 to 1237 x 822); and `images_2` as a sensitivity.
+
+**Feasibility (b.2),** by Amendment 14 g's model as note i applied it (an estimate, not a measurement), in GB (10^9
+bytes), x 1.14 for E3r's reserved-over-allocated ratio, against the T4's 15.64 GB. The colour-step term is the larger
+of our metric copy plus GN-VQ's update chunk for every splat (2.98 GB) and OGC's assignment at chunk 25,000
+(1,674,567,168 bytes, 1.67 GB): 2.98 GB.
+
+| Loaded size | Images on CUDA | Sensitivity, images on CUDA | Sensitivity, images on CPU | + colour step x 1.14, CUDA (lower / upper) | + colour step x 1.14, CPU (upper) |
+|---|---|---|---|---|---|
+| `images_4`, 1267 x 832, 141 views | 1.78 | 9.25-11.42 | 7.47-9.64 | 13.95 / 16.42 | 14.39 |
+| `images_2`, 2534 x 1663 (sensitivity) | 7.13 | 16.01-17.80 | 8.88-10.67 | 21.65 / 23.69 | 15.57 |
+
+- **Verdict (b.4): treehill runs in E4q.** It fits with images on the CPU (14.39 GB at the upper end), and it can be
+  fetched through E3p's download path.
+- **It starts with its images on the CPU:** with them on the GPU the upper end, 16.42 GB, is above the T4 (the lower
+  end is 13.95 GB). Amendment 15 d's retry rule then has no further fallback: a CPU run out of memory drops the scene
+  before any of its results.
+- **The fit rests on the `images_4` assumption.** E4q's code reads treehill's `cfg_args` and applies INRIA's size rule
+  before treehill's first C3DGS run; if the loaded size is not 1267 x 832, the fit above was not shown (b.4), treehill
+  is not started, and the reason is recorded. At `images_2` the CPU upper end is 15.57 GB, at the limit.
+- **What the model leaves out,** as in note i: tile instances on a treehill view (bracketed from bicycle and train); the
+  host memory (the images under `--data_device cpu`, 1.78 GB; OGC's `G`, 1,024 bytes per quantized splat; the forked
+  state's copy); and the time the CPU images cost, which Amendment 16 e did not include.
+
+**The scripts** are `kaggle/gn_e4q_note_i/header_read.py` (network, range requests only) and `feas.py` (offline), with
+their outputs `header_read.json` and `feas.json`; they are committed after this note. **This note changes no rule,
+row or scene.**
