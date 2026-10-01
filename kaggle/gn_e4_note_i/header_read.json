@@ -1,0 +1,279 @@
+{
+ "date": "2026-10-01",
+ "url": "https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip",
+ "archive_bytes": 14660630999,
+ "n_entries": 117,
+ "cd_offset": 14660617193,
+ "cd_size": 13708,
+ "directory_matches_e3p_pins": true,
+ "directory_mismatches": [],
+ "pins": {
+  "bonsai": {
+   "ply": {
+    "name": "bonsai/point_cloud/iteration_30000/point_cloud.ply",
+    "header_offset": 2146082330,
+    "compress_size": 260603022,
+    "file_size": 308716644,
+    "crc32": "3088ffa4",
+    "method": 8
+   },
+   "cameras": {
+    "name": "bonsai/cameras.json",
+    "header_offset": 2143065696,
+    "compress_size": 37076,
+    "file_size": 116695,
+    "crc32": "f963b75c",
+    "method": 8
+   },
+   "cfg_args": {
+    "name": "bonsai/cfg_args",
+    "header_offset": 2143102821,
+    "compress_size": 136,
+    "file_size": 167,
+    "crc32": "72f4cedf",
+    "method": 8
+   },
+   "ply_check": {
+    "file_size_equals_scouting": true,
+    "derived_splats": 1244819.0,
+    "scouting_splats": 1244819
+   }
+  },
+  "counter": {
+   "ply": {
+    "name": "counter/point_cloud/iteration_30000/point_cloud.ply",
+    "header_offset": 2644544174,
+    "compress_size": 261431049,
+    "file_size": 303294620,
+    "crc32": "f324e3ad",
+    "method": 8
+   },
+   "cameras": {
+    "name": "counter/cameras.json",
+    "header_offset": 2642254053,
+    "compress_size": 30633,
+    "file_size": 95501,
+    "crc32": "a3f7feee",
+    "method": 8
+   },
+   "cfg_args": {
+    "name": "counter/cfg_args",
+    "header_offset": 2642284736,
+    "compress_size": 135,
+    "file_size": 169,
+    "crc32": "271a40f7",
+    "method": 8
+   },
+   "ply_check": {
+    "file_size_equals_scouting": true,
+    "derived_splats": 1222956.0,
+    "scouting_splats": 1222956
+   }
+  },
+  "kitchen": {
+   "ply": {
+    "name": "kitchen/point_cloud/iteration_30000/point_cloud.ply",
+    "header_offset": 7878777571,
+    "compress_size": 406623576,
+    "file_size": 459380612,
+    "crc32": "84ed81c5",
+    "method": 8
+   },
+   "cameras": {
+    "name": "kitchen/cameras.json",
+    "header_offset": 7875310892,
+    "compress_size": 35453,
+    "file_size": 111500,
+    "crc32": "18babec2",
+    "method": 8
+   },
+   "cfg_args": {
+    "name": "kitchen/cfg_args",
+    "header_offset": 7875346395,
+    "compress_size": 137,
+    "file_size": 169,
+    "crc32": "fc9fc092",
+    "method": 8
+   },
+   "ply_check": {
+    "file_size_equals_scouting": true,
+    "derived_splats": 1852335.0,
+    "scouting_splats": 1852335
+   }
+  },
+  "room": {
+   "ply": {
+    "name": "room/point_cloud/iteration_30000/point_cloud.ply",
+    "header_offset": 9531466904,
+    "compress_size": 329909932,
+    "file_size": 395158780,
+    "crc32": "1a63439c",
+    "method": 8
+   },
+   "cameras": {
+    "name": "room/cameras.json",
+    "header_offset": 9529779210,
+    "compress_size": 39535,
+    "file_size": 124668,
+    "crc32": "57dae086",
+    "method": 8
+   },
+   "cfg_args": {
+    "name": "room/cfg_args",
+    "header_offset": 9529818792,
+    "compress_size": 134,
+    "file_size": 163,
+    "crc32": "c6b59cd5",
+    "method": 8
+   },
+   "ply_check": {
+    "file_size_equals_scouting": true,
+    "derived_splats": 1593376.0,
+    "scouting_splats": 1593376
+   }
+  },
+  "truck": {
+   "ply": {
+    "name": "truck/point_cloud/iteration_30000/point_cloud.ply",
+    "header_offset": 13741446521,
+    "compress_size": 550481900,
+    "file_size": 630225580,
+    "crc32": "44027887",
+    "method": 8
+   },
+   "cameras": {
+    "name": "truck/cameras.json",
+    "header_offset": 13739353050,
+    "compress_size": 32225,
+    "file_size": 100406,
+    "crc32": "820f7d65",
+    "method": 8
+   },
+   "cfg_args": {
+    "name": "truck/cfg_args",
+    "header_offset": 13739385323,
+    "compress_size": 130,
+    "file_size": 162,
+    "crc32": "6c485142",
+    "method": 8
+   },
+   "ply_check": {
+    "file_size_equals_scouting": true,
+    "derived_splats": 2541226.0,
+    "scouting_splats": 2541226
+   }
+  },
+  "drjohnson": {
+   "ply": {
+    "name": "drjohnson/point_cloud/iteration_30000/point_cloud.ply",
+    "header_offset": 3124408130,
+    "compress_size": 735160560,
+    "file_size": 844479476,
+    "crc32": "66dd518a",
+    "method": 8
+   },
+   "cameras": {
+    "name": "drjohnson/cameras.json",
+    "header_offset": 3123184169,
+    "compress_size": 33890,
+    "file_size": 105635,
+    "crc32": "bcf444d6",
+    "method": 8
+   },
+   "cfg_args": {
+    "name": "drjohnson/cfg_args",
+    "header_offset": 3123218111,
+    "compress_size": 131,
+    "file_size": 167,
+    "crc32": "a9d24034",
+    "method": 8
+   },
+   "ply_check": {
+    "file_size_equals_scouting": true,
+    "derived_splats": 3405153.0,
+    "scouting_splats": 3405153
+   }
+  },
+  "playroom": {
+   "ply": {
+    "name": "playroom/point_cloud/iteration_30000/point_cloud.ply",
+    "header_offset": 8654988456,
+    "compress_size": 523887782,
+    "file_size": 631438300,
+    "crc32": "f8b2c7e2",
+    "method": 8
+   },
+   "cameras": {
+    "name": "playroom/cameras.json",
+    "header_offset": 8654411652,
+    "compress_size": 29048,
+    "file_size": 89710,
+    "crc32": "e0e302d1",
+    "method": 8
+   },
+   "cfg_args": {
+    "name": "playroom/cfg_args",
+    "header_offset": 8654440751,
+    "compress_size": 131,
+    "file_size": 165,
+    "crc32": "0219f3f9",
+    "method": 8
+   },
+   "ply_check": {
+    "file_size_equals_scouting": true,
+    "derived_splats": 2546116.0,
+    "scouting_splats": 2546116
+   }
+  }
+ },
+ "deep_blending": {
+  "drjohnson": {
+   "cameras_json": {
+    "bytes": 105635,
+    "crc32": "bcf444d6",
+    "sha1": "f30d572a0de95ac42492811497ce5b5232cb4df6"
+   },
+   "n_cameras": 263,
+   "distinct_sizes": [
+    "1332x876"
+   ],
+   "max_w": 1332,
+   "max_h": 876,
+   "max_pixels": 1166832,
+   "total_pixels": 306876816,
+   "n_test_every8": 33,
+   "ply_header": {
+    "n_vertex": 3405153,
+    "n_properties": 62,
+    "properties_equal_inria": true,
+    "header_bytes": 1532,
+    "file_size_check": true
+   }
+  },
+  "playroom": {
+   "cameras_json": {
+    "bytes": 89710,
+    "crc32": "e0e302d1",
+    "sha1": "84615f7f2988cbdcbc4f4c4aa0b9d9e279693fd3"
+   },
+   "n_cameras": 225,
+   "distinct_sizes": [
+    "1264x832"
+   ],
+   "max_w": 1264,
+   "max_h": 832,
+   "max_pixels": 1051648,
+   "total_pixels": 236620800,
+   "n_test_every8": 29,
+   "ply_header": {
+    "n_vertex": 2546116,
+    "n_properties": 62,
+    "properties_equal_inria": true,
+    "header_bytes": 1532,
+    "file_size_check": true
+   }
+  }
+ },
+ "http_requests": 16,
+ "time_s": 11.188987255096436
+}
