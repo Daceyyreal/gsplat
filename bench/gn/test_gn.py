@@ -3460,3 +3460,426 @@ def test_e3r_job_constants_and_the_estimate():
         job.main(["--scene", "room", "--c3dgs_dir", "x", "--out_dir", "x"])
     with pytest.raises(RuntimeError, match="not an E3r result file"):
         job.assert_e3r_csv(os.path.join(repo, "kaggle", "gn_e3q", "attempt2", "gn3q", "gn3q_results_train.csv"))
+
+
+# ------------------------------------------------------------------------------ E4p (PREREG_GN.md Amendment 15)
+_FAKE_OGC_VQ = '''import torch
+
+
+def gram_kmeans(X, G, K, metric="gram", iters=20, device="mps", chunk=150000, seed=0, verbose=False, lam=1e-3):
+    """A stand-in with gram_kmeans's signature and layout: [n, 3, q] in, [K, 3, q] and [n] out."""
+    gen = torch.Generator().manual_seed(seed)
+    ids = torch.randperm(X.shape[0], generator=gen)[:K]
+    C = X[ids].clone() * (1.0 + lam)
+    d = ((X[:, None] - C[None]) ** 2).sum((2, 3))
+    return C, d.argmin(1)
+'''
+
+_C3DGS_MODULES = ("compression", "scene", "utils", "finetune", "compress")
+
+
+def _purge_c3dgs_modules():
+    for name in list(sys.modules):
+        if name.split(".")[0] in _C3DGS_MODULES:
+            del sys.modules[name]
+
+
+def _fork_in_process(tmp_path, monkeypatch, rho_cv=0.01, hooks_cls=None, ft_rows=("c3dgs", "ogc", "gnvq_cv")):
+    """The fork in this process on the CPU stand-in (C3DGS's call structure), as the wrapper runs it."""
+    import random
+    import runpy
+    import shutil
+    import types
+
+    import e4p_hooks
+
+    c3d = tmp_path / "c3dgs"
+    shutil.copytree(os.path.join(HERE, "dryrun", "fake_c3dgs"), c3d)
+    model, _ = _fake_model(tmp_path)
+    m_path = tmp_path / "full16.pt"
+    torch.save({"M_packed": _psd16(600, seed=7), "total_pixels": 10000}, m_path)
+    ogc = tmp_path / "ogc"
+    ogc.mkdir()
+    (ogc / "vq.py").write_text(_FAKE_OGC_VQ)
+    cfg = {"m_path": str(m_path), "rho_cv": rho_cv, "rows_dir": str(tmp_path / "rows"),
+           "report_path": str(tmp_path / "report.json"), "ogc": {"clone": str(ogc), "device": "cpu"},
+           "finetune": {"rows": list(ft_rows), "iterations": 5000}}
+    (tmp_path / "fork.json").write_text(json.dumps(cfg))
+    monkeypatch.setenv("E3R_FAKE_KAGGLE", os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle"))
+    _purge_c3dgs_modules()
+    sys.path.insert(0, str(c3d))
+    try:
+        hooks = (hooks_cls or e4p_hooks.ForkHooks)(fork=str(tmp_path / "fork.json")).install()
+        random.seed(0)
+        np.random.seed(0)
+        torch.manual_seed(0)
+        ns = runpy.run_path(str(c3d / "compress.py"), run_name="fake_compress")
+        model_p = types.SimpleNamespace(model_path=model, source_path="x", data_device="cpu", white_background=False,
+                                        sh_degree=3)
+        comp = types.SimpleNamespace(output_vq=str(tmp_path / "out"), finetune_iterations=0, color_codebook_size=16,
+                                     color_importance_include=0.6e-6, gaussian_codebook_size=16,
+                                     gaussian_importance_include=0.3e-5, load_iteration=30000, not_sort_morton=False)
+        ns["run_vq"](model_p, types.SimpleNamespace(lambda_dssim=0.2), types.SimpleNamespace(debug=False), comp)
+    finally:
+        sys.path.remove(str(c3d))
+        _purge_c3dgs_modules()
+    return hooks, hooks.report()
+
+
+def test_e4p_copy_restore_round_trip():
+    """copy_state / restore_state: tensors and parameters by value, device and requires_grad; a fake quantizer's
+    observers restored after they moved; an attribute added since (an optimizer) removed; a value restored; the RNG
+    states restored. states_equal and state_sha1 agree."""
+    import random
+
+    import e4p
+
+    class M:
+        pass
+
+    m = M()
+    m._xyz = torch.nn.Parameter(torch.randn(5, 3))
+    m._idx = torch.nn.Parameter(torch.arange(5), requires_grad=False)
+    m.plain = torch.ones(2)
+    m.qa = torch.ao.quantization.FakeQuantize(dtype=torch.qint8)
+    m.qa(torch.randn(10))
+    m.mode = "indexed"
+    m.optimizer = None
+    m.act = torch.sigmoid
+    snap = e4p.copy_state(m)
+    sha = e4p.state_sha1(m)
+    rng = e4p.rng_state()
+    r0 = (random.random(), float(np.random.rand()), float(torch.rand(1)))
+    with torch.no_grad():
+        m._xyz += 1
+    m._idx = torch.nn.Parameter(torch.arange(5).flip(0), requires_grad=False)
+    m.qa(torch.randn(10) * 9)
+    m.mode = "other"
+    m.optimizer = object()
+    m.extra = torch.zeros(3)
+    assert e4p.state_sha1(m) != sha
+    e4p.restore_state(m, snap)
+    e4p.set_rng_state(rng)
+    assert e4p.states_equal(e4p.copy_state(m), snap)["equal"] and e4p.state_sha1(m) == sha
+    assert not hasattr(m, "extra") and m.optimizer is None and m.mode == "indexed" and m.act is torch.sigmoid
+    assert isinstance(m._xyz, torch.nn.Parameter) and m._xyz.requires_grad and not m._idx.requires_grad
+    assert (random.random(), float(np.random.rand()), float(torch.rand(1))) == r0
+    assert e4p.copy_bytes(snap) > 0
+
+
+def test_e4p_fork_installs_rows_into_the_pre_save_copy(tmp_path, monkeypatch):
+    """Dace's condition (2026-10-01): every row is installed into a restore of the copy taken when compression
+    returned, never into a saved (Morton-sorted) state. Each row's installed state just before its save, as the fork
+    hashed it, equals the same row installed into an untouched model (a deep copy taken at that moment), in the
+    pre-sort order; so do the fine-tuned rows' states before fine-tuning. The per-process checks pass, one geometry
+    SHA-1 holds, every row is saved before any is evaluated, and the saved state of row 1 is not the pre-save one."""
+    import copy as _copy
+
+    import e4p
+    import e4p_hooks
+
+    class Twin(e4p_hooks.ForkHooks):
+        def compress_gaussians(self, *a, **k):
+            out = super().compress_gaussians(*a, **k)
+            self.twin = _copy.deepcopy(self._bind("compress_gaussians", a, k)["gaussians"])
+            return out
+
+    hooks, rep = _fork_in_process(tmp_path, monkeypatch, hooks_cls=Twin)
+    fr = rep["fork"]
+    assert fr["phase"] == "done" and fr["checks_failed"] == []
+    assert set(hooks.tables) == set(e4p.ROWS)
+    for row in e4p.ROWS:
+        t = _copy.deepcopy(hooks.twin)
+        if row != "c3dgs":
+            hooks._install(t, row)
+        assert fr["rows"][row]["pre_save_sha1"] == e4p.state_sha1(t), row
+        assert fr["rows"][row]["checks"]["ok"], (row, fr["rows"][row]["checks"])
+        assert os.path.exists(fr["rows"][row]["npz"]) or row == "c3dgs"
+    for row in e4p.FT_ROWS:
+        t = _copy.deepcopy(hooks.twin)
+        hooks._install(t, row)
+        ft = fr["rows"][e4p.ft_name(row)]
+        assert ft["status"] == "ok" and ft["labels_survived"] and ft["pre_finetune_sha1"] == e4p.state_sha1(t), row
+    g = hooks.state["gaussians"]  # after the fork: row 1's saved state, sorted by the save
+    assert e4p.state_sha1(g) != fr["rows"]["c3dgs"]["pre_save_sha1"]
+    assert not torch.equal(g._feature_indices, hooks.twin._feature_indices)
+    order = list(fr["cost"])
+    assert max(order.index(f"save_{r}") for r in e4p.FORK_ROWS) < min(order.index(f"eval_{r}") for r in e4p.ROWS)
+    assert all(fr["cost"][r]["host"]["available"] and fr["cost"][r]["time_s"] >= 0 for r in e4p.ROWS)
+    assert fr["rows"]["ogc"]["ogc"]["call"]["iters"] == 15 and fr["rows"]["ogc"]["ogc"]["call"]["chunk"] == 100000
+    assert fr["rows"]["ogc"]["ogc"]["call"]["lam"] == 1e-3 and fr["rows"]["ogc_lam1e6"]["ogc"]["call"]["lam"] == 1e-6
+    assert fr["rows"]["gnvq_cv"]["rho"] == 0.01 and fr["rows"]["gnvq_rho0"]["rho"] == 0.0
+    assert fr["copy"]["taken"].startswith("when compress_gaussians returned")
+    assert json.load(open(tmp_path / "report.json"))["fork"]["phase"] == "done"
+
+
+def test_e4p_fork_rho_cv_zero_and_a_failed_check(tmp_path, monkeypatch):
+    """rho_cv = 0: row 5 is not run (row 3 stands for it, its fine-tuned row uses row 3's table). A row whose
+    installed labels are not its own fails the check, which lists it."""
+    import e4p
+    import e4p_hooks
+
+    _, rep = _fork_in_process(tmp_path / "a", monkeypatch, rho_cv=0.0)
+    fr = rep["fork"]
+    assert fr["rows"]["gnvq_cv"]["status"] == "alias" and fr["rows"]["gnvq_cv"]["alias_of"] == "gnvq_rho0"
+    assert "gnvq_cv" not in fr["cost"] and "save_gnvq_cv" not in fr["cost"]
+    assert fr["rows"]["gnvq_cv_ft"]["table_of"] == "gnvq_rho0" and fr["rows"]["gnvq_cv_ft"]["status"] == "ok"
+
+    class Wrong(e4p_hooks.ForkHooks):
+        def _install(self, g, row):
+            super()._install(g, row)
+            if row == "scalar":
+                g._feature_indices = torch.nn.Parameter(g._feature_indices.flip(0), requires_grad=False)
+
+    _, rep = _fork_in_process(tmp_path / "b", monkeypatch, hooks_cls=Wrong)
+    assert rep["fork"]["checks_failed"] == ["scalar"]
+    assert not rep["fork"]["rows"]["scalar"]["checks"]["labels_equal"]
+
+
+def test_e4p_attempt_rules():
+    """Amendment 15 d, as e4p.next_action applies it: done; a GPU out-of-memory retried on the CPU (not the one
+    rerun); out of memory on the CPU in the first process before any result drops the scene, later it is a primary
+    loss; one whole rerun, then incomplete."""
+    import e4p
+
+    A = lambda dev, oom=False, lost=False, kind="first", res=False: {"device": dev, "oom": oom, "primary_lost": lost,  # noqa: E731
+                                                                      "kind": kind, "results_exist": res}
+    assert e4p.next_action([A("cuda")], True)["action"] == "done"
+    assert e4p.next_action([A("cuda", oom=True)], True) == {"action": "retry_cpu", "device": "cpu", "kind": "cpu_retry"}
+    assert e4p.next_action([A("cuda", oom=True), A("cpu", oom=True, kind="cpu_retry")], True)["action"] == "drop_scene"
+    assert e4p.next_action([A("cuda", oom=True), A("cpu", oom=True, kind="cpu_retry", res=True)], True)["action"] == "rerun"
+    assert e4p.next_action([A("cpu", oom=True)], False)["action"] == "rerun"
+    assert e4p.next_action([A("cuda", lost=True)], False) == {"action": "rerun", "device": "cuda", "kind": "rerun"}
+    assert e4p.next_action([A("cuda", lost=True), A("cuda", lost=True, kind="rerun")], False)["action"] == "incomplete"
+    assert e4p.next_action([A("cuda", lost=True), A("cuda", kind="rerun")], False)["action"] == "done"
+    assert e4p.PRIMARY_ROWS == ("ogc", "gnvq_rho0", "gnvq_cv") and e4p.FT_ROWS == ("c3dgs", "ogc", "gnvq_cv")
+    assert e4p.row_alias("gnvq_cv", 0.0) == "gnvq_rho0" and e4p.row_alias("gnvq_cv", 0.01) == "gnvq_cv"
+
+
+def test_e4p_bar_components_and_power_check():
+    """Amendment 15 c's components (SD_pool the root mean of the per-scene variances; a zero-by-rule scene with
+    variance 0 and not positive; ceil(0.7 n); n < 5 incomplete) and note ii d's power check."""
+    import e4p
+
+    v = {"a": [0.1, 0.2, 0.3], "b": [0.0, -0.1, 0.1], "c": [0.5, 0.5, 0.5]}
+    c = e4p.bar_components(v, zero_rule=["c"], with_conditions=True)
+    assert c["per_scene"]["c"]["D_sp"] == [0.0] * 3 and not c["per_scene"]["c"]["positive"] and c["per_scene"]["c"]["v_s"] == 0
+    assert c["D_bar"] == pytest.approx((0.2 + 0.0 + 0.0) / 3)
+    assert c["SD_pool"] == pytest.approx(math.sqrt((0.01 + 0.01 + 0.0) / 3))
+    assert c["SE_noise"] == pytest.approx(c["SD_pool"] / 3) and c["n_positive"] == 1 and c["positive_needed"] == 3
+    assert c["verdict"] == "incomplete"  # n = 3 < 5
+    seven = {str(i): [0.2, 0.3, 0.25] for i in range(7)}
+    c7 = e4p.bar_components(seven, with_conditions=True)
+    assert c7["positive_needed"] == 5 and c7["verdict"] == "pass"
+    assert e4p.bar_components({"x": [0.1, None, 0.2]})["incomplete_scenes"] == ["x"]
+    assert "verdict" not in e4p.bar_components(v)
+    p = e4p.power_check(0.3, 0.05)
+    assert p["threshold"] == pytest.approx(2 * 0.3 / math.sqrt(21)) and p["observed_below_threshold"]
+    P = p["proposal"]
+    assert 2 * 0.3 / math.sqrt(7 * P) < 0.05 <= 2 * 0.3 / math.sqrt(7 * (P - 1))
+    assert e4p.power_check(0.01, 0.5)["proposal"] is None and e4p.power_check(0.3, 0.0)["proposal"] is None
+
+
+def test_e4p_npz_stats_and_isotropic_metric():
+    """Per-array compressed / uncompressed sizes from the .npz's zip entries, the zero-order entropy and distinct
+    values of the colour indices; row 4's metric is tr(M_i) / 16 * I, and the floor changes nothing GN-VQ does on it."""
+    import tempfile
+
+    import e3r
+    import e4p
+
+    d = tempfile.mkdtemp()
+    p = os.path.join(d, "x.npz")
+    idx = np.array([0, 0, 1, 1, 2, 2, 2, 2, 20], dtype=np.int32)
+    np.savez_compressed(p, feature_indices=idx, xyz=np.zeros((9, 3), np.float16))
+    st = e4p.npz_stats(p, codebook_size=16)
+    q = np.array([2, 2, 4, 1]) / 9
+    assert st["index_entropy_bits"] == pytest.approx(float(-(q * np.log2(q)).sum())) and st["distinct_indices"] == 4
+    assert st["codebook_entries"]["n"] == 8 and st["codebook_entries"]["distinct"] == 3
+    assert set(st["arrays"]) == {"feature_indices", "xyz"} and st["arrays"]["xyz"]["uncompressed_bytes"] > 54
+    M = _psd16(200, seed=3)
+    iso = e4p.isotropic_packed(M)
+    assert torch.allclose(gm.unpack(iso), torch.diag_embed((gm.trace_packed(M) / 16)[:, None].expand(-1, 16)))
+    g = torch.Generator().manual_seed(1)
+    x = torch.randn(200, 48, generator=g) * 0.1
+    C0 = x[:8].clone()
+    L0 = torch.cdist(x, C0).argmin(1)
+    qz = e3r.C3DGSQuantizer(0.01, 0, 0.002, 0)
+    a = e3r.run_gn_vq(x, C0, L0, iso, 0.0, 1000, qz, log=None)
+    b = e3r.run_gn_vq(x, C0, L0, iso, 0.3, 1000, qz, log=None)
+    assert torch.equal(a[1], b[1]) and torch.allclose(a[0], b[0], rtol=1e-5, atol=1e-7)
+
+
+def test_e4p_note_ii_geometry_and_coverage():
+    """Note ii: the centre of converging cameras is their target; orbits keep the distance to it; the conditioning
+    report; terciles as numpy.array_split; effective rank 1 for a rank-one M_i and 16 for tr / 16 I; the coverage
+    report's low tercile share."""
+    import e4p
+
+    tgt = np.array([0.5, -0.2, 3.0])
+    cams = []
+    for a in np.linspace(-0.6, 0.6, 9):
+        pos = tgt + 2.0 * np.array([np.sin(a), 0.1 * np.cos(3 * a), -np.cos(a)])
+        z = (tgt - pos) / np.linalg.norm(tgt - pos)
+        x = np.cross([0, -1.0, 0], z)
+        x /= np.linalg.norm(x)
+        m = np.eye(4)
+        m[:3, :3] = np.stack([x, np.cross(z, x), z], 1)
+        m[:3, 3] = pos
+        cams.append(m)
+    cams = np.stack(cams)
+    geo = e4p.scene_centre(cams[1:])
+    assert np.allclose(geo["centre"], tgt, atol=1e-6) and geo["up"][1] > 0.9 and geo["lambda_min_over_n"] > 0  # camera y is world -y here
+    o = e4p.orbit_camtoworld(cams[0], geo["centre"], geo["up"], 40)
+    assert np.linalg.norm(o[:3, 3] - tgt) == pytest.approx(np.linalg.norm(cams[0][:3, 3] - tgt))
+    assert np.allclose(o[:3, :3] @ o[:3, :3].T, np.eye(3), atol=1e-12)
+    c = e4p.conditioning(cams[1:], cams[:1], geo)
+    assert c["orbit_share_beyond_farthest_train"] == c["test_share_beyond_farthest_train"] and c["n_orbit_cameras"] == 6
+    ang = e4p.nearest_train_angles(cams[:2], cams[1:], tgt)
+    assert ang[1] == pytest.approx(0, abs=1e-4) and ang[0] > 1  # degrees; arccos near 1
+    assert e4p.terciles([3.0, 1.0, 2.0, 1.0, 5.0]) == [[1, 3], [2, 0], [4]]
+    y = torch.randn(1, 16, dtype=torch.float64)
+    M = torch.cat([gm.pack((y.T @ y)[None]), gm.pack(torch.eye(16, dtype=torch.float64)[None]),
+                   torch.zeros(1, 136, dtype=torch.float64)]).float()
+    r = e4p.effective_rank(M)
+    assert r[0] == pytest.approx(1.0, abs=1e-3) and r[1] == pytest.approx(16.0, abs=1e-4) and torch.isnan(r[2])
+    rep = e4p.coverage_report(r, M)
+    assert rep["n_zero_trace_left_out"] == 1 and rep["low_tercile"]["n"] == 1
+    assert rep["low_tercile"]["trace_share"] == pytest.approx(float(gm.trace_packed(M[:1])) / float(gm.trace_packed(M[:2]).sum()))
+
+
+def test_e4p_host_rss_includes_children():
+    """HostRss samples this process and its children: a child holding about 200 MB raises the peak."""
+    import subprocess
+
+    import e4p
+
+    with e4p.HostRss(interval=0.05) as h:
+        subprocess.run([sys.executable, "-c", "import time; b = bytearray(200 * 2**20); b[::4096] = b'x' * len(b[::4096]); "
+                        "time.sleep(1.5)"], check=True)
+    r = h.record()
+    assert r["available"] and r["n_samples"] > 3 and r["rss_peak_bytes"] - r["rss_start_bytes"] > 100 * 2 ** 20
+    assert r["scope"] == "process and its children" and e4p.session_ram()["total_bytes"] > 0
+
+
+def test_e4p_ogc_dependencies_never_touch_the_session(monkeypatch, tmp_path):
+    """Dace's condition: OGC's missing dependencies go only into an isolated --target; a resolution that would replace
+    any session package installs nothing and skips Table 19 with the reason; nothing missing installs nothing."""
+    import e4p_ogc as og
+
+    state = {"missing": {"lpips"}, "report": [("lpips", "0.1.4")], "session": {}, "cmds": []}
+
+    def run(cmd, cwd=None, env=None, timeout=None):
+        import shlex
+
+        state["cmds"].append(cmd)
+        argv = shlex.split(cmd)
+        text = ""
+        if "OGC_MODS" in cmd:
+            import ast
+            import re
+
+            names = ast.literal_eval(re.search(r"for m in (\[.*?\])", argv[argv.index("-c") + 1]).group(1))
+            text = "OGC_MODS " + json.dumps({m: m not in state["missing"] for m in names})
+        elif "OGC_DISTS" in cmd:
+            import ast
+            import re
+
+            names = ast.literal_eval(re.search(r"for n in (\[.*?\])", argv[argv.index("-c") + 1]).group(1))
+            text = "OGC_DISTS " + json.dumps({n: state["session"].get(n) for n in names})
+        elif "--dry-run" in cmd:
+            json.dump({"install": [{"metadata": {"name": n, "version": v}} for n, v in state["report"]]},
+                      open(argv[argv.index("--report") + 1], "w"))
+        elif "--target" in cmd:
+            t = argv[argv.index("--target") + 1]
+            os.makedirs(os.path.join(t, "lpips"), exist_ok=True)
+        return {"returncode": 0, "_text": text, "tail": [], "time_s": 0.0}
+
+    monkeypatch.setattr(og, "_run", run)
+    d = og.plan_deps("PY", str(tmp_path / "t1"), str(tmp_path / "w1"))
+    assert d["ok"] and d["installed"] == ["lpips==0.1.4"] and d["pythonpath"] == str(tmp_path / "t1")
+    inst = [c for c in state["cmds"] if "pip install" in c]
+    assert all("--dry-run" in c or ("--no-deps" in c and "--target" in c) for c in inst) and len(inst) == 2
+    state.update(report=[("lpips", "0.1.4"), ("numpy", "9.0")], session={"numpy": "2.2.0"}, cmds=[])
+    d = og.plan_deps("PY", str(tmp_path / "t2"), str(tmp_path / "w2"))
+    assert not d["ok"] and d["skip_table19"] and "numpy (session 2.2.0, would be 9.0)" in d["reason"]
+    assert not os.path.exists(tmp_path / "t2") and not any("--target" in c for c in state["cmds"])
+    state.update(missing=set(), cmds=[])
+    d = og.plan_deps("PY", str(tmp_path / "t3"), str(tmp_path / "w3"))
+    assert d["ok"] and d["installed"] == [] and not any("pip install" in c for c in state["cmds"])
+
+
+def test_e4p_ogc_codebook_layout_and_gram_comparison(tmp_path):
+    """Rows 2 / 2b hand gram_kmeans X as [n, 3, 16] (channel-major) and take its codebook back to C3DGS's [K, 48]
+    (index k * 3 + channel); the comparison of our M with their A is 0 for equal Grams, with its counts."""
+    import e4p_ogc as og
+
+    (tmp_path / "vq.py").write_text(_FAKE_OGC_VQ)
+    mod = og.load_vq(str(tmp_path))
+    assert mod.__name__ == "ogc_vq"
+    g = torch.Generator().manual_seed(0)
+    x48 = torch.randn(50, 48, generator=g)
+    C48, L, info = og.ogc_codebook(mod, x48, _psd16(50, seed=1), 8, None, "cpu")
+    ids = torch.randperm(50, generator=torch.Generator().manual_seed(0))[:8]
+    assert torch.allclose(C48, x48[ids] * (1 + 1e-3)) and L.shape == (50,)
+    assert info["call"] == {"K": 8, "device": "cpu", "metric": "gram", "iters": 15, "chunk": 100000, "lam": 1e-3,
+                            "seed": 0, "init": info["call"]["init"]}
+    _, _, info6 = og.ogc_codebook(mod, x48, _psd16(50, seed=1), 8, 1e-6, "cpu")
+    assert info6["call"]["lam"] == 1e-6
+    M = _psd16(40, seed=2)
+    M[3] = 0
+    A = gm.unpack(M.double()).float()
+    c = og.compare_gram(A, M)
+    assert c["relative_error"] == pytest.approx(0, abs=1e-6) and c["n_tr_A_positive"] == 39
+    assert c["n_exactly_one_trace_zero"] == 0 and c["trace_ratio_M_over_A"] == pytest.approx(1.0)
+    c2 = og.compare_gram(A, M * 1.1)
+    assert c2["relative_error"] == pytest.approx(0.1, rel=1e-4) and c2["per_splat_relative_error"]["median"] == pytest.approx(0.1, rel=1e-4)
+
+
+def test_e4p_wrapper_probe_deferral_and_eval_npz(tmp_path):
+    """Through the real wrapper on the stand-in: the probe's evaluation deferred (render_and_eval replaced at the
+    save; results.json written), then C3DGS's evaluation of its loaded .npz (the run stopped there, a success)."""
+    import shutil
+
+    c3d = str(tmp_path / "c3dgs")
+    shutil.copytree(os.path.join(HERE, "dryrun", "fake_c3dgs"), c3d)
+    model, _ = _fake_model(tmp_path)
+    rec_path = str(tmp_path / "probe.pt")
+    p, r, arrays, out = _run_fake(tmp_path, c3d, model, "probe", ["--observe", "--record", rec_path, "--defer_eval"])
+    assert p.returncode == 0 and r["status"] == "ok", p.stderr[-2000:]
+    assert r["e4p"]["mode"] == "fork" or r["e4p"]["deferred_eval"]["evaluated"] is False
+    assert json.load(open(out / "results.json"))["ours_30000"]["deferred"] is True and os.path.exists(rec_path)
+    assert r["host_rss"]["available"] and "e3r" not in r
+    npz = str(out / "point_cloud" / "iteration_30000" / "point_cloud.npz")
+    p2, r2, _, _ = _run_fake(tmp_path, c3d, model, "evalnpz", ["--eval_npz", npz])
+    assert p2.returncode == 0 and r2["status"] == "ok", (p2.stderr[-2000:], r2.get("error"))
+    assert r2["e4p"]["mode"] == "eval_npz" and r2["e4p"]["eval_npz"]["c3dgs_eval"]["PSNR"] > 0
+
+
+def test_e4p_job_constants_and_refusals():
+    """Amendment 15's constants as the code holds them (train only, seeds 0-2, K 4,096, the default threshold, OGC's
+    pin and host call, Table 19's train row as note f quotes it); refusals."""
+    import re
+
+    import e4p
+    import e4p_ogc as og
+    import gn_e4p_scene as job
+
+    assert list(job.SCENES) == ["train"] and job.SEEDS == (0, 1, 2) and job.K_DEFAULT == 4096
+    assert job.THRESHOLD_DEFAULT == 0.6e-6 and len(set(job.COLUMNS)) == len(job.COLUMNS)
+    assert og.OGC_COMMIT == "49ccae72e75eec9877354ed72074827531f7fd79" and e4p.OGC_CALL == {"metric": "gram", "iters": 15,
+                                                                                            "chunk": 100000}
+    assert e4p.OGC_LAM == {"ogc": None, "ogc_lam1e6": 1e-6} and e4p.FINETUNE_ITERATIONS == 5000
+    assert e4p.ANGLES == (-40, -20, -10, 0, 10, 20, 40)
+    repo = os.path.dirname(os.path.dirname(HERE))
+    a15 = re.sub(r"\s+", " ", open(os.path.join(repo, "kaggle", "PREREG_GN.md"), encoding="utf-8").read())
+    a15 = a15[a15.index("## Amendment 15"):]
+    t = og.TABLE19_TRAIN
+    assert f"the full model: {t['full']:.2f}" in a15
+    for L in (2, 1, 0):
+        assert f"{t[f'trunc{L}']:.2f} / {t[f'ours{L}']:.2f}" in a15
+    assert "iters=15, device=\"cuda\", chunk=100000" in a15 and "seeded 0, 1 and 2" in a15
+    with pytest.raises(ValueError, match="not an E4p scene"):
+        job.main(["--job", "fork", "--scene", "bonsai", "--c3dgs_dir", "x", "--out_dir", "x"])
+    with pytest.raises(RuntimeError, match="not an E4p result file"):
+        job.assert_e4p_csv(os.path.join(repo, "kaggle", "gn_e3r", "gn3r", "gn3r_results_train.csv"))
