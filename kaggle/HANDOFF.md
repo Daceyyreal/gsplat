@@ -17,8 +17,10 @@ section 14). **E3r**, a pilot of the C3DGS host on train and bicycle before the 
 (Amendment 14, with its notes f, g and h), **ran on Kaggle on 2026-09-30** ("E3r C3DGS pilot", imported at tip
 `b27e1421`) **and is closed**: its bundle is committed (`kaggle/gn_e3r/gn3r/`, `9c28cc89`) and FINDINGS section 15
 quotes it (`2eb091f9`, checked by `bench/gn/check_s15.py`, `5fda2ea7`). Every step ran; the colour threshold spans
-2.49x in bytes, K 1.02x; seeded C3DGS runs are not reproduced on the GPU. **Next: the C3DGS arm's pre-registration**
-from `kaggle/E3_C3DGS_DESIGN.md` and section 15, before any of its code.
+2.49x in bytes, K 1.02x; seeded C3DGS runs are not reproduced on the GPU. Two overlapping preprints were found and read
+(`kaggle/RELATED_WORK_OGC.md`), and the C3DGS arm became **E4** (`kaggle/E4_DESIGN.md`), with Dace's final decisions in
+"Related work, paper direction and E4 decisions (2026-10-01)" below. **Next: draft Amendment 15** (E4p and E4),
+not yet written; nothing of E4 exists beyond the design.
 
 ## Context and rules
 
@@ -2863,7 +2865,86 @@ The work went in this order:
     (post hoc), and `gnvq_k4096`'s geometry SHA-1.
   - pytest: 118 passed.
 
-### Open items (E0, E1, E2, E2b, E2c, E3p, E3q, E3r: closed; E3: the C3DGS arm designed, not pre-registered)
+### Related work, paper direction and E4 decisions (2026-10-01)
+
+Docs only: no code, rule or result. Commits: `04577841` (the related-work notes), `7a954b0d` (the E4 design), then this
+flush.
+
+1. **Overlap found.** Two preprints overlap GN-VQ:
+   - arXiv **2609.28997** ("OGC", K. Pietroszek, 24 Sep 2026; code `github.com/moholo-founder/ogc-3dgs` at
+     `49ccae72`, PolyForm Noncommercial 1.0.0);
+   - arXiv **2609.15735** (T. T. Do, P. A. Chou, G. Cheung, 14 Sep 2026).
+
+   Details, with page and file:line for every item, are in `kaggle/RELATED_WORK_OGC.md` (`04577841`). The equivalence
+   check found that our `M_i` equals their S2 observation Gram in expectation: the 16-probe Rademacher estimate is
+   unbiased for sum_p w_ip^2. The PDFs and the clone stay outside the repository.
+2. **Paper direction (Dace's decision).**
+   - A pre-registered replication and extension, journal first.
+   - Headline: the observation metric's failure on test views, with the cross-validated floor as the fix.
+   - The venue is decided after reproducing OGC.
+   - **E3a** (gsplat PNG on the 13 INRIA scenes) is **deferred**.
+3. **E4: the C3DGS arm, as designed in `kaggle/E4_DESIGN.md` (`7a954b0d`).** The decisions below are final and
+   **supersede the design doc's recommendations where they differ.**
+   - **a. Co-primary; both must pass:**
+     - D1 = `rho_cv` minus ρ = 0;
+     - D2 = `rho_cv` minus OGC.
+
+     Both on protocol-ii test-view PSNR, at K = 4,096, the default threshold and no fine-tuning; paired within a
+     forked C3DGS process; per-scene mean of 3 processes.
+   - **b. The bar, for each difference:**
+     - the mean over scenes > 0;
+     - positive on at least ceil(0.7 n) scenes (5 of 7);
+     - the mean > 2 x SE_noise, where SE_noise = (the pooled within-scene SD of the difference across processes) /
+       sqrt(3 n).
+
+     If `rho_cv` = 0 on a scene, D1 there is 0, which does not count as positive.
+   - **c. Rows** (one forked process each):
+     1. C3DGS's own VQ;
+     2. OGC's `vq.gram_kmeans` on our 16 x 16 metric with its defaults (`lam` 1e-3, 15 iterations, its own init);
+     3. GN-VQ at ρ = 0;
+     4. the scalar tr(M) weighting;
+     5. GN-VQ at `rho_cv`, chosen once per scene from a probe run.
+   - **d. Scenes and failures:**
+     - the INRIA checkpoints of bonsai, counter, kitchen, room, truck, drjohnson and playroom. Disclose that G2c used
+       the first five's test views, with this project's own checkpoints;
+     - a run out of memory is retried with the images on the CPU; if it still runs out, the scene is dropped before
+       any result and n shrinks;
+     - a header read (camera count, image sizes, splat count only) is **not touching**; the rule is written before
+       the read.
+   - **e. Secondaries:**
+     - fine-tuning on all 3 processes for C3DGS's own row, OGC and `rho_cv` (OGC minus C3DGS, against the noise
+       SE);
+     - Gram against scalar;
+     - per-array bytes and the index entropy;
+     - the threshold-sweep BD in a later session.
+   - **f. E4p, a pilot on train first:**
+     - the fork end to end, 3 processes, with fine-tuning;
+     - OGC's full pipeline against their published train row;
+     - the exact S2 Gram against our 16-probe `M` (relative error).
+
+     E4p may only raise the number of repeats or fix bugs.
+   - **g. Order:**
+     1. Amendment 15 alone (docs);
+     2. Deep Blending's header read and a dated note;
+     3. E4p code, tests and dry run;
+     4. the E4p run and its findings;
+     5. E4.
+
+     Kaggle titles: **"E4p C3DGS fork pilot"** and **"E4 C3DGS gate"**.
+- **Where the doc's recommendations changed:**
+  - its single primary (R5 − R3) became the co-primary D1 and D2;
+  - its "pooled mean above C3DGS's own spread" became the 2 x SE_noise rule;
+  - fine-tuning moved from one process per scene to all 3 processes for three rows;
+  - its scenes-that-do-not-fit options became "retry on the CPU, else drop before results".
+
+  Not stated here, so the doc's recommendations stand as inputs to Amendment 15, not as decisions:
+  - the OGC context rows (512 entries; `lam` 1e-6);
+  - the arc protocol (left out);
+  - R2's statistic (our M16);
+  - the ridge-to-mean variant (left out);
+  - the licence handling (fetch and import at run time, never vendor).
+
+### Open items (E0, E1, E2, E2b, E2c, E3p, E3q, E3r: closed; E4: designed, Amendment 15 not written)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -2916,7 +2997,11 @@ The work went in this order:
      runs took 8-9 iterations, and E2c's at K = 4,096 13-19, all stopping at the rule; not like-for-like.
   3. **`pruned_trace_check`:** 13,627 pruned splats have `tr > 0`, and 38 unpruned ones `tr = 0`. The trace share of
      the 13,627 is not recoverable: the metric cache was not bundled.
-- **Next: pre-register the C3DGS arm** (Amendment 12 c) from `kaggle/E3_C3DGS_DESIGN.md` and FINDINGS section 15, in
+- **Next: draft Amendment 15** (not yet written), alone and docs only, pre-registering E4p and E4 as decided in
+  "Related work, paper direction and E4 decisions (2026-10-01)" above, from `kaggle/E4_DESIGN.md`. Then follow that
+  entry's order (g). The item below is kept for its checklist: Amendment 15 must still settle or state each point.
+- ~~**Pre-register the C3DGS arm**~~ **Became E4 (superseded by the item above).** Kept as a checklist:
+  (Amendment 12 c) from `kaggle/E3_C3DGS_DESIGN.md` and FINDINGS section 15, in
   a new amendment, before any of its code or data. It must settle every item of the doc's section 9, or state it as a
   limitation. In particular:
   - `M_i` with DC (16x16), an extension of the frozen method;
@@ -2934,7 +3019,8 @@ The work went in this order:
 
   The development-scene pilot that this item used to leave open was E3r itself.
 - ~~**Optional: commit a section-14 checker.**~~ **Done (2026-09-29):** `bench/gn/check_s14.py`, run by pytest (`9de1c993`).
-- **Then: E3's design beyond the C3DGS arm, not written yet** (no amendment, code or notebook; the C3DGS arm's design
+- **Then: E3's design beyond the C3DGS arm, not written yet; E3a (gsplat PNG on the 13 INRIA scenes) deferred by
+  Dace's decision of 2026-10-01** (no amendment, code or notebook; the C3DGS arm's design
   input is `kaggle/E3_C3DGS_DESIGN.md`; `kaggle/E3_SCOUTING.md` has the scouting, which recommends C3DGS as the first host and E3a, gsplat PNG on the INRIA checkpoints, as the
   first step): port the frozen `gn_vq_cvfloor`
   (FINDINGS section 12, "The method, as frozen"; Amendment 11 b) to other codecs, on INRIA checkpoints.
@@ -3155,7 +3241,7 @@ The work went in this order:
 - `lint/format-code.sh` and the tests on a CUDA machine (locally only CPU).
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
 - **Related work:** `kaggle/RELATED_WORK_OGC.md` (2026-10-01, literature notes, not findings) on arXiv 2609.28997 (OGC: per-Gaussian S2 observation Gram, matrix-weighted Lloyd, a C3DGS drop-in) and 2609.15735 (global factorised Gram, sqrt + KLT, no VQ), with the metric-equivalence check (our M_i equals their S2 Gram in expectation) and open questions; read it before the C3DGS arm's pre-registration. PDFs and the `ogc-3dgs` clone (`49ccae72`, PolyForm Noncommercial) are not in the repo.
-- **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3r / E3:** see "Open items (E0, E1, E2, E2b, E2c, E3p, E3q, E3r: closed; E3: the C3DGS arm designed, not pre-registered)". E0 is done
+- **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3r / E3:** see "Open items (E0, E1, E2, E2b, E2c, E3p, E3q, E3r: closed; E4: designed, Amendment 15 not written)". E0 is done
   and G0 passed (`kaggle/gn_e0/gn/`, FINDINGS section 8); E1 is done and G1 failed (`kaggle/gn_e1/gn1/`,
   FINDINGS section 9); E2 is done and G2a passed (`kaggle/gn_e2/gn2/`, FINDINGS section 10); E2b
   (Amendments 9 and 10, exploratory) is done, and works in fidelity terms but not by the PSNR criterion
@@ -3164,5 +3250,5 @@ The work went in this order:
   INRIA's bicycle and train checkpoints) is done (`kaggle/gn_e3p/gn3p/`, FINDINGS section 13). E3q (Amendment 13,
   a C3DGS smoke test on train) failed in attempt 1 (cuSOLVER batched eigen) and ran in attempt 2 with Amendment 13 g's fix (`kaggle/gn_e3q/`,
   FINDINGS section 14). E3r (Amendment 14, the C3DGS-host pilot) is done (`kaggle/gn_e3r/gn3r/`,
-  FINDINGS section 15). The C3DGS arm's integration design is `kaggle/E3_C3DGS_DESIGN.md`; its pre-registration,
-  and the rest of E3's design (other codecs, INRIA checkpoints), are not written yet.
+  FINDINGS section 15). The C3DGS arm's integration design is `kaggle/E3_C3DGS_DESIGN.md`; it became E4 (`kaggle/E4_DESIGN.md`,
+  decisions of 2026-10-01). **Next: draft Amendment 15**, not yet written. The rest of E3's design (other codecs, INRIA checkpoints), are not written yet.
