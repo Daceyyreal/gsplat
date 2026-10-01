@@ -2027,3 +2027,133 @@ Kaggle titles: **"E4p C3DGS fork pilot"** and **"E4 C3DGS gate"**.
   (14 f), the out-of-memory retry and the deadline (14 d), one device copy of the metric (14 g). A failure is
   recorded and every step that does not need its product still runs (14 d), within the drop and `incomplete` rules of
   c and d.
+
+### i. Note (2026-10-01, after Amendment 15 was committed at `573142ac` and before any E4p code): the header read, the archive pins and Deep Blending's feasibility
+
+**What was read, under d's rule.** Order step g.2; nothing else was fetched, decompressed or kept.
+- **The archive's zip directory** (Amendment 12 a's archive; zip64, 117 entries, central directory at 14,660,617,193,
+  13,708 bytes; 14,660,630,999 bytes). It matches E3p's pins: the archive size, the directory, and all six pinned
+  bicycle and train members (`e3p_inria.check_directory`, no mismatch).
+- **drjohnson and playroom only:**
+  - `cameras.json`, fetched whole with `e3p_inria.fetch_member` (size and CRC32 checked). Only the camera count and
+    each camera's width and height were kept; the file was deleted, and its poses were not used.
+  - the `.ply` member, inflated one output byte at a time up to and including `end_header`, so no splat byte was
+    decompressed. Only the vertex count, the property names and the header's size were kept.
+- **Not read:** any `cfg_args` content, any image, splat value, render or metric. 16 HTTP requests, 11.2 s.
+- **The scripts are scratch files, not committed:** `header_read.py`, `feas7.py` and `cost7.py` (this session's
+  scratchpad, `note_i/`). Their outputs are quoted here; E4p's code will carry the pins.
+
+**The pins** (method 8, deflate, for every member; offsets are the local headers'):
+
+| Scene | Member | Local header offset | Compressed bytes | Bytes | CRC32 |
+|---|---|---|---|---|---|
+| bonsai | `bonsai/cameras.json` | 2,143,065,696 | 37,076 | 116,695 | `f963b75c` |
+| bonsai | `bonsai/cfg_args` | 2,143,102,821 | 136 | 167 | `72f4cedf` |
+| bonsai | `bonsai/point_cloud/iteration_30000/point_cloud.ply` | 2,146,082,330 | 260,603,022 | 308,716,644 | `3088ffa4` |
+| counter | `counter/cameras.json` | 2,642,254,053 | 30,633 | 95,501 | `a3f7feee` |
+| counter | `counter/cfg_args` | 2,642,284,736 | 135 | 169 | `271a40f7` |
+| counter | `counter/point_cloud/iteration_30000/point_cloud.ply` | 2,644,544,174 | 261,431,049 | 303,294,620 | `f324e3ad` |
+| kitchen | `kitchen/cameras.json` | 7,875,310,892 | 35,453 | 111,500 | `18babec2` |
+| kitchen | `kitchen/cfg_args` | 7,875,346,395 | 137 | 169 | `fc9fc092` |
+| kitchen | `kitchen/point_cloud/iteration_30000/point_cloud.ply` | 7,878,777,571 | 406,623,576 | 459,380,612 | `84ed81c5` |
+| room | `room/cameras.json` | 9,529,779,210 | 39,535 | 124,668 | `57dae086` |
+| room | `room/cfg_args` | 9,529,818,792 | 134 | 163 | `c6b59cd5` |
+| room | `room/point_cloud/iteration_30000/point_cloud.ply` | 9,531,466,904 | 329,909,932 | 395,158,780 | `1a63439c` |
+| truck | `truck/cameras.json` | 13,739,353,050 | 32,225 | 100,406 | `820f7d65` |
+| truck | `truck/cfg_args` | 13,739,385,323 | 130 | 162 | `6c485142` |
+| truck | `truck/point_cloud/iteration_30000/point_cloud.ply` | 13,741,446,521 | 550,481,900 | 630,225,580 | `44027887` |
+| drjohnson | `drjohnson/cameras.json` | 3,123,184,169 | 33,890 | 105,635 | `bcf444d6` |
+| drjohnson | `drjohnson/cfg_args` | 3,123,218,111 | 131 | 167 | `a9d24034` |
+| drjohnson | `drjohnson/point_cloud/iteration_30000/point_cloud.ply` | 3,124,408,130 | 735,160,560 | 844,479,476 | `66dd518a` |
+| playroom | `playroom/cameras.json` | 8,654,411,652 | 29,048 | 89,710 | `e0e302d1` |
+| playroom | `playroom/cfg_args` | 8,654,440,751 | 131 | 165 | `0219f3f9` |
+| playroom | `playroom/point_cloud/iteration_30000/point_cloud.ply` | 8,654,988,456 | 523,887,782 | 631,438,300 | `f8b2c7e2` |
+
+- **Checks.** Every `.ply` size equals `kaggle/E3_SCOUTING.md` a's, and 1,525 bytes plus the count's digits plus 248
+  bytes per splat gives its splat count exactly.
+- **Deep Blending's two `.ply` headers:** INRIA's 62 float properties in INRIA's order, a 1,532-byte header, and
+  `element vertex` 3,405,153 (drjohnson) and 2,546,116 (playroom), equal to the counts derived from the sizes.
+- **The `cameras.json` SHA-1s:** drjohnson `f30d572a0de95ac42492811497ce5b5232cb4df6`, playroom
+  `84615f7f2988cbdcbc4f4c4aa0b9d9e279693fd3`.
+
+**Deep Blending's cameras:**
+
+| Scene | Cameras | Image size (every camera) | Test views, every 8th |
+|---|---|---|---|
+| drjohnson | 263 | 1332 x 876 | 33 |
+| playroom | 225 | 1264 x 832 | 29 |
+
+- **The loaded size is taken as the `cameras.json` size.** `cfg_args` was not read (d's rule covers counts and sizes
+  only). Both widths are below 1,600, so INRIA's `-r 1` and `-r -1` (`e3p_inria.inria_image_size`) both load this
+  size. A larger reduction in `cfg_args` would only shrink every image term, so the figures below are upper ends in
+  that respect. E4p's and E4's code read `cfg_args` and apply the size rule.
+
+**Feasibility, by Amendment 14 g's model as `kaggle/E4_DESIGN.md` section 6 applies it** (an estimate, not a
+measurement). In GB (10^9 bytes):
+- **The sensitivity pass:** C3DGS's per-splat allocations (1,850 bytes per splat), the image state (28 bytes per pixel
+  of the largest view) and the binning buffers (36 bytes per tile instance), plus the images (all views, float32 RGB)
+  with `--data_device cuda`.
+  - Tile instances are bracketed from the two measured scenes: 11.60 (bicycle) to 11.71 (train) per pixel, and up to
+    6.09 (train) per splat.
+  - The upper end adds train's unexplained 470 bytes per splat.
+- **The colour step** adds the larger of our metric copy plus GN-VQ's update chunk (544 bytes per splat plus
+  `e3r_memory.UPDATE_CHUNK_BYTES`, 922,746,880 bytes) and OGC's assignment chunk (100,000 x 4,096 float32 scores and
+  their inputs, 1.76 GB), added to the upper end. That is conservative: the two peaks are not simultaneous.
+- **"x 1.14"** is E3r's reserved-over-allocated ratio (5.38 / 4.71 GB). The T4 has 15.64 GB.
+- **Sizes for the five other scenes** are the design's (ceil of the full size / 2, from runs 4-5's committed metadata).
+  Their `cameras.json` was not read.
+
+| Scene | Splats | Loaded size, views | Images on CUDA | Sensitivity, images on CUDA | Sensitivity, images on CPU | + colour step, CUDA / CPU | + colour step x 1.14, CUDA / CPU | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| bonsai | 1,244,819 | 1559 x 1039, 292 | 5.68 | 8.70-9.29 | 3.02-3.62 | 11.05 / 5.38 | 12.60 / 6.13 | CUDA likely |
+| counter | 1,222,956 | 1558 x 1038, 240 | 4.66 | 7.64-8.22 | 2.98-3.56 | 9.98 / 5.32 | 11.38 / 6.07 | CUDA likely |
+| kitchen | 1,852,335 | 1558 x 1039, 279 | 5.42 | 9.57-10.44 | 4.15-5.03 | 12.38 / 6.96 | 14.11 / 7.93 | CUDA tight; CPU sure |
+| room | 1,593,376 | 1557 x 1038, 311 | 6.03 | 9.70-10.45 | 3.67-4.42 | 12.24 / 6.21 | 13.96 / 7.08 | CUDA tight; CPU sure |
+| truck | 2,541,226 | 979 x 546, 251 | 1.61 | 6.55-8.08 | 4.94-6.47 | 10.38 / 8.77 | 11.84 / 10.00 | CUDA likely |
+| drjohnson | 3,405,153 | 1332 x 876, 263 | 3.68 | 10.50-12.36 | 6.82-8.68 | 15.14 / 11.45 | 17.26 / 13.06 | CUDA unlikely at the colour step; CPU fits |
+| playroom | 2,546,116 | 1264 x 832, 225 | 2.84 | 8.02-9.33 | 5.18-6.49 | 11.64 / 8.80 | 13.27 / 10.04 | CUDA likely |
+
+- **Against the design's table:** the five rows' sensitivity columns reproduce it exactly, as do kitchen's, room's
+  and truck's colour-step columns. Bonsai's and counter's colour-step columns, bounded by OGC's chunk, read 0.01 GB
+  lower in the last digit (11.05 against 11.06; 9.98 against 9.99): the design states that bound as 1.76 GB, and its
+  unrounded value is not recorded.
+- **drjohnson.**
+  - Its sensitivity pass alone fits with images on the GPU: 10.50-12.36 GB, 11.97-14.09 GB x 1.14.
+  - The colour step does not, at the upper end: 15.14 GB, 17.26 x 1.14, above the T4. The lower end is 13.28 GB,
+    15.14 x 1.14, at the limit.
+  - **So d's retry is expected to run there:** a process that runs out of memory at its colour step is retried with
+    `--data_device cpu`, which the model puts at 11.45 GB (13.06 x 1.14). The scene's later runs then start on the
+    CPU (d).
+- **playroom:** 11.64 GB on CUDA (13.27 x 1.14), below kitchen's and room's.
+- **By this model every scene fits with images on the CPU,** so no scene is expected to be dropped. Whether a scene
+  runs is still settled by d's memory rule, not by this note.
+- **What the model leaves out:**
+  - tile instances on an indoor Deep Blending view: the per-pixel bracket comes from bicycle and train;
+  - host memory: the images under `--data_device cpu`, the host copy of the forked state, and OGC's `G` (1,024 bytes
+    per quantized splat, at most 3.49 GB on drjohnson);
+  - the time the CPU fallback costs.
+
+**Time per scene** (an estimate). The method is `kaggle/E4_DESIGN.md` section 7's:
+- **The base:** E3r's measured train times (`kaggle/gn_e3r/gn3r/`), flat (lower end) to linear in the splat count
+  (upper end), with C3DGS's evaluation and protocol ii scaled by test-view pixels.
+- **Amendment 15's scope:**
+  - six rows per process: three GN-VQ runs, and two OGC runs at 15 iterations taken at our per-iteration rate (an
+    assumption);
+  - the probe evaluated from its decoded `.npz`;
+  - fine-tuning of rows 1, 2 and 5 in all 3 processes, each with its evaluation, decode and protocol ii.
+- **Not included:** the saving when `rho_cv` = 0, an out-of-memory retry, and the session setup (396.0 s in E3r).
+
+| Scene | Download, runner, GN passes, CV, probe (s) | One process (s) | Scene: the above plus 3 processes (s) | Hours |
+|---|---|---|---|---|
+| bonsai | 1,567-1,796 | 3,906-4,265 | 13,285-14,591 | 3.69-4.05 |
+| counter | 1,515-1,722 | 3,484-3,807 | 11,966-13,142 | 3.32-3.65 |
+| kitchen | 1,552-2,418 | 3,785-5,143 | 12,906-17,849 | 3.59-4.96 |
+| room | 1,581-2,176 | 4,021-4,953 | 13,642-17,035 | 3.79-4.73 |
+| truck | 1,374-2,963 | 2,322-4,814 | 8,339-17,403 | 2.32-4.83 |
+| drjohnson | 1,470-3,965 | 3,113-7,027 | 10,810-25,045 | 3.00-6.96 |
+| playroom | 1,434-3,028 | 2,817-5,317 | 9,885-18,979 | 2.75-5.27 |
+
+In all, 80,834-124,045 s (22.5-34.5 GPU-hours), without the threshold sweep.
+
+**This note changes no scene, row or bar** (d). The scenes' assignment to sessions is a later dated note, before any
+E4 run (g).
