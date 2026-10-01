@@ -22,8 +22,11 @@ quotes it (`2eb091f9`, checked by `bench/gn/check_s15.py`, `5fda2ea7`). Every st
 "Related work, paper direction and E4 decisions (2026-10-01)" below. **Amendment 15** (E4p and E4) is committed
 (`573142ac`); its decisions are in the same entry. Note i (`85b43cff`: the header read, the seven scenes' archive pins,
 Deep Blending's feasibility; its scripts `15f263a7`) and note ii (`fcd1914f`: report-only measures) are committed, and
-**E4p is built** (Amendment 15 g.3: code, tests, dry run; see "E4p notebook"). **Next: run E4p on Kaggle** ("E4p C3DGS
-fork pilot"). E4's session assignment waits for E4p's host-RAM numbers. No E4p or E4 data exists.
+**E4p ran** on Kaggle ("E4p C3DGS fork pilot"); its bundle is committed data only (`kaggle/gn_e4p/gn4p/`, `60c4839b`) and
+was checked against Dace's readings in chat, not yet written up. **Dace decided to withdraw E4 before any E4 data**
+(Amendment 16, not drafted) **and to run E4q instead**, an exploratory dissection on development scenes only; see "E4p
+results check and the E4q pivot (2026-10-02)" below. **Next: draft FINDINGS section 16 (E4p) and `check_s16.py`, then
+draft Amendment 16** (E4 withdrawn, E4q registered); both are shown to Dace before commit. No E4 or E4q data exists.
 
 ## Context and rules
 
@@ -1341,7 +1344,9 @@ Session decisions.
 
 ## E4p notebook (`bench/gn-vq`, `kaggle/gn_e4p_bench.ipynb`, Kaggle title "E4p C3DGS fork pilot")
 
-**Built, not run** (Amendment 15 g.3). E4p is **pre-registered in `PREREG_GN.md` Amendment 15** (`573142ac`) with
+**Ran on Kaggle; bundle committed data only** (`kaggle/gn_e4p/gn4p/`, 11 files, `60c4839b`; zip 298,965 bytes, SHA-1
+`7641a3cdc980e08a2b80cfa726bad68805a9af5a`). Not written up yet (FINDINGS section 16 is next). What follows is how it
+was built and run. E4p is **pre-registered in `PREREG_GN.md` Amendment 15** (`573142ac`) with
 **note i** (`85b43cff`) and **note ii** (`fcd1914f`). It is **exploratory, with no verdict**: E4's rows, measurements and
 fine-tuning on **train** (a development scene), before E4. It may only raise E4's process count or fix bugs.
 
@@ -3141,7 +3146,42 @@ file. No E4p or E4 data exists.
 - **Checked:** pytest 130 passed; the E4p dry run (every stage, OGC's real clone, `gram_kmeans` and
   `plugin.observation_gram` on the CPU); E3q's and E3r's dry runs; E0-E3r notebooks rebuild byte-identical.
 
-### Open items (E0, E1, E2, E2b, E2c, E3p, E3q, E3r: closed; E4p: built, not run; E4: pre-registered)
+### E4p results check and the E4q pivot (2026-10-02)
+
+Docs only (this flush). No FINDINGS section, amendment or code changed in this session after the bundle commit.
+
+1. **The E4p bundle is committed data only** (`60c4839b`): `~/Downloads/E4p_bundle.zip`, the only copy (no "(1)"), 298,965
+   bytes, SHA-1 `7641a3cdc980e08a2b80cfa726bad68805a9af5a`; 11 files under `kaggle/gn_e4p/gn4p/`, each byte-checked against
+   its zip entry on disk and as a staged blob (CSVs CR-insensitively); pytest 130 passed before the commit. **Dace's
+   readings were checked against the files in chat** (Claude Code's confirmation report, with three read-only
+   diagnoses: the fine-tuned OGC row's smaller `features_rest`, OGC's GPU peak and the gate scenes' feasibility, and
+   every difference between the GN-VQ rows and OGC's row). None of it is written up yet; FINDINGS section 16 is next.
+2. **Decisions (Dace, via chat):**
+   - **a. E4 will be withdrawn before any E4 data**, by Amendment 16 (not yet drafted). The reasons, to be stated there,
+     from train (a development scene):
+     - D1 is about 0 on the standard test views;
+     - D2 compares unequal effective codebooks at equal K: OGC reseeds empty clusters (`vq.py:74-84` at `49ccae72`),
+       while GN-VQ keeps the empty ones of C3DGS's warm start. So equal-K PSNR is the wrong primary.
+   - **b. Next: E4q**, exploratory, **development scenes only** (train; treehill if it fits after a header read under
+     Amendment 15 d's rule). Its contents, to be pre-registered in Amendment 16:
+     - a dissection ladder from the frozen GN-VQ toward OGC, one factor at a time: reseed empty clusters; init in
+       proportion to tr(G); clip per part (DC, AC) or none; ridge toward the cluster mean in place of the floor;
+       iterations 15 and 50; the final int8 assignment off;
+     - OGC's `lam` chosen by held-out-train-view cross-validation over {1e-6 .. 1};
+     - an equal-rate comparison by the colour-threshold sweep (BD);
+     - note ii's measures, plus fidelity as the PSNR of the pooled MSE, the quantizer state at every save, each table's
+       range against its int8 grid, and the codewords used per row.
+
+     The new gate hypothesis is written only after E4q's findings. **Train and treehill can never be gate scenes.**
+   - **c. The global clip is not patched into the frozen method.** `gn_vq.py:179` clips to one min / max over all 48
+     values, DC included, so in C3DGS's layout the AC bound is effectively the DC maximum. A per-part clip is a ladder
+     variant in E4q, not a bug fix.
+   - **d. Engineering:** fix the reserved-memory recording bug (the wrapper folds the hooks' per-row resets into the
+     allocated peak but not the reserved one); OGC's chunk is 25,000 for any gate run, and E4q checks on train that the
+     labels equal those at chunk 100,000 (or reports how many differ).
+   - **e. Rule (Dace): pytest before every commit, docs-only commits included.**
+
+### Open items (E0-E3r: closed; E4p: ran, not written up; E4: to be withdrawn; E4q: next)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -3199,12 +3239,15 @@ file. No E4p or E4 data exists.
 - ~~**Amendment 15 g.2.**~~ **Done (2026-10-01):** note i (`85b43cff`), its scripts (`15f263a7`); note ii (`fcd1914f`).
 - ~~**Amendment 15 g.3.**~~ **Done (2026-10-01):** E4p's code, tests and dry run (see "Notes i and ii, and the E4p
   build" above and "E4p notebook").
-- **Next: run E4p on Kaggle** ("E4p C3DGS fork pilot"; Amendment 15 g.4), then its findings (FINDINGS section 16).
-- **E4's session assignment waits for E4p's host-RAM numbers** (Amendment 15 g's dated note before any E4 run; a
-  proposal from note i's estimates exists only in chat: session 1 drjohnson | kitchen then room, session 2 playroom then
-  counter | bonsai then truck).
-- **Before any E4 code:** a note if E4p's power check proposes more processes (note ii d), and E4p's bug fixes. The item
-  below is kept for its checklist.
+- ~~**Run E4p on Kaggle.**~~ **Done:** bundle committed data only (`60c4839b`), checked against Dace's readings in chat.
+- **Next: draft FINDINGS section 16 (E4p) and `bench/gn/check_s16.py`** (check_s15's form, with planted errors), shown
+  to Dace before commit.
+- **Then: draft Amendment 16** (dated, before any E4 data): E4 withdrawn, E4q registered (see "E4p results check and the
+  E4q pivot (2026-10-02)", item 2), shown to Dace before commit. Then E4q's code, tests, dry run and run.
+- ~~**E4's session assignment.**~~ **Moot:** E4 is to be withdrawn. Gate scenes stay untouched.
+- **Engineering before E4q runs:** the reserved-memory recording fix; OGC's chunk at 25,000 with E4q's label-equality
+  check against 100,000 on train.
+- The item below is kept for its checklist.
 - ~~**Pre-register the C3DGS arm**~~ **Became E4 (superseded by the item above).** Kept as a checklist:
   (Amendment 12 c) from `kaggle/E3_C3DGS_DESIGN.md` and FINDINGS section 15, in
   a new amendment, before any of its code or data. It must settle every item of the doc's section 9, or state it as a
@@ -3446,7 +3489,7 @@ file. No E4p or E4 data exists.
 - `lint/format-code.sh` and the tests on a CUDA machine (locally only CPU).
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
 - **Related work:** `kaggle/RELATED_WORK_OGC.md` (2026-10-01, literature notes, not findings) on arXiv 2609.28997 (OGC: per-Gaussian S2 observation Gram, matrix-weighted Lloyd, a C3DGS drop-in) and 2609.15735 (global factorised Gram, sqrt + KLT, no VQ), with the metric-equivalence check (our M_i equals their S2 Gram in expectation) and open questions; read it before the C3DGS arm's pre-registration. PDFs and the `ogc-3dgs` clone (`49ccae72`, PolyForm Noncommercial) are not in the repo.
-- **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3r / E3:** see "Open items (E0, E1, E2, E2b, E2c, E3p, E3q, E3r: closed; E4p: built, not run; E4: pre-registered)". E0 is done
+- **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3r / E3:** see "Open items (E0-E3r: closed; E4p: ran, not written up; E4: to be withdrawn; E4q: next)". E0 is done
   and G0 passed (`kaggle/gn_e0/gn/`, FINDINGS section 8); E1 is done and G1 failed (`kaggle/gn_e1/gn1/`,
   FINDINGS section 9); E2 is done and G2a passed (`kaggle/gn_e2/gn2/`, FINDINGS section 10); E2b
   (Amendments 9 and 10, exploratory) is done, and works in fidelity terms but not by the PSNR criterion
@@ -3456,4 +3499,5 @@ file. No E4p or E4 data exists.
   a C3DGS smoke test on train) failed in attempt 1 (cuSOLVER batched eigen) and ran in attempt 2 with Amendment 13 g's fix (`kaggle/gn_e3q/`,
   FINDINGS section 14). E3r (Amendment 14, the C3DGS-host pilot) is done (`kaggle/gn_e3r/gn3r/`,
   FINDINGS section 15). The C3DGS arm's integration design is `kaggle/E3_C3DGS_DESIGN.md`; it became E4 (`kaggle/E4_DESIGN.md`,
-  decisions of 2026-10-01), pre-registered as E4p and E4 by Amendment 15 (`573142ac`, notes i and ii); E4p is built. **Next: run E4p.** The rest of E3's design (other codecs, INRIA checkpoints) is not written yet.
+  decisions of 2026-10-01), pre-registered as E4p and E4 by Amendment 15 (`573142ac`, notes i and ii); E4p ran (`60c4839b`); E4 is to be withdrawn
+  for E4q (2026-10-02). **Next: FINDINGS section 16, then Amendment 16.** The rest of E3's design (other codecs, INRIA checkpoints) is not written yet.
