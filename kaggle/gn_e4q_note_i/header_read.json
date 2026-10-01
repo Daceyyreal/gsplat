@@ -1,0 +1,107 @@
+{
+ "date": "2026-10-02",
+ "url": "https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip",
+ "archive_bytes": 14660630999,
+ "n_entries": 117,
+ "cd_offset": 14660617193,
+ "cd_size": 13708,
+ "directory_matches_e3p_pins": true,
+ "directory_mismatches": [],
+ "directory_matches_note_i_pins": true,
+ "note_i_mismatches": [],
+ "pins": {
+  "ply": {
+   "name": "treehill/point_cloud/iteration_30000/point_cloud.ply",
+   "header_offset": 12389905633,
+   "compress_size": 829119730,
+   "file_size": 938374260,
+   "crc32": "a9916ad2",
+   "method": 8
+  },
+  "cameras": {
+   "name": "treehill/cameras.json",
+   "header_offset": 12388503807,
+   "compress_size": 18444,
+   "file_size": 56201,
+   "crc32": "fc3331eb",
+   "method": 8
+  },
+  "cfg_args": {
+   "name": "treehill/cfg_args",
+   "header_offset": 12388522302,
+   "compress_size": 137,
+   "file_size": 171,
+   "crc32": "1e467944",
+   "method": 8
+  }
+ },
+ "ply_check": {
+  "file_size_equals_scouting": true,
+  "derived_splats": 3783761.0,
+  "scouting_splats": 3783761
+ },
+ "header": {
+  "cameras_json": {
+   "bytes": 56201,
+   "crc32": "fc3331eb",
+   "sha1": "1dda79c011bc188d903852bc5758b0043d337316"
+  },
+  "n_cameras": 141,
+  "distinct_sizes": [
+   "5068x3326"
+  ],
+  "max_w": 5068,
+  "max_h": 3326,
+  "max_pixels": 16856168,
+  "total_pixels": 2376719688,
+  "n_test_every8": 18,
+  "ply_header": {
+   "n_vertex": 3783761,
+   "n_properties": 62,
+   "properties_equal_inria": true,
+   "header_bytes": 1532,
+   "file_size_check": true
+  }
+ },
+ "inria_http_requests": 10,
+ "download_path": {
+  "route": "gn_e2_scene.ensure_data -> tilequant_run4.download_scene (dataset 'mipnerf360')",
+  "scene_meta_present": true,
+  "zip": "360_extra_scenes",
+  "url": "https://storage.googleapis.com/gresearch/refraw360/360_extra_scenes.zip",
+  "mcmc_sh_data_factor": 4,
+  "archive_bytes": 4488140217,
+  "n_entries": 1278,
+  "n_selected": 286,
+  "selected": {
+   "images": [
+    141,
+    1288424692
+   ],
+   "images_4": [
+    141,
+    128303200
+   ],
+   "poses_bounds.npy": [
+    1,
+    19304
+   ],
+   "sparse": [
+    3,
+    39353154
+   ]
+  },
+  "http_requests": 4,
+  "bytes_equal_scene_meta": {
+   "images": true,
+   "images_4": true,
+   "sparse": true,
+   "poses_bounds.npy": true
+  },
+  "n_images": 141,
+  "n_images_equal_scene_meta": true,
+  "ok": true,
+  "why": "every member the downloader selects is in the zip, with SCENE_META's bytes and image count"
+ },
+ "time_s": 10.462736368179321
+}

@@ -1,0 +1,67 @@
+{
+ "per_splat": 1850,
+ "resid_per_splat": 469.9802164230576,
+ "inst_per_pixel": {
+  "train": 11.709516944392435,
+  "bicycle": 11.60345746616392
+ },
+ "inst_per_splat": {
+  "train": 6.0925516410977805,
+  "bicycle": 1.9241106505365173
+ },
+ "ogc_chunk_25k_bytes": 1674567168,
+ "t4": 15640000000.0,
+ "reserve": 1.14,
+ "rows": [
+  {
+   "case": "images_4 (bicycle's cfg_args)",
+   "n": 3783761,
+   "W": 1267,
+   "H": 832,
+   "n_images": 141,
+   "images": 1.783611648,
+   "cuda_lo": 9.253427272419628,
+   "cuda_hi": 11.42127767811571,
+   "cpu_lo": 7.4698156244196285,
+   "cpu_hi": 9.637666030115708,
+   "colour_gn": 2.981112864,
+   "colour_ogc_25k": 1.674567168,
+   "colour": 2.981112864,
+   "cuda_colour": 14.40239054211571,
+   "cpu_colour": 12.618778894115708,
+   "cuda_colour_lo": 12.234540136419628,
+   "cuda_colour_reserved": 16.418725218011907,
+   "cpu_colour_reserved": 14.385407939291907,
+   "cuda_colour_lo_reserved": 13.947375755518376,
+   "fits_cuda_upper": false,
+   "fits_cuda_lower": true,
+   "fits_cpu_upper": true
+  },
+  {
+   "case": "images_2 (sensitivity)",
+   "n": 3783761,
+   "W": 2534,
+   "H": 1663,
+   "n_images": 141,
+   "images": 7.130159064,
+   "cuda_lo": 16.00841854587462,
+   "cuda_hi": 17.802801166994854,
+   "cpu_lo": 8.87825948187462,
+   "cpu_hi": 10.672642102994853,
+   "colour_gn": 2.981112864,
+   "colour_ogc_25k": 1.674567168,
+   "colour": 2.981112864,
+   "cuda_colour": 20.783914030994854,
+   "cpu_colour": 13.653754966994853,
+   "cuda_colour_lo": 18.98953140987462,
+   "cuda_colour_reserved": 23.693661995334132,
+   "cpu_colour_reserved": 15.565280662374132,
+   "cuda_colour_lo_reserved": 21.648065807257066,
+   "fits_cuda_upper": false,
+   "fits_cuda_lower": false,
+   "fits_cpu_upper": true
+  }
+ ],
+ "start_device": "cpu",
+ "runs": true
+}
