@@ -1,6 +1,8 @@
 """A CPU stand-in for C3DGS's ``scene/gaussian_model.py`` (E3r's tests and dry run): the attributes, fake quantizers
-and methods E3r's hooks touch, with C3DGS's semantics. ``get_features`` runs the two real
-``torch.ao.quantization.FakeQuantize`` modules, whose observers update on every call, and counts its calls."""
+and methods E3r's and E4p's hooks touch, with C3DGS's semantics. ``get_features`` runs the two real
+``torch.ao.quantization.FakeQuantize`` modules, whose observers update on every call, and counts its calls.
+``training_setup`` puts an optimizer and a scheduler on the model, as C3DGS's does; ``load_npz`` reads what
+``save_npz`` wrote (C3DGS's decoder of its own ``.npz``)."""
 
 import os
 import sys
@@ -18,6 +20,8 @@ GET_FEATURES_CALLS = [0]
 class GaussianModel:
     def __init__(self, sh_degree: int = 3, quantization: bool = True):
         self.max_sh_degree = sh_degree
+        self.quantization = quantization
+        self.optimizer = None
         self._feature_indices = None
         self._gaussian_indices = None
         self.features_dc_qa = torch.ao.quantization.FakeQuantize(dtype=torch.qint8)
@@ -64,6 +68,26 @@ class GaussianModel:
         self._gaussian_indices = nn.Parameter(indices.detach(), requires_grad=False)
         self._rotation = nn.Parameter(rotation.detach())
         self._scaling = nn.Parameter(scaling.detach())
+
+    def training_setup(self, training_args):
+        params = [self._features_dc, self._features_rest]
+        self.optimizer = torch.optim.Adam(params, lr=0.0, eps=1e-15)
+        self.xyz_scheduler_args = lambda step: 0.0
+
+    def load_npz(self, path, override_quantization=False):
+        z = np.load(path)
+
+        def deq(name):
+            return (torch.from_numpy(z[name]).float() - float(z[f"{name}_zero_point"])) * float(z[f"{name}_scale"])
+
+        self._xyz = nn.Parameter(torch.from_numpy(z["xyz"]).float())
+        self._opacity = nn.Parameter(torch.from_numpy(z["opacity"]).float())
+        self._features_dc = nn.Parameter(deq("features_dc"))
+        self._features_rest = nn.Parameter(deq("features_rest"))
+        self._feature_indices = nn.Parameter(torch.from_numpy(z["feature_indices"]).long(), requires_grad=False)
+        self._gaussian_indices = nn.Parameter(torch.from_numpy(z["gaussian_indices"]).long(), requires_grad=False)
+        self._scaling = nn.Parameter(torch.from_numpy(z["scaling"]).float())
+        self._rotation = nn.Parameter(torch.from_numpy(z["rotation"]).float())
 
     def save_npz(self, path, compress: bool = True, half_precision: bool = False, sort_morton: bool = False):
         with torch.no_grad():

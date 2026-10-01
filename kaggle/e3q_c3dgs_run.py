@@ -20,6 +20,13 @@ float64 CPU reference on a sample of its actual input matrices.
 E3r (Amendment 14) adds ``--observe``, ``--record PATH`` and ``--inject CONFIG``, which install
 ``kaggle/e3r_hooks.py`` after the chdir, before ``compress.py`` runs; their report is ``"e3r"``. An injection that
 cannot be installed, or that never happens, is an error: C3DGS's own codebook is never reported as an injected one.
+
+E4p (Amendment 15) adds ``--defer_eval`` (the probe: C3DGS's evaluation deferred), ``--fork CONFIG`` (the fork's
+rows in one process) and ``--eval_npz NPZ`` (C3DGS's evaluation of a decoded ``.npz``), which install
+``kaggle/e4p_hooks.py`` instead; their report is ``"e4p"``, with the host RSS of this process and its children over
+the run (``"host_rss"``) and the process's peak GPU memory folded over the hooks' per-row resets. Hooks that cannot
+be installed, a fork that does not reach its end, or an ``--eval_npz`` that evaluates nothing are errors. Without
+these flags the wrapper is E3q's and E3r's, unchanged.
 """
 
 import argparse
@@ -197,6 +204,16 @@ class ChunkedLinalg:
         }
 
 
+def _import_e4p():
+    saved = list(sys.path)
+    sys.path.insert(0, os.path.join(REPO, "bench", "gn"))
+    try:
+        import e4p
+    finally:
+        sys.path[:] = saved
+    return e4p
+
+
 def main() -> int:
     argv = sys.argv[1:]
     rest = argv[argv.index("--") + 1:] if "--" in argv else []
@@ -210,7 +227,14 @@ def main() -> int:
     p.add_argument("--seed", type=int, default=None,
                    help="E3r (Amendment 14 f): seed random, numpy and torch as C3DGS's own safe_state does, before "
                         "compress.py (which seeds nothing)")
+    # E4p (Amendment 15): kaggle/e4p_hooks.py in this process
+    p.add_argument("--defer_eval", action="store_true", help="E4p: the probe; C3DGS's evaluation deferred")
+    p.add_argument("--fork", default=None, help="E4p: a JSON config; the fork's rows in this process")
+    p.add_argument("--eval_npz", default=None, help="E4p: C3DGS's evaluation of this decoded .npz, then stop")
     a = p.parse_args(argv[:argv.index("--")] if "--" in argv else argv)
+    fork = os.path.abspath(a.fork) if a.fork else None
+    eval_npz = os.path.abspath(a.eval_npz) if a.eval_npz else None
+    e4p_mode = bool(a.defer_eval or fork or eval_npz)
     record = os.path.abspath(a.record) if a.record else None
     inject = os.path.abspath(a.inject) if a.inject else None
     import torch
@@ -224,7 +248,15 @@ def main() -> int:
     sys.argv = ["compress.py"] + rest
     rec = {"argv": sys.argv, "status": "ok", "error": None, "deviations": [DEVIATION]}
     hooks = None
-    if a.observe or record or inject:
+    if e4p_mode:
+        try:
+            import e4p_hooks
+
+            hooks = e4p_hooks.install(record=record, fork=fork, defer_eval=a.defer_eval, eval_npz=eval_npz)
+        except BaseException as e:  # noqa: B902
+            rec["e4p_install_error"] = f"{type(e).__name__}: {str(e)[:800]}"
+            rec.update(status="error", error=f"E4p hooks not installed: {rec['e4p_install_error']}")
+    elif a.observe or record or inject:
         try:
             import e3r_hooks
 
@@ -245,20 +277,35 @@ def main() -> int:
         rec["deviations"].append(f"random, numpy and torch seeded with {a.seed} before compress.py, as C3DGS's own "
                                  "safe_state seeds them (compress.py seeds nothing; PREREG_GN.md Amendment 14 f)")
     t0 = time.time()
+    rss = _import_e4p().HostRss(interval=0.5).__enter__() if e4p_mode else None
     if rec["status"] == "ok":
         try:
             runpy.run_path("compress.py", run_name="__main__")
         except BaseException as e:  # noqa: B902 (recorded, then the exit code says so)
-            rec.update(status="error", error=f"{type(e).__name__}: {str(e)[:800]}", traceback=traceback.format_exc()[-6000:])
+            if not (e4p_mode and hooks is not None and getattr(hooks, "stopped_ok", False) and type(e).__name__ == "Stop"):
+                rec.update(status="error", error=f"{type(e).__name__}: {str(e)[:800]}",
+                           traceback=traceback.format_exc()[-6000:])
     rec["wall_s"] = time.time() - t0
+    if rss is not None:
+        rss.__exit__(None, None, None)
+        rec["host_rss"] = rss.record()
     rec["linalg_patch"] = patch.record()
-    if hooks is not None:
+    if hooks is not None and e4p_mode:
+        rec["e4p"] = hooks.report()
+        if fork and rec["status"] == "ok" and (rec["e4p"].get("fork") or {}).get("phase") != "done":
+            rec.update(status="error", error=f"E4p: compress.py finished but the fork stopped at phase "
+                                             f"{(rec['e4p'].get('fork') or {}).get('phase')!r}")
+        if eval_npz and rec["status"] == "ok" and "eval_npz" not in rec["e4p"]:
+            rec.update(status="error", error="E4p: compress.py finished but the .npz was never evaluated")
+    elif hooks is not None:
         rec["e3r"] = hooks.report()
         if inject and rec["status"] == "ok" and "inject" not in rec["e3r"]:
             rec.update(status="error", error="E3r: compress.py finished but the colour codebook was never injected")
     if cuda:
         rec.update(max_memory_allocated=torch.cuda.max_memory_allocated(),
                    max_memory_reserved=torch.cuda.max_memory_reserved(), device=torch.cuda.get_device_name(0))
+        if hooks is not None and e4p_mode:  # the hooks reset the peak per row; this is the process's
+            rec["max_memory_allocated"] = max(rec["max_memory_allocated"], rec["e4p"].get("cuda_peak_allocated_process") or 0)
     os.makedirs(os.path.dirname(os.path.abspath(a.out_json)), exist_ok=True)
     with open(a.out_json, "w") as f:
         json.dump(rec, f, indent=2)
