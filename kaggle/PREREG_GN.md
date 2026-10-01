@@ -2231,3 +2231,213 @@ the mean and range over the processes, per scene. **Also a's fidelity renders:**
 
 **What this note does not change:** E4's rows, scenes, metric, bars, order and Kaggle titles; Amendment 15 d's
 memory and failure rules; the secondaries of Amendment 15 e, which stay as it states them.
+
+## Amendment 16 (2026-10-02, after E4p's results and before any E4 code ran on a gate scene, and before any E4q code)
+
+E4p ran on Kaggle ("E4p C3DGS fork pilot"); its bundle is committed unchanged in `kaggle/gn_e4p/gn4p/` (`60c4839b`) and
+FINDINGS section 16 reports it (`75c53e09`, re-checked by `bench/gn/check_s16.py`, `82d70578`). This amendment
+withdraws E4 (a), pre-registers **E4q, an exploratory dissection on development scenes** (b), fixes two engineering
+items (c), and states what is unchanged (d). G0, G1, G2a, H2b, G2c, E2b's criteria, E4p and Amendments 1-15 with their
+notes are unchanged except for E4's withdrawal.
+
+### a. E4 is withdrawn
+
+- **When:** before any E4 code ran on a gate scene, and before any gate-scene data was read beyond note i's header
+  read (the archive's zip directory; drjohnson's and playroom's camera counts, image sizes and `.ply` headers). The
+  only C3DGS-arm code is E4p's, which runs on train alone (`kaggle/gn_e4p_scene.py`, `SCENES`). No pixel, splat value,
+  render or metric of bonsai, counter, kitchen, room, truck, drjohnson or playroom has been read.
+- **Why,** from E4p on train, a development scene (FINDINGS section 16):
+  1. **D1 is about 0 on the standard test views:** +0.0007 dB with `SE_noise` 0.0020, one process of three negative.
+  2. **D2 compares unequal effective codebooks at equal K.** OGC reseeds empty clusters at the points of largest
+     distortion (`vq.py:74-84` at `49ccae72`) and used all 4,096 entries in every process. GN-VQ starts from C3DGS's
+     own codebook and keeps its empty entries (`bench/gn/diagnostics.py:547`), and used 2,310-2,592. OGC's `.npz` was
+     275,459 bytes larger. Equal K therefore equalizes neither the effective codebook nor the rate, so PSNR at equal K
+     is the wrong primary for the comparison E4 was meant to make.
+- **What is withdrawn:** Amendment 15 c (the primary, its bar and E4's verdict), the seven scenes of d as E4's scenes,
+  e's E4 secondaries and E4's threshold-sweep session, g.5 and the session-assignment note, and the Kaggle title
+  **"E4 C3DGS gate"**. E4 has no verdict, and no result will be reported as E4's. Note ii d's proposal (14 processes
+  for D1) is not adopted.
+- **What stands:** E4p (Amendment 15 f, notes i and ii) and its results; note i's pins and header read, as records.
+- **The gate scenes stay untouched.** No code reads the seven scenes' members beyond note i's header read until a
+  later amendment registers a gate on them.
+
+### b. E4q: a dissection on development scenes (exploratory, no verdict)
+
+**Purpose.** E4q measures which of OGC's differences from the frozen GN-VQ moves quality and rate inside C3DGS, and how
+the rows compare at equal rate. It has no verdict, no bar and no gate; its purpose is to choose the gate hypothesis.
+**The new gate is a later amendment,** written after E4q's findings and before any of that gate's code or data.
+**Train and treehill can never be gate scenes.**
+
+**Scenes.**
+- **train:** INRIA's 30k checkpoint through E3p's pinned members, as in E4p.
+- **treehill,** a development scene since Amendment 10, if it fits:
+  1. **A header read under Amendment 15 d's rule:** the camera count and image sizes from its `cameras.json`, and the
+     vertex count from its `.ply` header. Its three archive members are pinned (offset, sizes, CRC32) from the archive's
+     zip directory. Both go in a dated note before any E4q code.
+  2. **Feasibility in that note,** by Amendment 14 g's model as note i applied it. The colour-step term is the larger
+     of our metric copy plus GN-VQ's update chunk, and OGC's assignment at chunk 25,000 (c) by E4p's measured
+     decomposition: 4 x 25,000 x 4,096 x 4 bytes of score buffers, the chunk's inputs (25,000 x 304 x 4 bytes) and the
+     codebook's device copies (5,767,168 bytes), 1,674,567,168 bytes in all (FINDINGS section 16). The reserved-over-
+     allocated factor stays E3r's 1.14 (5.38 / 4.71 GB), because E4p's reserved figures are unusable (c).
+  3. **The download path:** whether treehill's dataset can be fetched through E3p's download path (the code E3p and E4p
+     fetch a scene's images and COLMAP model with), checked from that code and recorded in the note with the reason.
+  4. **E4q runs on train only if treehill does not fit even with images on the CPU (2), or cannot be fetched through
+     E3p's download path (3).** The note records which, and why. Otherwise treehill runs, starting with its images on
+     the GPU (on the CPU if the model puts the GPU above the T4's 15.64 GB), under Amendment 15 d's out-of-memory
+     retry.
+
+**Per scene, before any fork process:**
+- **as in E4p:** the probe run (C3DGS at K = 4,096 and the default threshold, seeded 0, `--record`, its evaluation
+  deferred), E3r's harness phase (the runner, protocol ii of the uncompressed model, the 16 x 16 GN passes), and note
+  ii's geometry, reference renders and coverage;
+- **`rho_cv`** by Amendment 14 b's cross-validation, as in E4p. On train it is selected again from E4q's own probe run;
+  whether it equals E4p's 1e-2 is reported;
+- **`lam_cv`, OGC's ridge selected the same way:**
+  - `lam` in {1e-6, 1e-4, 1e-3, 1e-2, 1e-1, 1};
+  - for each, `gram_kmeans(X, G_even, 4096, metric="gram", iters=15, device="cuda", chunk=25000, seed=0, lam=lam)`,
+    with `X` the probe's quantizer input reshaped to `[n, 3, 16]` and `G_even` the even-view 16 x 16 metric of the
+    probe's quantized splats, unpacked;
+  - each codebook through C3DGS's int8 table quantizer at the probe's colour step (`bench/gn/e3r.py`'s
+    `C3DGSQuantizer`, as the `rho` cross-validation quantizes its codebooks, `kaggle/gn_e3r_scene.py:581`), with OGC's
+    labels;
+  - each scored by the clamped dMSE on the odd-indexed train views (`e3r.colour_dmse`, the `rho` cross-validation's
+    function and views);
+  - `lam_cv` is the lowest score; a tie goes to the smaller `lam`. No test view enters the selection.
+
+**The rows of one fork process.** Amendment 15 b's fork: C3DGS at `2a234af5` unedited, K = 4,096, the process's colour
+threshold, no fine-tuning; every row computed at the colour call from the same inputs, every row saved before any is
+evaluated, Amendment 15 b's three checks at every save, every row decoded and evaluated with protocol ii and evaluated
+by C3DGS's `render_and_eval`.
+
+| Row | Colour codebook |
+|---|---|
+| `c3dgs` | C3DGS's own `vq_features` (Amendment 15's row 1) |
+| `gnvq_cv` | the frozen GN-VQ at `rho_cv` (Amendment 15's row 5): the ladder's starting point |
+| `lad_reseed`, `lad_init_tr`, `lad_clip_part`, `lad_no_clip`, `lad_ridge_mean`, `lad_iters15`, `lad_iters50`, `lad_no_final_int8` | the ladder, below |
+| `lad_all` | the ladder's factors all at once, below |
+| `ogc` | Amendment 15's row 2, at chunk 25,000 (c) |
+| `ogc_lamcv` | `ogc` with `lam` = `lam_cv`; if `lam_cv` = 1e-3 it is `ogc` and is not run again |
+
+**The dissection ladder.** Each row changes one factor of `gnvq_cv` toward OGC's VQ and keeps every other: the 16 x 16
+metric floored at `rho_cv`; the ridge toward zero, eps = 1e-2; C3DGS's codebook and labels as the warm start; empty
+clusters keeping their entries; the clip to the warm start's range with per-cluster acceptance; at most 20 iterations
+with the 1e-3 relative-drop rule; the final exact assignment against C3DGS's int8 table. "The loop" is `gn_vq`
+(`bench/gn/gn_vq.py`) as `gnvq_cv` runs it.
+
+| Row | The factor | Exactly | Code |
+|---|---|---|---|
+| `lad_reseed` | reseed empty clusters, as OGC (`vq.py:74-84`) | After each update, its clip and acceptance: every cluster with no member in that iteration's assignment takes the quantizer input `x_i` of a splat of largest distortion, `D_i` = the floored-metric distance of `x_i` to its centroid in the codebook that assignment used; the empty clusters take the top `D_i` in `torch.topk`'s order, one splat each. A reseeded entry is not clipped (it is a data point, on the int8 grid by construction) and has no acceptance test (it has no members). Clusters with members but a zero summed metric keep their entries, as in the loop. | the loop; `diagnostics.direct_distance` for `D_i`; new: the reseed step |
+| `lad_init_tr` | OGC's init (`vq.py:21, 31-33`) | The starting codebook is K splats' quantizer inputs, drawn without replacement with probability proportional to `tr(M_i)` + 1e-12 (the unfloored metric, as OGC is given it) from a `torch.Generator` seeded 0; the starting labels are one exact assignment to it under the floored metric (`diagnostics.assign_exact`). The clip range stays the range of C3DGS's codebook, as in `gnvq_cv`, so only the start changes. | the loop; new: the draw, and the clip range passed explicitly |
+| `lad_clip_part` | the clip per part | The DC coordinates (the first 3 of the 48 values, `k` = 0) are clipped to the DC range of the warm start, and the 45 AC coordinates to its AC range; acceptance per cluster as in the loop. | the loop; new: per-coordinate bounds |
+| `lad_no_clip` | no clip | `gn_vq(..., clip=False)`: neither the clamp nor the acceptance test. | the loop, its existing flag |
+| `lad_ridge_mean` | OGC's regulariser (`vq.py:63-73`) in place of the floor | The metric is unfloored (`rho` = 0) in every assignment, the final one included. The update is `c = (sum M_i + r I)^-1 (sum M_i x_i + r xbar)`, with `r` = 1e-3 `tr(sum M_i)` / 16 per cluster and `xbar` the members' mean of `x`, in float64, in place of the loop's `(sum M_i + mu I)^-1 sum M_i x_i`, `mu` = 1e-2 `tr(sum M_i)` / 16. Clusters with a zero summed metric keep their entries, as in the loop. | the loop; new: a ridge-to-mean mode of `diagnostics.update_centroids` |
+| `lad_iters15` | OGC's iteration count | at most 15 iterations; the 1e-3 rule kept | the loop, `max_iters` |
+| `lad_iters50` | more iterations | at most 50 iterations; the 1e-3 rule kept | the loop, `max_iters` |
+| `lad_no_final_int8` | no final assignment against the int8 table, as OGC's host | `gn_vq(..., final_quantized_assignment=False)`: the labels are the last iteration's; C3DGS still quantizes the table at its save. | the loop, its existing flag |
+
+- **`lad_ridge_mean` changes two things that act as one regulariser:** the floor goes, and the ridge changes form
+  (toward the cluster's mean, at OGC's 1e-3, in place of toward zero at 1e-2). It counts as two changes below.
+
+**The combined row `lad_all`:** the loop with every OGC choice at once.
+- **Exactly:** `lad_init_tr`'s start (the draw seeded 0, with one exact assignment for the starting labels);
+  `lad_reseed`'s reseeding; `lad_no_clip` (no clamp, no acceptance test); `lad_ridge_mean`'s metric and update (the floor
+  and the eps ridge both replaced by the ridge toward the cluster mean at `lam` 1e-3); exactly 15 iterations, with no
+  relative-drop stop; no final assignment against the int8 table. In its place, one exact assignment against the
+  returned float codebook, as OGC's last step (`vq.py:87`). Without it the labels would come from before the last
+  update, a difference of structure rather than arithmetic. So OGC's sequence is followed: 15 times assign, update,
+  reseed, then one assignment.
+- **Purpose:** it validates the ladder. `lad_all` minus `ogc` is the residual that the listed factors do not explain:
+  the implementation arithmetic. That covers the loop's exact assignment (the lifted float32 argmin with its float64
+  guard, which keeps the current label unless another is strictly closer) against OGC's expanded float32 cost and plain
+  argmin; the zero-trace splats (the loop gives them their L2-nearest entry, OGC's cost is 0 for every entry and its
+  argmin takes the first); and the loop's float64 update on the GPU against OGC's float32 sums and float64 solve on the
+  CPU, with its clamps (`vq.py:69-71`).
+- **Reported:** `lad_all` minus `ogc` in every measure, as the other differences; and the labels that agree between
+  `lad_all` and `ogc`, as a count and a fraction of the quantized splats, with the number of codebook entries both use.
+- **`lad_all` is not a ladder variant for the selection below,** and it does not run at the sweep's other points.
+
+**Processes.**
+- **The default point (j = 0):** two processes per scene, seeded 0 and 1, each running every row above. The second
+  process is for noise: each difference is reported per process and as `D_s`, `v_s` = (`D_0` - `D_1`)^2 / 2 (1 degree
+  of freedom) and `SE_noise` = sqrt(`v_s` / 2).
+- **The rate sweep, train only:** `color_importance_include` = 0.6e-6 x 3^j, j = -2, -1, +1, +2, at K = 4,096; one
+  process per point, seeded 0, with the rows `c3dgs`, `ogc`, `ogc_lamcv`, `gnvq_cv` and the best ladder row; the j = 0
+  point is the seed-0 default process. `rho_cv` and `lam_cv` are the default point's.
+- **The best ladder row, fixed now:** the highest protocol-ii test PSNR at j = 0 among the eight single-factor ladder
+  rows (`lad_all` excluded), as the
+  mean of the two processes, rounded to 9 decimals; a tie goes to the row with fewer changes (`lad_ridge_mean` two, every
+  other row one), then to the earlier row in the ladder's order. It is chosen among ladder rows whether or not it beats
+  `gnvq_cv`.
+- **Order within a scene:** the probe run and the selections, then the two default processes, then the sweep (the
+  best ladder row needs the default point's results). Treehill runs on the second GPU.
+- **BD, report only:** per row, `.npz` bytes against protocol ii's test PSNR at the five points; BD-rate and BD-PSNR with
+  Amendment 9 a's domain-scaled fit (`g2.bd_rate_scaled`, `bd_psnr_scaled`), of every row against `gnvq_cv`, of `ogc`
+  and `ogc_lamcv` against `c3dgs`, and of `ogc_lamcv` against `ogc`.
+
+**Measures, per row and process (report only):**
+- **E4p's per-row record:** protocol ii (PSNR, SSIM, LPIPS, per view), C3DGS's evaluation, the `.npz`'s bytes (bytes,
+  MiB, MB), each array's compressed and uncompressed size, the index entropy and distinct indices, GN-VQ's iterations,
+  stopping and last relative drops, the three checks, and the per-row time, GPU peak and host RSS.
+- **Note ii's a, b, c and e** (d was E4's power check), with each difference computed as above: every ladder row minus
+  `gnvq_cv`; `lad_all` minus `ogc`; `gnvq_cv` minus `c3dgs`; `ogc` minus `c3dgs`; `gnvq_cv` minus `ogc`; `gnvq_cv` minus
+  `ogc_lamcv`; `ogc_lamcv` minus `ogc`.
+- **Fidelity also as the PSNR of the pooled MSE:** per row and angle, 10 log10(1 / m), with m the mean over the test
+  cameras of each render's MSE against the uncompressed model's (note ii a's 8-bit renders on [0, 1]); and its
+  differences as above.
+- **The quantizer state at every save:** each row's and the probe's DC and AC scale and zero point.
+- **Each table's range against its int8 grid:** for every row's codebook as installed, the minimum and maximum of its DC
+  values (the first 3 of 48) and of its AC values (the other 45), each part's grid at that save,
+  [scale x (-128 - zero point), scale x (127 - zero point)], and the number of codebook values outside it.
+- **Codewords used per row:** the distinct codebook entries among the quantized splats' stored indices, and so the
+  empty entries.
+- **The OGC chunk check** (c).
+
+**Failures, memory and the deadline:** as in E4p (Amendment 15 d's out-of-memory retry, a failed row recorded and
+every row that does not need it still run; no new C3DGS run after 11.5 h minus the 1,800 s reserve). E4q has no
+primary row, so no failure reruns a process.
+
+**Not in E4q:** fine-tuning; the rows `gnvq_rho0`, `scalar` and `ogc_lam1e6` (1e-6 is a point of the `lam` grid); any
+gate scene; any verdict.
+
+**Kaggle title "E4q C3DGS dissection"**; bundle `E4q_bundle.zip`, arcname `gn4q/`.
+
+### c. Engineering
+
+1. **The reserved-memory recording.** E4p's processes recorded a reserved peak below their allocated peak (FINDINGS
+   section 16): the hooks reset the allocator's peak statistics at every row (`kaggle/e4p_hooks.py:139`) and fold
+   only the allocated peak (`:130`). From E4q on, the hooks fold `torch.cuda.max_memory_reserved()` per row the same
+   way, and the wrapper records the folded value beside the allocated one (`kaggle/e3q_c3dgs_run.py:305-308`).
+2. **OGC's chunk is 25,000** in E4q and in any later gate run; OGC's call is otherwise Amendment 15 b's. The chunk
+   only batches the assignment, and E4q measures whether that changes anything: on train, in the seed-0 default
+   process, one more `gram_kmeans` call at chunk 100,000 and `lam` 1e-3 on the same inputs (not saved, not evaluated).
+   Reported: whether its labels equal those at chunk 25,000 exactly; if not, how many differ (count and fraction) and
+   the two codebooks' largest absolute difference. Neither result changes a row.
+
+### d. Unchanged
+
+- The frozen method (Amendment 11 b) with Amendment 14 b's 16 x 16 extension and its placement in C3DGS. Its global clip
+  (`bench/gn/gn_vq.py:179`) stays: the per-part clip is the ladder's `lad_clip_part`, not a fix.
+- Protocol ii (Amendment 12 a).
+- Amendments 1-15 and their notes, except E4's withdrawal in a. E4p's results stand as FINDINGS section 16 reports them.
+
+### e. The runtime estimate (before any E4q code; an estimate)
+
+From E4p's measured train parts (`kaggle/gn_e4p/gn4p/`), by note i's method: train at E4p's times; treehill flat (lower
+end) to linear in the splat count (upper end, 3,783,761 / 1,026,508 = 3.69), C3DGS's evaluation, protocol ii and the
+fidelity renders scaled by test-view pixels; the ladder rows at E4p's GN-VQ rate (4.99 s per iteration), `lad_iters50`
+from 20 to 50 iterations, `lad_all` at 17 (15 iterations, the starting and the final assignment); OGC at chunk 25,000
+taken at E4p's chunk-100,000 time (26.5 s, an assumption); treehill's fetch from E3p's bicycle fetch scaled by the
+`.ply` bytes, its download at E3r's bicycle download (290.9 s). The script is `bench/gn/e4q_estimate.py`, committed with
+E4q's code.
+
+| | train | treehill (2 default processes) |
+|---|---|---|
+| probe, harness, `rho` and `lam` cross-validation, note ii | 1,705 s | 1,794-5,522 s |
+| one default process (13 rows) | 2,468-2,618 s (the seed-0 one, with the chunk check) | 2,390-9,362 s |
+| the sweep's four points (5 rows each) | 3,816-4,348 s | |
+| the scene | 10,432-11,263 s | 6,575-24,247 s |
+| without C3DGS's evaluation of the 12 rows after row 1 | 7,987-8,818 s | 5,203-19,191 s |
+
+- **One session:** with the scenes on the two GPUs and setup (429.0 s in E4p), 10,861-24,676 s, 3.0-6.9 h, inside
+  the 11 h start cutoff; 4.7-9.9 GPU-hours.
+- **Not included:** treehill on the CPU retry, the header read, and chunk 25,000's own speed.
