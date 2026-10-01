@@ -62,8 +62,18 @@ def e1(v: float) -> str:
     return f"{m}e{int(e)}"
 
 
+# Section 15's file:line citations are to this repository as it stood when the section was written (FINDINGS commit
+# 2eb091f9; the E3r code it cites is unchanged since E3r ran at b27e1421). Later edits (E4p's wrapper flags) move
+# lines, so the cited lines are read at that revision, not from the working tree.
+CITED_AT = "2eb091f9"
+
+
 def lines_of(path: str, a: int, b: int) -> str:
-    return "".join(open(os.path.join(REPO, path), encoding="utf-8").readlines()[a - 1:b])
+    import subprocess
+
+    text = subprocess.run(["git", "-C", REPO, "show", f"{CITED_AT}:{path}"], capture_output=True, check=True,
+                          encoding="utf-8").stdout
+    return "".join(text.splitlines(keepends=True)[a - 1:b])
 
 
 def run():

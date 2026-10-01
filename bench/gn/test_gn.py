@@ -2626,7 +2626,7 @@ def test_e3p_pins_and_amendment_12():
 
     repo = os.path.dirname(os.path.dirname(HERE))
     prereg = open(os.path.join(repo, "kaggle", "PREREG_GN.md"), encoding="utf-8").read()
-    a12 = prereg[prereg.index("## Amendment 12"):]
+    a12 = prereg[prereg.index("## Amendment 12"):prereg.index("## Amendment 13")]  # (Amendment 15 i pins other scenes)
     rx = r"\| `([\w/.]+)` \| ([\d,]+) \| ([\d,]+) \| ([\d,]+) \| `([0-9a-f]{8})` \|"
     table = {m[0]: tuple(int(v.replace(",", "")) for v in m[1:4]) + (int(m[4], 16),) for m in re.findall(rx, a12)}
     pins = {p["name"]: (p["header_offset"], p["compress_size"], p["file_size"], p["crc32"])
