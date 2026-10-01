@@ -2157,3 +2157,77 @@ In all, 80,834-124,045 s (22.5-34.5 GPU-hours), without the threshold sweep.
 
 **This note changes no scene, row or bar** (d). The scenes' assignment to sessions is a later dated note, before any
 E4 run (g).
+
+### ii. Note (2026-10-01, after note i (`85b43cff`) and its scripts (`15f263a7`), before any E4p code): report-only measures
+
+**Report only.** This note adds measures to E4p and E4. It changes no row, scene, metric, bar or verdict, and nothing
+in it enters Amendment 15 c's primary. No E4p or E4 code or data exists. Items a, b, c and e apply to E4p and E4;
+item d to E4p only. Below, "Amendment 15 c" and "Amendment 15 e" name the amendment's sections; a bare letter names
+this note's items.
+
+**The geometry the items share,** per scene, from the runner's train split (the cameras protocol ii uses, in COLMAP's
+world frame, as E3p set it up; camera-to-world rotation `R_j` and centre `p_j`, OpenCV axes):
+- **the scene centre `c`:** the least-squares point nearest the training cameras' optical axes, minimizing
+  sum_j ||(I - d_j d_j^T)(c - p_j)||^2 with `d_j = R_j e_z` (closed form);
+- **the up axis `u`:** the normalized mean of the training cameras' up vectors, `-R_j e_y`.
+- **The centre's conditioning, reported per scene:**
+  - the smallest eigenvalue of sum_j (I - d_j d_j^T), divided by the number of training cameras;
+  - the minimum, median and maximum distance from `c` to the training camera centres;
+  - the share of a's orbit camera centres farther from `c` than the farthest training camera. A rotation about an
+    axis through `c` keeps each centre's distance to `c`, so this equals the test cameras' own share.
+
+**a. Novel-direction fidelity.**
+- **The cameras:** for each test camera, synthetic cameras orbited about the axis through `c` along `u` by
+  `theta` in {-40, -20, -10, +10, +20, +40} degrees (right-handed about `u`): centre `c + R_u(theta)(p - c)`,
+  rotation `R_u(theta) R`, the test camera's own intrinsics and image size. `theta` = 0 is the test camera itself.
+- **The renders:** protocol ii's renderer and 8-bit quantization (Amendment 12 a), for the uncompressed model and
+  every row of every process: rows 1-5 and 2b, and the fine-tuned rows 1, 2 and 5. Each row is its decoded `.ply`,
+  as protocol ii reads it.
+- **The measure:** per row and angle, the mean over the test cameras of the PSNR of the row's render against the
+  uncompressed model's render at the same camera. There is no ground truth at `theta` != 0; this measures fidelity to
+  the uncompressed model, which E4's question is about, and not image quality.
+- **Reported per angle, the seven angles 0 included:** D1, D2 and Amendment 15 e's differences (`ogc` minus
+  `c3dgs`, `gnvq_cv` minus `c3dgs`, `ogc_lam1e6` minus `ogc`, `gnvq_rho0` minus `scalar`, and after fine-tuning `ogc`
+  minus `c3dgs` and `gnvq_cv` minus `ogc`), each with `D_sp`, `D_s`, `v_s`, `SD_pool` and `SE_noise` computed as in
+  Amendment 15 c.
+- **A limit stated in advance:** a synthetic camera can look where no training view did, and the uncompressed model
+  can be poor there; the measure compares the codecs with that model, whatever it renders.
+
+**b. Test views by distance to the training views.**
+- **The angle of a test camera:** the smallest angle, seen from `c`, between its centre and any training camera's
+  centre: min_j angle(`p_t - c`, `p_j - c`).
+- **Terciles:** the test cameras sorted by that angle (ties by view index), split into three groups as
+  `numpy.array_split` splits them.
+- **Reported per tercile:** protocol ii's PSNR per row, and D1 and D2 with `D_sp`, `D_s`, `v_s`, `SD_pool` and
+  `SE_noise` as in Amendment 15 c, over that tercile's views; the terciles' angle ranges.
+
+**c. Splat direction coverage, from the full-train-view 16 x 16 metric.**
+- **Per splat with `tr(M_i)` > 0:** the effective rank exp(H), with H the entropy of the eigenvalues of
+  `M_i / tr(M_i)` (float64, negative eigenvalues set to 0 before normalizing; `bench/gn/batched.py`'s chunked
+  eigendecomposition). It runs from 1 (one direction) to 16.
+- **Reported per scene,** over all the checkpoint's splats with `tr(M_i)` > 0 and over the colour-quantized splats of
+  the probe run:
+  - the number of splats with `tr(M_i)` = 0, which are left out;
+  - the effective rank's minimum, 10th, 25th, 50th, 75th and 90th percentiles and maximum;
+  - the share of the total `tr(M_i)` carried by the lowest-rank tercile (splats sorted by effective rank, ties by
+    index, split as in b above).
+
+**d. A power check (E4p only).**
+- **From E4p,** for D1 and D2 separately: the within-scene SD `s` over E4p's 3 processes (`sqrt(v_s)`, 2 degrees of
+  freedom).
+- **The smallest `D_bar` that Amendment 15 c's condition 3 lets pass** with n = 7 and 3 processes, if E4's
+  `SD_pool` were `s`: 2 x `s` / sqrt(21). Conditions 1 and 2 set no such threshold.
+- **If E4p's observed |`D_s`| is below it,** the report proposes a process count P, the smallest with
+  2 x `s` / sqrt(7 P) < |`D_s`|. Adopting it is for a dated note before any E4 code (Amendment 15 f allows only an
+  increase), which also restates Amendment 15 c's `SE_noise` with P in place of 3.
+- **Limits:** `s` comes from one scene and 2 degrees of freedom; the check is a planning number, not a test. If
+  `rho_cv` = 0 on train, D1 is 0 by rule and its check is not computed.
+
+**e. Cost per row.** For every process, per colour row (C3DGS's own VQ, GN-VQ at `rho` = 0, the scalar weighting,
+GN-VQ at `rho_cv`, OGC, OGC at `lam` 1e-6): the wall time, the peak allocated GPU memory, and the peak host RSS of the
+C3DGS process and its children during that row's computation, with the RSS at its start. Reported per process and as
+the mean and range over the processes, per scene. **Also a's fidelity renders:** their wall time per row and in total
+(the uncompressed model's included), and their peak allocated GPU memory and peak host RSS (process and children).
+
+**What this note does not change:** E4's rows, scenes, metric, bars, order and Kaggle titles; Amendment 15 d's
+memory and failure rules; the secondaries of Amendment 15 e, which stay as it states them.
