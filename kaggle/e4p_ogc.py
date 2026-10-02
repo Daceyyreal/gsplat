@@ -98,16 +98,19 @@ def load_vq(clone: str):
 
 
 def ogc_codebook(vqmod, x48: torch.Tensor, M_packed_rows: torch.Tensor, K: int, lam: Optional[float], device: str,
-                 log: Optional[Callable] = None) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
+                 log: Optional[Callable] = None, chunk: Optional[int] = None) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
     """Rows 2 / 2b: ``gram_kmeans(X, G, K, metric="gram", iters=15, device, chunk=100000[, lam])`` with ``X`` the
     quantizer input as ``[n, 3, 16]`` and ``G`` our unpacked 16 x 16 metric of the same splats (CPU float32, as the
-    function takes them); returns ``(C [K, 48], labels [n], info)`` in C3DGS's layout (index ``k * 3 + channel``)."""
+    function takes them); returns ``(C [K, 48], labels [n], info)`` in C3DGS's layout (index ``k * 3 + channel``).
+    ``chunk`` replaces the host's 100,000 (E4q: 25,000, Amendment 16 c); None keeps it."""
     import gn_metric as gm
 
     t = time.perf_counter()
     X = x48.detach().float().reshape(-1, 16, 3).permute(0, 2, 1).contiguous().cpu()
     G = gm.unpack(M_packed_rows.detach().float().cpu())
     kw = dict(e4p.OGC_CALL)
+    if chunk is not None:
+        kw["chunk"] = int(chunk)
     if lam is not None:
         kw["lam"] = lam
     C, asg = vqmod.gram_kmeans(X, G, int(K), device=device, **kw)

@@ -3491,7 +3491,8 @@ def _purge_c3dgs_modules():
             del sys.modules[name]
 
 
-def _fork_in_process(tmp_path, monkeypatch, rho_cv=0.01, hooks_cls=None, ft_rows=("c3dgs", "ogc", "gnvq_cv")):
+def _fork_in_process(tmp_path, monkeypatch, rho_cv=0.01, hooks_cls=None, ft_rows=("c3dgs", "ogc", "gnvq_cv"),
+                     cfg_extra=None, ogc_src=None):
     """The fork in this process on the CPU stand-in (C3DGS's call structure), as the wrapper runs it."""
     import random
     import runpy
@@ -3507,10 +3508,10 @@ def _fork_in_process(tmp_path, monkeypatch, rho_cv=0.01, hooks_cls=None, ft_rows
     torch.save({"M_packed": _psd16(600, seed=7), "total_pixels": 10000}, m_path)
     ogc = tmp_path / "ogc"
     ogc.mkdir()
-    (ogc / "vq.py").write_text(_FAKE_OGC_VQ)
+    (ogc / "vq.py").write_text(ogc_src or _FAKE_OGC_VQ)
     cfg = {"m_path": str(m_path), "rho_cv": rho_cv, "rows_dir": str(tmp_path / "rows"),
            "report_path": str(tmp_path / "report.json"), "ogc": {"clone": str(ogc), "device": "cpu"},
-           "finetune": {"rows": list(ft_rows), "iterations": 5000}}
+           "finetune": {"rows": list(ft_rows), "iterations": 5000}, **(cfg_extra or {})}
     (tmp_path / "fork.json").write_text(json.dumps(cfg))
     monkeypatch.setenv("E3R_FAKE_KAGGLE", os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle"))
     _purge_c3dgs_modules()
@@ -3890,3 +3891,384 @@ def test_e4p_job_constants_and_refusals():
         job.main(["--job", "fork", "--scene", "bonsai", "--c3dgs_dir", "x", "--out_dir", "x"])
     with pytest.raises(RuntimeError, match="not an E4p result file"):
         job.assert_e4p_csv(os.path.join(repo, "kaggle", "gn_e3r", "gn3r", "gn3r_results_train.csv"))
+
+
+# --------------------------------------------------------------------------------- E4q (Amendment 16)
+
+
+def _e4q_case(n=300, K=12, seed=3, rank=5):
+    """x [n, 48] (C3DGS's layout), a packed 16 x 16 metric of rank ``rank`` per splat (five splats unseen), a warm start
+    with three entries far away (empty after the first assignment), C3DGS's quantizer."""
+    import e3r
+
+    g = torch.Generator().manual_seed(seed)
+    x = torch.randn(n, 48, generator=g) * 0.3
+    x[:, :3] *= 4.0
+    a = torch.randn(n, 16, rank, generator=g, dtype=torch.float64)
+    M = gm.pack(a @ a.transpose(1, 2)).float()
+    M[:5] = 0
+    C0 = x[torch.randperm(n, generator=g)[:K]].clone()
+    C0[K - 3:] += 50.0
+    L0 = gd.assign_exact(x, M, C0, torch.zeros(n, dtype=torch.long))[0]
+    return x, M, C0, L0, e3r.C3DGSQuantizer(0.06, -60, 0.008, -4)
+
+
+def _run_spec(row, x, M, C0, L0, q, rho=0.01, **over):
+    import e2b
+    import e3r
+    import e4q
+
+    spec = e4q.ladder_spec(row)
+    r = rho if spec["rho"] == "cv" else 0.0
+    Mf = e2b.floored_metric(M, r)
+    if spec["start"] == "ogc_init":
+        Cs, _ = e4q.ogc_init(x, M, C0.shape[0], seed=0)
+        Ls = e4q.start_labels(x, Mf, Cs)
+    else:
+        Cs, Ls = C0, L0
+    opts = {**e4q.ladder_options(spec, x, Mf, C0), **over}
+    return e3r.run_gn_vq(x, Cs, Ls, Mf, r, 1000, q, log=None, report_metric=M, **opts)
+
+
+def test_e4q_gn_vq_defaults_and_explicit_frozen_options_are_bit_identical():
+    """The frozen path is unchanged: gn_vq with E4q's options set to the frozen method's (the ridge toward zero, the
+    warm start's global range as explicit bounds, the default arithmetic) gives the same codebook, labels and objectives
+    bit for bit."""
+    x, M, C0, L0, q = _e4q_case()
+    a = vq.gn_vq(x, C0, L0, M, 1000, max_iters=6, eps=1e-2, topk=8, log=None, quantizer=q)
+    b = vq.gn_vq(x, C0, L0, M, 1000, max_iters=6, eps=1e-2, topk=8, log=None, quantizer=q, update="ridge",
+                 clip_bounds=(float(C0.min()), float(C0.max())), assign_fn=gd.assign_exact, update_fn=gd.update_centroids)
+    assert torch.equal(a[0], b[0]) and torch.equal(a[1], b[1])
+    assert a[2]["objective_after_quantization"] == b[2]["objective_after_quantization"]
+    assert [h["objective"] for h in a[2]["history"]] == [h["objective"] for h in b[2]["history"]]
+    assert "update" not in a[2] and b[2]["warm_start"]["clip_bounds"] == [float(C0.min()), float(C0.max())]
+
+
+def test_e4q_ridge_toward_the_cluster_mean():
+    """update_centroids' ridge_mean is OGC's form: (sum M + mu I)^-1 (sum M c + mu cbar), mu = eps tr(sum M) / 16, per
+    cluster and channel; a cluster with a zero summed metric keeps its entry; a huge eps gives the members' mean."""
+    x, M, C0, L0, _ = _e4q_case(n=120, K=6)
+    new, _ = gd.update_centroids(x, L0, M, C0, "ridge_mean", 1e-3)
+    x3 = x.reshape(-1, 16, 3).double()
+    for k in range(6):
+        m = L0 == k
+        if not bool(m.any()):
+            assert torch.equal(new[k], C0[k])
+            continue
+        Mk = gm.unpack(M[m].double())
+        A = Mk.sum(0)
+        mu = 1e-3 * torch.trace(A) / 16
+        rhs = torch.einsum("nkl,nlc->kc", Mk, x3[m]) + mu * x3[m].mean(0)
+        want = torch.linalg.solve(A + mu * torch.eye(16, dtype=torch.float64), rhs).reshape(48).float()
+        assert torch.allclose(new[k], want, atol=1e-5), k
+    big, _ = gd.update_centroids(x, L0, M, C0, "ridge_mean", 1e9)
+    k = int(torch.bincount(L0).argmax())
+    assert torch.allclose(big[k], x[L0 == k].mean(0), atol=1e-4)
+    with pytest.raises(ValueError):
+        gd.update_centroids(x, L0, M, C0, "nope", 1e-3)
+
+
+def test_e4q_reseed_draw_and_part_clip():
+    """lad_reseed: every cluster empty in an assignment takes the input of a splat of largest distortion (its distance to
+    the centroid that assignment used), in topk's order; lad_init_tr: OGC's draw (probabilities tr(G) + 1e-12 from a
+    generator seeded 0) with the clip range kept from C3DGS's codebook; lad_clip_part: per-part bounds, held;
+    lad_no_clip: no clamp, no acceptance."""
+    import e4q
+
+    x, M, C0, L0, q = _e4q_case()
+    K = C0.shape[0]
+    hook = e4q.make_reseed(x, M)
+    empty = torch.bincount(L0, minlength=K) == 0
+    assert int(empty.sum()) >= 3
+    C1, info = hook(1, C0, C0.clone(), L0)
+    d = gd.direct_distance(x, M, C0, L0)
+    worst = torch.topk(d, int(empty.sum())).indices
+    assert info["reseeded"] == int(empty.sum()) and torch.equal(C1[empty], x[worst]) and torch.equal(C1[~empty], C0[~empty])
+    _, _, rep = _run_spec("lad_reseed", x, M, C0, L0, q)
+    assert any(h.get("reseeded") for h in rep["history"] if h["step"] == "update")
+    p = e4q.ogc_init_probs(M)
+    tr = torch.einsum("nii->n", gm.unpack(M.float())).clamp(min=0) + 1e-12
+    assert torch.equal(p, tr / tr.sum()) and float(p[:5].max()) < 1e-6
+    Cs, ids = e4q.ogc_init(x, M, K, seed=0)
+    assert torch.equal(ids, torch.multinomial(tr / tr.sum(), K, replacement=False,
+                                              generator=torch.Generator().manual_seed(0)))
+    assert torch.equal(Cs, x[ids]) and not bool((ids < 5).any())
+    _, _, rep_i = _run_spec("lad_init_tr", x, M, C0, L0, q)
+    assert rep_i["warm_start"]["clip_bounds"] == [float(C0.min()), float(C0.max())]
+    lo, hi = e4q.part_bounds(C0)
+    assert float(lo[0]) == float(C0[:, :3].min()) and float(hi[47]) == float(C0[:, 3:].max())
+    C, _, rep_p = _run_spec("lad_clip_part", x, M, C0, L0, q)
+    assert bool((C >= lo).all()) and bool((C <= hi).all()) and len(rep_p["warm_start"]["clip_bounds"][0]) == 48
+    _, _, rep_n = _run_spec("lad_no_clip", x, M, C0, L0, q)
+    assert rep_n["clip"] is False and rep_n["clusters_rejected_by_clip_total"] == 0
+
+
+def test_e4q_ladder_specs_iterations_and_final_assignment():
+    """Each single-factor row changes one thing of gnvq_cv (lad_ridge_mean the floor and the ridge's form: rho, update,
+    eps); the iteration caps hold; lad_no_final_int8 keeps the last iteration's labels; lad_all has every change, 15
+    iterations with no early stop and a final assignment against the float codebook."""
+    import e4q
+
+    base = e4q.ladder_spec("gnvq_cv")
+    for r in e4q.LADDER:
+        changed = {k for k, v in e4q.ladder_spec(r).items() if base[k] != v}
+        assert len(changed) == (3 if r == "lad_ridge_mean" else 1), (r, changed)
+        assert e4q.CHANGES[r] == (2 if r == "lad_ridge_mean" else 1)
+    assert e4q.ladder_spec("lad_ridge_mean")["update"] == "ridge_mean" and e4q.ladder_spec("lad_ridge_mean")["rho"] == 0.0
+    a = e4q.ladder_spec(e4q.LAD_ALL)
+    assert a["reseed"] and a["start"] == "ogc_init" and a["clip"] is None and a["update"] == "ridge_mean"
+    assert a["eps"] == 1e-3 and a["max_iters"] == 15 and a["rel_tol"] == float("-inf") and a["final"] == "float"
+    x, M, C0, L0, q = _e4q_case()
+    _, _, r15 = _run_spec("lad_iters15", x, M, C0, L0, q, rel_tol=-1.0)
+    _, _, r50 = _run_spec("lad_iters50", x, M, C0, L0, q, rel_tol=-1.0)
+    assert r15["iterations"] == 15 and r50["iterations"] == 50
+    _, _, rn = _run_spec("lad_no_final_int8", x, M, C0, L0, q)
+    assert rn["final_quantized_assignment"] is False and rn["final_assignment_labels_changed_fraction"] == 0.0
+    C, L, ra = _run_spec(e4q.LAD_ALL, x, M, C0, L0, q)
+    assert ra["iterations"] == 15 and ra["stopped_because"] == "max_iters" and ra["update"] == "ridge_mean"
+    assert "final_float_assignment_labels_changed_fraction" in ra
+    assert torch.equal(L, gd.assign_exact(x, M, C, L)[0])  # the final assignment is against the returned codebook
+    with pytest.raises(ValueError):
+        e4q.ladder_spec("scalar")
+
+
+def _ogc_layout(t):
+    return t.float().reshape(t.shape[0], 16, 3).permute(0, 2, 1).contiguous()
+
+
+def _ogc_arith():
+    """OGC's arithmetic in gn_vq's call signatures, re-expressed from vq.py at 49ccae72 (the expanded float32 assignment
+    cost and its argmin; the float32 sums and float64 solve of the update with its clamps; the expanded float32
+    distortion for the reseeding). Test only: this is how lad_all is checked against their released function."""
+    def pre(x, M):
+        X, G = _ogc_layout(x), gm.unpack(M.float())
+        n = X.shape[0]
+        return X, G, G.reshape(n, 256), torch.einsum("nij,ncj->nci", G, X).reshape(n, 48)
+
+    def assign(x, M, C, current):
+        X, G, vecG, GX = pre(x, M)
+        Cd, K = _ogc_layout(C), C.shape[0]
+        Q = torch.einsum("kci,kcj->kij", Cd, Cd).reshape(K, 256).T.contiguous()
+        CT = Cd.reshape(K, 48).T.contiguous()
+        return (vecG @ Q - 2.0 * (GX @ CT)).min(1)[1], {}
+
+    def update(x, labels, M, C_prev, variant, eps):
+        X, G, vecG, GX = pre(x, M)
+        K = C_prev.shape[0]
+        SA = torch.zeros(K, 256).index_add_(0, labels, vecG).reshape(K, 16, 16).double()
+        SB = torch.zeros(K, 48).index_add_(0, labels, GX).reshape(K, 3, 16).double()
+        cnt = torch.bincount(labels, minlength=K).clamp(min=1).double()[:, None, None]
+        xbar = torch.zeros(K, 3, 16, dtype=torch.float64).index_add_(0, labels, X.double()) / cnt
+        ridge = eps * (torch.einsum("kii->k", SA) / 16).clamp(min=1e-12)[:, None, None] + 1e-20
+        Cn = torch.linalg.solve(SA + ridge * torch.eye(16, dtype=torch.float64)[None], (SB + ridge * xbar).transpose(1, 2))
+        return Cn.transpose(1, 2).float().permute(0, 2, 1).reshape(K, 48), 0
+
+    def distance(x, M, C, labels):
+        X, G, vecG, GX = pre(x, M)
+        cc = _ogc_layout(C)[labels]
+        xGx = torch.einsum("nci,nij,ncj->n", X, G, X)
+        return (vecG * torch.einsum("kci,kcj->kij", cc, cc).reshape(-1, 256)).sum(1) - 2 * (GX * cc.reshape(-1, 48)).sum(1) + xGx
+
+    return assign, update, distance
+
+
+def e4q_lad_all_against_ogc(vqmod, x, M, K, q):
+    """``lad_all`` (GN-VQ's loop with every OGC choice) run with OGC's arithmetic swapped in, against their released
+    ``gram_kmeans`` on the same inputs; the dry run calls this too."""
+    import e4q
+
+    assign, update, distance = _ogc_arith()
+    C_ogc, L_ogc = vqmod.gram_kmeans(_ogc_layout(x), gm.unpack(M.float()), K, metric="gram", iters=15, device="cpu",
+                                     chunk=x.shape[0], seed=0, lam=1e-3)
+    Cs, _ = e4q.ogc_init(x, M, K, seed=0)
+    Ls = e4q.start_labels(x, M, Cs, assign_fn=assign)
+    opts = e4q.ladder_options(e4q.ladder_spec(e4q.LAD_ALL), x, M, Cs)
+    opts["after_update"] = e4q.make_reseed(x, M, distance_fn=distance)
+    eps = opts.pop("eps")
+    C, L, rep = vq.gn_vq(x, Cs, Ls, M, 1000, eps=eps, topk=min(64, K), log=None, quantizer=q, assign_fn=assign,
+                         update_fn=update, **opts)
+    C48 = C_ogc.permute(0, 2, 1).reshape(K, 48)
+    return {"labels_equal": bool(torch.equal(L, L_ogc.long())), "codebook_equal": bool(torch.equal(C, C48)),
+            "n_labels_differ": int((L != L_ogc.long()).sum()), "codebook_max_abs_diff": float((C - C48).abs().max()),
+            "reseeded_total": sum(h.get("reseeded", 0) for h in rep["history"] if h["step"] == "update"),
+            "zero_trace": int((gm.trace_packed(M) == 0).sum())}
+
+
+def _ogc_clone(tmp_path):
+    """OGC's clone at the pin from ``GN_OGC_SRC`` (a local clone or the URL); None when unset."""
+    import subprocess
+
+    import e4p
+
+    src = os.environ.get("GN_OGC_SRC")
+    if not src:
+        return None
+    dest = str(tmp_path / "ogc-3dgs")
+    subprocess.run(["git", "clone", "--quiet", src, dest], check=True)
+    subprocess.run(["git", "-C", dest, "checkout", "--quiet", e4p.OGC_COMMIT], check=True)
+    return dest
+
+
+def test_e4q_lad_all_with_ogcs_arithmetic_reproduces_their_gram_kmeans(tmp_path):
+    """lad_all is GN-VQ's loop with every OGC choice (Amendment 16 b). With OGC's own arithmetic swapped in (gn_vq's
+    assign_fn / update_fn, the reseed's distance) it gives their released gram_kmeans's labels and codebook exactly, on a
+    case with empty clusters, zero-trace splats and reseeding: the listed factors account for the whole algorithm, and
+    lad_all minus ogc measures the arithmetic alone. Needs OGC's clone (GN_OGC_SRC); the dry run always runs it."""
+    import e4p_ogc as og
+
+    clone = _ogc_clone(tmp_path)
+    if clone is None:
+        pytest.skip("GN_OGC_SRC is not set (a local clone of moholo-founder/ogc-3dgs or its URL)")
+    x, M, q = _e4q_dup_case()
+    res = e4q_lad_all_against_ogc(og.load_vq(clone), x, M, 24, q)
+    assert res["labels_equal"] and res["codebook_equal"], res
+    assert res["reseeded_total"] == 4 and res["zero_trace"] == 5
+
+
+def _e4q_dup_case():
+    """40 distinct inputs repeated over 400 splats (half with a little noise): OGC's draw then picks equal points, whose
+    clusters empty and are reseeded (4 reseedings over the 15 iterations)."""
+    x, M, _, _, q = _e4q_case(n=400, K=24, seed=2)
+    g = torch.Generator().manual_seed(102)
+    x = x[torch.randint(0, 40, (400,), generator=g)].clone()
+    x[200:] += torch.randn(200, 48, generator=g) * 0.05
+    return x, M, q
+
+
+def test_e4q_selection_rules_and_measures():
+    """lam_cv (lowest score, ties to the smaller lam, None if any is missing); the best ladder row (9 decimals, ties to
+    fewer changes then the ladder's order, lad_all never chosen); ogc_lamcv aliased only at 1e-3; the pooled-MSE PSNR;
+    labels agreement; a table's values outside its int8 grid; the chunk check; the attempt rules; BD over five points."""
+    import e3r
+    import e4q
+
+    s = {l: 1.0 for l in e4q.LAMS}
+    s[1e-2] = s[1e-4] = 0.5
+    assert e4q.select_lam_cv(s) == 1e-4 and e4q.select_lam_cv({**s, 1.0: None}) is None
+    m = {r: 20.0 for r in e4q.LADDER}
+    m["lad_ridge_mean"] = m["lad_iters50"] = 20.5
+    assert e4q.best_ladder_row(m) == "lad_iters50"  # fewer changes than lad_ridge_mean
+    m["lad_reseed"] = 20.5 + 1e-12  # equal at 9 decimals: the ladder's order then
+    assert e4q.best_ladder_row(m) == "lad_reseed"
+    assert e4q.best_ladder_row({**m, e4q.LAD_ALL: 99.0}) == "lad_reseed" and e4q.best_ladder_row({}) is None
+    assert e4q.lamcv_alias(1e-3) and not e4q.lamcv_alias(1e-4) and not e4q.lamcv_alias(None)
+    assert e4q.pooled_psnr([20.0, 20.0]) == pytest.approx(20.0)
+    assert e4q.pooled_psnr([10.0, 30.0]) == pytest.approx(-10 * math.log10((0.1 + 0.001) / 2))
+    assert e4q.pooled_psnr([10.0, 30.0], [3, 1]) == pytest.approx(-10 * math.log10((0.3 + 0.001) / 4))
+    assert e4q.pooled_psnr([10.0, None]) is None
+    a = e4q.labels_agreement(torch.tensor([0, 1, 2, 2]), torch.tensor([0, 1, 3, 3]), 5)
+    assert a["n_equal"] == 2 and a["used_a"] == 3 and a["used_b"] == 3 and a["used_both"] == 2
+    q = e3r.C3DGSQuantizer(0.1, 0, 0.01, 0)
+    C = torch.zeros(4, 48)
+    C[0, 0], C[1, 5], C[2, 7] = 20.0, 2.0, -0.5
+    tr = e4q.table_range(C, q)
+    assert tr["dc"]["n_outside_grid"] == 1 and tr["rest"]["n_outside_grid"] == 1 and tr["rest"]["codebook_max"] == 2.0
+    cc = e4q.chunk_check(torch.tensor([1, 2, 3]), torch.tensor([1, 2, 4]), torch.zeros(2, 3), torch.ones(2, 3))
+    assert cc["n_labels_differ"] == 1 and not cc["labels_equal"] and cc["codebook_max_abs_diff"] == 1.0
+    na = e4q.next_action
+    assert na([{"device": "cuda", "oom": True}], True)["action"] == "retry_cpu"
+    assert na([{"device": "cuda", "oom": True}, {"device": "cpu", "oom": True}], True)["action"] == "drop_scene"
+    assert na([{"device": "cpu", "oom": True, "results_exist": True}], True)["action"] == "done"
+    assert na([{"device": "cuda", "oom": False}], False)["action"] == "done"
+    b = [1e6, 1.2e6, 1.4e6, 1.7e6, 2e6]
+    curves = {"gnvq_cv": (b, [20.0, 20.4, 20.7, 21.0, 21.2]), "ogc": (b, [20.1, 20.5, 20.8, 21.1, 21.3]),
+              "c3dgs": (b[:3], [19.0, 19.5, 19.8])}
+    out = e4q.bd(curves, [("ogc", "gnvq_cv"), ("c3dgs", "gnvq_cv"), ("x", "gnvq_cv")])
+    assert out["ogc_vs_gnvq_cv"]["bd_psnr_db"] == pytest.approx(0.1, abs=1e-6) and out["ogc_vs_gnvq_cv"]["bd_rate_percent"] < 0
+    assert not out["c3dgs_vs_gnvq_cv"]["computed"] and not out["x_vs_gnvq_cv"]["computed"]
+    assert e4q.config_name(0, 1, "ogc") == "p1_ogc" and e4q.config_name(-2, 0, "ogc") == "j-2_p0_ogc"
+    assert [e4q.threshold(j) for j in (-2, 2)] == [pytest.approx(0.6e-6 / 9), pytest.approx(5.4e-6)]
+
+
+def test_e4q_fork_on_the_stand_in(tmp_path, monkeypatch):
+    """E4q's fork in C3DGS's call structure: every default-point row computed, installed, checked and saved before any
+    is evaluated, with its table range and the quantizer state at its save; OGC at chunk 25,000; the chunk check against
+    100,000; lad_all's labels against ogc's; ogc_lamcv aliased at lam_cv = 1e-3; no fine-tuning; at a sweep point only
+    the rows listed."""
+    import e4q
+    import e4q_hooks
+
+    def extra(sub, **over):
+        return {"e4q": True, "rows": list(e4q.DEFAULT_ROWS), "lam_cv": 1e-4, "chunk_check": True,
+                "ogc": {"clone": str(tmp_path / sub / "ogc"), "device": "cpu", "chunk": 25000}, **over}
+
+    hooks, rep = _fork_in_process(tmp_path / "a", monkeypatch, hooks_cls=e4q_hooks.E4qHooks, ft_rows=(),
+                                  cfg_extra=extra("a"))
+    fr = rep["fork"]
+    assert fr["phase"] == "done" and fr["checks_failed"] == [] and set(hooks.tables) == set(e4q.DEFAULT_ROWS)
+    for row in e4q.DEFAULT_ROWS:
+        r = fr["rows"][row]
+        assert r["status"] == "ok" and r["checks"]["ok"] and "qa_at_save" in r and "table_range" in r, row
+        assert "c3dgs_eval" in r, row
+    order = list(fr["cost"])
+    assert max(order.index(f"save_{r}") for r in e4q.FORK_ROWS) < min(order.index(f"eval_{r}") for r in e4q.DEFAULT_ROWS)
+    assert fr["rows"]["ogc"]["ogc"]["call"]["chunk"] == 25000 and fr["rows"]["ogc_lamcv"]["ogc"]["call"]["lam"] == 1e-4
+    assert fr["chunk_check"]["labels_equal"] and fr["chunk_check"]["call"]["chunk"] == 100000
+    assert fr["lad_all_vs_ogc"]["comparable"] and not any(k.endswith("_ft") for k in fr["rows"])
+    assert fr["rows"]["lad_all"]["gn_vq"]["iterations"] == 15 and fr["rows"]["lad_all"]["rho"] == 0.0
+    assert fr["rows"]["lad_init_tr"]["start"]["drawn"] == 16 and fr["rows"]["gnvq_cv"]["rho"] == 0.01
+    assert "cuda_peak_reserved_process" in rep
+    _, rep = _fork_in_process(tmp_path / "b", monkeypatch, hooks_cls=e4q_hooks.E4qHooks, ft_rows=(),
+                              cfg_extra=extra("b", lam_cv=1e-3, chunk_check=False,
+                                              rows=["c3dgs", "gnvq_cv", "ogc", "ogc_lamcv", "lad_iters50"]))
+    fr = rep["fork"]
+    assert set(fr["rows"]) == {"c3dgs", "gnvq_cv", "ogc", "ogc_lamcv", "lad_iters50"} and "chunk_check" not in fr
+    assert fr["rows"]["ogc_lamcv"]["status"] == "alias" and fr["rows"]["ogc_lamcv"]["alias_of"] == "ogc"
+    assert "save_ogc_lamcv" not in fr["cost"] and fr["checks_failed"] == []
+
+
+def test_e4q_job_constants_pins_and_refusals(tmp_path):
+    """Amendment 16's constants as the code holds them, treehill's pins equal note i's header read, the loaded-size
+    check (note i) passes only at 1267 x 832, and refusals: a gate scene, E4p's CSV."""
+    from PIL import Image
+
+    import e4q
+    import gn_e4q_scene as job
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    assert list(job.SCENES) == ["train", "treehill"] and job.START_DEVICE == {"train": "cuda", "treehill": "cpu"}
+    assert e4q.DEFAULT_SEEDS == (0, 1) and e4q.SWEEP_JS == (-2, -1, 1, 2) and e4q.SWEEP_SCENES == ("train",)
+    assert e4q.LAMS == (1e-6, 1e-4, 1e-3, 1e-2, 1e-1, 1.0) and e4q.OGC_CHUNK == 25000 and e4q.OGC_CHUNK_CHECK == 100000
+    assert len(set(job.COLUMNS)) == len(job.COLUMNS) and job.K_DEFAULT == 4096
+    hr = json.load(open(os.path.join(repo, "kaggle", "gn_e4q_note_i", "header_read.json")))
+    for kind, pin in job.INRIA_PINS["treehill"].items():
+        h = hr["pins"][kind]
+        assert (pin["name"], pin["header_offset"], pin["compress_size"], pin["file_size"], f"{pin['crc32']:08x}") == (
+            h["name"], h["header_offset"], h["compress_size"], h["file_size"], h["crc32"]), kind
+    assert job.N_SPLATS["treehill"] == hr["header"]["ply_header"]["n_vertex"]
+    feas = json.load(open(os.path.join(repo, "kaggle", "gn_e4q_note_i", "feas.json")))
+    assert feas["runs"] and feas["start_device"] == "cpu" and [feas["rows"][0]["W"], feas["rows"][0]["H"]] == [1267, 832]
+    d = tmp_path / "d"
+    (d / "images_4").mkdir(parents=True)
+    Image.new("RGB", (1267, 832)).save(d / "images_4" / "a.JPG")
+    ok = job.loaded_size_check("treehill", job.CFG_EXPECTED["treehill"], str(d))
+    assert ok["ok"] and ok["loaded_size"] == [1267, 832]
+    bad = job.loaded_size_check("treehill", {**job.CFG_EXPECTED["treehill"], "images": "images_2"}, str(d))
+    assert not bad["ok"]
+    with pytest.raises(ValueError, match="not an E4q scene"):
+        job.main(["--scene", "bonsai", "--c3dgs_dir", "x", "--out_dir", "x"])
+    with pytest.raises(RuntimeError, match="not an E4q result file"):
+        job.assert_csv(os.path.join(repo, "kaggle", "gn_e4p", "gn4p", "gn4p_results_train.csv"), job.COLUMNS)
+
+
+def test_e4q_estimate_matches_amendment_16_e():
+    """Amendment 16 e quotes bench/gn/e4q_estimate.py; the script's numbers, rounded as quoted, are in its table."""
+    import re
+
+    import e4q_estimate as est
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    a16 = re.sub(r"\s+", " ", open(os.path.join(repo, "kaggle", "PREREG_GN.md"), encoding="utf-8").read())
+    a16 = a16[a16.index("## Amendment 16"):]
+    r = est.estimate()
+    rng = lambda v: f"{v[0]:,.0f}-{v[1]:,.0f}"  # noqa: E731
+    th = r["treehill_parts_s"]
+    for s in (f"| {r['train_pre_s']:,.0f} s | {th[0]['pre_s']:,.0f}-{th[1]['pre_s']:,.0f} s |",
+              f"| {rng(r['train_j0_process_s'])} s (the seed-0 one, with the chunk check) | "
+              f"{th[0]['one_default_process_s']:,.0f}-{th[1]['one_default_process_s']:,.0f} s |",
+              f"| {rng(r['train_sweep_s'])} s | |", f"| {rng(r['train_s'])} s | {rng(r['treehill_s'])} s |",
+              f"| {rng(r['train_s_without_c3dgs_eval'])} s | {rng(r['treehill_s_without_c3dgs_eval'])} s |",
+              f"{rng(r['session_s'])} s, {r['session_h'][0]:.1f}-{r['session_h'][1]:.1f} h",
+              f"{r['gpu_hours'][0]:.1f}-{r['gpu_hours'][1]:.1f} GPU-hours", f"(429.0 s in E4p)"):
+        assert s in a16, s
+    assert f"{r['inputs']['setup']:.1f}" == "429.0" and f"{r['inputs']['per_iteration']:.2f}" == "4.99"

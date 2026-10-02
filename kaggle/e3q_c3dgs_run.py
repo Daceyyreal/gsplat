@@ -304,8 +304,9 @@ def main() -> int:
     if cuda:
         rec.update(max_memory_allocated=torch.cuda.max_memory_allocated(),
                    max_memory_reserved=torch.cuda.max_memory_reserved(), device=torch.cuda.get_device_name(0))
-        if hooks is not None and e4p_mode:  # the hooks reset the peak per row; this is the process's
+        if hooks is not None and e4p_mode:  # the hooks reset the peaks per row; these are the process's (Amendment 16 c)
             rec["max_memory_allocated"] = max(rec["max_memory_allocated"], rec["e4p"].get("cuda_peak_allocated_process") or 0)
+            rec["max_memory_reserved"] = max(rec["max_memory_reserved"], rec["e4p"].get("cuda_peak_reserved_process") or 0)
     os.makedirs(os.path.dirname(os.path.abspath(a.out_json)), exist_ok=True)
     with open(a.out_json, "w") as f:
         json.dump(rec, f, indent=2)

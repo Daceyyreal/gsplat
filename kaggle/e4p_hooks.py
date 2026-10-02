@@ -100,7 +100,9 @@ class ForkHooks(e3r_hooks.Hooks):
         self.rep["mode"] = "fork" if fork else "eval_npz" if eval_npz else "probe_deferred" if defer_eval else self.rep["mode"]
         self.cuda = torch.cuda.is_available()
         self.cuda_peak = 0
+        self.cuda_peak_reserved = 0  # Amendment 16 c: folded over the per-row resets like the allocated peak
         self.stopped_ok = False
+        self.fork_rows = tuple(self.e4p.FORK_ROWS)  # the rows computed at the colour call (E4q's subclass sets its own)
         self.tables: Dict[str, tuple] = {}
         if self.cfg is not None:
             self.rep["fork"] = {"rows": {}, "cost": {}, "checks_failed": [], "phase": "start",
@@ -128,6 +130,7 @@ class ForkHooks(e3r_hooks.Hooks):
     def fold_peak(self) -> int:
         if self.cuda:
             self.cuda_peak = max(self.cuda_peak, torch.cuda.max_memory_allocated())
+            self.cuda_peak_reserved = max(self.cuda_peak_reserved, torch.cuda.max_memory_reserved())
         return self.cuda_peak
 
     @contextmanager
@@ -147,6 +150,7 @@ class ForkHooks(e3r_hooks.Hooks):
                 torch.cuda.synchronize()
             rec["time_s"] = time.perf_counter() - t
             rec["cuda_peak_allocated"] = torch.cuda.max_memory_allocated() if self.cuda else None
+            rec["cuda_peak_reserved"] = torch.cuda.max_memory_reserved() if self.cuda else None
             self.fold_peak()
             h.__exit__(None, None, None)
             rec["host"] = h.record()
@@ -303,12 +307,14 @@ class ForkHooks(e3r_hooks.Hooks):
             "keep_mask_and_set_equal": bool(idx.shape[0] == keep.shape[0]
                                             and torch.equal(idx[keep_d], torch.arange(n_keep, device=idx.device) + K)
                                             and table.shape[0] == K + n_keep
-                                            and torch.equal(table[K:], all_features[keep].reshape(n_keep, -1).to(table.device))),
+                                            and torch.equal(table[K:], all_features[keep].reshape(n_keep, table.shape[1]).to(table.device))),
             "labels_equal": bool(torch.equal(idx[~keep_d], L.to(idx.device).long())),
             "geometry_sha1_equal": _geometry_sha1(g) == self.rep.get("geometry_sha1"),
         }
         res["ok"] = all(res.values())
         self.rep["fork"]["rows"].setdefault(row, {})["checks"] = res
+        # Amendment 16 b: the quantizer state at every save (buffers; reading them has no side effect)
+        self.rep["fork"]["rows"][row]["qa_at_save"] = e3r_hooks._qa_state(g)
         if not res["ok"]:
             self.rep["fork"]["checks_failed"].append(row)
         return res["ok"]
@@ -325,7 +331,7 @@ class ForkHooks(e3r_hooks.Hooks):
         saved = {"c3dgs": e4p.copy_state(g)}  # row 1's saved state (compress.py saved it)
         # (a) every other row: restored from the copy taken when compression returned, installed, checked, saved
         fr["phase"] = "saving"
-        for row in e4p.FORK_ROWS:
+        for row in self.fork_rows:
             if row not in self.tables:
                 continue
             path = os.path.join(cfg["rows_dir"], row, "point_cloud.npz")
@@ -412,9 +418,15 @@ class ForkHooks(e3r_hooks.Hooks):
     def report(self) -> Dict:
         self.fold_peak()
         self.rep["cuda_peak_allocated_process"] = self.cuda_peak if self.cuda else None
+        self.rep["cuda_peak_reserved_process"] = self.cuda_peak_reserved if self.cuda else None
         return self.rep
 
 
 def install(record: Optional[str] = None, fork: Optional[str] = None, defer_eval: bool = False,
             eval_npz: Optional[str] = None) -> ForkHooks:
-    return ForkHooks(record=record, fork=fork, defer_eval=defer_eval, eval_npz=eval_npz).install()
+    cls = ForkHooks
+    if fork and json.load(open(fork)).get("e4q"):  # E4q's fork (Amendment 16 b): kaggle/e4q_hooks.py
+        import e4q_hooks
+
+        cls = e4q_hooks.E4qHooks
+    return cls(record=record, fork=fork, defer_eval=defer_eval, eval_npz=eval_npz).install()

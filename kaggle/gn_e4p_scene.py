@@ -303,7 +303,8 @@ def get_runner(ctx):
     if not (ctx.have_model and ctx.have_data):
         steps.skip("build_runner", f"model present {ctx.have_model}, dataset present {ctx.have_data}")
         return None
-    model, _ = ei.read_inria_ply(os.path.join(args.inria_dir, "point_cloud.ply"), ei.N_SPLATS[scene])
+    n_splats = getattr(ctx, "n_splats", None) or ei.N_SPLATS[scene]  # E4q passes treehill's (Amendment 16 note i)
+    model, _ = ei.read_inria_ply(os.path.join(args.inria_dir, "point_cloud.ply"), n_splats)
     built = steps.run("build_runner", lambda: e3p.build_runner(args, model))
     del model
     if built is None:
