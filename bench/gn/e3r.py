@@ -76,21 +76,24 @@ class C3DGSQuantizer:
 def run_gn_vq(x: Tensor, C0: Tensor, L0: Tensor, M16, rho: float, total_pixels: int,
               quantizer: C3DGSQuantizer, eps: float = VQ_EPS, max_iters: int = VQ_MAX_ITERS,
               rel_tol: float = VQ_REL_TOL, log: Optional[Callable[[str], None]] = print,
-              report_metric=None) -> Tuple[Tensor, Tensor, Dict]:
+              report_metric=None, **vq_options) -> Tuple[Tensor, Tensor, Dict]:
     """GN-VQ on ``x [n, 48]`` from the warm start ``(C0 [K, 48], L0 [n])`` with ``M16 [n, 136]`` floored at ``rho``;
     returns (float centroids, labels, report). ``report["objectives_under"]["M"]`` is the unfloored objective.
 
     With ``report_metric`` (the unfloored metric, e.g. a ``metric_store.HostMetric`` in host memory), ``M16`` is taken
     as already floored at ``rho``: a ``metric_store.MetricStore`` buffer, one device copy, filled slice by slice with
     ``e2b.floored_metric`` itself, so the values are those the default path computes (a CPU test checks it bit for
-    bit). The default floors here, with a full copy."""
+    bit). The default floors here, with a full copy.
+
+    ``vq_options`` go to ``gn_vq`` unchanged (E4q's ladder, Amendment 16 b: ``clip``, ``final_quantized_assignment``,
+    ``update``, ``clip_bounds``, ``after_update``, ``final_float_assignment``); none is the frozen method."""
     if M16.shape[1] != gm.D_DC * (gm.D_DC + 1) // 2 or x.shape[1] != N_COLOUR:
         raise ValueError(f"E3r's GN-VQ takes a [n, 136] metric and [n, 48] colours, got {tuple(M16.shape)}, {tuple(x.shape)}")
     t = time.perf_counter()
     Mf, M_rep = (e2b.floored_metric(M16, rho), M16) if report_metric is None else (M16, report_metric)
     C, labels, report = vq.gn_vq(x, C0, L0, Mf, total_pixels, max_iters=max_iters, rel_tol=rel_tol, eps=eps,
                                  topk=min(64, int(C0.shape[0])), log=log, report_metrics={"M": (M_rep, total_pixels)},
-                                 quantizer=quantizer)
+                                 quantizer=quantizer, **vq_options)
     report.update(rho=rho, floor="M_i + rho * tr(M_i) / 16 * I", metric_dim=gm.D_DC, n_splats=int(x.shape[0]),
                   n_clusters=int(C0.shape[0]), time_s=time.perf_counter() - t)
     return C, labels, report

@@ -530,6 +530,8 @@ def share_in_l2_topk(
 
 
 REFINE_VARIANTS = ("ridge", "prox")
+# update_centroids also takes "ridge_mean" (E4q, Amendment 16 b): OGC's regularised update (vq.py:63-73 at 49ccae72)
+UPDATE_VARIANTS = REFINE_VARIANTS + ("ridge_mean",)
 MONOTONE_RTOL = 1e-6  # the proximal objective may not rise by more (Amendment 3)
 
 
@@ -543,11 +545,13 @@ def update_centroids(
     chunk: int = 262144,
 ) -> Tuple[Tensor, int]:
     """Per cluster, per channel, float64, with ``mu = eps * tr(sum M) / 15``:
-    ridge ``q = (sum M + mu I)^-1 sum M c``; prox ``q = (sum M + mu I)^-1 (sum M c + mu q_old)``.
-    Clusters with ``tr(sum M) = 0`` (empty, or all members unseen) keep ``q_old`` in both variants.
+    ridge ``q = (sum M + mu I)^-1 sum M c``; prox ``q = (sum M + mu I)^-1 (sum M c + mu q_old)``;
+    ridge_mean (E4q, Amendment 16 b: OGC's form, ``eps`` its ``lam``) ``q = (sum M + mu I)^-1 (sum M c + mu cbar)``,
+    ``cbar`` the members' Euclidean mean.
+    Clusters with ``tr(sum M) = 0`` (empty, or all members unseen) keep ``q_old`` in every variant.
     Returns (centroids like ``C_prev``, n kept). The dimension is the metric's (15, or 16 with DC: then
     ``mu = eps * tr(sum M) / 16``, Amendment 14 b)."""
-    if variant not in REFINE_VARIANTS:
+    if variant not in UPDATE_VARIANTS:
         raise ValueError(f"unknown refine variant {variant!r}")
     K = C_prev.shape[0]
     dev = C_prev.device
@@ -555,6 +559,9 @@ def update_centroids(
     A = torch.zeros(K, M_packed.shape[1], dtype=torch.float64, device=dev)
     B = torch.zeros(K, d, 3, dtype=torch.float64, device=dev)
     x3 = _x3(x)
+    if variant == "ridge_mean":
+        S = torch.zeros(K, d, 3, dtype=torch.float64, device=dev)
+        cnt = torch.zeros(K, dtype=torch.float64, device=dev)
     for start in range(0, x3.shape[0], chunk):
         sl = slice(start, start + chunk)
         mp = M_packed[sl].double()
@@ -563,6 +570,9 @@ def update_centroids(
         B.index_add_(
             0, lab, torch.einsum("nkl,nlc->nkc", gm.unpack(mp), x3[sl].double())
         )
+        if variant == "ridge_mean":
+            S.index_add_(0, lab, x3[sl].double())
+            cnt.index_add_(0, lab, torch.ones(lab.shape[0], dtype=torch.float64, device=dev))
     tr = gm.trace_packed(A)
     ok = tr > 0
     new = C_prev.clone()
@@ -572,6 +582,9 @@ def update_centroids(
         rhs = B[ok]
         if variant == "prox":
             rhs = rhs + mu[:, None, None] * _x3(C_prev).double()[ok]
+        elif variant == "ridge_mean":
+            cbar = S[ok] / cnt[ok].clamp(min=1.0)[:, None, None]
+            rhs = rhs + mu[:, None, None] * cbar
         q = bl.batched_linalg(
             torch.linalg.solve, gm.unpack(A[ok]) + mu[:, None, None] * eye, rhs
         )  # [k, 15, 3]

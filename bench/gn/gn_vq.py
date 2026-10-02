@@ -159,6 +159,12 @@ def gn_vq(
     log: Optional[Callable[[str], None]] = print,
     report_metrics: Optional[Dict[str, Tuple[Tensor, int]]] = None,
     quantizer=None,
+    update: str = "ridge",
+    clip_bounds: Optional[Tuple] = None,
+    after_update: Optional[Callable] = None,
+    final_float_assignment: bool = False,
+    assign_fn: Optional[Callable] = None,
+    update_fn: Optional[Callable] = None,
 ) -> Tuple[Tensor, Tensor, Dict]:
     """GN-VQ (Amendment 5). Returns (float centroids for the writer, labels, report).
 
@@ -173,24 +179,45 @@ def gn_vq(
 
     ``quantizer`` is the codec's quantizer; None is gsplat's (``codec_range`` / ``quantized_codebook``), and
     every earlier experiment ran with None. Another codec passes an object with ``range(C) -> dict`` and
-    ``quantize(C) -> (dequantized centroids, codes, range)``: E3r's C3DGS int8 table quantizer (Amendment 14 b)."""
+    ``quantize(C) -> (dequantized centroids, codes, range)``: E3r's C3DGS int8 table quantizer (Amendment 14 b).
+
+    E4q's ladder (Amendment 16 b) adds options; their defaults are the frozen method, unchanged:
+    - ``update``: ``diagnostics.update_centroids``'s variant, ``"ridge"`` (toward zero) or ``"ridge_mean"`` (OGC's form,
+      toward the cluster's Euclidean mean, ``eps`` its ``lam``);
+    - ``clip_bounds``: ``(lo, hi)``, scalars or per-coordinate tensors broadcasting over a centroid, in place of the
+      warm start's global minimum and maximum;
+    - ``after_update(it, C_assigned, C_new, labels) -> (C_new, info)``: called after each update (and its clip and
+      acceptance), with the codebook that iteration's assignment used; ``info`` joins the update's history entry
+      (E4q's reseeding of empty clusters);
+    - ``final_float_assignment``: with ``final_quantized_assignment`` off, one more exact assignment against the
+      returned float codebook (OGC's last step, ``vq.py:87`` at ``49ccae72``);
+    - ``assign_fn`` / ``update_fn``: the assignment and update arithmetic (default ``diagnostics.assign_exact`` and
+      ``diagnostics.update_centroids``, looked up at call time); a test swaps in OGC's arithmetic.
+    ``rel_tol`` = ``-inf`` never stops early."""
     range_fn = codec_range if quantizer is None else quantizer.range
     quantize_fn = quantized_codebook if quantizer is None else quantizer.quantize
-    lo, hi = float(C0.detach().float().min()), float(C0.detach().float().max())
+    assign = assign_fn or gd.assign_exact
+    upd = update_fn or gd.update_centroids
+    if clip_bounds is None:
+        lo, hi = float(C0.detach().float().min()), float(C0.detach().float().max())
+    else:
+        lo, hi = clip_bounds
     C, labels = C0.clone(), labels0.clone()
     obj = gd.gn_objective(x, C, labels, M_packed, total_pixels)
     history = [{"iter": 0, "step": "start", "objective": obj}]
     warm = {
-        "range": [lo, hi],
+        "range": [float(C0.detach().float().min()), float(C0.detach().float().max())],
         "quantizer": range_fn(C0),
         "objective": obj,
         "n_clusters": int(C0.shape[0]),
     }
+    if clip_bounds is not None:
+        warm["clip_bounds"] = [b.detach().cpu().reshape(-1).tolist() if torch.is_tensor(b) else float(b) for b in (lo, hi)]
     stopped, iters, rejected_total = "max_iters", 0, 0
     for it in range(1, max_iters + 1):
         iters = it
         prev = history[-1]["objective"]
-        labels, info = gd.assign_exact(x, M_packed, C, labels)
+        labels, info = assign(x, M_packed, C, labels)
         entry = {
             "iter": it,
             "step": "assign",
@@ -200,13 +227,16 @@ def gn_vq(
         if it == topk_at_iter:
             entry.update(gd.share_in_l2_topk(x, C, labels, M_packed, topk))
         history.append(entry)
-        C_new, kept_zero_M = gd.update_centroids(x, labels, M_packed, C, "ridge", eps)
+        C_new, kept_zero_M = upd(x, labels, M_packed, C, update, eps)
         outside = fraction_outside(C_new, lo, hi)
         rejected = 0
         if clip:
             C_new = C_new.clamp(lo, hi)
             C_new, rejected = accept_by_cluster(x, labels, M_packed, C, C_new)
             rejected_total += rejected
+        extra = {}
+        if after_update is not None:
+            C_new, extra = after_update(it, C, C_new, labels)
         C = C_new
         obj = gd.gn_objective(x, C, labels, M_packed, total_pixels)
         drop = (prev - obj) / prev if prev > 0 else 0.0
@@ -219,6 +249,7 @@ def gn_vq(
                 "clusters_rejected_by_clip": rejected,
                 "clusters_kept_zero_M": kept_zero_M,
                 "relative_drop": drop,
+                **extra,
             }
         )
         if log is not None:
@@ -230,6 +261,11 @@ def gn_vq(
         if drop < rel_tol:
             stopped = "rel_tol"
             break
+    changed_float = None
+    if final_float_assignment and not final_quantized_assignment:
+        new_labels, _ = assign(x, M_packed, C, labels)
+        changed_float = float((new_labels != labels).double().mean())
+        labels = new_labels
     obj_before = gd.gn_objective(x, C, labels, M_packed, total_pixels)
     before_under = {
         name: gd.gn_objective(x, C, labels, m, px) for name, (m, px) in (report_metrics or {}).items()
@@ -237,7 +273,7 @@ def gn_vq(
     Cq, codes, rng = quantize_fn(C)
     changed = 0.0
     if final_quantized_assignment:
-        new_labels, info_q = gd.assign_exact(x, M_packed, Cq, labels)
+        new_labels, info_q = assign(x, M_packed, Cq, labels)
         changed = float((new_labels != labels).double().mean())
         labels = new_labels
     obj_after = gd.gn_objective(x, Cq, labels, M_packed, total_pixels)
@@ -255,6 +291,8 @@ def gn_vq(
         "fraction_outside_warm_range_final": fraction_outside(C, lo, hi),
         "clusters_rejected_by_clip_total": rejected_total,
         "final_assignment_labels_changed_fraction": changed,
+        **({} if update == "ridge" else {"update": update}),
+        **({} if changed_float is None else {"final_float_assignment_labels_changed_fraction": changed_float}),
         "objective_before_quantization": obj_before,
         "objective_after_quantization": obj_after,
         "history": history,
