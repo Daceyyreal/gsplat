@@ -3114,6 +3114,13 @@ def test_findings_section_16_numbers_recheck_from_the_repo():
     assert res["fails"] == [] and res["n_numbers"] > 190
 
 
+def test_findings_section_17_numbers_recheck_from_the_repo():
+    import check_s17
+
+    res = check_s17.run()
+    assert res["fails"] == [] and res["n_numbers"] > 175
+
+
 # --------------------------------------------------------------------------------- E3r (Amendment 14)
 
 
