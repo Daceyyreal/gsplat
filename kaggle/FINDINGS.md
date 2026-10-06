@@ -91,6 +91,15 @@ compiling (no `ensurepip` for a venv).
 - **OGC's released code** reproduces its Table 19 train row to two decimals; our 16-probe metric's total trace is 0.919
   of their exact Gram's.
 
+**E4q (section 17, branch `bench/gn-vq`): exploratory dissection inside C3DGS on train and treehill, no verdict
+(Amendment 16 b).**
+- **OGC's lead over GN-VQ is codebook use:** OGC's choices in GN-VQ's code (`lad_all`) come within 0.0013 dB (train)
+  and 0.0009 dB (treehill) of OGC's VQ. Reseeding empty clusters (+0.0394 dB, train) and OGC's start (+0.0179 dB,
+  treehill) are the large single steps; the regularization choices are each 0.0097 dB or less.
+- **At equal bytes on train** OGC needs 14.42% fewer bytes than GN-VQ (BD-PSNR +0.0228 dB). `lam_cv` is OGC's default,
+  1e-3, on both scenes.
+- **C3DGS's own evaluation fails with the images on the CPU,** so treehill has none; protocol ii is unaffected.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -162,6 +171,13 @@ compiling (no `ensurepip` for a venv).
   (`kaggle/gn_e3r/gn3r/`), note i's feasibility (PREREG_GN.md Amendment 15 i) and the readings of code: this repository's
   job, hooks, wrapper and `bench/gn/`, OGC's `vq.py` at `49ccae72` and C3DGS's source at `2a234af5`.
   `bench/gn/check_s16.py` recomputes every number in the section from those files and checks each against the text.
+- Section 17: every number comes from `kaggle/gn_e4q/gn4q/` (`1d986d1a`; one Kaggle session on 2x T4, rows timestamped
+  2026-10-02T11:54 to 15:48, gsplat commit `c0e34e8e`, a restored wheel and E3p's fetched train members reused),
+  unpacked unchanged. The exceptions are E4p's rows in the post hoc chain (`kaggle/gn_e4p/gn4p/`), Amendment 16 e's
+  estimate and note i's feasibility (PREREG_GN.md), the test of `lad_all` against OGC's code (`bench/gn/test_gn.py`),
+  and the readings of code: this repository's job, hooks and stand-in, OGC's `vq.py` at `49ccae72` and C3DGS's source
+  at `2a234af5`. The post hoc BD checks use `bench/gn/g2.py`'s fit. `bench/gn/check_s17.py` recomputes every number in
+  the section from those files and checks each against the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -3107,3 +3123,409 @@ coordinate. In C3DGS's layout the DC values set both bounds, so the AC bound is 
   - the fine-tuned rows' quantizer state, OGC's table range, and so the cause of `ogc_ft`'s smaller `features_rest`;
   - which deterministic difference makes our metric's trace 8.1% short;
   - GN-VQ's convergence from C3DGS's warm start: all 16 runs stopped at the cap.
+
+## 17. E4q: the C3DGS dissection on train and treehill (exploratory, no verdict) — OGC's lead is codebook use and the metric, `lam_cv` is OGC's default, and C3DGS's own evaluation fails with the images on the CPU
+
+**E4q is exploratory, on two development scenes, and has no verdict** (Amendment 16 b, `1f0b7e15`, with note i,
+`de49bd24`, both written before any E4q code; the code at `c0e34e8e`). It forks C3DGS's process at the colour VQ as E4p
+did and runs, in each of two processes per scene, C3DGS's own VQ, GN-VQ with the cross-validated floor, eight rows that
+each change one of GN-VQ's choices to OGC's, `lad_all` with all of them, and OGC's own `gram_kmeans`; on train also a
+sweep of the colour threshold. Nothing below is a result about a method on a gate scene. Every number comes from
+`kaggle/gn_e4q/gn4q/` (`1d986d1a`), except where another committed file is named. Items marked **post hoc** were read
+from the files after the fact; Amendment 16 and its note did not plan them.
+
+**What ran:**
+- **Both jobs completed** and exited with code 0; neither was skipped by the start cutoff.
+- **train** wrote 48 rows: `uncompressed`, the `probe`, 26 rows at the default point (13 per process) and 20 at the
+  sweep's four other points (5 per point). 42 are `ok` and 6 `alias` (`ogc_lamcv`, below).
+- **treehill** wrote 28 rows: `uncompressed`, the `probe` and 26 at the default point. 25 are `ok`, 2 `alias` and 1
+  `failed`, the probe (below).
+- **Nothing else failed:** no failed or skipped step, no drop, no deviation and no `cfg_args` mismatch in either job.
+- **No retry:** every process ran once (attempt 0), none ran out of memory, and no fork check failed. train's ran with
+  `--data_device cuda`; treehill's started, and stayed, on the CPU, as note i set.
+- **One flag to read correctly:** treehill's meta records `done` false. Its only cause is the probe in
+  `missing_or_failed`.
+
+### Inputs and checks
+
+Session: torch 2.10.0+cu128 (CUDA 12.8), driver 580.178.04, cuDNN 91002, Python 3.12.13, 2x Tesla T4; gsplat commit
+`c0e34e8e`, the restored wheel (install 160.0 s). C3DGS built once (`gn4q_c3dgs_build.json`): ok, head `2a234af5`,
+180.8 s of builds and 199.3 s in all, Amendment 13 b's six deviations. OGC's clone was at HEAD `49ccae72` in both jobs
+(`/tmp/ogc_train`, `/tmp/ogc_treehill`).
+
+| Check | train | treehill |
+|---|---|---|
+| INRIA members | E3p's attached copies (`present`), all 3 matching the pins; `point_cloud.ply` SHA-1 `187b6095`, E3p's | fetched through note i's pins (`fetched`), all 3 matching in size and CRC32; `point_cloud.ply` SHA-1 `3dd0f6a4` |
+| `cfg_args` | no mismatch | no mismatch; `images_4` at resolution 1 |
+| Loaded size | - | first image 1267 x 832, loaded size 1267 x 832, as note i assumed |
+| Camera frame against `cameras.json` | pass: 301 of 301, largest differences 1.78e-15 (position), 3.33e-16 (rotation) | pass: 141 of 141, 1.33e-15, 3.33e-16 |
+| Test split against `cameras.json` | equal, 38 test views | equal, 18 test views |
+| Train views, even / odd | 132 / 131 | 62 / 61 |
+| Uncompressed model, protocol ii (PSNR / SSIM / LPIPS) | 21.293 / 0.7926 / 0.2170 at 980x545, E4p's row in every digit the CSVs hold | 22.313 / 0.6268 / 0.3238 at 1267x832 |
+| Splats: in the checkpoint, pruned, keeping their own colour, colour-quantized | 1,026,508, 115,907, 107,525, 803,076 (E4p's) | 3,783,761, 377,859, 81,863, 3,324,039 |
+
+**The fork held:** every row's three checks passed in every process (`checks_ok` in all 72 fork rows), and within a
+process every row carries one geometry SHA-1, different between processes as in E4p: train `94704be3` and `8a32514f`
+at the default point, the probe `dbbb1cc5`; treehill `db6f3204` and `a7a81b58`, the probe `6124f46f`.
+
+### C3DGS's own evaluation fails with the images on the CPU (treehill)
+
+- **Every treehill evaluation by C3DGS raised:** 24 of 24 in the two processes (12 evaluated rows each; `ogc_lamcv` is
+  an alias), each recorded in `c3dgs_eval_error` as a `RuntimeError` that the input (`torch.FloatTensor`) and the
+  weight (`torch.cuda.FloatTensor`) differ, after 0.1 s. The probe's evaluation run raised the same error.
+- **The cause, read from C3DGS at `2a234af5`:** its `render_and_eval` takes the ground truth as loaded,
+  `gt = view.original_image[0:3, :, :].unsqueeze(0)` (`compress.py:105`), and never moves it to the render's device.
+  With `--data_device cpu` it is a CPU tensor, the render and `ssim`'s window are on CUDA, and `ssim` (`:107`, through
+  `utils/loss_utils.py:45`) raises. So C3DGS's own evaluation cannot run with the images on the CPU. train's images
+  were on the GPU, and all its rows have it.
+- **What is missing:** C3DGS's evaluation (PSNR, SSIM, LPIPS) of all 26 treehill rows and of the probe, so no
+  treehill difference has that component. Protocol ii renders with this repository's runner, not C3DGS's, and is
+  present for every row, as are the bytes, the fidelity, the codewords and the costs.
+- **The two status rules disagree.** A fork row is `ok` when protocol ii's PSNR exists
+  (`kaggle/gn_e4q_scene.py:632-636`): the hooks record C3DGS's failure and continue, as for any secondary
+  (`kaggle/e4p_hooks.py:359-361`). The probe row needs both (`:675`), so it is `failed` with its protocol ii present
+  (22.098 dB). The probe enters no difference (Amendment 15 d, kept), so nothing else changes.
+- **Why the dry run did not catch it:** the stand-in's `render_and_eval` (`bench/gn/dryrun/fake_c3dgs/compress.py:32`)
+  computes a number from the colour features alone, with no image, so its device could not matter. E3r and E4p ran
+  only with the images on the GPU.
+- **Amendment 16 e's treehill estimate counted C3DGS's evaluation** of the 12 rows after row 1; it did not run.
+
+### `rho_cv` and `lam_cv`
+
+GN-VQ's floor (E3r's harness, unchanged): GN-VQ on the probe run's colour-quantized splats with the even-view metric at
+each `rho`, scored by the clamped dMSE on the odd views.
+
+| dMSE, odd train views | `rho` = 0 | 1e-3 | 1e-2 | 1e-1 | 3e-1 | 1 | 3 |
+|---|---|---|---|---|---|---|---|
+| train | 1.0983e-04 | 1.0750e-04 | **1.0384e-04** | 1.0542e-04 | 1.1396e-04 | 1.3730e-04 | 1.7504e-04 |
+| treehill | 2.7556e-04 | 2.6883e-04 | 2.5524e-04 | **2.4479e-04** | 2.5256e-04 | 2.8187e-04 | 3.4086e-04 |
+
+- **train's `rho_cv` is 1e-2, as E4p's** (`rho_cv_equals_e4p`), ahead of 1e-1 by 1.52% of its score. treehill's is
+  1e-1, ahead of 3e-1 by 3.18%.
+
+OGC's `lam` (Amendment 16 b): OGC's `gram_kmeans` on the probe's colour-quantized splats with the even-view metric at
+each `lam`, scored the same way.
+
+| dMSE, odd train views | `lam` = 1e-6 | 1e-4 | 1e-3 | 1e-2 | 1e-1 | 1 |
+|---|---|---|---|---|---|---|
+| train | 1.1947e-04 | 7.2703e-05 | **6.5991e-05** | 6.6296e-05 | 7.3328e-05 | 1.0367e-04 |
+| treehill | 2.7256e-04 | 2.0416e-04 | **2.0158e-04** | 2.0620e-04 | 2.2561e-04 | 3.1886e-04 |
+
+- **`lam_cv` is 1e-3 on both scenes: OGC's default** (`vq.py:17` at `49ccae72`). So `ogc_lamcv` is `ogc`, an alias in
+  every process and at every sweep point (8 alias rows), and `ogc_lamcv` minus `ogc` is zero by construction.
+- **Both minima are shallow:** the runner-up is 0.46% above on train (1e-2) and 1.28% on treehill (1e-4). Every `lam`
+  used all 4,096 codewords; each call took 24.7-25.5 s on train and 107.8-108.8 s on treehill.
+- **The paper's 1e-6 scores worst of the six on train and second worst on treehill,** 81.0% and 35.2% above the
+  minimum. Post hoc.
+
+**Iterations.** All 14 cross-validation runs stopped at GN-VQ's 20-iteration cap. In the fork, `gnvq_cv` and the rows
+that keep its stopping rule (`lad_clip_part`, `lad_no_clip`, `lad_ridge_mean`, `lad_no_final_int8`) stopped at the cap
+in every process; `lad_iters15` and `lad_all` ran their 15; the relative-drop rule stopped `lad_reseed` at 16 (train) and
+18-19 (treehill), `lad_init_tr` at 18-19 and 18, and `lad_iters50` at 30-31 and 44-45.
+
+**A recording limit:** `vq_reseeded_total` sums only the history the record keeps, its last three entries
+(`kaggle/gn_e4q_scene.py:538`), so its zeros are the last iterations'; how many clusters were reseeded in all is not in
+the bundle. That they were shows in the codewords used, below.
+
+### The rows at the default point
+
+Protocol ii on each row's decoded `.npz`, and C3DGS's evaluation (train only, above). Means over the two processes, with
+the range for protocol ii's PSNR; codewords used are the distinct codebook entries among the quantized splats' stored
+indices (K = 4,096), per process 0 / 1; the index entropy is over the whole stored index array, in bits.
+
+**train:**
+
+| Row | Protocol ii PSNR: mean (range) | SSIM | LPIPS | C3DGS's PSNR | `.npz` bytes | Codewords used | Index entropy |
+|---|---|---|---|---|---|---|---|
+| `c3dgs` | 20.999 (20.995-21.004) | 0.7745 | 0.2361 | 21.507 | 13,865,908 | 2,496 / 2,209 | 10.45 / 10.34 |
+| `gnvq_cv` | 21.131 (21.129-21.133) | 0.7821 | 0.2279 | 21.631 | 14,073,859 | 2,579 / 2,315 | 11.06 / 10.97 |
+| `lad_reseed` | 21.170 (21.169-21.172) | 0.7838 | 0.2262 | 21.651 | 14,309,076 | 4,096 / 4,096 | 12.44 / 12.48 |
+| `lad_init_tr` | 21.151 (21.150-21.152) | 0.7833 | 0.2264 | 21.646 | 14,313,501 | 3,983 / 3,983 | 12.69 / 12.69 |
+| `lad_clip_part` | 21.127 (21.127-21.127) | 0.7820 | 0.2279 | 21.626 | 14,072,994 | 2,590 / 2,296 | 11.06 / 10.96 |
+| `lad_no_clip` | 21.131 (21.130-21.133) | 0.7821 | 0.2280 | 21.632 | 14,074,662 | 2,585 / 2,316 | 11.07 / 10.99 |
+| `lad_ridge_mean` | 21.141 (21.139-21.142) | 0.7824 | 0.2275 | 21.638 | 14,117,351 | 2,661 / 2,374 | 11.29 / 11.19 |
+| `lad_iters15` | 21.130 (21.129-21.131) | 0.7820 | 0.2280 | 21.630 | 14,070,111 | 2,569 / 2,295 | 11.04 / 10.94 |
+| `lad_iters50` | 21.132 (21.129-21.135) | 0.7821 | 0.2278 | 21.633 | 14,078,412 | 2,598 / 2,348 | 11.09 / 11.00 |
+| `lad_no_final_int8` | 21.131 (21.130-21.133) | 0.7821 | 0.2279 | 21.631 | 14,072,980 | 2,578 / 2,314 | 11.06 / 10.96 |
+| `lad_all` | 21.170 (21.169-21.171) | 0.7840 | 0.2260 | 21.650 | 14,348,417 | 4,096 / 4,096 | 12.77 / 12.77 |
+| `ogc` | 21.171 (21.170-21.172) | 0.7840 | 0.2259 | 21.650 | 14,348,885 | 4,096 / 4,096 | 12.77 / 12.77 |
+
+**treehill** (no C3DGS evaluation):
+
+| Row | Protocol ii PSNR: mean (range) | SSIM | LPIPS | `.npz` bytes | Codewords used | Index entropy |
+|---|---|---|---|---|---|---|
+| `c3dgs` | 22.096 (22.094-22.099) | 0.5980 | 0.3648 | 34,828,680 | 1,983 / 1,854 | 9.38 / 9.29 |
+| `gnvq_cv` | 22.186 (22.185-22.187) | 0.6102 | 0.3482 | 35,662,710 | 2,396 / 2,304 | 9.97 / 9.88 |
+| `lad_reseed` | 22.180 (22.179-22.181) | 0.6114 | 0.3465 | 36,290,147 | 4,096 / 4,096 | 11.11 / 11.24 |
+| `lad_init_tr` | 22.204 (22.204-22.204) | 0.6124 | 0.3452 | 36,391,052 | 4,064 / 4,064 | 11.66 / 11.66 |
+| `lad_clip_part` | 22.185 (22.183-22.187) | 0.6102 | 0.3482 | 35,663,290 | 2,412 / 2,301 | 9.97 / 9.88 |
+| `lad_no_clip` | 22.187 (22.185-22.188) | 0.6103 | 0.3480 | 35,650,015 | 2,394 / 2,316 | 9.92 / 9.85 |
+| `lad_ridge_mean` | 22.191 (22.190-22.192) | 0.6113 | 0.3456 | 36,232,529 | 2,717 / 2,610 | 10.60 / 10.54 |
+| `lad_iters15` | 22.184 (22.182-22.185) | 0.6100 | 0.3484 | 35,638,223 | 2,314 / 2,217 | 9.92 / 9.83 |
+| `lad_iters50` | 22.191 (22.191-22.191) | 0.6106 | 0.3476 | 35,738,648 | 2,788 / 2,677 | 10.11 / 10.04 |
+| `lad_no_final_int8` | 22.185 (22.184-22.187) | 0.6101 | 0.3484 | 35,653,012 | 2,396 / 2,303 | 9.95 / 9.87 |
+| `lad_all` | 22.203 (22.202-22.204) | 0.6128 | 0.3440 | 36,812,000 | 4,096 / 4,096 | 11.76 / 11.76 |
+| `ogc` | 22.204 (22.203-22.205) | 0.6128 | 0.3441 | 36,811,594 | 4,096 / 4,096 | 11.76 / 11.76 |
+
+- **Context:** the probe, evaluated from its decoded `.npz`, reads 21.004 / 0.7746 / 0.2360 at 13,877,101 bytes on train
+  (C3DGS's evaluation 21.515), and 22.098 / 0.5982 / 0.3648 at 34,865,843 bytes on treehill.
+- **C3DGS's own VQ differs between the two processes** by 0.0088 dB (train) and 0.0049 dB (treehill) in protocol ii.
+- **Codewords used (post hoc):** C3DGS's own VQ leaves 1,600-1,887 of its 4,096 entries without a splat on train and
+  2,113-2,242 on treehill. GN-VQ starts from that codebook and keeps most of them empty. Only the rows that reseed
+  (`lad_reseed`, `lad_all`, `ogc`) use all 4,096; `lad_init_tr`, which starts from OGC's draw, uses 3,983 and 4,064.
+  Every other GN-VQ row stays within 2,217-2,788.
+- **The index entropy rises with the codewords used,** and the bytes with it: the four rows near 4,096 codewords are
+  the four largest on both scenes.
+
+### The ladder: each of OGC's choices in GN-VQ's code
+
+Each row changes one of GN-VQ's choices to OGC's (Amendment 16 b); `lad_all` changes all of them. Within process `p`,
+protocol ii's test PSNR minus `gnvq_cv`'s, n = 1 scene and two processes, so `SE_noise` = sqrt(`v_s`) / sqrt(2), with
+one degree of freedom:
+
+| Row minus `gnvq_cv` | train: `D_sp` 0 / 1 | `D_s` | `SE_noise` | `.npz` bytes | treehill: `D_sp` 0 / 1 | `D_s` | `SE_noise` | `.npz` bytes |
+|---|---|---|---|---|---|---|---|---|
+| `lad_reseed` | +0.0396 / +0.0392 | +0.0394 | 0.0002 | +235,216 | -0.0058 / -0.0058 | -0.0058 | 0.0000 | +627,437 |
+| `lad_init_tr` | +0.0212 / +0.0186 | +0.0199 | 0.0013 | +239,642 | +0.0169 / +0.0189 | +0.0179 | 0.0010 | +728,342 |
+| `lad_clip_part` | -0.0020 / -0.0057 | -0.0038 | 0.0019 | -866 | +0.0001 / -0.0016 | -0.0007 | 0.0009 | +580 |
+| `lad_no_clip` | +0.0006 / -0.0002 | +0.0002 | 0.0004 | +804 | +0.0007 / +0.0006 | +0.0006 | 0.0001 | -12,695 |
+| `lad_ridge_mean` | +0.0100 / +0.0094 | +0.0097 | 0.0003 | +43,492 | +0.0045 / +0.0052 | +0.0049 | 0.0003 | +569,819 |
+| `lad_iters15` | -0.0004 / -0.0023 | -0.0013 | 0.0010 | -3,748 | -0.0020 / -0.0026 | -0.0023 | 0.0003 | -24,487 |
+| `lad_iters50` | +0.0003 / +0.0016 | +0.0010 | 0.0007 | +4,552 | +0.0038 / +0.0061 | +0.0049 | 0.0011 | +75,938 |
+| `lad_no_final_int8` | +0.0004 / +0.0002 | +0.0003 | 0.0001 | -878 | -0.0002 / -0.0011 | -0.0007 | 0.0005 | -9,698 |
+| `lad_all` | +0.0398 / +0.0375 | +0.0387 | 0.0011 | +274,558 | +0.0164 / +0.0174 | +0.0169 | 0.0005 | +1,149,290 |
+
+The other differences, computed the same way:
+
+| Difference | train: `D_sp` 0 / 1 | `D_s` | `SE_noise` | `.npz` bytes | C3DGS's PSNR | treehill: `D_sp` 0 / 1 | `D_s` | `SE_noise` | `.npz` bytes |
+|---|---|---|---|---|---|---|---|---|---|
+| `lad_all` - `ogc` | -0.0013 / -0.0014 | -0.0013 | 0.0000 | -468 | -0.0005 | -0.0010 / -0.0009 | -0.0009 | 0.0000 | +405 |
+| `gnvq_cv` - `c3dgs` | +0.1255 / +0.1382 | +0.1319 | 0.0064 | +207,952 | +0.1238 | +0.0886 / +0.0910 | +0.0898 | 0.0012 | +834,030 |
+| `ogc` - `c3dgs` | +0.1666 / +0.1772 | +0.1719 | 0.0053 | +482,978 | +0.1429 | +0.1060 / +0.1093 | +0.1077 | 0.0017 | +1,982,914 |
+| `gnvq_cv` - `ogc` | -0.0411 / -0.0389 | -0.0400 | 0.0011 | -275,026 | -0.0191 | -0.0174 / -0.0183 | -0.0179 | 0.0004 | -1,148,884 |
+
+`gnvq_cv` minus `ogc_lamcv` equals `gnvq_cv` minus `ogc`, and `ogc_lamcv` minus `ogc` is zero, in every column (the
+alias).
+
+- **The two largest single changes are both about codebook use:** reseeding empty clusters (`lad_reseed`, +0.0394 dB on
+  train) and OGC's trace-weighted draw as the start (`lad_init_tr`, +0.0179 dB on treehill). Which leads differs by
+  scene: on treehill `lad_reseed` alone is -0.0058 dB.
+- **The regularization choices are small:** OGC's ridge toward the cluster mean (`lad_ridge_mean`) +0.0097 and +0.0049
+  dB, the per-part clip and no clip within 0.0038 dB, the iteration counts within 0.0049 dB, the final int8 assignment
+  within 0.0007 dB.
+- **The single changes do not add up to `lad_all`.** Their sum is +0.0654 dB on train against +0.0387 for `lad_all`,
+  and +0.0189 dB on treehill against +0.0169. On train the two codebook-use changes overlap: each fills most of the
+  empty entries, so together they do not count twice.
+- **The best ladder row** (Amendment 16 b: highest mean protocol-ii PSNR among the eight single-factor rows, `lad_all`
+  excluded) is `lad_reseed` on train (21.170462 dB) and `lad_init_tr` on treehill (22.203899 dB). train's sweep used
+  `lad_reseed`.
+
+**`lad_all` against `ogc`: the ladder accounts for OGC's algorithm.**
+- **The difference is -0.0013 dB (train) and -0.0009 dB (treehill),** with -468 and +405 bytes, against the +0.0387 and
+  +0.0169 dB `lad_all` gains over `gnvq_cv`.
+- **The labels agree on 671,422 of 803,076 splats (0.836) and 2,616,453 of 3,324,039 (0.787).** Both rows use all
+  4,096 codewords; the codebooks' largest absolute difference is 0.8134 and 0.3341.
+- **What is left is arithmetic.** With OGC's assignment and update arithmetic swapped into GN-VQ's code, `lad_all`
+  reproduces OGC's `gram_kmeans` labels and codebook bit for bit
+  (`test_e4q_lad_all_with_ogcs_arithmetic_reproduces_their_gram_kmeans`, `9db4cf8b`; on 400 splats with 4
+  reseedings). So the listed choices are the whole algorithm, and the rest of `lad_all` minus `ogc` is how the same
+  algorithm's floating-point arithmetic is carried out.
+- **The agreement is the same in both processes, to every digit.** Neither row touches C3DGS's own colour codebook:
+  `ogc` is called with seed 0 in every process, `lad_all` starts from OGC's draw with the same generator and clips
+  nothing, and both processes reach the colour VQ with the same counts and the same quantizer (DC scale 0.054016, zero point
+  -81, AC scale 0.0068831, zero point -4, on train), so with the same inputs as far as the records show. Their table ranges are equal across processes.
+  Every other GN-VQ row starts from, or clips to the range of, C3DGS's codebook, which C3DGS draws from the process's
+  seed, and its table range differs between processes. The PSNR difference still moves between processes (-0.0013 and
+  -0.0014 dB on train) because the geometry VQ, seeded by the process too, differs.
+
+### Rate and distortion on train (the sweep)
+
+The colour threshold at 6e-7 x 3^j, j = -2 to +2, one process each (seed 0; j = 0 is the default point's process 0);
+`.npz` bytes / protocol ii PSNR:
+
+| j | Threshold | `c3dgs` | `gnvq_cv` | `lad_reseed` | `ogc` |
+|---|---|---|---|---|---|
+| -2 | 6.67e-08 | 26,350,534 / 21.2068 | 26,462,764 / 21.2163 | 26,635,288 / 21.2205 | 26,669,207 / 21.2209 |
+| -1 | 2e-07 | 19,545,024 / 21.1480 | 19,711,341 / 21.1901 | 19,908,999 / 21.2045 | 19,947,940 / 21.2034 |
+| 0 | 6e-07 | 13,877,025 / 21.0036 | 14,084,635 / 21.1291 | 14,307,120 / 21.1687 | 14,350,149 / 21.1702 |
+| +1 | 1.8e-06 | 11,329,011 / 20.8406 | 11,559,964 / 21.0861 | 11,809,211 / 21.1251 | 11,847,146 / 21.1314 |
+| +2 | 5.4e-06 | 10,567,508 / 20.7349 | 10,806,652 / 21.0583 | 11,054,251 / 21.0969 | 11,089,131 / 21.1060 |
+
+BD with Amendment 9 a's domain-scaled fit (report only):
+
+| Row against reference | BD-rate | BD-PSNR (dB) |
+|---|---|---|
+| `ogc` against `gnvq_cv` | -14.42% | +0.0228 |
+| `lad_reseed` against `gnvq_cv` | -13.66% | +0.0221 |
+| `c3dgs` against `gnvq_cv` | +31.59% | -0.0907 |
+| `ogc` against `c3dgs` | -33.76% | +0.1080 |
+
+`ogc_lamcv`'s BD values are `ogc`'s, and `ogc_lamcv` against `ogc` is 0.
+
+- **At equal bytes GN-VQ loses to OGC on train:** OGC reaches `gnvq_cv`'s PSNR with 14.42% fewer bytes, and
+  `lad_reseed` with 13.66% fewer. GN-VQ still beats C3DGS's own VQ (C3DGS needs 31.59% more bytes).
+- **The curves are flat:** each spans 0.115-0.472 dB in PSNR over a 2.4-2.5x range of bytes.
+
+**Post hoc: the fit's support and its sensitivity.** The fit integrates only over the overlap of the two curves'
+measured ranges, so nothing is extrapolated, and every fitted curve is monotone inside it. But BD-rate integrates bytes
+over the PSNR overlap, which is narrow:
+
+| Pair | PSNR overlap | Share of each curve's PSNR span | Points on or inside, each | Bytes overlap, share of each log span | BD-rate, fit degree 3 / 2 / 1, piecewise linear | BD-rate, one j dropped | BD-PSNR, one j dropped |
+|---|---|---|---|---|---|---|---|
+| `ogc` against `gnvq_cv` | 0.110 dB | 96% / 70% | 4 / 3 | 99% / 97% | -14.42 / -15.37 / -14.79 / -15.02% | -17.8 to -12.6% | +0.0206 to +0.0333 |
+| `lad_reseed` against `gnvq_cv` | 0.119 dB | 97% / 76% | 4 / 3 | 99% / 97% | -13.66 / -14.43 / -13.34 / -14.07% | -16.4 to -12.3% | +0.0201 to +0.0318 |
+| `ogc` against `c3dgs` | 0.101 dB | 88% / 21% | 4 / 2 | 99% / 95% | -33.76 / -35.01 / -29.90 / -33.13% | -36.2 to -31.9% | +0.0946 to +0.1553 |
+| `c3dgs` against `gnvq_cv` | 0.149 dB | 31% / 94% | 2 / 4 | 98% / 100% | +31.59 / +34.37 / +31.54 / +31.92% | +27.4 to +37.3% | -0.1282 to -0.0772 |
+
+- **BD-rate moves by 4.1-5.3 percentage points with one point, and by 9.8 for `c3dgs` against `gnvq_cv`** (the
+  same j dropped from both curves). Each sweep point is one process, and at j = 0 the two
+  processes differ by 0.0088 dB (`c3dgs`) and 0.0039 dB (`gnvq_cv`); on these curves that is a shift of several percent
+  in bytes.
+- **C3DGS's curve has 2 of its 5 points in the PSNR overlap** against `ogc` and against `gnvq_cv`; its part of those
+  BD-rates rests on them and the fit's shape.
+- **The signs hold** under every degree, the piecewise-linear integral and every dropped point.
+
+### Fidelity to the uncompressed model per angle (note ii a)
+
+Each row's renders against the uncompressed model's at the test cameras orbited about the scene's up axis; `D_s` in
+dB as the mean PSNR / as the PSNR of the pooled MSE (Amendment 16 b):
+
+**train** (38 cameras):
+
+| Angle (degrees) | `ogc` - `c3dgs` | `gnvq_cv` - `c3dgs` | `gnvq_cv` - `ogc` | `lad_all` - `ogc` | `lad_reseed` - `gnvq_cv` | `lad_init_tr` - `gnvq_cv` |
+|---|---|---|---|---|---|---|
+| -40 | +1.479 / +0.485 | +1.206 / +0.772 | -0.273 / +0.287 | +0.012 / +0.043 | +0.487 / +0.393 | +0.470 / +0.479 |
+| -20 | +1.712 / +0.525 | +1.117 / +0.096 | -0.595 / -0.428 | -0.205 / -1.367 | +0.537 / -0.349 | +0.650 / +0.826 |
+| -10 | +2.755 / +2.217 | +2.069 / +1.773 | -0.686 / -0.443 | +0.057 / +0.136 | +0.752 / +0.703 | +0.608 / +0.517 |
+| 0 | +3.468 / +3.433 | +2.649 / +2.618 | -0.819 / -0.815 | -0.004 / -0.004 | +0.757 / +0.744 | +0.619 / +0.616 |
+| +10 | +2.609 / +1.498 | +1.670 / +0.064 | -0.939 / -1.434 | -0.017 / -0.106 | +0.592 / +0.544 | +0.582 / +0.802 |
+| +20 | +1.122 / -0.118 | +0.881 / -0.050 | -0.240 / +0.068 | +0.254 / +0.434 | +0.575 / +0.920 | +0.481 / +0.603 |
+| +40 | +0.431 / -0.739 | +0.287 / -0.893 | -0.145 / -0.155 | -0.039 / -0.198 | +0.534 / +0.603 | +0.488 / +0.990 |
+
+**treehill** (18 cameras):
+
+| Angle (degrees) | `ogc` - `c3dgs` | `gnvq_cv` - `c3dgs` | `gnvq_cv` - `ogc` | `lad_all` - `ogc` | `lad_reseed` - `gnvq_cv` | `lad_init_tr` - `gnvq_cv` |
+|---|---|---|---|---|---|---|
+| -40 | +3.015 / +2.995 | +2.419 / +2.402 | -0.596 / -0.593 | +0.007 / +0.007 | +0.254 / +0.256 | +0.437 / +0.435 |
+| -20 | +3.088 / +3.051 | +2.479 / +2.447 | -0.609 / -0.604 | -0.000 / -0.000 | +0.266 / +0.265 | +0.455 / +0.449 |
+| -10 | +2.968 / +2.908 | +2.381 / +2.344 | -0.587 / -0.564 | -0.003 / -0.004 | +0.262 / +0.265 | +0.458 / +0.448 |
+| 0 | +2.905 / +2.838 | +2.340 / +2.303 | -0.565 / -0.536 | +0.003 / +0.003 | +0.254 / +0.253 | +0.442 / +0.430 |
+| +10 | +2.941 / +2.891 | +2.369 / +2.336 | -0.573 / -0.556 | -0.001 / -0.001 | +0.250 / +0.251 | +0.446 / +0.440 |
+| +20 | +3.069 / +3.026 | +2.462 / +2.424 | -0.608 / -0.602 | +0.001 / +0.002 | +0.238 / +0.242 | +0.436 / +0.435 |
+| +40 | +3.108 / +3.047 | +2.517 / +2.470 | -0.591 / -0.577 | -0.001 / -0.001 | +0.249 / +0.248 | +0.424 / +0.421 |
+
+- **treehill is flat across the angles except against `c3dgs`:** over the seven angles each ladder difference,
+  `lad_all` - `gnvq_cv`, `lad_all` - `ogc` and `gnvq_cv` - `ogc` (11 in all) moves by 0.068 dB or less in either
+  measure, and the two measures agree. The differences against `c3dgs` move by 0.167-0.213 dB, lowest at 0 degrees.
+  `SE_noise` is at most 0.033 dB in either measure.
+- **train peaks at 0 degrees against `c3dgs`** in the mean-PSNR measure (`ogc` +3.468 dB, `gnvq_cv` +2.649 dB) and
+  falls toward +40 degrees (+0.431 and +0.287 dB), more steeply on the positive side.
+- **train's pooled-MSE measure is noisy:** its `SE_noise` reaches 2.719 dB (0.396 dB for the mean PSNR), and at +20 and
+  +40 degrees it turns the differences against `c3dgs` negative. One low-PSNR view dominates a pooled MSE.
+- **The -20 degree effect is one view (post hoc).** `lad_all` - `ogc` reads -1.367 dB pooled at -20 degrees against
+  -0.205 dB mean. At camera `00113` there, `lad_all`'s render reads 20.67 and 20.74 dB against `ogc`'s 28.92 and 28.44
+  dB in processes 0 and 1; without that camera the pooled difference is -0.032 and -0.030 dB.
+- **On treehill the two references disagree for `lad_reseed`** (post hoc): +0.238 to +0.266 dB closer to the
+  uncompressed model than `gnvq_cv`, but -0.0058 dB in protocol ii against the ground truth, as for E4p's D1.
+
+### OGC's chunk (Amendment 16 c)
+
+On train, in process 0, one more `gram_kmeans` call at chunk 100,000 on the same inputs: **its labels equal those at
+chunk 25,000 in all 803,076 splats, and the codebooks are identical** (largest absolute difference 0.0). It took 26.9 s
+against 25.1 s at chunk 25,000 in the same process.
+
+### Time and memory
+
+**Setup:** restore 58.2 s, install 160.0 s, C3DGS build 202.4 s. **train:** 9,716.0 s by its own clock (9,735.5 s in
+the queue), 2.7 h. **treehill:** 14,624.5 s (14,640.6 s in the queue), 4.1 h, on the other GPU. **The session:** setup
+plus the longer job, 15,061.2 s (4.18 h).
+
+The jobs' steps (wall time; GPU GB are the C3DGS process's allocated / reserved peaks, folded over the process; host RSS
+is the wrapper's, C3DGS's process and its children; GB are 10^9 bytes):
+
+| Step | train: s | GPU GB | RSS GB | treehill: s | GPU GB | RSS GB |
+|---|---|---|---|---|---|---|
+| INRIA members / dataset download | 2.4 / 371.0 | - | - | 88.9 / 48.8 | - | - |
+| probe run (C3DGS's process) | 291.6 | 4.89 / 5.38 | 2.58 | 302.5 | 4.85 / 6.04 | 7.22 |
+| default process 0 | 2,024.2 | 9.95 / 12.77 | 4.43 | 4,591.6 | 7.76 / 8.51 | 14.25 |
+| default process 1 | 1,998.5 | 4.97 / 6.15 | 4.46 | 4,526.1 | 7.76 / 8.38 | 14.33 |
+| sweep processes, j = -2 / -1 / +1 / +2 | 646.1 / 693.5 / 762.3 / 786.2 | 4.90-4.94 / 5.72-6.68 | 4.02-4.67 | - | - | - |
+| GN passes 16 x 16, all / even views | 18.3 / 9.2 | - | - | 14.9 / 8.4 | - | - |
+| `rho` CV: GN-VQ, 7 runs | 687.9 in all | - | - | 2,810.5 in all | - | - |
+| `lam` CV: OGC, 6 runs | 151.1 in all | - | - | 651.4 in all | - | - |
+| per decoded row: `npz2ply.py` / protocol ii / fidelity renders | 11.7-12.9 / 7.2-8.1 / 2.7-2.8 | - | - | 35.3-38.2 / 6.5-7.1 / 3.4-3.5 | - | - |
+
+**Inside each default process** (the hooks' costs, s, process 0 / 1):
+- **train:** C3DGS's own VQ 128.2 / 130.4; `gnvq_cv` 98.4 / 98.3; the eight ladder rows 75.0-148.7 (`lad_iters50` the longest),
+  `lad_all` 63.8 / 64.1; `ogc` 25.1 / 25.9; C3DGS's evaluation of the 12 rows 59.9-64.4 each; the rest, 154.9 / 155.6.
+- **treehill:** C3DGS's own VQ 139.0 / 138.0; `gnvq_cv` 401.0 / 400.4; the eight ladder rows 306.0-871.7 (`lad_iters50`
+  871.7 / 850.8), `lad_all` 261.2 / 257.9; `ogc` 108.6 / 98.8; C3DGS's evaluation 0.1 (it failed at once); the rest, 161.6 / 161.9.
+
+**Memory:**
+- **The reserved peaks are now sane** (Amendment 16 c): reserved is at least the allocated peak in every process, row
+  and step, and each process's reserved peak is at least its rows'. E4p could not report this.
+- **The largest GPU peak is train's process 0, 9.95 GB allocated and 12.77 GB reserved:** its chunk check runs OGC at
+  chunk 100,000. Without it, a train process peaks at 4.97 GB.
+- **treehill with the images on the CPU peaked at 7.76 GB allocated, 8.51 GB reserved,** inside note i's CPU range for
+  the sensitivity pass alone (7.47-9.64 GB) and below its 14.39 GB upper end with the colour step and the x 1.14: the
+  colour step did not stack on the sensitivity pass's peak.
+- **Host memory:** the session had 33.66 GB. treehill's C3DGS processes peaked at 14.25 and 14.33 GB (the wrapper's
+  figure); the job's own steps, which count the job's process too, at 18.43 GB. train's peaked at 4.67 GB and 7.84 GB.
+
+**Against Amendment 16 e's estimate** (made before the code):
+- **train:** 9,716.0 s against 10,432-11,263 s, 6.9% below the lower end; a default process 2,020.5 / 1,995.5 s against
+  2,468-2,618 s.
+- **treehill:** 14,624.5 s, inside 6,575-24,247 s; a default process 4,588.1 / 4,522.8 s against 2,390-9,362 s. The
+  estimate counted C3DGS's evaluation, which failed at once, and not the CPU images, which ran.
+- **The session:** 15,061.2 s against 10,861-24,676 s.
+
+### Post hoc: where `ogc` minus `c3dgs` comes from (train, E4p and E4q)
+
+A chain of paired differences from C3DGS's own VQ to OGC's, each computed within processes (protocol ii, test PSNR):
+
+| Step | Rows | Run | Processes | `D_s` (dB) | `SE_noise` |
+|---|---|---|---|---|---|
+| (iii) GN-VQ's update on the isotropic metric, from C3DGS's codebook | `scalar` - `c3dgs` | E4p | 3 | +0.0190 | 0.0020 |
+| (i) the 16 x 16 metric against its trace | `gnvq_rho0` - `scalar` | E4p | 3 | +0.1129 | 0.0039 |
+| the floor | `gnvq_cv` - `gnvq_rho0` | E4p | 3 | +0.0007 | 0.0020 |
+| (ii) OGC's choices in GN-VQ's code | `lad_all` - `gnvq_cv` | E4q | 2 | +0.0387 | 0.0011 |
+| arithmetic | `ogc` - `lad_all` | E4q | 2 | +0.0013 | 0.0000 |
+| sum | | | | +0.1726 | |
+| `ogc` - `c3dgs` | | E4q | 2 | +0.1719 | 0.0053 |
+
+- **Shares of the sum:** the metric 65.4%, OGC's choices 22.4%, step (iii) 11.0%, the arithmetic 0.8%, the floor 0.4%.
+- **Which joins are tested.** Within E4p, the first three steps add to E4p's `gnvq_cv` - `c3dgs` by construction, and
+  within E4q the last two to E4q's `ogc` - `gnvq_cv`. The only join between runs is `gnvq_cv` - `c3dgs`: +0.1326 dB in
+  E4p and +0.1319 dB in E4q. Those are different C3DGS runs even at the same seeds (FINDINGS section 15; the geometry
+  SHA-1s differ; `c3dgs`'s protocol ii in process 0 reads 21.0020 in E4p and 21.0036 in E4q). They agree within 0.0008
+  dB; `ogc` - `c3dgs` reads +0.1730 in E4p and +0.1719 in E4q.
+- **(ii) cannot be split into single factors that add:** taking `lad_reseed` alone for (ii), +0.0394, closes the sum to
+  within 0.0002 dB on train, but on treehill `lad_reseed` is -0.0058 dB and `lad_init_tr` +0.0179; and the single
+  factors' sum exceeds `lad_all` (above).
+- **(iii) is more than Lloyd against C3DGS's moving averages.** C3DGS's `vq_features` starts from uniform random
+  codewords in the features' bounding box, updates on 100 random batches of 262,144 splats with exponential moving
+  averages (decay 0.8), weights by its own colour importance normalized to its maximum, and never reseeds; an entry no
+  batch member chooses decays toward zero (`compression/vq.py:33-35`, `:37-58`, `:78-116`, with `arguments/__init__.py:77-79`, at
+  `2a234af5`). `scalar` starts from C3DGS's codebook and
+  labels, updates on all splats, weights by `tr(M_i) / 16`, clips to the warm start's range and ends with the assignment
+  against the int8 table. Its +0.0190 dB mixes all of these.
+
+### What E4q settles, and what it does not
+
+- **The gap between GN-VQ and OGC is codebook use, not regularization.** OGC's choices in GN-VQ's code (`lad_all`)
+  recover all but 0.0013 dB (train) and 0.0009 dB (treehill) of it. The large single steps fill C3DGS's empty entries
+  (reseeding, +0.0394 dB on train; OGC's draw, +0.0179 dB on treehill); the regularization choices are each 0.0097 dB
+  or less, GN-VQ's floor 0.0007 dB (E4p).
+- **The gap between C3DGS's VQ and OGC is mostly the metric** (post hoc, train): the 16 x 16 metric against its trace is
+  65.4% of the chain's sum, codebook choices 22.4%.
+- **`lam_cv` is OGC's default, 1e-3, on both scenes,** on shallow minima; the paper's 1e-6 scores far worse.
+- **At equal bytes GN-VQ loses to OGC on train:** BD-rate -14.42% and BD-PSNR +0.0228 dB for `ogc` against `gnvq_cv`,
+  and every sign holds under the post hoc checks. At the default point GN-VQ reads -0.0400 dB (train) and -0.0179 dB
+  (treehill) below OGC with fewer bytes.
+- **The chunk is 25,000 without changing a label.** The reserved peaks are recorded correctly.
+- **C3DGS's own evaluation does not run with the images on the CPU** (`compress.py:105`).
+- **Not settled:**
+  - anything on a gate scene: train and treehill are development scenes;
+  - the rate comparison on treehill, which had no sweep;
+  - how many clusters each reseeding row reseeded in all;
+  - why one camera (`00113` at -20 degrees) separates `lad_all` from `ogc` by about 8 dB.
