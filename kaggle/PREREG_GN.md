@@ -2505,3 +2505,240 @@ of our metric copy plus GN-VQ's update chunk for every splat (2.98 GB) and OGC's
 **The scripts** are `kaggle/gn_e4q_note_i/header_read.py` (network, range requests only) and `feas.py` (offline), with
 their outputs `header_read.json` and `feas.json`; they are committed after this note. **This note changes no rule,
 row or scene.**
+
+## Amendment 17 (2026-10-06, after E4q's results and before any E5p or E5 code)
+
+E4q ran on Kaggle ("E4q C3DGS dissection"); its bundle is committed unchanged in `kaggle/gn_e4q/gn4q/` (`1d986d1a`) and
+FINDINGS section 17 reports it (`290ca395`, re-checked by `bench/gn/check_s17.py`, `87275d9a`). This amendment retires
+GN-VQ from any gate (a), registers a replication and dissection of OGC (arXiv 2609.28997) inside C3DGS: its rows (b), a
+pilot on train, E5p (c), and a gate on the seven untouched scenes, E5 (d); and it fixes engineering items (e) and states
+what is unchanged (f). The runtime estimate is g; host memory (h), failures before a gate scene's results (i) and the
+Deep Blending data path (j) follow it. G0, G1, G2a, H2b, G2c, E2b's criteria, E4p, E4q and Amendments 1-16 with their notes are
+unchanged except as stated here.
+
+### a. GN-VQ is retired from any gate
+
+- **When:** before any E5p or E5 code, and before any gate-scene data was read beyond Amendment 15 note i's header read.
+  No pixel, splat value, render or metric of bonsai, counter, kitchen, room, truck, drjohnson or playroom has been read.
+- **Why,** from E4q on train and treehill, development scenes (FINDINGS section 17):
+  1. **OGC's lead over GN-VQ is codebook use, not GN-VQ's other choices.** OGC's choices made one at a time in GN-VQ's
+     code move protocol ii by at most +0.0394 dB, and only the two that fill empty codebook entries (reseeding; OGC's
+     trace-weighted start) move it by more than 0.0097 dB. With all of them (`lad_all`), GN-VQ's code comes within
+     0.0013 dB (train) and 0.0009 dB (treehill) of OGC's own `gram_kmeans`, and with OGC's arithmetic it reproduces it
+     bit for bit (`bench/gn/test_gn.py`). GN-VQ's floor adds 0.0007 dB (E4p).
+  2. **At equal bytes on train GN-VQ loses to OGC:** BD-rate -14.42%, BD-PSNR +0.0228 dB for OGC against GN-VQ, with
+     every sign holding under FINDINGS section 17's post hoc checks.
+  3. **What GN-VQ contributes beyond OGC is the metric, which OGC's VQ already uses.** Post hoc on train, the 16 x 16
+     metric against its trace is about two thirds of OGC's lead over C3DGS's own VQ.
+- **So GN-VQ, frozen in Amendment 11 b, enters no gate from here on.** Its results stand as FINDINGS sections 8-17
+  report them, and its code stays in the repository for those results.
+- **The study continues as a pre-registered replication and dissection of OGC inside C3DGS:** whether OGC's VQ beats
+  C3DGS's own at equal rate on unseen scenes, and whether its Gram metric is what does it.
+
+### b. Rows: one forked C3DGS process
+
+**The process,** as in E4p and E4q (Amendment 15 b, kept): C3DGS at `2a234af5` with Amendment 13 b's build, E3q's wrapper
+with Amendment 13 g's chunked `eigh` and `det`, Amendment 14 f's seeding, the scene's INRIA 30k checkpoint, K = 4,096,
+`--finetune_iterations 0`; C3DGS's own `vq_features` first, unchanged, as row 1; the other rows computed at that colour
+call from the same inputs; C3DGS's geometry VQ once, shared; the copy; every row saved before any row is evaluated; each
+row evaluated by C3DGS (with e.2) and, decoded, by protocol ii (Amendment 12 a). E4p's three checks hold in every
+process, and a failed check makes the process's rows invalid.
+
+**The rows,** all at K = 4,096 and the process's colour threshold:
+
+| Row | Colour codebook | OGC's `metric` | What it is |
+|---|---|---|---|
+| `c3dgs` | C3DGS's own `vq_features` | - | C3DGS's VQ, the replication's baseline |
+| `ogc_plain` | OGC's `vq.gram_kmeans` | `"plain"` | their Lloyd with the identity metric |
+| `ogc_scalar` | OGC's `vq.gram_kmeans` | `"scalar"` | their Lloyd with `tr(G_i) / 16 * I` |
+| `ogc_gram` | OGC's `vq.gram_kmeans` | `"gram"` | OGC's VQ, as E4q's `ogc` |
+
+- **OGC's call, the same in all three rows but the metric:** `gram_kmeans(X, G, 4096, metric=m, iters=15,
+  device="cuda", chunk=25000, seed=0, lam=1e-3)` from the clone at `49ccae72`, with `X` the quantizer input as
+  `[n, 3, 16]` and `G` our full-train-view 16 x 16 metric of the same splats, unpacked (CPU float32). Their init (a draw
+  in proportion to the trace of the row's metric), reseeding of empty clusters and final assignment are theirs, unedited.
+  `lam` is their default (`vq.py:17`), which E4q's cross-validation chose on both development scenes.
+- **What the three metrics are, read from `vq.py` at `49ccae72`:** `"gram"` uses `G_i` (`:22-23`); `"scalar"` uses
+  `tr(G_i) / q * I` (`:25-26`, `:29`), with q = 16 here, so `tr(G_i) / 16 * I`, E4p's `scalar` metric; any other value
+  uses the identity (`:27-29`), which their docstring calls `'plain'` (`:11`). The metric also sets the init's weights,
+  the ridge's scale and the reseeding's distortion (`:30-33`, `:71`, `:77-84`), so each row is their whole algorithm
+  under that metric.
+- **Why not `"euclid"`:** their code has no such value; it would reach the identity branch only by falling through.
+  `"plain"` is their name for that mode, so the row passes `"plain"`.
+- **Our code, not theirs:** `kaggle/e4p_ogc.py`'s `ogc_codebook` takes a `metric` argument (it passes `"gram"` today,
+  through `e4p.OGC_CALL`). OGC's code stays unedited and is never copied or vendored (PolyForm Noncommercial).
+- **Not run:** GN-VQ in any form, and any `lam` other than 1e-3.
+
+**Fine-tuning,** where c and d say: from the copy with the row's table and the copy's random states, C3DGS's
+`finetune` for 5,000 iterations, saved, evaluated by C3DGS and by protocol ii, as Amendment 15 e did. The labels are
+checked to survive.
+
+**Measured per row and process (report only, beyond the primaries):** E4q's per-row record (protocol ii per view, C3DGS's
+evaluation, the `.npz`'s bytes and per-array sizes, index entropy, codewords used, each table's range against its int8
+grid, the quantizer state at the save, per-row time, GPU peaks allocated and reserved, host RSS, the checks and the
+geometry SHA-1) and note ii's fidelity per angle as the mean PSNR and as the PSNR of the pooled MSE.
+
+### c. E5p: the pilot on train (mechanics and timing, no verdict)
+
+- **Train only,** INRIA's checkpoint through E3p's pinned members. E5p is exploratory: no verdict, and no claim rests on
+  it.
+- **Before the processes:** E3r's harness phase without the cross-validation (the runner, protocol ii of the
+  uncompressed model, the full-train-view 16 x 16 GN pass) and note ii's geometry, reference renders and coverage. **No
+  probe run:** nothing is selected on it, since no `rho` or `lam` is chosen.
+- **Processes,** in this order:
+  1. j = 0, seed 0, images on the GPU: the four rows, then fine-tuning of `c3dgs` and `ogc_gram`;
+  2. j = 0, seed 1, **images forced onto the CPU** (`--data_device cpu`), to exercise e.2: the same;
+  3. j = -1 and j = +1 (the colour threshold 6e-7 x 3^j, as E4q), seed 0, one process each: the four rows.
+- **Reported:** everything b measures; for process 2, whether C3DGS's evaluation exists for every row, its fine-tuned
+  rows included; the BD values d defines, on train's three points; costs and peaks per step, row and process.
+- **What E5p may change,** each by a dated note before any E5 code: bug fixes, and process counts, upward only. It
+  cannot change E5's rows, scenes, points, measures or bars.
+
+### d. E5: the gate
+
+**Scenes:** INRIA's official 30k checkpoints of bonsai, counter, kitchen, room, truck, drjohnson and playroom, with
+Amendment 15 d's archive pins (note i), drop rule and header-read rule, kept as written. Disclosure as Amendment 15 d:
+E2 and E2c used the first five with this project's own checkpoints; INRIA's have not been fetched, loaded or rendered;
+drjohnson and playroom have never been used; OGC's paper reports bonsai, counter, kitchen and room in its C3DGS host
+(its Table 12). Nothing in E5 was chosen on these scenes: the rows, K, the points, `lam` and the bars come from
+OGC's code and paper and from E4p, E4q and E5p on train and treehill.
+
+**Per scene:**
+- before the processes, as c;
+- **four processes:** j = 0 with seed 0, then j = 0 with seed 1, then j = -1 and j = +1 with seed 0, each with the four
+  rows; fine-tuning of `c3dgs` and `ogc_gram` in both j = 0 processes;
+- **memory,** by Amendment 15 d's rule: each scene starts on the device the feasibility note (e.3) gives; one retry with
+  `--data_device cpu` on running out of GPU memory, after which the scene's later runs start on the CPU; a scene whose
+  first process also runs out of memory on the CPU, before any of its results, is dropped and n shrinks. Every process
+  saves all its rows before any is evaluated, so a drop precedes the scene's results;
+- **the loaded size** is read from the scene's `cfg_args` and first image at run time and must be one the feasibility
+  note covers; otherwise the scene is not started and is reported as dropped, with the reason.
+
+**The two primaries,** per scene `s`, from protocol ii's test PSNR and the `.npz` bytes at the three points (j = 0 is
+process 0's):
+- **P1** = BD-PSNR(`ogc_gram` against `c3dgs`);
+- **P2** = BD-PSNR(`ogc_gram` against `ogc_scalar`);
+- with Amendment 9 a's domain-scaled fit (`g2.bd_psnr_scaled`) over the overlap of the two curves' byte ranges only.
+  With three points per curve the fit is of degree 2, through every point (`g2`'s degree is the smaller of 3 and the
+  points less one). A scene whose two curves share no byte range has no BD-PSNR for that primary and counts as not
+  positive, with its value reported as missing.
+
+**Each primary P passes if all three hold:**
+1. its mean over the n scenes, `P_bar`, is > 0;
+2. it is > 0 on at least ceil(0.7 n) scenes (5 of 7, 5 of 6, 4 of 5);
+3. `P_bar` > 2 x `SE_noise`, where `SE_noise` is that pair's noise at j = 0: with `D_sp` the protocol ii PSNR of
+   `ogc_gram` minus that of the pair's other row in process `p` at j = 0, `v_s` = sum over the two processes of
+   (`D_sp` - `D_s`)^2, `SD_pool` = sqrt(mean of `v_s` over the n scenes) and `SE_noise` = `SD_pool` / sqrt(2 n). The
+   j = 0 paired difference's spread stands for the BD-PSNR's, which one process per point cannot measure.
+
+**E5 passes if P1 and P2 both pass.** Both are reported whatever the outcome, with every part: each scene's P and its
+two curves, `D_sp`, `D_s`, `v_s`, `P_bar`, `SD_pool`, `SE_noise` and the count of positive scenes.
+- **At least 5 scenes:** with n < 5 after drops, E5 is `incomplete`, never `pass`.
+- **`incomplete`** also if a primary row (`c3dgs`, `ogc_scalar` or `ogc_gram`, measured with protocol ii) is missing in
+  any of a non-dropped scene's four processes after one rerun of that process, whole, with the same seed. Verdict order:
+  `incomplete` > `fail` > `pass`.
+- **Rounding:** every value is rounded to 9 decimals before it is compared; every comparison is strict.
+
+**Secondaries (descriptive, no bars):**
+- `ogc_scalar` minus `ogc_plain`, and `ogc_plain` minus `c3dgs`: BD-PSNR over the three points, and the paired j = 0
+  difference with its `SE_noise`, computed as above;
+- BD-rate for every pair of the four rows, with the same fit;
+- **after fine-tuning,** `ogc_gram` minus `c3dgs` in both j = 0 processes: per scene the mean of the two; over the scenes
+  the mean, the SD and the 95% interval mean ± t(0.975, n - 1) x SD / sqrt(n), placed next to arXiv 2609.28997's
+  reported +0.09 dB (its Table 1, the mean of 9 Mip-NeRF 360 scenes, one run each), and whether +0.09 lies inside;
+- before fine-tuning, `ogc_gram` minus `c3dgs` at j = 0, next to the paper's +0.49 dB, as Amendment 15 e did;
+- codewords used, index entropy and per-array bytes, per row;
+- note ii's fidelity per angle, as the mean PSNR and as the PSNR of the pooled MSE.
+
+**Kaggle title "E5 OGC replication gate"** (one notebook per session); bundle `E5_bundle.zip` per session, arcname
+`gn5/`. E5p: **"E5p OGC dissection pilot"**, `E5p_bundle.zip`, arcname `gn5p/`.
+
+### e. Engineering
+
+1. **OGC's chunk is 25,000,** as Amendment 16 c set; E4q found the labels identical to chunk 100,000's on train.
+2. **C3DGS's evaluation with the images on the CPU.** C3DGS's `render_and_eval` passes the ground truth as loaded
+   (`compress.py:105` at `2a234af5`), so with `--data_device cpu` it fails (FINDINGS section 17). The wrapper fixes this
+   without editing C3DGS: before `compress.py` runs it replaces the `ssim`, `psnr` and `lpips` names in `compress.py`'s
+   namespace with calls that move the ground truth to the render's device and then call C3DGS's own functions. The
+   values are moved, not recomputed, so nothing else changes. It is recorded as a deviation, as Amendment 13 g's
+   linear algebra was, and E5p's second process exercises it. The CPU stand-in's evaluation is made device-aware, so
+   the dry run fails without the fix.
+3. **The seven scenes' feasibility is redone before any E5 code,** in a dated note, by note i's model with the colour
+   step's term now OGC's chunk at 25,000 alone (1,674,567,168 bytes; GN-VQ no longer runs) and the loaded sizes each
+   scene's images may take. The note adds host memory, which the earlier notes left out: the images under
+   `--data_device cpu`, OGC's `G` (1,024 bytes per quantized splat) and the second `[n, 16, 16]` copy that the `"scalar"`
+   and `"plain"` rows build (`vq.py:29`), and the forked state's copy. E4q's measured treehill peaks (7.76 GB allocated
+   with the images on the CPU; 18.43 GB host at the job's step level) are its check.
+4. **A dated session-assignment note before any E5 run:** which scenes run in which session and on which GPU, from e.3
+   and g, under h's host-memory rule.
+
+### f. Unchanged
+
+- Amendments 1-16 and their notes, except as stated here. GN-VQ's results stand as reported, and Amendment 11 b's frozen
+  method stays frozen.
+- Protocol ii (Amendment 12 a).
+- Amendment 14's rules where not replaced here: the build (13 b), the chunked `eigh` and `det` (13 g), the seeding
+  (14 f), the out-of-memory retry and the deadline (14 d: no new C3DGS run after 11.5 h less the 1,800 s reserve). A
+  failure is recorded and every step that does not need its product still runs.
+- Amendment 15 d's pins, drop rule and header-read rule; Amendment 16 c's reserved-memory recording.
+
+### g. The runtime estimate (before any E5p code; an estimate)
+
+From E4q's measured parts (`kaggle/gn_e4q/gn4q/`; fine-tuning from E4p's), the lower end with each part at its measured
+rate and the upper end scaled:
+- OGC 29.7-32.7 s per million colour-quantized splats per row (0.78-0.88 of the splats); C3DGS's own VQ 128.2-139.0 s;
+  the process's other parts 154.9-161.9 s, scaled at the upper end by the scene's train-view pixels against train's;
+- C3DGS's evaluation 2.95-3.17 s per million test-view pixels (e.2's cost on the CPU is not measured);
+- fine-tuning 320.5-327.5 s on train (E4p), scaled by the view's pixels, and at the upper end also by the splats;
+- per decoded row `npz2ply.py` 9.3-12.6 s per million splats, protocol ii 0.37-0.40 s and the fidelity renders
+  0.14-0.18 s per million test-view pixels;
+- per scene the fetch at treehill's rate (0.107 s per compressed MB), the download at treehill's to train's (48.8-371.0 s),
+  the runner, the GN pass and note ii;
+- loaded sizes as Amendment 15 note i's table, test views every 8th.
+
+| Scene | Splats | Estimate (s) |
+|---|---|---|
+| train (E5p) | 1,026,508 | 4,411-5,292 |
+| bonsai | 1,244,819 | 9,909-13,260 |
+| counter | 1,222,956 | 9,098-11,943 |
+| kitchen | 1,852,335 | 9,990-15,700 |
+| room | 1,593,376 | 10,293-15,198 |
+| truck | 2,541,226 | 4,987-8,070 |
+| drjohnson | 3,405,153 | 8,435-17,144 |
+| playroom | 2,546,116 | 7,160-12,545 |
+
+- **E5p:** one session, 1.2-1.5 h plus setup (about 420 s in E4q).
+- **E5:** 59,872-93,859 GPU-seconds (16.6-26.1 GPU-hours). A session gives two GPUs about 11 h each before the start
+  cutoff. At the lower end one session holds all seven scenes; at the upper end two do (four GPU lanes, none above
+  about 7.7 h). **Plan: two sessions,** settled by e.4's note.
+- **Not included:** the CPU images' cost in fine-tuning and in C3DGS's evaluation; a retry; a smaller loaded size
+  (`images_4` instead of `images_2` would shorten every image term).
+
+### h. Host memory
+
+- **E5p records the host RSS of each OGC row** (`ogc_plain`, `ogc_scalar`, `ogc_gram`): at the row's start and its
+  peak, the C3DGS process and its children, beside the row's GPU peaks.
+- **The seven-scene feasibility note (e.3) models host memory per scene:** the images under `--data_device cpu`, OGC's
+  `G` (1,024 bytes per colour-quantized splat), the second `[n, 16, 16]` float32 copy the `"plain"` and `"scalar"` rows
+  build (`vq.py:29` at `49ccae72`; 1,024 bytes per colour-quantized splat more), the forked state's copy, and the job's
+  own process, checked against E4q's treehill and E5p's measured peaks.
+- **The session-assignment note (e.4) pairs scenes** so that the sum of the predicted host peaks of the scenes that run
+  at the same time in one session stays below 0.8 x the session's total RAM.
+
+### i. A failure on a gate scene before any of its results
+
+- **A scene's results** are any row's protocol ii measurements or `.npz` bytes.
+- **A failure that is not out of memory,** in a gate scene before any of its results exist, lets that scene be rerun
+  after a dated bug-fix note. The note may change code only, and no row, point, metric or bar.
+- **After results exist,** Amendment 15 d's rule applies: one whole rerun of the failed process with the same seed, then
+  `incomplete` (d).
+- **Out of memory** is d's memory rule, unchanged.
+
+### j. The Deep Blending data path before E5
+
+- **The download, the runner and protocol ii on Deep Blending's layout** are exercised before E5 only through a stand-in
+  in the tests and the dry run: tandt_db's `db/<scene>` structure (`images/`, `sparse/0/`) with synthetic images and a
+  synthetic COLMAP model.
+- **No Deep Blending data is read before E5:** no member of `tandt_db.zip`'s `db/` folder is fetched, and drjohnson's
+  and playroom's INRIA members are read no further than Amendment 15 note i did.
+- **This amendment's own dated notes** are titled "Note 1", "Note 2" and so on, since i is a rule here.
