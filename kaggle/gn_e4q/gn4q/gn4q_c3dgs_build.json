@@ -1,0 +1,330 @@
+{
+  "repo": "https://github.com/KeKsBoTer/c3dgs.git",
+  "commit": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+  "python": "/usr/bin/python3",
+  "steps": [
+    {
+      "name": "clone",
+      "cmd": "git clone --recursive https://github.com/KeKsBoTer/c3dgs.git /tmp/c3dgs",
+      "cwd": null,
+      "returncode": 0,
+      "time_s": 8.189983367919922,
+      "tail": [
+        "Submodule path 'submodules/diff-gaussian-rasterization/third_party/glm': checked out '673a963a0f1eb82f5fcef00b7b873371555e5814'",
+        "Cloning into '/tmp/c3dgs'...",
+        "Submodule 'submodules/diff-gaussian-rasterization/third_party/glm' (https://github.com/g-truc/glm.git) registered for path 'submodules/diff-gaussian-rasterization/third_party/glm'",
+        "Cloning into '/tmp/c3dgs/submodules/diff-gaussian-rasterization/third_party/glm'..."
+      ],
+      "output_lines": 4
+    },
+    {
+      "name": "checkout",
+      "cmd": "git -C /tmp/c3dgs checkout -q 2a234af55fbe8b90c8829c1436ce80088c4b622b && git -C /tmp/c3dgs submodule update --init --recursive",
+      "cwd": null,
+      "returncode": 0,
+      "time_s": 0.37679624557495117,
+      "tail": [],
+      "output_lines": 0
+    },
+    {
+      "name": "plyfile",
+      "cmd": "/usr/bin/python3 -m pip install -q --no-deps plyfile==0.8.1",
+      "cwd": null,
+      "returncode": 0,
+      "time_s": 1.3388891220092773,
+      "tail": [],
+      "output_lines": 0
+    },
+    {
+      "name": "plyfile_check",
+      "cmd": "/usr/bin/python3 -c 'import numpy as np, plyfile, tempfile, os\na = np.zeros(4, dtype=[('\"'\"'x'\"'\"', '\"'\"'f4'\"'\"'), ('\"'\"'y'\"'\"', '\"'\"'f4'\"'\"')]); a['\"'\"'x'\"'\"'] = [1, 2, 3, 4]\np = os.path.join(tempfile.mkdtemp(), '\"'\"'t.ply'\"'\"')\nplyfile.PlyData([plyfile.PlyElement.describe(a, '\"'\"'vertex'\"'\"')]).write(p)\nb = plyfile.PlyData.read(p)['\"'\"'vertex'\"'\"']['\"'\"'x'\"'\"']\nassert list(b) == [1, 2, 3, 4]\nprint('\"'\"'PLYFILE_OK'\"'\"', getattr(plyfile, '\"'\"'__version__'\"'\"', '\"'\"''\"'\"'))\n'",
+      "cwd": null,
+      "returncode": 0,
+      "time_s": 0.16594552993774414,
+      "tail": [
+        "PLYFILE_OK "
+      ],
+      "output_lines": 1
+    },
+    {
+      "name": "tqdm",
+      "cmd": "/usr/bin/python3 -c 'import tqdm'",
+      "cwd": null,
+      "returncode": 0,
+      "time_s": 0.10501837730407715,
+      "tail": [],
+      "output_lines": 0,
+      "note": "already in the session"
+    },
+    {
+      "name": "torch_scatter",
+      "cmd": "/usr/bin/python3 -m pip install -v --no-deps --no-build-isolation torch-scatter -f https://data.pyg.org/whl/torch-2.10.0+cu128.html",
+      "cwd": null,
+      "returncode": 0,
+      "time_s": 2.096327781677246,
+      "tail": [
+        "Using pip 24.1.2 from /usr/local/lib/python3.12/dist-packages/pip (python 3.12)",
+        "Looking in links: https://data.pyg.org/whl/torch-2.10.0+cu128.html",
+        "Collecting torch-scatter",
+        "  Downloading https://data.pyg.org/whl/torch-2.10.0%2Bcu128/torch_scatter-2.1.2%2Bpt210cu128-cp312-cp312-linux_x86_64.whl (10.9 MB)",
+        "     \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501 10.9/10.9 MB 92.7 MB/s eta 0:00:00",
+        "Installing collected packages: torch-scatter",
+        "Successfully installed torch-scatter-2.1.2+pt210cu128"
+      ],
+      "output_lines": 7,
+      "built_from_source": false
+    },
+    {
+      "name": "diff_gaussian_rasterization",
+      "cmd": "/usr/bin/python3 -m pip install -v --no-deps --no-build-isolation /tmp/c3dgs/submodules/diff-gaussian-rasterization",
+      "cwd": null,
+      "returncode": 0,
+      "time_s": 110.08901000022888,
+      "tail": [
+        "  /tmp/c3dgs/submodules/diff-gaussian-rasterization/cuda_rasterizer/auxiliary.h(151): warning #177-D: variable \"p_proj\" was declared but never referenced",
+        "     float3 p_proj = { p_hom.x * p_w, p_hom.y * p_w, p_hom.z * p_w };",
+        "            ^",
+        "",
+        "  Remark: The warnings can be suppressed with \"-diag-suppress <warning-number>\"",
+        "",
+        "  [5/8] /usr/local/cuda/bin/nvcc --generate-dependencies-with-compile --dependency-output /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/cuda_rasterizer/rasterizer_impl.o.d -I/usr/local/lib/python3.12/dist-packages/torch/include -I/usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda/include -I/usr/include/python3.12 -c -c /tmp/c3dgs/submodules/diff-gaussian-rasterization/cuda_rasterizer/rasterizer_impl.cu -o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/cuda_rasterizer/rasterizer_impl.o -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options ''\"'\"'-fPIC'\"'\"'' -I/tmp/c3dgs/submodules/diff-gaussian-rasterization/third_party/glm/ -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=_C -gencode=arch=compute_75,code=sm_75 -std=c++17",
+        "  /tmp/c3dgs/submodules/diff-gaussian-rasterization/cuda_rasterizer/auxiliary.h(151): warning #177-D: variable \"p_proj\" was declared but never referenced",
+        "     float3 p_proj = { p_hom.x * p_w, p_hom.y * p_w, p_hom.z * p_w };",
+        "            ^",
+        "",
+        "  Remark: The warnings can be suppressed with \"-diag-suppress <warning-number>\"",
+        "",
+        "  [6/8] c++ -MMD -MF /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/ext.o.d -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O2 -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2 -fPIC -I/usr/local/lib/python3.12/dist-packages/torch/include -I/usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda/include -I/usr/include/python3.12 -c -c /tmp/c3dgs/submodules/diff-gaussian-rasterization/ext.cpp -o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/ext.o -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=_C -std=c++17",
+        "  [7/8] /usr/local/cuda/bin/nvcc --generate-dependencies-with-compile --dependency-output /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/rasterize_points.o.d -I/usr/local/lib/python3.12/dist-packages/torch/include -I/usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda/include -I/usr/include/python3.12 -c -c /tmp/c3dgs/submodules/diff-gaussian-rasterization/rasterize_points.cu -o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/rasterize_points.o -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options ''\"'\"'-fPIC'\"'\"'' -I/tmp/c3dgs/submodules/diff-gaussian-rasterization/third_party/glm/ -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=_C -gencode=arch=compute_75,code=sm_75 -std=c++17",
+        "  [8/8] /usr/local/cuda/bin/nvcc --generate-dependencies-with-compile --dependency-output /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/rasterize_points_indexed.o.d -I/usr/local/lib/python3.12/dist-packages/torch/include -I/usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda/include -I/usr/include/python3.12 -c -c /tmp/c3dgs/submodules/diff-gaussian-rasterization/rasterize_points_indexed.cu -o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/rasterize_points_indexed.o -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options ''\"'\"'-fPIC'\"'\"'' -I/tmp/c3dgs/submodules/diff-gaussian-rasterization/third_party/glm/ -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=_C -gencode=arch=compute_75,code=sm_75 -std=c++17",
+        "  x86_64-linux-gnu-g++ -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O2 -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2 -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -g -fwrapv -O2 /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/cuda_rasterizer/backward.o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/cuda_rasterizer/backward_indexed.o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/cuda_rasterizer/forward.o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/cuda_rasterizer/forward_indexed.o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/cuda_rasterizer/rasterizer_impl.o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/ext.o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/rasterize_points.o /tmp/c3dgs/submodules/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-312/rasterize_points_indexed.o -L/usr/local/lib/python3.12/dist-packages/torch/lib -L/usr/local/cuda/lib64 -L/usr/lib/x86_64-linux-gnu -lc10 -ltorch -ltorch_cpu -ltorch_python -lcudart -lc10_cuda -ltorch_cuda -o build/lib.linux-x86_64-cpython-312/diff_gaussian_rasterization/_C.cpython-312-x86_64-linux-gnu.so",
+        "  /usr/local/lib/python3.12/dist-packages/setuptools/_distutils/cmd.py:90: SetuptoolsDeprecationWarning: setup.py install is deprecated.",
+        "  !!",
+        "",
+        "          ********************************************************************************",
+        "          Please avoid running ``setup.py`` directly.",
+        "          Instead, use pypa/build, pypa/installer or other",
+        "          standards-based tools.",
+        "",
+        "          This deprecation is overdue, please update your project and remove deprecated",
+        "          calls to avoid build errors in the future.",
+        "",
+        "          See https://blog.ganssle.io/articles/2021/10/setup-py-deprecated.html for details.",
+        "          ********************************************************************************",
+        "",
+        "  !!",
+        "    self.initialize_options()",
+        "  installing to build/bdist.linux-x86_64/wheel",
+        "  running install",
+        "  running install_lib",
+        "  creating build/bdist.linux-x86_64/wheel",
+        "  creating build/bdist.linux-x86_64/wheel/diff_gaussian_rasterization",
+        "  copying build/lib.linux-x86_64-cpython-312/diff_gaussian_rasterization/__init__.py -> build/bdist.linux-x86_64/wheel/./diff_gaussian_rasterization",
+        "  copying build/lib.linux-x86_64-cpython-312/diff_gaussian_rasterization/_C.cpython-312-x86_64-linux-gnu.so -> build/bdist.linux-x86_64/wheel/./diff_gaussian_rasterization",
+        "  running install_egg_info",
+        "  running egg_info",
+        "  creating diff_gaussian_rasterization.egg-info",
+        "  writing diff_gaussian_rasterization.egg-info/PKG-INFO",
+        "  writing dependency_links to diff_gaussian_rasterization.egg-info/dependency_links.txt",
+        "  writing top-level names to diff_gaussian_rasterization.egg-info/top_level.txt",
+        "  writing manifest file 'diff_gaussian_rasterization.egg-info/SOURCES.txt'",
+        "  reading manifest file 'diff_gaussian_rasterization.egg-info/SOURCES.txt'",
+        "  writing manifest file 'diff_gaussian_rasterization.egg-info/SOURCES.txt'",
+        "  Copying diff_gaussian_rasterization.egg-info to build/bdist.linux-x86_64/wheel/./diff_gaussian_rasterization-0.0.0-py3.12.egg-info",
+        "  running install_scripts",
+        "  creating build/bdist.linux-x86_64/wheel/diff_gaussian_rasterization-0.0.0.dist-info/WHEEL",
+        "  creating '/tmp/pip-wheel-u8f6spiv/diff_gaussian_rasterization-0.0.0-cp312-cp312-linux_x86_64.whl' and adding 'build/bdist.linux-x86_64/wheel' to it",
+        "  adding 'diff_gaussian_rasterization/_C.cpython-312-x86_64-linux-gnu.so'",
+        "  adding 'diff_gaussian_rasterization/__init__.py'",
+        "  adding 'diff_gaussian_rasterization-0.0.0.dist-info/METADATA'",
+        "  adding 'diff_gaussian_rasterization-0.0.0.dist-info/WHEEL'",
+        "  adding 'diff_gaussian_rasterization-0.0.0.dist-info/top_level.txt'",
+        "  adding 'diff_gaussian_rasterization-0.0.0.dist-info/RECORD'",
+        "  removing build/bdist.linux-x86_64/wheel"
+      ],
+      "output_lines": 113
+    },
+    {
+      "name": "weighted_distance",
+      "cmd": "/usr/bin/python3 -m pip install -v --no-deps --no-build-isolation /tmp/c3dgs/submodules/weighted_distance",
+      "cwd": null,
+      "returncode": 0,
+      "time_s": 68.66363596916199,
+      "tail": [
+        "  running egg_info",
+        "  creating /tmp/pip-pip-egg-info-2aihgro1/weighted_distance.egg-info",
+        "  writing /tmp/pip-pip-egg-info-2aihgro1/weighted_distance.egg-info/PKG-INFO",
+        "  writing dependency_links to /tmp/pip-pip-egg-info-2aihgro1/weighted_distance.egg-info/dependency_links.txt",
+        "  writing top-level names to /tmp/pip-pip-egg-info-2aihgro1/weighted_distance.egg-info/top_level.txt",
+        "  writing manifest file '/tmp/pip-pip-egg-info-2aihgro1/weighted_distance.egg-info/SOURCES.txt'",
+        "  reading manifest file '/tmp/pip-pip-egg-info-2aihgro1/weighted_distance.egg-info/SOURCES.txt'",
+        "  writing manifest file '/tmp/pip-pip-egg-info-2aihgro1/weighted_distance.egg-info/SOURCES.txt'",
+        "  Running command python setup.py bdist_wheel",
+        "  running bdist_wheel",
+        "  running build",
+        "  running build_ext",
+        "  W1002 11:43:16.707000 707 torch/utils/cpp_extension.py:535] There are no x86_64-linux-gnu-g++ version bounds defined for CUDA version 12.8",
+        "  building 'weighted_distance._C' extension",
+        "  creating /tmp/c3dgs/submodules/weighted_distance/build/temp.linux-x86_64-cpython-312",
+        "  [1/2] c++ -MMD -MF /tmp/c3dgs/submodules/weighted_distance/build/temp.linux-x86_64-cpython-312/ext.o.d -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O2 -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2 -fPIC -I/usr/local/lib/python3.12/dist-packages/torch/include -I/usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda/include -I/usr/include/python3.12 -c -c /tmp/c3dgs/submodules/weighted_distance/ext.cpp -o /tmp/c3dgs/submodules/weighted_distance/build/temp.linux-x86_64-cpython-312/ext.o -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=_C -std=c++17",
+        "  [2/2] /usr/local/cuda/bin/nvcc --generate-dependencies-with-compile --dependency-output /tmp/c3dgs/submodules/weighted_distance/build/temp.linux-x86_64-cpython-312/weighted_distance.o.d -I/usr/local/lib/python3.12/dist-packages/torch/include -I/usr/local/lib/python3.12/dist-packages/torch/include/torch/csrc/api/include -I/usr/local/cuda/include -I/usr/include/python3.12 -c -c /tmp/c3dgs/submodules/weighted_distance/weighted_distance.cu -o /tmp/c3dgs/submodules/weighted_distance/build/temp.linux-x86_64-cpython-312/weighted_distance.o -D__CUDA_NO_HALF_OPERATORS__ -D__CUDA_NO_HALF_CONVERSIONS__ -D__CUDA_NO_BFLOAT16_CONVERSIONS__ -D__CUDA_NO_HALF2_OPERATORS__ --expt-relaxed-constexpr --compiler-options ''\"'\"'-fPIC'\"'\"'' -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=_C -gencode=arch=compute_75,code=sm_75 -std=c++17",
+        "  creating build/lib.linux-x86_64-cpython-312/weighted_distance",
+        "  x86_64-linux-gnu-g++ -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O2 -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2 -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -g -fwrapv -O2 /tmp/c3dgs/submodules/weighted_distance/build/temp.linux-x86_64-cpython-312/ext.o /tmp/c3dgs/submodules/weighted_distance/build/temp.linux-x86_64-cpython-312/weighted_distance.o -L/usr/local/lib/python3.12/dist-packages/torch/lib -L/usr/local/cuda/lib64 -L/usr/lib/x86_64-linux-gnu -lc10 -ltorch -ltorch_cpu -ltorch_python -lcudart -lc10_cuda -ltorch_cuda -o build/lib.linux-x86_64-cpython-312/weighted_distance/_C.cpython-312-x86_64-linux-gnu.so",
+        "  /usr/local/lib/python3.12/dist-packages/setuptools/_distutils/cmd.py:90: SetuptoolsDeprecationWarning: setup.py install is deprecated.",
+        "  !!",
+        "",
+        "          ********************************************************************************",
+        "          Please avoid running ``setup.py`` directly.",
+        "          Instead, use pypa/build, pypa/installer or other",
+        "          standards-based tools.",
+        "",
+        "          This deprecation is overdue, please update your project and remove deprecated",
+        "          calls to avoid build errors in the future.",
+        "",
+        "          See https://blog.ganssle.io/articles/2021/10/setup-py-deprecated.html for details.",
+        "          ********************************************************************************",
+        "",
+        "  !!",
+        "    self.initialize_options()",
+        "  installing to build/bdist.linux-x86_64/wheel",
+        "  running install",
+        "  running install_lib",
+        "  creating build/bdist.linux-x86_64/wheel",
+        "  creating build/bdist.linux-x86_64/wheel/weighted_distance",
+        "  copying build/lib.linux-x86_64-cpython-312/weighted_distance/_C.cpython-312-x86_64-linux-gnu.so -> build/bdist.linux-x86_64/wheel/./weighted_distance",
+        "  running install_egg_info",
+        "  running egg_info",
+        "  creating weighted_distance.egg-info",
+        "  writing weighted_distance.egg-info/PKG-INFO",
+        "  writing dependency_links to weighted_distance.egg-info/dependency_links.txt",
+        "  writing top-level names to weighted_distance.egg-info/top_level.txt",
+        "  writing manifest file 'weighted_distance.egg-info/SOURCES.txt'",
+        "  reading manifest file 'weighted_distance.egg-info/SOURCES.txt'",
+        "  writing manifest file 'weighted_distance.egg-info/SOURCES.txt'",
+        "  Copying weighted_distance.egg-info to build/bdist.linux-x86_64/wheel/./weighted_distance-0.0.0-py3.12.egg-info",
+        "  running install_scripts",
+        "  creating build/bdist.linux-x86_64/wheel/weighted_distance-0.0.0.dist-info/WHEEL",
+        "  creating '/tmp/pip-wheel-tgjzd866/weighted_distance-0.0.0-cp312-cp312-linux_x86_64.whl' and adding 'build/bdist.linux-x86_64/wheel' to it",
+        "  adding 'weighted_distance/_C.cpython-312-x86_64-linux-gnu.so'",
+        "  adding 'weighted_distance-0.0.0.dist-info/METADATA'",
+        "  adding 'weighted_distance-0.0.0.dist-info/WHEEL'",
+        "  adding 'weighted_distance-0.0.0.dist-info/top_level.txt'",
+        "  adding 'weighted_distance-0.0.0.dist-info/RECORD'",
+        "  removing build/bdist.linux-x86_64/wheel"
+      ],
+      "output_lines": 73
+    },
+    {
+      "name": "imports",
+      "cmd": "/usr/bin/python3 -c 'import importlib, json\nres = {}\nfor m in ['\"'\"'torch'\"'\"', '\"'\"'torchvision'\"'\"', '\"'\"'torch_scatter'\"'\"', '\"'\"'plyfile'\"'\"', '\"'\"'tqdm'\"'\"', '\"'\"'diff_gaussian_rasterization'\"'\"', '\"'\"'diff_gaussian_rasterization._C'\"'\"', '\"'\"'weighted_distance._C'\"'\"', '\"'\"'compression.vq'\"'\"', '\"'\"'gaussian_renderer'\"'\"']:\n    try:\n        mod = importlib.import_module(m)\n        res[m] = {'\"'\"'ok'\"'\"': True, '\"'\"'file'\"'\"': getattr(mod, '\"'\"'__file__'\"'\"', None), '\"'\"'version'\"'\"': getattr(mod, '\"'\"'__version__'\"'\"', None)}\n    except Exception as e:\n        res[m] = {'\"'\"'ok'\"'\"': False, '\"'\"'error'\"'\"': repr(e)[:800]}\nprint('\"'\"'C3DGS_IMPORTS '\"'\"' + json.dumps(res))\n'",
+      "cwd": "/tmp/c3dgs",
+      "returncode": 0,
+      "time_s": 8.185280799865723,
+      "tail": [
+        "C3DGS_IMPORTS {\"torch\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/torch/__init__.py\", \"version\": \"2.10.0+cu128\"}, \"torchvision\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/torchvision/__init__.py\", \"version\": \"0.25.0+cu128\"}, \"torch_scatter\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/torch_scatter/__init__.py\", \"version\": \"2.1.2+pt210cu128\"}, \"plyfile\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/plyfile.py\", \"version\": null}, \"tqdm\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/tqdm/__init__.py\", \"version\": \"4.67.3\"}, \"diff_gaussian_rasterization\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/diff_gaussian_rasterization/__init__.py\", \"version\": null}, \"diff_gaussian_rasterization._C\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/diff_gaussian_rasterization/_C.cpython-312-x86_64-linux-gnu.so\", \"version\": null}, \"weighted_distance._C\": {\"ok\": true, \"file\": \"/usr/local/lib/python3.12/dist-packages/weighted_distance/_C.cpython-312-x86_64-linux-gnu.so\", \"version\": null}, \"compression.vq\": {\"ok\": true, \"file\": \"/tmp/c3dgs/compression/vq.py\", \"version\": null}, \"gaussian_renderer\": {\"ok\": true, \"file\": \"/tmp/c3dgs/gaussian_renderer/__init__.py\", \"version\": null}}"
+      ],
+      "output_lines": 1
+    }
+  ],
+  "deviations": [
+    "installed into the session's Python environment with pip, not a conda environment from environment.yml (Amendment 13 b: Kaggle's Python lacks ensurepip, so no venv either)",
+    "--no-deps on every pip install, so the session's torch, torchvision and CUDA toolkit stay as they are",
+    "torch-scatter from pip (the PyG wheel index for the session's torch), not conda's pytorch-scatter",
+    "--source_path given on the command line: the checkpoint's cfg_args names its authors' local paths",
+    "the model directory laid out from the three pinned archive members (cfg_args, cameras.json, the 30k point_cloud.ply), without the archive's input.ply and 7k iteration",
+    "the session's torch 2.10.0+cu128 (CUDA 12.8) and CUDA toolkit, not pytorch-cuda=12.1 and cuda-toolkit=12.1; the session's Python, not python=3.8"
+  ],
+  "ok": true,
+  "failed_step": null,
+  "torch": {
+    "version": "2.10.0+cu128",
+    "cuda": "12.8",
+    "base": "2.10.0",
+    "cu": "cu128",
+    "pyg_index": "https://data.pyg.org/whl/torch-2.10.0+cu128.html"
+  },
+  "head": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+  "submodules": [
+    "673a963a0f1eb82f5fcef00b7b873371555e5814 submodules/diff-gaussian-rasterization/third_party/glm (0.9.5.3-2833-g673a963a)"
+  ],
+  "build_time_s": 180.84897375106812,
+  "imports": {
+    "torch": {
+      "ok": true,
+      "file": "/usr/local/lib/python3.12/dist-packages/torch/__init__.py",
+      "version": "2.10.0+cu128"
+    },
+    "torchvision": {
+      "ok": true,
+      "file": "/usr/local/lib/python3.12/dist-packages/torchvision/__init__.py",
+      "version": "0.25.0+cu128"
+    },
+    "torch_scatter": {
+      "ok": true,
+      "file": "/usr/local/lib/python3.12/dist-packages/torch_scatter/__init__.py",
+      "version": "2.1.2+pt210cu128"
+    },
+    "plyfile": {
+      "ok": true,
+      "file": "/usr/local/lib/python3.12/dist-packages/plyfile.py",
+      "version": null
+    },
+    "tqdm": {
+      "ok": true,
+      "file": "/usr/local/lib/python3.12/dist-packages/tqdm/__init__.py",
+      "version": "4.67.3"
+    },
+    "diff_gaussian_rasterization": {
+      "ok": true,
+      "file": "/usr/local/lib/python3.12/dist-packages/diff_gaussian_rasterization/__init__.py",
+      "version": null
+    },
+    "diff_gaussian_rasterization._C": {
+      "ok": true,
+      "file": "/usr/local/lib/python3.12/dist-packages/diff_gaussian_rasterization/_C.cpython-312-x86_64-linux-gnu.so",
+      "version": null
+    },
+    "weighted_distance._C": {
+      "ok": true,
+      "file": "/usr/local/lib/python3.12/dist-packages/weighted_distance/_C.cpython-312-x86_64-linux-gnu.so",
+      "version": null
+    },
+    "compression.vq": {
+      "ok": true,
+      "file": "/tmp/c3dgs/compression/vq.py",
+      "version": null
+    },
+    "gaussian_renderer": {
+      "ok": true,
+      "file": "/tmp/c3dgs/gaussian_renderer/__init__.py",
+      "version": null
+    }
+  },
+  "total_time_s": 199.27396702766418,
+  "env": {
+    "python": "3.12.13",
+    "torch": "2.10.0+cu128",
+    "torch_cuda": "12.8",
+    "cudnn": 91002,
+    "packages": {
+      "gsplat": "1.6.0",
+      "torchpq": null,
+      "cupy-cuda12x": "14.0.1",
+      "plas": null,
+      "torchmetrics": "1.8.2",
+      "numpy": "2.0.2",
+      "pycolmap": "4.2.1",
+      "remotezip": "0.12.6"
+    },
+    "gpu": {
+      "name": "Tesla T4",
+      "capability": "7.5",
+      "total_memory": 15636037632,
+      "count": 2
+    },
+    "nvidia_smi": "Tesla T4, 580.178.04, 15360 MiB\nTesla T4, 580.178.04, 15360 MiB",
+    "nvcc": [
+      "Build cuda_12.8.r12.8/compiler.35583870_0"
+    ]
+  }
+}
