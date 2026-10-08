@@ -4279,3 +4279,171 @@ def test_e4q_estimate_matches_amendment_16_e():
               f"{r['gpu_hours'][0]:.1f}-{r['gpu_hours'][1]:.1f} GPU-hours", f"(429.0 s in E4p)"):
         assert s in a16, s
     assert f"{r['inputs']['setup']:.1f}" == "429.0" and f"{r['inputs']['per_iteration']:.2f}" == "4.99"
+
+
+# --------------------------------------------------------------------------------- E5p (Amendment 17)
+
+
+def test_e5_rows_processes_and_names():
+    """Amendment 17 b-c: the four rows (C3DGS's VQ and OGC's three metrics), fine-tuning of c3dgs and ogc_gram in the
+    two j = 0 processes, the second forced onto the CPU, j = -1 and +1 with the four rows; E4q's names."""
+    import e5
+
+    assert e5.ROWS == ("c3dgs", "ogc_plain", "ogc_scalar", "ogc_gram") and e5.FT_ROWS == ("c3dgs", "ogc_gram")
+    assert e5.OGC_METRIC == {"ogc_plain": "plain", "ogc_scalar": "scalar", "ogc_gram": "gram"}
+    assert e5.LAM == 1e-3 and e5.OGC_CHUNK == 25_000 and e5.K_DEFAULT == 4096 and e5.FINETUNE_ITERATIONS == 5000
+    assert [(p["j"], p["seed"], p["device"], p["finetune"]) for p in e5.E5P_PROCESSES] == [
+        (0, 0, None, True), (0, 1, "cpu", True), (-1, 0, None, False), (1, 0, None, False)]
+    w = e5.wanted_configs()
+    assert len(w) == 2 * 6 + 2 * 4 and "p1_ogc_gram_ft" in w and "j-1_p0_ogc_plain" in w and "j+1_p0_c3dgs_ft" not in w
+    assert e5.process_key(0, 1) == "j0_p1" and e5.process_key(-1, 0) == "j-1_p0"
+    assert e5.threshold(1) == pytest.approx(1.8e-6) and e5.threshold(-1) == pytest.approx(0.2e-6)
+
+
+def test_e5_one_status_rule_and_c3dgs_eval_record():
+    """One rule for every row: ok when protocol ii measured it and the process's checks held; C3DGS's evaluation never
+    sets the status, and its presence is recorded per process."""
+    import e5
+
+    assert e5.row_status(21.1, []) == ("ok", None)
+    assert e5.row_status("", [])[0] == "failed" and e5.row_status(None, [])[0] == "failed"
+    s, why = e5.row_status(21.1, ["ogc_gram"])
+    assert s == "failed" and "checks failed" in why
+    rec = e5.c3dgs_eval_presence({"c3dgs": {"c3dgs_eval": {"PSNR": 21.0}}, "ogc_gram": {"c3dgs_eval_error": "E"},
+                                  "ogc_plain": {"c3dgs_eval_error": "E"}, "c3dgs_ft": {}})
+    assert rec["evaluated"] == ["c3dgs"] and rec["raised"] == ["ogc_gram", "ogc_plain"] and rec["errors"] == ["E"]
+    assert rec["neither"] == ["c3dgs_ft"] and not rec["all_evaluated"]
+    assert e5.c3dgs_eval_presence({"c3dgs": {"c3dgs_eval": {"PSNR": 1.0}}})["all_evaluated"]
+
+
+def test_e5_bd_over_three_points():
+    """Amendment 17 d: Amendment 9 a's fit over three points is of degree 2, through every point; the same curve gives
+    0, a curve 0.1 dB higher everywhere +0.1 dB of BD-PSNR, and curves sharing no byte range no BD-PSNR."""
+    import e5
+
+    b = [1.0e7, 1.4e7, 2.0e7]
+    p = [21.0, 21.1, 21.15]
+    r = e5.bd({"a": (b, p), "b": (b, p), "c": (b, [x + 0.1 for x in p]), "d": ([3e7, 4e7, 5e7], p)},
+              [("a", "b"), ("c", "b"), ("d", "b"), ("a", "zz")])
+    assert r["a_vs_b"]["degree"] == 2 and r["a_vs_b"]["n_points"] == [3, 3] and r["a_vs_b"]["computed"]
+    assert abs(r["a_vs_b"]["bd_psnr_db"]) < 1e-9 and abs(r["a_vs_b"]["bd_rate_percent"]) < 1e-6
+    assert r["c_vs_b"]["bd_psnr_db"] == pytest.approx(0.1, abs=1e-9) and r["c_vs_b"]["bd_rate_percent"] < 0
+    assert not r["d_vs_b"]["computed"] and "share no byte range" in r["d_vs_b"]["reason"]
+    assert not r["a_vs_zz"]["computed"]
+    assert e5.bd({"a": (b[:2], p[:2]), "b": (b, p)}, [("a", "b")])["a_vs_b"]["computed"] is False
+    assert len(e5.bd_pairs()) == 6 and ("ogc_gram", "c3dgs") in e5.bd_pairs() and ("ogc_gram", "ogc_scalar") in e5.bd_pairs()
+
+
+def test_e5_ogc_codebook_passes_the_metric():
+    """kaggle/e4p_ogc.py's ogc_codebook takes OGC's metric (Amendment 17 b): None keeps E4p's call; "scalar" and "plain"
+    reach their gram_kmeans and record the second [n, 16, 16] copy they build (vq.py:29); anything else is refused."""
+    import e4p_ogc as og
+
+    seen = []
+
+    class FakeVQ:
+        @staticmethod
+        def gram_kmeans(X, G, K, **kw):
+            seen.append(kw)
+            return X[:K].clone(), torch.zeros(X.shape[0], dtype=torch.long)
+
+    g = torch.Generator().manual_seed(0)
+    x = torch.randn(50, 48, generator=g)
+    M = gm.pack(torch.eye(16).expand(50, 16, 16).contiguous())
+    _, _, i0 = og.ogc_codebook(FakeVQ, x, M, 8, None, "cpu")
+    _, _, i1 = og.ogc_codebook(FakeVQ, x, M, 8, 1e-3, "cpu", chunk=25000, metric="scalar")
+    _, _, i2 = og.ogc_codebook(FakeVQ, x, M, 8, 1e-3, "cpu", chunk=25000, metric="gram")
+    assert seen[0]["metric"] == "gram" and "host_bytes_metric_copy" not in i0
+    assert seen[1]["metric"] == "scalar" and seen[1]["chunk"] == 25000 and i1["host_bytes_metric_copy"] == 50 * 256 * 4
+    assert i2["host_bytes_metric_copy"] == 0 and i1["call"]["metric"] == "scalar"
+    with pytest.raises(ValueError):
+        og.ogc_codebook(FakeVQ, x, M, 8, 1e-3, "cpu", metric="euclid")
+
+
+def test_e5_ogc_metric_modes_are_their_whole_algorithm(tmp_path):
+    """Amendment 17 b, read from vq.py at 49ccae72: "scalar" is gram_kmeans with tr(G_i) / 16 * I and "plain" with the
+    identity, init, ridge and reseeding included; passing those matrices through "gram" gives the same labels and the
+    codebook to float rounding. Needs OGC's clone (GN_OGC_SRC)."""
+    import e4p_ogc as og
+
+    clone = _ogc_clone(tmp_path)
+    if clone is None:
+        pytest.skip("GN_OGC_SRC is not set (a local clone of moholo-founder/ogc-3dgs or its URL)")
+    vqmod = og.load_vq(clone)
+    x, M, _ = _e4q_dup_case()
+    X = _ogc_layout(x)
+    G = gm.unpack(M.float())
+    tr = torch.einsum("nii->n", G) / 16
+    for metric, Gm in (("scalar", tr[:, None, None] * torch.eye(16)[None]),
+                       ("plain", torch.eye(16).expand_as(G).contiguous())):
+        Ca, La = vqmod.gram_kmeans(X, G, 24, metric=metric, iters=15, device="cpu", chunk=400, seed=0, lam=1e-3)
+        Cb, Lb = vqmod.gram_kmeans(X, Gm, 24, metric="gram", iters=15, device="cpu", chunk=400, seed=0, lam=1e-3)
+        assert torch.equal(La, Lb), metric
+        assert float((Ca - Cb).abs().max()) < 1e-4, metric
+
+
+def test_e5_eval_device_fix_moves_the_ground_truth_only_when_devices_differ():
+    """Amendment 17 e.2: the fix replaces ssim, psnr and lpips in compress.py's namespace by calls that move the second
+    image to the first's device; with the stand-in's emulated devices: C3DGS's error without it, the value with it,
+    nothing moved when the devices already match, and nothing replaced when the fix is off."""
+    import importlib.util
+    import types
+
+    import e4p_hooks
+
+    fake = os.path.join(HERE, "dryrun", "fake_c3dgs", "utils", "fake_devices.py")
+    old = os.environ.get("E3R_FAKE_DEVICES")
+    os.environ["E3R_FAKE_DEVICES"] = "1"
+    try:
+        spec = importlib.util.spec_from_file_location("fake_devices_t", fake)
+        fd = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(fd)
+    finally:
+        if old is None:
+            os.environ.pop("E3R_FAKE_DEVICES")
+        else:
+            os.environ["E3R_FAKE_DEVICES"] = old
+
+    def ssim(a, b):
+        if a.device != b.device:
+            raise RuntimeError(fd.MISMATCH)
+        return float(((fd.plain(a) - fd.plain(b)) ** 2).mean())
+
+    render = fd.Emu(torch.full((1, 3, 4, 4), 0.3), "cuda")
+    gt_cpu = fd.Emu(torch.full((3, 4, 4), 0.1), "cpu")[0:3, :, :].unsqueeze(0)
+    gt_gpu = fd.Emu(torch.full((3, 4, 4), 0.1), "cuda")[0:3, :, :].unsqueeze(0)
+    with pytest.raises(RuntimeError, match="should be the same"):
+        ssim(render, gt_cpu)
+    globs = {"ssim": ssim, "psnr": ssim, "lpips": ssim, "render_and_eval": None}
+    hooks = types.SimpleNamespace(eval_device_fix=True, rep={})
+    e4p_hooks.ForkHooks._patch_eval_device(hooks, globs)
+    e4p_hooks.ForkHooks._patch_eval_device(hooks, globs)  # once per namespace
+    assert hooks.rep["eval_device_fix"]["names"] == ["ssim", "psnr", "lpips"]
+    assert globs["ssim"](render, gt_cpu) == pytest.approx(0.04) and hooks.rep["eval_device_fix"]["moved_calls"] == 1
+    assert globs["psnr"](render, gt_gpu) == pytest.approx(0.04) and hooks.rep["eval_device_fix"]["moved_calls"] == 1
+    assert hooks.rep["eval_device_fix"]["calls"] == 2
+    off = types.SimpleNamespace(eval_device_fix=False, rep={})
+    g_off = {"ssim": ssim}
+    e4p_hooks.ForkHooks._patch_eval_device(off, g_off)
+    assert g_off["ssim"] is ssim and "eval_device_fix" not in off.rep
+
+
+def test_e5_estimate_matches_amendment_17_g():
+    """Amendment 17 g quotes bench/gn/e5_estimate.py; the script's numbers, rounded as quoted, are in its table. Its E5
+    lower total is 59,873 s against the amendment's 59,872 (the amendment's sum came from the scratch script's
+    rounded constants for the download, runner and GN-pass times)."""
+    import re
+
+    import e5_estimate as est
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    a17 = re.sub(r"\s+", " ", open(os.path.join(repo, "kaggle", "PREREG_GN.md"), encoding="utf-8").read())
+    a17 = a17[a17.index("## Amendment 17"):]
+    r = est.estimate()
+    for s, spec in est.SCENES.items():
+        lo, hi = r["scenes_s"][s]
+        label = "train (E5p)" if s == "train" else s
+        assert f"| {label} | {spec[0]:,} | {lo:,.0f}-{hi:,.0f} |" in a17, (s, lo, hi)
+    assert f"{r['e5p_h'][0]:.1f}-{r['e5p_h'][1]:.1f} h plus setup" in a17
+    assert f"-{r['e5_gpu_s'][1]:,.0f} GPU-seconds ({r['e5_gpu_h'][0]:.1f}-{r['e5_gpu_h'][1]:.1f} GPU-hours)" in a17
+    assert abs(r["e5_gpu_s"][0] - 59_872) < 1.5

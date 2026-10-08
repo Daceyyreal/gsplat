@@ -466,10 +466,10 @@ def main(argv=None):
 
 def harness_phase(args, scene, steps, meta, save, csv_path, common, get_runner, uncompressed_row, probe_record,
                   full_cache, even_cache, cv_names, need_cv, need_share, need_calib, need_full, dev, done_configs,
-                  gn_only: bool = False, need_ptc: bool = False):
+                  gn_only: bool = False, need_ptc: bool = False, gn_kinds=("full", "even")):
     """Step 3: the runner, the uncompressed model, the 16 x 16 GN passes, the trace share, the pruned-splat trace count
     (Amendment 14 h), the SH-only cross-validation and the calibration (Amendment 14 b-c). ``gn_only``
-    (Amendment 14 g): the two GN passes alone."""
+    (Amendment 14 g): the GN passes alone, those in ``gn_kinds`` (E5p, Amendment 17 c: the full-train-view pass only)."""
 
     def ptc_not_computed(reason: str) -> None:
         if need_ptc:
@@ -519,7 +519,7 @@ def harness_phase(args, scene, steps, meta, save, csv_path, common, get_runner, 
 
     if gn_only:
         for kind, views, path in (("full", train_views, full_cache), ("even", even_views, even_cache)):
-            if kind not in gn_meta:
+            if kind not in gn_meta and kind in gn_kinds:
                 gn16(kind, views, path)
         return
     rec = torch.load(probe_record, map_location="cpu", weights_only=False) if os.path.exists(probe_record) else None

@@ -27,6 +27,11 @@ rows in one process) and ``--eval_npz NPZ`` (C3DGS's evaluation of a decoded ``.
 the run (``"host_rss"``) and the process's peak GPU memory folded over the hooks' per-row resets. Hooks that cannot
 be installed, a fork that does not reach its end, or an ``--eval_npz`` that evaluates nothing are errors. Without
 these flags the wrapper is E3q's and E3r's, unchanged.
+
+E5p and E5 (Amendment 17 e.2) add ``--eval_device_fix`` (with the E4p hooks only): C3DGS's ``render_and_eval`` passes
+the ground truth as loaded (``compress.py:105``), so with ``--data_device cpu`` it fails; the hooks replace ``ssim``,
+``psnr`` and ``lpips`` in ``compress.py``'s namespace by calls that move the ground truth to the render's device first.
+C3DGS's source is not edited; it is recorded as a deviation.
 """
 
 import argparse
@@ -48,6 +53,12 @@ DEVIATION = (
     "chunked versions (bench/gn/batched.py's batched_linalg: at most 8,192 matrices per call, halved on a backend "
     "refusal, every reduction recorded; PREREG_GN.md Amendment 13 g); C3DGS's source was not edited; each matrix "
     "is decomposed independently, so what is computed does not change"
+)
+EVAL_DEVICE_DEVIATION = (
+    "compress.py's ssim, psnr and lpips were replaced in its namespace, at the save, by calls that move the ground "
+    "truth to the render's device before calling C3DGS's own functions (PREREG_GN.md Amendment 17 e.2: C3DGS's "
+    "render_and_eval passes the image as loaded, compress.py:105, so with --data_device cpu it fails); C3DGS's source "
+    "was not edited; the values are moved, not recomputed"
 )
 
 
@@ -231,6 +242,9 @@ def main() -> int:
     p.add_argument("--defer_eval", action="store_true", help="E4p: the probe; C3DGS's evaluation deferred")
     p.add_argument("--fork", default=None, help="E4p: a JSON config; the fork's rows in this process")
     p.add_argument("--eval_npz", default=None, help="E4p: C3DGS's evaluation of this decoded .npz, then stop")
+    # E5p / E5 (Amendment 17 e.2): C3DGS's evaluation with the images on the CPU; needs the E4p hooks
+    p.add_argument("--eval_device_fix", action="store_true",
+                   help="E5: move the ground truth to the render's device in C3DGS's evaluation (no source edit)")
     a = p.parse_args(argv[:argv.index("--")] if "--" in argv else argv)
     fork = os.path.abspath(a.fork) if a.fork else None
     eval_npz = os.path.abspath(a.eval_npz) if a.eval_npz else None
@@ -247,12 +261,17 @@ def main() -> int:
     sys.path.insert(0, a.c3dgs_dir)
     sys.argv = ["compress.py"] + rest
     rec = {"argv": sys.argv, "status": "ok", "error": None, "deviations": [DEVIATION]}
+    if a.eval_device_fix:
+        if not e4p_mode:
+            rec.update(status="error", error="--eval_device_fix needs the E4p hooks (--fork, --defer_eval or --eval_npz)")
+        rec["deviations"].append(EVAL_DEVICE_DEVIATION)
     hooks = None
     if e4p_mode:
         try:
             import e4p_hooks
 
-            hooks = e4p_hooks.install(record=record, fork=fork, defer_eval=a.defer_eval, eval_npz=eval_npz)
+            hooks = e4p_hooks.install(record=record, fork=fork, defer_eval=a.defer_eval, eval_npz=eval_npz,
+                                      eval_device_fix=a.eval_device_fix)
         except BaseException as e:  # noqa: B902
             rec["e4p_install_error"] = f"{type(e).__name__}: {str(e)[:800]}"
             rec.update(status="error", error=f"E4p hooks not installed: {rec['e4p_install_error']}")

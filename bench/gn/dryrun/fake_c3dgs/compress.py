@@ -16,8 +16,12 @@ import torch
 
 from compression.vq import CompressionSettings, compress_gaussians
 from finetune import finetune
+from gaussian_renderer import render
+from lpipsPyTorch import lpips
 from scene import Scene
 from scene.gaussian_model import GET_FEATURES_CALLS, GaussianModel
+from utils.image_utils import psnr
+from utils.loss_utils import ssim
 
 
 def calc_importance(gaussians, scene, pipeline_params):
@@ -30,10 +34,20 @@ def calc_importance(gaussians, scene, pipeline_params):
 
 
 def render_and_eval(gaussians, scene, model_params, pipeline_params):
+    """C3DGS's shape (``compress.py:87-117`` at ``2a234af5``): the ground truth as loaded (``:105``) against the render,
+    through the module-level ``ssim``, ``psnr`` and ``lpips``, looked up at call time."""
     with torch.no_grad():
-        f = gaussians.get_features.reshape(-1)
-        mse = float(((f - 0.1) ** 2).mean()) + 1e-9
-        return {"SSIM": 0.8, "PSNR": -10.0 * torch.log10(torch.tensor(mse)).item(), "LPIPS": 0.2}
+        ssims, psnrs, lpipss = [], [], []
+        views = scene.getTestCameras()
+        background = torch.tensor([0, 0, 0], dtype=torch.float32)
+        for view in views:
+            rendering = render(view, gaussians, pipeline_params, background)["render"].unsqueeze(0)
+            gt = view.original_image[0:3, :, :].unsqueeze(0)
+            ssims.append(float(ssim(rendering, gt)))
+            psnrs.append(float(psnr(rendering, gt)))
+            lpipss.append(float(lpips(rendering, gt, net_type="vgg")))
+        return {"SSIM": torch.tensor(ssims).mean().item(), "PSNR": torch.tensor(psnrs).mean().item(),
+                "LPIPS": torch.tensor(lpipss).mean().item()}
 
 
 def run_vq(model_params, optim_params, pipeline_params, comp_params):

@@ -91,8 +91,9 @@ def _find_frame(names):
 
 class ForkHooks(e3r_hooks.Hooks):
     def __init__(self, record: Optional[str] = None, fork: Optional[str] = None, defer_eval: bool = False,
-                 eval_npz: Optional[str] = None, log=print):
+                 eval_npz: Optional[str] = None, log=print, eval_device_fix: bool = False):
         super().__init__(record=record, inject=None, log=log)
+        self.eval_device_fix = bool(eval_device_fix)  # Amendment 17 e.2
         self.e3r, self.e4p, self.ogc, self.gm, self.ms = _import_e4p()
         self.cfg = json.load(open(fork)) if fork else None
         self.defer_eval = bool(defer_eval or fork)
@@ -170,6 +171,37 @@ class ForkHooks(e3r_hooks.Hooks):
             traceback=traceback.format_exc()[-3000:])
         if self.cuda:
             torch.cuda.empty_cache()
+
+    # ------------------------------------------------------------------ Amendment 17 e.2: C3DGS's evaluation on the CPU
+    def _patch_eval_device(self, globs: Dict) -> None:
+        """C3DGS's ``render_and_eval`` passes the ground truth as loaded (``compress.py:105`` at ``2a234af5``), so with
+        ``--data_device cpu`` its ``ssim`` raises. The ``ssim``, ``psnr`` and ``lpips`` names in ``compress.py``'s
+        namespace (where ``render_and_eval`` looks them up at call time) are replaced by calls that move the second
+        image to the first's device, the render's, and then call C3DGS's own functions: the values are moved, not
+        recomputed. Recorded in the report (``eval_device_fix``); applied once per namespace."""
+        if not self.eval_device_fix or globs.get("_e5_eval_device_fix"):
+            return
+        rec = self.rep.setdefault("eval_device_fix", {"names": [], "moved_calls": 0, "calls": 0})
+
+        def moved(fn):
+            def call(img1, img2, *a, **k):
+                rec["calls"] += 1
+                d1, d2 = getattr(img1, "device", None), getattr(img2, "device", None)
+                if d1 is not None and d2 is not None and d1 != d2:
+                    img2 = img2.to(d1)
+                    rec["moved_calls"] += 1
+                return fn(img1, img2, *a, **k)
+
+            call.__wrapped__ = fn
+            return call
+
+        for name in ("ssim", "psnr", "lpips"):
+            if callable(globs.get(name)):
+                globs[name] = moved(globs[name])
+                rec["names"].append(name)
+        globs["_e5_eval_device_fix"] = True
+        rec["how"] = ("compress.py's ssim, psnr and lpips replaced in its namespace by calls that move the ground truth "
+                      "to the render's device first (PREREG_GN.md Amendment 17 e.2); C3DGS's source was not edited")
 
     # ------------------------------------------------------------------ the wrapped functions
     def join_features(self, all_features, keep_mask, codebook, codebook_indices):
@@ -276,6 +308,7 @@ class ForkHooks(e3r_hooks.Hooks):
                 raise RuntimeError("E4p: compress.py's run_vq frame (scene, comp_params) was not found at the save")
             fl = f.f_locals
             self.ctx = {k: fl.get(k) for k in ("scene", "model_params", "optim_params", "pipeline_params", "comp_params")}
+            self._patch_eval_device(f.f_globals)
             self.orig_eval = f.f_globals["render_and_eval"]
             self.finetune_fn = f.f_globals.get("finetune")
             f.f_globals["render_and_eval"] = self.deferred_eval
@@ -364,9 +397,9 @@ class ForkHooks(e3r_hooks.Hooks):
         fr["phase"] = "finetuning"
         ft = cfg.get("finetune") or {}
         for row in ft.get("rows", []):
-            src = e4p.row_alias(row, cfg.get("rho_cv"))
+            src = self._ft_source(row)
             name = e4p.ft_name(row)
-            rec = fr["rows"].setdefault(name, {"row": e4p.ROW_NUMBER[row] + " fine-tuned", "table_of": src})
+            rec = fr["rows"].setdefault(name, {"row": self._row_label(row) + " fine-tuned", "table_of": src})
             if src not in self.tables:
                 rec.update(status="not_run", reason=f"no table for {src}")
                 continue
@@ -388,12 +421,18 @@ class ForkHooks(e3r_hooks.Hooks):
                     os.makedirs(os.path.dirname(path), exist_ok=True)
                     self.orig["save_npz"](g, path, sort_morton=sort)
                 rec["npz"] = path
-                with self.cost(f"eval_{name}"):
-                    m = self.orig_eval(g, scene, model_params, pipeline_params)
-                rec.update(status="ok", c3dgs_eval={k: float(v) for k, v in m.items()},
-                           finetune_iterations=comp_ft.finetune_iterations)
+                rec.update(status="ok", finetune_iterations=comp_ft.finetune_iterations)
             except Exception as e:  # noqa: BLE001 (a secondary: recorded only)
                 self._row_error(name, e)
+                self.flush()
+                continue
+            try:  # C3DGS's evaluation of the fine-tuned row: recorded beside it, as for every row (b)
+                with self.cost(f"eval_{name}"):
+                    m = self.orig_eval(g, scene, model_params, pipeline_params)
+                rec["c3dgs_eval"] = {k: float(v) for k, v in m.items()}
+            except Exception as e:  # noqa: BLE001
+                rec["c3dgs_eval_error"] = f"{type(e).__name__}: {str(e)[:600]}"
+                rec["c3dgs_eval_oom"] = e4p.is_oom_text(f"{type(e).__name__}: {e}")
             self.flush()
         # (d) row 1's saved state back; row 1's metrics for compress.py's results.json
         e4p.restore_state(g, saved["c3dgs"])
@@ -401,11 +440,19 @@ class ForkHooks(e3r_hooks.Hooks):
         self.flush()
         return dict(fr["rows"]["c3dgs"].get("c3dgs_eval") or {})
 
+    def _ft_source(self, row: str) -> str:
+        """The row whose table a fine-tuned row starts from (E4p: row 5 is row 3 when ``rho_cv`` = 0)."""
+        return self.e4p.row_alias(row, self.cfg.get("rho_cv"))
+
+    def _row_label(self, row: str) -> str:
+        return self.e4p.ROW_NUMBER[row]
+
     # ------------------------------------------------------------------ eval_npz
     def _evaluate_npz(self, scene_obj) -> None:
         f = _find_frame(("gaussians", "model_params", "pipeline_params"))
         if f is None:
             raise RuntimeError("E4p: compress.py's run_vq frame was not found at the Scene")
+        self._patch_eval_device(f.f_globals)
         g = f.f_locals["gaussians"]
         with self.cost("eval_npz") as c:
             g.load_npz(self.eval_npz)
@@ -423,10 +470,16 @@ class ForkHooks(e3r_hooks.Hooks):
 
 
 def install(record: Optional[str] = None, fork: Optional[str] = None, defer_eval: bool = False,
-            eval_npz: Optional[str] = None) -> ForkHooks:
+            eval_npz: Optional[str] = None, eval_device_fix: bool = False) -> ForkHooks:
     cls = ForkHooks
-    if fork and json.load(open(fork)).get("e4q"):  # E4q's fork (Amendment 16 b): kaggle/e4q_hooks.py
+    cfg = json.load(open(fork)) if fork else {}
+    if cfg.get("e4q"):  # E4q's fork (Amendment 16 b): kaggle/e4q_hooks.py
         import e4q_hooks
 
         cls = e4q_hooks.E4qHooks
-    return cls(record=record, fork=fork, defer_eval=defer_eval, eval_npz=eval_npz).install()
+    elif cfg.get("e5"):  # E5p's and E5's fork (Amendment 17 b): kaggle/e5_hooks.py
+        import e5_hooks
+
+        cls = e5_hooks.E5Hooks
+    return cls(record=record, fork=fork, defer_eval=defer_eval, eval_npz=eval_npz,
+               eval_device_fix=eval_device_fix).install()
