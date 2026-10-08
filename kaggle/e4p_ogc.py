@@ -42,6 +42,7 @@ if os.path.join(REPO, "bench", "gn") not in sys.path:
 import e4p  # noqa: E402
 
 OGC_URL, OGC_COMMIT = e4p.OGC_URL, e4p.OGC_COMMIT
+METRICS = ("gram", "scalar", "plain")  # their modes (vq.py:11, 22-29 at 49ccae72); "plain" is their identity
 LICENCE = "PolyForm Noncommercial 1.0.0 (LICENSE at the pinned commit); used for noncommercial academic research"
 # Their Table 19 (arXiv 2609.28997v1, p. 22), row train: test PSNR (dB) of uniform SH degree reduction
 TABLE19_TRAIN = {"full": 21.79, "trunc2": 21.00, "ours2": 21.73, "trunc1": 20.11, "ours1": 21.44, "trunc0": 19.48,
@@ -98,11 +99,13 @@ def load_vq(clone: str):
 
 
 def ogc_codebook(vqmod, x48: torch.Tensor, M_packed_rows: torch.Tensor, K: int, lam: Optional[float], device: str,
-                 log: Optional[Callable] = None, chunk: Optional[int] = None) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
+                 log: Optional[Callable] = None, chunk: Optional[int] = None,
+                 metric: Optional[str] = None) -> Tuple[torch.Tensor, torch.Tensor, Dict]:
     """Rows 2 / 2b: ``gram_kmeans(X, G, K, metric="gram", iters=15, device, chunk=100000[, lam])`` with ``X`` the
     quantizer input as ``[n, 3, 16]`` and ``G`` our unpacked 16 x 16 metric of the same splats (CPU float32, as the
     function takes them); returns ``(C [K, 48], labels [n], info)`` in C3DGS's layout (index ``k * 3 + channel``).
-    ``chunk`` replaces the host's 100,000 (E4q: 25,000, Amendment 16 c); None keeps it."""
+    ``chunk`` replaces the host's 100,000 (E4q: 25,000, Amendment 16 c); None keeps it. ``metric`` (Amendment 17 b)
+    replaces ``"gram"`` with ``"scalar"`` or ``"plain"``, their other two modes (``vq.py:22-29``); None keeps it."""
     import gn_metric as gm
 
     t = time.perf_counter()
@@ -113,11 +116,19 @@ def ogc_codebook(vqmod, x48: torch.Tensor, M_packed_rows: torch.Tensor, K: int, 
         kw["chunk"] = int(chunk)
     if lam is not None:
         kw["lam"] = lam
+    if metric is not None:
+        if metric not in METRICS:
+            raise ValueError(f"{metric!r} is not one of OGC's metric modes {METRICS} (Amendment 17 b)")
+        kw["metric"] = metric
     C, asg = vqmod.gram_kmeans(X, G, int(K), device=device, **kw)
     C48 = C.permute(0, 2, 1).reshape(C.shape[0], -1)
+    init = ("their own (points sampled in proportion to tr(G_i), vq.py:31-33)" if metric is None else
+            "their own (points sampled in proportion to the trace of the row's metric, vq.py:30-33)")
     info = {"call": {"K": int(K), "device": device, **kw, "lam": lam if lam is not None else e4p.OGC_DEFAULT_LAM,
-                     "seed": 0, "init": "their own (points sampled in proportion to tr(G_i), vq.py:31-33)"},
+                     "seed": 0, "init": init},
             "n_splats": int(X.shape[0]), "host_bytes_G": G.numel() * G.element_size(), "time_s": time.perf_counter() - t}
+    if metric is not None:  # Amendment 17 h: "scalar" and "plain" build a second [n, 16, 16] float32 copy (vq.py:29)
+        info["host_bytes_metric_copy"] = 0 if metric == "gram" else G.numel() * G.element_size()
     return C48, asg.long(), info
 
 
