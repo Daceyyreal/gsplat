@@ -1,0 +1,12 @@
+{
+  "name": "gn_e5p_train",
+  "log": "/kaggle/working/gn5p_work/gn_e5p_train.log",
+  "exit_code": 3,
+  "skipped_by_cutoff": false,
+  "lines_total": 2,
+  "lines_kept": 2,
+  "tail": [
+    "[train] 305 files, 0.22 GB (0.22 GB to fetch) from https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/input/tandt_db.zip; free 1147.3 GB",
+    "[train] OGC CLONE MISMATCH: /tmp/ogc_train is at \"fatal: cannot change to '/tmp/ogc_train': No such file or directory\", pinned 49ccae72e75eec9877354ed72074827531f7fd79 (Amendment 15 a); no row runs"
+  ]
+}

@@ -1,0 +1,1478 @@
+{
+  "exploratory": "PREREG_GN.md Amendment 17 c: E5p is a pilot (mechanics and timing), no verdict",
+  "scenes": {
+    "train": {
+      "rows": [],
+      "per_row": {},
+      "differences_j0": {
+        "ogc_gram_minus_c3dgs": {
+          "PSNR_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "SSIM_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "LPIPS_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "c3dgs_PSNR": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "npz_bytes": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          }
+        },
+        "ogc_gram_minus_ogc_scalar": {
+          "PSNR_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "SSIM_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "LPIPS_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "c3dgs_PSNR": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "npz_bytes": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          }
+        },
+        "ogc_scalar_minus_ogc_plain": {
+          "PSNR_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "SSIM_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "LPIPS_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "c3dgs_PSNR": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "npz_bytes": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          }
+        },
+        "ogc_plain_minus_c3dgs": {
+          "PSNR_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "SSIM_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "LPIPS_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "c3dgs_PSNR": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "npz_bytes": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          }
+        },
+        "ogc_gram_ft_minus_c3dgs_ft": {
+          "PSNR_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "SSIM_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "LPIPS_ii": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "c3dgs_PSNR": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          },
+          "npz_bytes": {
+            "per_scene": {
+              "train": {
+                "D_sp": [
+                  null,
+                  null
+                ],
+                "complete": false
+              }
+            },
+            "n": 0,
+            "incomplete_scenes": [
+              "train"
+            ]
+          }
+        }
+      },
+      "fidelity_per_angle_j0": {
+        "ogc_gram_minus_c3dgs": {
+          "fidelity_psnr": {
+            "-40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "0": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            }
+          },
+          "fidelity_pooled_psnr": {
+            "-40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "0": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            }
+          }
+        },
+        "ogc_gram_minus_ogc_scalar": {
+          "fidelity_psnr": {
+            "-40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "0": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            }
+          },
+          "fidelity_pooled_psnr": {
+            "-40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "0": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            }
+          }
+        },
+        "ogc_scalar_minus_ogc_plain": {
+          "fidelity_psnr": {
+            "-40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "0": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            }
+          },
+          "fidelity_pooled_psnr": {
+            "-40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "0": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            }
+          }
+        },
+        "ogc_plain_minus_c3dgs": {
+          "fidelity_psnr": {
+            "-40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "0": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            }
+          },
+          "fidelity_pooled_psnr": {
+            "-40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "-10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "0": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "10": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "20": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            },
+            "40": {
+              "per_scene": {
+                "train": {
+                  "D_sp": [
+                    null,
+                    null
+                  ],
+                  "complete": false
+                }
+              },
+              "n": 0,
+              "incomplete_scenes": [
+                "train"
+              ]
+            }
+          }
+        }
+      },
+      "bd_points": {
+        "c3dgs": [
+          {
+            "j": -1,
+            "threshold": 2e-07,
+            "npz_bytes": null,
+            "PSNR_ii": null
+          },
+          {
+            "j": 0,
+            "threshold": 6e-07,
+            "npz_bytes": null,
+            "PSNR_ii": null
+          },
+          {
+            "j": 1,
+            "threshold": 1.8e-06,
+            "npz_bytes": null,
+            "PSNR_ii": null
+          }
+        ],
+        "ogc_plain": [
+          {
+            "j": -1,
+            "threshold": 2e-07,
+            "npz_bytes": null,
+            "PSNR_ii": null
+          },
+          {
+            "j": 0,
+            "threshold": 6e-07,
+            "npz_bytes": null,
+            "PSNR_ii": null
+          },
+          {
+            "j": 1,
+            "threshold": 1.8e-06,
+            "npz_bytes": null,
+            "PSNR_ii": null
+          }
+        ],
+        "ogc_scalar": [
+          {
+            "j": -1,
+            "threshold": 2e-07,
+            "npz_bytes": null,
+            "PSNR_ii": null
+          },
+          {
+            "j": 0,
+            "threshold": 6e-07,
+            "npz_bytes": null,
+            "PSNR_ii": null
+          },
+          {
+            "j": 1,
+            "threshold": 1.8e-06,
+            "npz_bytes": null,
+            "PSNR_ii": null
+          }
+        ],
+        "ogc_gram": [
+          {
+            "j": -1,
+            "threshold": 2e-07,
+            "npz_bytes": null,
+            "PSNR_ii": null
+          },
+          {
+            "j": 0,
+            "threshold": 6e-07,
+            "npz_bytes": null,
+            "PSNR_ii": null
+          },
+          {
+            "j": 1,
+            "threshold": 1.8e-06,
+            "npz_bytes": null,
+            "PSNR_ii": null
+          }
+        ]
+      },
+      "bd": {
+        "ogc_plain_vs_c3dgs": {
+          "computed": false,
+          "reason": "a curve is missing"
+        },
+        "ogc_scalar_vs_c3dgs": {
+          "computed": false,
+          "reason": "a curve is missing"
+        },
+        "ogc_gram_vs_c3dgs": {
+          "computed": false,
+          "reason": "a curve is missing"
+        },
+        "ogc_scalar_vs_ogc_plain": {
+          "computed": false,
+          "reason": "a curve is missing"
+        },
+        "ogc_gram_vs_ogc_plain": {
+          "computed": false,
+          "reason": "a curve is missing"
+        },
+        "ogc_gram_vs_ogc_scalar": {
+          "computed": false,
+          "reason": "a curve is missing"
+        }
+      },
+      "primaries_values": {
+        "P1": {
+          "pair": [
+            "ogc_gram",
+            "c3dgs"
+          ],
+          "computed": false,
+          "reason": "a curve is missing"
+        },
+        "P2": {
+          "pair": [
+            "ogc_gram",
+            "ogc_scalar"
+          ],
+          "computed": false,
+          "reason": "a curve is missing"
+        }
+      },
+      "c3dgs_eval_per_process": {},
+      "eval_device_fix_per_process": {},
+      "ogc_rows_host_memory": {},
+      "note_ii": {
+        "geometry": null,
+        "coverage": null,
+        "orbit_reference": null
+      },
+      "cfg_args_mismatch": [],
+      "processes": {},
+      "scene_device": null,
+      "deviations": null,
+      "dropped": null,
+      "missing_or_failed": null,
+      "failed_steps": null,
+      "skipped_steps": null,
+      "session_ram": {
+        "total_bytes": 33658318848,
+        "available_bytes": 31841239040
+      },
+      "ogc_clone": {
+        "ok": false,
+        "error": "OGC CLONE MISMATCH: /tmp/ogc_train is at \"fatal: cannot change to '/tmp/ogc_train': No such file or directory\", pinned 49ccae72e75eec9877354ed72074827531f7fd79 (Amendment 15 a); no row runs"
+      },
+      "gn": null,
+      "steps": [
+        {
+          "name": "fetch_inria",
+          "status": "ok",
+          "time_s": 2.7339701869996134,
+          "error": null,
+          "reason": null,
+          "cuda_peak_allocated": 0,
+          "cuda_peak_reserved": 0,
+          "host_rss_peak_bytes": 788733952
+        },
+        {
+          "name": "download_dataset",
+          "status": "ok",
+          "time_s": 229.42931923000015,
+          "error": null,
+          "reason": null,
+          "cuda_peak_allocated": 0,
+          "cuda_peak_reserved": 0,
+          "host_rss_peak_bytes": 844664832
+        }
+      ],
+      "timings_s": {},
+      "env": {
+        "python": "3.13.15",
+        "torch": "2.11.0+cu128",
+        "torch_cuda": "12.8",
+        "cudnn": 91900,
+        "packages": {
+          "gsplat": "1.6.0",
+          "torchpq": null,
+          "cupy-cuda12x": "14.0.1",
+          "plas": null,
+          "torchmetrics": "1.8.2",
+          "numpy": "2.1.3",
+          "pycolmap": "4.2.1",
+          "remotezip": "0.12.6"
+        },
+        "gpu": {
+          "name": "Tesla T4",
+          "capability": "7.5",
+          "total_memory": 15636037632,
+          "count": 1
+        },
+        "nvidia_smi": "Tesla T4, 580.178.04, 15360 MiB\nTesla T4, 580.178.04, 15360 MiB",
+        "nvcc": [
+          "Build cuda_12.8.r12.8/compiler.35583870_0"
+        ]
+      }
+    }
+  },
+  "build": {
+    "ok": true,
+    "failed_step": null,
+    "build_time_s": 206.1072061061859,
+    "total_time_s": 222.89345049858093,
+    "deviations": [
+      "installed into the session's Python environment with pip, not a conda environment from environment.yml (Amendment 13 b: Kaggle's Python lacks ensurepip, so no venv either)",
+      "--no-deps on every pip install, so the session's torch, torchvision and CUDA toolkit stay as they are",
+      "torch-scatter from pip (the PyG wheel index for the session's torch), not conda's pytorch-scatter",
+      "--source_path given on the command line: the checkpoint's cfg_args names its authors' local paths",
+      "the model directory laid out from the three pinned archive members (cfg_args, cameras.json, the 30k point_cloud.ply), without the archive's input.ply and 7k iteration",
+      "the session's torch 2.11.0+cu128 (CUDA 12.8) and CUDA toolkit, not pytorch-cuda=12.1 and cuda-toolkit=12.1; the session's Python, not python=3.8",
+      "diff-gaussian-rasterization: the build failed on a missing fixed-width integer type and was retried once with <cstdint> force-included (CFLAGS / CXXFLAGS / NVCC_APPEND_FLAGS '-include cstdint'; Amendment 13 b); the source was not edited"
+    ],
+    "head": "2a234af55fbe8b90c8829c1436ce80088c4b622b"
+  }
+}

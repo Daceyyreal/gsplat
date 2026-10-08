@@ -1,0 +1,205 @@
+{
+  "scene": "train",
+  "timings_s": {},
+  "dataset": "tandt",
+  "scene_set": "development",
+  "data_factor": 1,
+  "k": 4096,
+  "threshold": 6e-07,
+  "processes_planned": [
+    {
+      "j": 0,
+      "seed": 0,
+      "device": null,
+      "finetune": true
+    },
+    {
+      "j": 0,
+      "seed": 1,
+      "device": "cpu",
+      "finetune": true
+    },
+    {
+      "j": -1,
+      "seed": 0,
+      "device": null,
+      "finetune": false
+    },
+    {
+      "j": 1,
+      "seed": 0,
+      "device": null,
+      "finetune": false
+    }
+  ],
+  "rows": [
+    "c3dgs",
+    "ogc_plain",
+    "ogc_scalar",
+    "ogc_gram"
+  ],
+  "ogc_metric": {
+    "ogc_plain": "plain",
+    "ogc_scalar": "scalar",
+    "ogc_gram": "gram"
+  },
+  "lam": 0.001,
+  "ogc_chunk": 25000,
+  "ft_rows": [
+    "c3dgs",
+    "ogc_gram"
+  ],
+  "gsplat_commit": "175b92533f3b",
+  "env": {
+    "python": "3.13.15",
+    "torch": "2.11.0+cu128",
+    "torch_cuda": "12.8",
+    "cudnn": 91900,
+    "packages": {
+      "gsplat": "1.6.0",
+      "torchpq": null,
+      "cupy-cuda12x": "14.0.1",
+      "plas": null,
+      "torchmetrics": "1.8.2",
+      "numpy": "2.1.3",
+      "pycolmap": "4.2.1",
+      "remotezip": "0.12.6"
+    },
+    "gpu": {
+      "name": "Tesla T4",
+      "capability": "7.5",
+      "total_memory": 15636037632,
+      "count": 1
+    },
+    "nvidia_smi": "Tesla T4, 580.178.04, 15360 MiB\nTesla T4, 580.178.04, 15360 MiB",
+    "nvcc": [
+      "Build cuda_12.8.r12.8/compiler.35583870_0"
+    ]
+  },
+  "session_ram": {
+    "total_bytes": 33658318848,
+    "available_bytes": 31841239040
+  },
+  "c3dgs_commit": "2a234af55fbe8b90c8829c1436ce80088c4b622b",
+  "ogc_commit": "49ccae72e75eec9877354ed72074827531f7fd79",
+  "deadline": 1791517129.0,
+  "reserve_s": 1800.0,
+  "n_splats": 1026508,
+  "eval_device_fix": true,
+  "steps": [
+    {
+      "name": "fetch_inria",
+      "timestamp": "2026-10-08T17:21:42",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 2.7339701869996134,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 788492288,
+      "host_rss": {
+        "available": true,
+        "rss_start_bytes": 644489216,
+        "rss_peak_bytes": 788733952,
+        "n_samples": 13,
+        "interval_s": 0.25,
+        "scope": "process and its children"
+      }
+    },
+    {
+      "name": "download_dataset",
+      "timestamp": "2026-10-08T17:21:45",
+      "cuda_start": {
+        "allocated": 0,
+        "reserved": 0,
+        "free": 15526068224,
+        "total": 15636037632
+      },
+      "status": "ok",
+      "time_s": 229.42931923000015,
+      "cuda_peak": {
+        "allocated": 0,
+        "reserved": 0,
+        "allocated_over_start": 0
+      },
+      "host_max_rss_bytes": 844435456,
+      "host_rss": {
+        "available": true,
+        "rss_start_bytes": 755421184,
+        "rss_peak_bytes": 844664832,
+        "n_samples": 917,
+        "interval_s": 0.25,
+        "scope": "process and its children"
+      }
+    }
+  ],
+  "inria": {
+    "url": "https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip",
+    "directory_checked": true,
+    "directory_time_s": 2.291066507999858,
+    "members": {
+      "ply": {
+        "name": "train/point_cloud/iteration_30000/point_cloud.ply",
+        "path": "/kaggle/working/e3p_inria/train/point_cloud.ply",
+        "bytes_pinned": 254575516,
+        "crc32_pinned": "85d6d4ca",
+        "compressed_bytes": 219441845,
+        "header_offset": 12052819184,
+        "source": "present",
+        "bytes": 254575516,
+        "crc32": "85d6d4ca",
+        "sha1": "187b6095ffe3135c7769d73a9caefcd03a5273d8",
+        "time_s": 0.442132182000023
+      },
+      "cameras": {
+        "name": "train/cameras.json",
+        "path": "/kaggle/working/e3p_inria/train/cameras.json",
+        "bytes_pinned": 120800,
+        "crc32_pinned": "9940f310",
+        "compressed_bytes": 38454,
+        "header_offset": 12050023231,
+        "source": "present",
+        "bytes": 120800,
+        "crc32": "9940f310",
+        "sha1": "79ee8c10b5991f634545557ca401cd2e31a31f75",
+        "time_s": 0.00044453200007410487
+      },
+      "cfg_args": {
+        "name": "train/cfg_args",
+        "path": "/kaggle/working/e3p_inria/train/cfg_args",
+        "bytes_pinned": 162,
+        "crc32_pinned": "cbf086a8",
+        "compressed_bytes": 130,
+        "header_offset": 12050061733,
+        "source": "present",
+        "bytes": 162,
+        "crc32": "cbf086a8",
+        "sha1": "7b4e85d00695394a1decc4300c0904be7a912d6c",
+        "time_s": 6.941500032553449e-05
+      }
+    },
+    "time_s": 2.7337608260004345,
+    "http_requests": 4
+  },
+  "inria_cfg_args": {
+    "eval": true,
+    "images": "images",
+    "model_path": "./eval/train",
+    "resolution": 1,
+    "sh_degree": 3,
+    "source_path": "f:/bkerbl/Downloads/tandt/train",
+    "white_background": false
+  },
+  "cfg_args_mismatch": [],
+  "ogc_clone": {
+    "ok": false,
+    "error": "OGC CLONE MISMATCH: /tmp/ogc_train is at \"fatal: cannot change to '/tmp/ogc_train': No such file or directory\", pinned 49ccae72e75eec9877354ed72074827531f7fd79 (Amendment 15 a); no row runs"
+  }
+}
