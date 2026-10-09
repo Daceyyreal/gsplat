@@ -3697,6 +3697,12 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   no torch 2.11 key.
 - **Amendment 18 note 1** (the dataset copy cloned from a scratch copy): the dataset source has not verified on Kaggle;
   Amendment 18 e's pre-E5 note records it as untested unless a Kaggle preflight shows `dataset ok` before then.
+- **Amendment 18 note 2** (`c9d1dc49`, code `7ca78f4e`, 2026-10-10; report only): each fine-tuned row now records
+  `qa_at_save`, `table_range` of the trained codebook and `codebook_int8` (values at -128 or 127, distinct int8
+  codewords) right before its save, checked against the saved `.npz`; a run-time check fails the row if the record
+  moves any colour quantizer state. Checked: pytest 165; dry runs E3r 145 s, E4p 1,020 s, E4q 1,123 s, E5p url 603 s,
+  every stage ok; all 12 notebooks rebuild byte-identical. It explains attempt 2's fine-tuned `features_rest` bytes
+  (`ogc_gram`'s codebook outside the int8 grid; C3DGS re-fits the quantizer while fine-tuning) only from E5 on.
 - **After E5p (latent, not hit):** `attempt_of` in `kaggle/build_gn_e5p_bench.py` (lines 336-341 at `27c7731b`)
   calls `.get` on whatever `gn5p_attempt.json` holds. Valid JSON that is not an object (a list, a number) raises an
   uncaught `AttributeError` and stops the restore cell. Only files this notebook writes are read, so it has not
