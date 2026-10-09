@@ -2896,3 +2896,41 @@ metric or bar of Amendments 17 and 18 changes, and neither does the chain's orde
 - **Not changed:** the attached dataset, the chain (URL, then dataset, else derived), the verification (HEAD
   `49ccae72`, tree `9feebced`, a clean clone), `ogc_gram_ours`, the estimate. E5p attempt 2 runs with `27c7731b`, where
   the URL verified; the fix applies to whichever run comes next.
+
+### Amendment 18 note 2 (2026-10-09, after E5p attempt 2's bundle (`8eadc81e`) and before any E5 code): the fine-tuned rows' quantizer and codebook
+
+A bug fix, by Amendment 17 c (bug fixes by a dated note before any E5 code). It is report only: it changes no row,
+point, primary, bar or verdict, and no value any row writes or measures.
+
+- **The gap:** Amendment 17 b asks, for every row, for the quantizer state at the save and each table's range against
+  its int8 grid. The fine-tuned rows recorded neither: `qa_at_save` is written only in the fork's own save
+  (`kaggle/e4p_hooks.py`, `_check`), and `table_range` only at the colour call (`kaggle/e5_hooks.py`), so attempt 2's
+  `_ft` rows have both empty. E5p attempt 2 shows why it matters: after fine-tuning, `ogc_gram_ft`'s `features_rest`
+  compresses to 2,212,783 B from 3,277,763 B (p0), while `c3dgs_ft`'s grows to 3,281,910 B from 3,203,748 B. Before
+  fine-tuning, `ogc_gram`'s AC codebook spans -2.50 to +3.71 against an int8 grid of -0.85 to +0.90 (254 values
+  outside it), and C3DGS's fine-tuning re-fits the colour quantizer to the trained table (its `FakeQuantize` observer
+  runs at every render). E4p's fine-tuned rows show the same. Without the record, the mechanism can be inferred but not
+  read from the bundle.
+- **The fix (report only):** right before each fine-tuned row's save, the fork records, without writing to the model:
+  - `qa_at_save`: the colour quantizers' scale and zero point, which that save uses (`e3r_hooks._qa_state`);
+  - `table_range`: the trained codebook (the table's first K rows, `_features_dc` with `_features_rest`) against that
+    grid, with the values outside it (E4q's `table_range`);
+  - `codebook_int8`: per part, the number and fraction of the codebook's int8 values at -128 or 127, and the number of
+    distinct int8 codewords.
+
+  The results CSV gets one column (`codebook_int8`); the summary's `per_row` gets `qa_at_save`, `codebook_int8`, and
+  `n_outside_grid` per part for every row (until now inside `table_range`'s JSON only), the fork's non-fine-tuned rows
+  included.
+- **Tests:** the CPU stand-in's fine-tuning branch fills all three records for every fine-tuned row, with `qa_at_save`
+  equal to the scale and zero point written into the row's `.npz`, and `codebook_int8`'s counts at -128 or 127 and
+  distinct codewords equal to those of the int8 codebook decoded from that saved `.npz`; a hand-made table checks the
+  counts at the int8 limits and outside the grid, and that the model is unchanged; the dry run checks the fields in the
+  CSV and the summary.
+- **No side effect on the save:** the record reads the quantizers' buffers and the raw table only, and calls no
+  quantizer (a `FakeQuantize` call would move its observer and so the scale the save uses). The fine-tuning branch
+  checks it at run time: the colour quantizers' scale, zero point and observer minimum and maximum are equal before and
+  after the record, or the row records what moved and fails. A test with real `FakeQuantize` modules, whose observer
+  moves when called, shows the record leaves them unchanged, and one with a record that does call a quantizer shows
+  the row fails.
+- **Not changed:** every row, point, metric, primary, bar and verdict of Amendments 17 and 18; the fine-tuning itself;
+  E5p attempt 2's bundle, which stands as run.
