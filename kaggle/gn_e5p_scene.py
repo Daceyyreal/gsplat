@@ -20,6 +20,8 @@ One job:
    - j = 0, seed 0, the scene's device, with fine-tuning of ``c3dgs`` and ``ogc_gram`` (5,000 iterations);
    - j = 0, seed 1, **the images forced onto the CPU** (Amendment 17 c: it exercises e.2's evaluation fix), the same;
    - j = -1 and j = +1 (the colour threshold 0.6e-6 x 3^j), seed 0, the four rows;
+   with ``ogc_gram_ours`` (Amendment 18 d: ``bench/gn/ogc_derived.gram_kmeans_ours``, report only, not fine-tuned)
+   beside ``ogc_gram`` whenever OGC's rows come from their code;
    every row's ``.npz`` measured, decoded and evaluated (protocol ii per view, note ii a's fidelity as the mean PSNR and
    as the PSNR of the pooled MSE). C3DGS's evaluation runs through the wrapper's ``--eval_device_fix`` (e.2).
 
@@ -183,7 +185,8 @@ def main(argv=None):
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     meta.update(dataset=args.dataset, scene_set="development", data_factor=args.data_factor, k=K_DEFAULT,
                 threshold=e5.THRESHOLD_DEFAULT, processes_planned=[dict(p) for p in e5.E5P_PROCESSES],
-                rows=list(e5.ROWS), ogc_metric=dict(e5.OGC_METRIC), lam=e5.LAM, ogc_chunk=e5.OGC_CHUNK,
+                rows=list(e5.ROWS), secondary_rows=[e5.OURS_ROW], ogc_metric=dict(e5.ROW_METRIC), lam=e5.LAM,
+                ogc_chunk=e5.OGC_CHUNK,
                 ft_rows=list(e5.FT_ROWS), gsplat_commit=args.commit, env=e3p.environment(), session_ram=e4p.session_ram(),
                 c3dgs_commit=c3.C3DGS_COMMIT, ogc_commit=og.OGC_COMMIT, deadline=args.deadline, reserve_s=args.reserve_s,
                 n_splats=ei.N_SPLATS[scene], eval_device_fix=bool(EVAL_FIX_ARG))
@@ -313,7 +316,7 @@ def fork_job(ctx) -> int:
                 start_blocker=start_blocker, full_cache=full_cache)
     e4pjob.drop_runner(ctx)
     got = {r["config"]: r["status"] for r in read_rows(csv_path, scene)}
-    wanted = [UNCOMPRESSED] + e5.wanted_configs()
+    wanted = [UNCOMPRESSED] + e5.wanted_configs(impl=args.ogc_impl)
     meta["rows_ok"] = sorted(c for c, s in got.items() if s == "ok")
     meta["missing_or_failed"] = [c for c in wanted if got.get(c) != "ok"]
     meta["done"] = not meta["missing_or_failed"]
@@ -387,7 +390,7 @@ def process(ctx, proc: Dict, first: bool, csv_path: str, c3dgs, run_oom, start_b
     settled. ``proc["device"]`` forces the images' device (E5p's second process: the CPU); None takes the scene's."""
     meta, args, steps, scene, save = ctx.meta, ctx.args, ctx.steps, ctx.scene, ctx.save
     j, seed = proc["j"], proc["seed"]
-    rows = e5.process_rows(proc)
+    rows = e5.process_rows(proc, args.ogc_impl)
     key = e5.process_key(j, seed)
     pr = meta["processes"].setdefault(key, {"attempts": [], "settled": False, "j": j, "seed": seed, "rows": rows,
                                             "forced_device": proc.get("device")})
@@ -412,7 +415,7 @@ def process(ctx, proc: Dict, first: bool, csv_path: str, c3dgs, run_oom, start_b
         out = os.path.join(args.work_dir, name)
         cfg_path = os.path.join(args.work_dir, f"{name}_fork.json")
         report_path = os.path.join(args.work_dir, f"{name}_fork_report.json")
-        e0.write_json(cfg_path, {"e5": True, "rows": list(e5.ROWS), "j": j, "threshold": e5.threshold(j),
+        e0.write_json(cfg_path, {"e5": True, "rows": ["c3dgs"] + list(e5.fork_rows(args.ogc_impl)), "j": j, "threshold": e5.threshold(j),
                                  "m_path": full_cache, "rows_dir": os.path.join(out, "rows"), "report_path": report_path,
                                  "seed": seed, "ogc": {"clone": args.ogc_clone, "commit": og.OGC_COMMIT,
                                                        "impl": args.ogc_impl, "device": args.ogc_device,
@@ -442,7 +445,8 @@ def process(ctx, proc: Dict, first: bool, csv_path: str, c3dgs, run_oom, start_b
         pr["attempts"].append(att)
         pr.setdefault("measured", {})[str(k)] = measured
         pr.setdefault("fork", {})[str(k)] = {x: fr.get(x) for x in ("n_colour_quantized", "quantizer_at_colour_vq",
-                                                                    "threshold", "j", "copy")}
+                                                                    "threshold", "j", "copy", "ogc_impl",
+                                                                    "ours_vs_ogc_gram")}
         act = e5.next_action(pr["attempts"], first)
         att["next"] = act
         save()
@@ -473,6 +477,41 @@ def process(ctx, proc: Dict, first: bool, csv_path: str, c3dgs, run_oom, start_b
 
 
 # ------------------------------------------------------------------------------ the summary
+def ours_vs_ogc_gram(meta: Dict, procs: Dict, get) -> Dict:
+    """Amendment 18 d, per process: the fork's label agreement and codebook difference, the two ``.npz`` files' bytes
+    per array, and their protocol ii PSNR (the j = 0 difference with its SE_noise is in ``differences_j0``)."""
+    if meta.get("ogc_source") == "derived":
+        return {"available": False, "reason": "ogc_source derived: ogc_gram is computed by ogc_derived itself "
+                                              "(Amendment 18 e), so ogc_gram_ours is not computed"}
+    out = {}
+    for key, pr in procs.items():
+        fk = (pr.get("fork") or {}).get(str(pr.get("final_attempt", len(pr.get("attempts", [])) - 1))) or {}
+        a, b = get(pr["j"], pr["seed"], e5.OURS_ROW), get(pr["j"], pr["seed"], "ogc_gram")
+        arr = lambda r: json.loads(r["arrays"]) if r and r.get("arrays") else None  # noqa: E731
+        out[key] = {"tables": fk.get("ours_vs_ogc_gram"), "array_bytes": e5.array_bytes(arr(a), arr(b)),
+                    "npz_bytes": {"ours": _f(a.get("npz_bytes")) if a else None, "ogc": _f(b.get("npz_bytes")) if b else None},
+                    "PSNR_ii": {"ours": _f(a.get("PSNR_ii")) if a else None, "ogc": _f(b.get("PSNR_ii")) if b else None}}
+    return {"available": True, "per_process": out}
+
+
+def ogc_gram_vs_e4q(row: Optional[Dict], scene: str) -> Dict:
+    """Amendment 18 d, report only: this run's ``ogc_gram`` at j = 0, seed 0, against E4q's ``ogc`` row there
+    (``kaggle/gn_e4q/gn4q/``). Not expected to match exactly: the metric is recomputed, and the image differs."""
+    path = os.path.join(os.path.dirname(HERE), "kaggle", "gn_e4q", "gn4q", f"gn4q_results_{scene}.csv")
+    if not os.path.exists(path):
+        return {"available": False, "reason": f"no {os.path.relpath(path, os.path.dirname(HERE))}"}
+    ref = next((r for r in csv.DictReader(open(path, newline="")) if r["config"] == e5.E4Q_OGC_CONFIG), None)
+    if ref is None or row is None:
+        return {"available": False, "reason": "E4q's p0_ogc row or this run's ogc_gram is missing"}
+    out = {}
+    for col in e5.E4Q_COMPARE:
+        a, b = _f(row.get(col)), _f(ref.get(col))
+        out[col] = {"e5p": a, "e4q": b, "e5p_minus_e4q": None if a is None or b is None else a - b}
+    return {"available": True, "e4q_config": e5.E4Q_OGC_CONFIG, "values": out,
+            "note": "report only (Amendment 18 d): the metric is recomputed and not bit-reproducible on the GPU, and "
+                    "the Kaggle image differs"}
+
+
 def summarize(out_dir: str, scenes=tuple(SCENES)) -> Dict:
     """``gn5p_summary.json``, no verdict (Amendment 17 c): per process every row; at j = 0 every difference of
     ``e5.DIFFERENCES`` over the two processes (protocol ii, C3DGS's evaluation, bytes, fidelity per angle as the mean
@@ -508,7 +547,7 @@ def summarize(out_dir: str, scenes=tuple(SCENES)) -> Dict:
 
         cols = ("PSNR_ii", "SSIM_ii", "LPIPS_ii", "c3dgs_PSNR", "npz_bytes")
         diffs = {name: {col: e5.components(diff(a, b, col), scene) for col in cols}
-                 for name, (a, b) in {**e5.DIFFERENCES, **e5.FT_DIFFERENCES}.items()}
+                 for name, (a, b) in {**e5.DIFFERENCES, **e5.FT_DIFFERENCES, **e5.SECONDARY_DIFFERENCES}.items()}
         fid = {}
         for name, (a, b) in e5.DIFFERENCES.items():
             fid[name] = {}
@@ -545,7 +584,10 @@ def summarize(out_dir: str, scenes=tuple(SCENES)) -> Dict:
                                           "row_rss_start_bytes", "row_rss_peak_bytes", "row_host_bytes_metric_copy")}
                     for c, v in per_row.items() if v.get("ogc_metric") and not c.endswith(e5.FT_SUFFIX)}
         procs = meta.get("processes") or {}
+        ours = ours_vs_ogc_gram(meta, procs, get)
+        e4q_cmp = ogc_gram_vs_e4q(get(0, 0, "ogc_gram"), scene)
         out["scenes"][scene] = {
+            "ogc_source": meta.get("ogc_source"), "ogc_gram_ours_vs_ogc_gram": ours, "ogc_gram_vs_e4q_ogc": e4q_cmp,
             "rows": rows, "per_row": per_row, "differences_j0": diffs, "fidelity_per_angle_j0": fid,
             "bd_points": points, "bd": bd, "primaries_values": primaries,
             "c3dgs_eval_per_process": {k: [a.get("c3dgs_eval") for a in v.get("attempts", [])] for k, v in procs.items()},

@@ -11,6 +11,9 @@ colour call from the same quantizer input, quantized set and 16 x 16 metric:
   (``"plain"``, ``"scalar"``, ``"gram"``), ``lam`` 1e-3, 15 iterations, seed 0, chunk 25,000 (``bench/gn/e5.py``); with
   the config's ``ogc.impl`` "derived" (no verified copy, Amendment 18 e), ``bench/gn/ogc_derived.gram_kmeans_ours``
   computes them with the same settings, and each row records its ``impl``;
+- ``ogc_gram_ours`` (Amendment 18 d, report only): ``gram_kmeans_ours`` with ``ogc_gram``'s settings, from the same
+  inputs and metric; when both exist, ``fork.ours_vs_ogc_gram`` holds their label agreement and the codebooks' largest
+  difference;
 - fine-tuning of the rows the config lists (``c3dgs`` and ``ogc_gram`` in the j = 0 processes), each from its own table.
 
 Also recorded: every row's table range against its int8 grid and the quantizer state at every save (E4q's); each OGC
@@ -86,7 +89,7 @@ class E5Hooks(e4p_hooks.ForkHooks):
         for row in self.fork_rows:
             rec = fr["rows"].setdefault(row, {"row": row})
             metric = e5.ROW_METRIC[row]
-            ours = impl == "derived"
+            ours = impl == "derived" or row == e5.OURS_ROW
             try:
                 with self.cost(row) as c:
                     if ours:
@@ -105,5 +108,8 @@ class E5Hooks(e4p_hooks.ForkHooks):
                 self._row_error(row, e)
             self.flush()
         del M_rows
+        if e5.OURS_ROW in self.tables and "ogc_gram" in self.tables:  # Amendment 18 d
+            (Ca, La), (Cb, Lb) = self.tables[e5.OURS_ROW], self.tables["ogc_gram"]
+            fr["ours_vs_ogc_gram"] = e5.compare_tables(Ca, La, Cb, Lb, K)
         fr["phase"] = "rows_computed"
         self.flush()

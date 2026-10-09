@@ -4258,7 +4258,9 @@ def test_e5_rows_processes_and_names():
     assert [(p["j"], p["seed"], p["device"], p["finetune"]) for p in e5.E5P_PROCESSES] == [
         (0, 0, None, True), (0, 1, "cpu", True), (-1, 0, None, False), (1, 0, None, False)]
     w = e5.wanted_configs()
-    assert len(w) == 2 * 6 + 2 * 4 and "p1_ogc_gram_ft" in w and "j-1_p0_ogc_plain" in w and "j+1_p0_c3dgs_ft" not in w
+    # Amendment 18 d adds ogc_gram_ours to every process (not fine-tuned)
+    assert len(w) == 2 * 7 + 2 * 5 and "p1_ogc_gram_ft" in w and "j-1_p0_ogc_plain" in w and "j+1_p0_c3dgs_ft" not in w
+    assert "j+1_p0_ogc_gram_ours" in w and "p0_ogc_gram_ours_ft" not in w
     assert e5.process_key(0, 1) == "j0_p1" and e5.process_key(-1, 0) == "j-1_p0"
     assert e5.threshold(1) == pytest.approx(1.8e-6) and e5.threshold(-1) == pytest.approx(0.2e-6)
 
@@ -4547,3 +4549,36 @@ def test_gram_kmeans_ours_modes_and_layout():
         C, L, info = od.gram_kmeans_ours(x, M, 8, metric=metric, chunk=50)
         assert C.shape == (8, 48) and L.shape == (120,) and int(L.max()) < 8 and L.dtype == torch.long
         assert (info["host_bytes_metric_copy"] > 0) == (metric != "gram") and len(info["reseeded_per_iteration"]) == 15
+
+
+def test_e5_ogc_gram_ours_row_and_its_comparisons():
+    """Amendment 18 d: ogc_gram_ours is computed beside OGC's rows in every process when they come from their code, not
+    when they are ogc_derived's (e); it is not fine-tuned and enters no BD pair or primary. Its comparisons: labels and
+    codebooks, per-array bytes, the j = 0 difference; and E5p's ogc_gram against E4q's p0_ogc (report only)."""
+    import e5
+    import gn_e5p_scene as job
+
+    assert e5.fork_rows("ogc") == ("ogc_plain", "ogc_scalar", "ogc_gram", "ogc_gram_ours")
+    assert e5.fork_rows("derived") == e5.OGC_ROWS and e5.ROW_METRIC["ogc_gram_ours"] == "gram"
+    with pytest.raises(ValueError):
+        e5.fork_rows("theirs")
+    p0, p2 = e5.E5P_PROCESSES[0], e5.E5P_PROCESSES[2]
+    assert e5.process_rows(p0) == ["c3dgs", "ogc_plain", "ogc_scalar", "ogc_gram", "ogc_gram_ours", "c3dgs_ft", "ogc_gram_ft"]
+    assert e5.process_rows(p2, "derived") == ["c3dgs", "ogc_plain", "ogc_scalar", "ogc_gram"]
+    assert len(e5.wanted_configs()) == 2 * 7 + 2 * 5 and len(e5.wanted_configs(impl="derived")) == 2 * 6 + 2 * 4
+    assert all("ogc_gram_ours" not in p for p in e5.bd_pairs()) and "ogc_gram_ours" not in json.dumps(e5.PRIMARY_PAIRS)
+    assert e5.impl_of("url") == e5.impl_of("dataset") == "ogc" and e5.impl_of("derived") == "derived"
+    C = torch.arange(12.0).reshape(3, 4)
+    c = e5.compare_tables(C, torch.tensor([0, 1, 2, 2]), C + 0.5 * (C > 10), torch.tensor([0, 1, 2, 1]), 3)
+    assert c["codebook_max_abs_diff"] == 0.5 and not c["codebook_equal"] and c["n_equal"] == 3 and not c["labels_equal"]
+    assert e5.compare_tables(C, torch.tensor([1]), C, torch.tensor([1]), 3)["codebook_equal"]
+    ab = e5.array_bytes({"feature_indices": {"compressed_bytes": 10}}, {"feature_indices": {"compressed_bytes": 7},
+                                                                         "features": {"compressed_bytes": 3}})
+    assert ab["feature_indices"]["ours_minus_ogc"] == 3 and ab["features"]["ours"] is None
+    row = {"npz_bytes": "14350149", "PSNR_ii": "21.0", "index_entropy_bits": "", "distinct_indices": "1",
+           "codebook_entropy_bits": "1", "codebook_distinct": "1", "n_colour_quantized": "803076"}
+    cmp = job.ogc_gram_vs_e4q(row, "train")
+    assert cmp["available"] and cmp["values"]["npz_bytes"]["e5p_minus_e4q"] == 0.0
+    assert cmp["values"]["n_colour_quantized"]["e4q"] == 803076 and cmp["values"]["index_entropy_bits"]["e5p"] is None
+    assert not job.ogc_gram_vs_e4q(None, "train")["available"]
+    assert not job.ours_vs_ogc_gram({"ogc_source": "derived"}, {}, None)["available"]

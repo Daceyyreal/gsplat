@@ -7,6 +7,7 @@ inside C3DGS. GN-VQ is retired from any gate (Amendment 17 a) and runs in neithe
 - fine-tuning (b, c): ``c3dgs`` and ``ogc_gram``, 5,000 iterations, in each j = 0 process;
 - E5p's processes (c), on train: j = 0 seeded 0 with the images on the scene's device; j = 0 seeded 1 with the images
   forced onto the CPU (it exercises e.2's evaluation fix); j = -1 and j = +1 seeded 0;
+- ``ogc_gram_ours`` (Amendment 18 d): our derived implementation beside ``ogc_gram`` in every process, report only;
 - OGC's source (Amendment 18 c, e): the URL, then the private dataset, else ``derived``; ``impl_of``;
 - the one status rule: a row is ``ok`` when protocol ii measured it and its process's checks held. C3DGS's own
   evaluation is recorded beside it and never sets the status;
@@ -26,7 +27,10 @@ import g2
 ROWS = ("c3dgs", "ogc_plain", "ogc_scalar", "ogc_gram")
 OGC_ROWS = ROWS[1:]
 OGC_METRIC = {"ogc_plain": "plain", "ogc_scalar": "scalar", "ogc_gram": "gram"}  # vq.py:22-29 at 49ccae72
-ROW_METRIC = dict(OGC_METRIC)  # every row computed at the colour call, and its metric
+# Amendment 18 d: our derived implementation of OGC's VQ, a secondary row (report only, not fine-tuned), in every process
+# where OGC's rows come from their code; it enters no primary, no BD pair and no rule
+OURS_ROW = "ogc_gram_ours"
+ROW_METRIC = {**OGC_METRIC, OURS_ROW: "gram"}  # every row computed at the colour call, and its metric
 # Amendment 18 c, e: where OGC's rows come from ("ogc": their code from a verified copy; "derived": bench/gn/ogc_derived)
 SOURCES = ("url", "dataset", "derived")
 IMPLS = ("ogc", "derived")
@@ -64,6 +68,12 @@ DIFFERENCES = {
 }
 FT_DIFFERENCES = {"ogc_gram_ft_minus_c3dgs_ft": ("ogc_gram_ft", "c3dgs_ft")}
 PRIMARY_PAIRS = {"P1": ("ogc_gram", "c3dgs"), "P2": ("ogc_gram", "ogc_scalar")}
+# Amendment 18 d (report only): ours against theirs, paired at j = 0 within each process, with its SE_noise
+SECONDARY_DIFFERENCES = {"ogc_gram_ours_minus_ogc_gram": (OURS_ROW, "ogc_gram")}
+# Amendment 18 d (report only): E5p's ogc_gram (j = 0, seed 0) against E4q's train ogc row at j = 0
+E4Q_OGC_CONFIG = "p0_ogc"
+E4Q_COMPARE = ("npz_bytes", "index_entropy_bits", "distinct_indices", "codebook_entropy_bits", "codebook_distinct",
+               "n_colour_quantized", "PSNR_ii")
 
 
 def ft_name(row: str) -> str:
@@ -87,13 +97,22 @@ def process_key(j: int, seed: int) -> str:
     return f"{point_name(j)}_p{seed}"
 
 
-def process_rows(proc: Dict) -> List[str]:
-    """The rows one process writes: the four, then the fine-tuned ones where it fine-tunes."""
-    return list(ROWS) + ([ft_name(r) for r in FT_ROWS] if proc.get("finetune") else [])
+def fork_rows(impl: str = "ogc") -> Tuple[str, ...]:
+    """The rows computed at the colour call: OGC's three, then ``ogc_gram_ours`` unless OGC's rows are themselves
+    ``ogc_derived``'s (Amendment 18 d, e: it would duplicate ``ogc_gram``)."""
+    if impl not in IMPLS:
+        raise ValueError(f"{impl!r} is not one of {IMPLS}")
+    return OGC_ROWS + ((OURS_ROW,) if impl == "ogc" else ())
 
 
-def wanted_configs(processes: Sequence[Dict] = E5P_PROCESSES) -> List[str]:
-    return [config_name(p["j"], p["seed"], r) for p in processes for r in process_rows(p)]
+def process_rows(proc: Dict, impl: str = "ogc") -> List[str]:
+    """The rows one process writes: the four, ``ogc_gram_ours`` (``fork_rows``), then the fine-tuned ones where it
+    fine-tunes."""
+    return ["c3dgs"] + list(fork_rows(impl)) + ([ft_name(r) for r in FT_ROWS] if proc.get("finetune") else [])
+
+
+def wanted_configs(processes: Sequence[Dict] = E5P_PROCESSES, impl: str = "ogc") -> List[str]:
+    return [config_name(p["j"], p["seed"], r) for p in processes for r in process_rows(p, impl)]
 
 
 # ------------------------------------------------------------------------------ the one status rule
@@ -163,3 +182,24 @@ def next_action(attempts: List[Dict], first_process: bool) -> Dict:
     """E4q's (Amendment 15 d's memory rule): a retry on the CPU after running out of GPU memory; a drop if the scene's
     first process runs out of memory on the CPU before any of its results; otherwise done."""
     return e4q.next_action(attempts, first_process)
+
+
+# ------------------------------------------------------------------------------ Amendment 18 d's comparisons
+def compare_tables(C_ours, L_ours, C_ogc, L_ogc, K: int) -> Dict:
+    """``ogc_gram_ours`` against ``ogc_gram`` in one process: label agreement, and the two float codebooks' largest
+    absolute difference (before C3DGS's int8 table)."""
+    d = (C_ours.detach().float().cpu() - C_ogc.detach().float().cpu()).abs()
+    return {**e4q.labels_agreement(L_ours, L_ogc, K), "codebook_max_abs_diff": float(d.max()) if d.numel() else None,
+            "codebook_equal": bool(d.numel() and float(d.max()) == 0.0),
+            "labels_equal": bool(L_ours.shape == L_ogc.shape and bool((L_ours.cpu().long() == L_ogc.cpu().long()).all()))}
+
+
+def array_bytes(ours: Optional[Dict], ogc: Optional[Dict]) -> Dict:
+    """Per array of the two ``.npz`` files (``e4p.npz_stats``'s ``arrays``): the compressed bytes of each, and ours
+    minus theirs."""
+    ours, ogc = ours or {}, ogc or {}
+    out = {}
+    for name in sorted(set(ours) | set(ogc)):
+        a, b = (ours.get(name) or {}).get("compressed_bytes"), (ogc.get(name) or {}).get("compressed_bytes")
+        out[name] = {"ours": a, "ogc": b, "ours_minus_ogc": None if a is None or b is None else a - b}
+    return out
