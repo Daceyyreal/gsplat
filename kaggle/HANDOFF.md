@@ -37,8 +37,10 @@ on 2026-10-08 and produced no data:** OGC's repository was unavailable (HTTP 404
 its bundle is committed data only (`kaggle/gn_e5p/attempt1/gn5p/`, `a56a0bcf`). **Amendment 18** (`f13193cb`) records
 it, the Kaggle image change, OGC's source chain (the URL, then the private Kaggle dataset "E5p OGC source 49ccae72",
 else our derived code), and a report-only row `ogc_gram_ours`; the licence-notice commit is `459f7318`, and E5p
-attempt 2 is built (see "Amendment 18 and E5p attempt 2 (2026-10-09)" below). **Next: run E5p attempt 2.** No E5p or E5
-data exists.
+attempt 2 **ran on 2026-10-09; its bundle is committed data only** (`kaggle/gn_e5p/attempt2/gn5p/`, `8eadc81e`; see
+"Amendment 18 and E5p attempt 2 (2026-10-09)" and "A stale launch of attempt 2" below). Amendment 18 note 1 (`f32c36d1`,
+code `58805307`) fixes the dataset source for a read-only copy owned by another user, and `f428c93f` records only HEAD
+and the tree id of OGC's copy. **Next: Dace reads E5p attempt 2 (FINDINGS section 18 and its checker after that), and decides on Amendment 18 note 2 (drafted, not committed).** No E5 data exists.
 
 ## Context and rules
 
@@ -1527,11 +1529,14 @@ own speed.
 ## E5p notebook (`bench/gn-vq`, `kaggle/gn_e5p_bench.ipynb`, Kaggle title "E5p OGC dissection pilot")
 
 **Attempt 1 ran on 2026-10-08 and produced no data** (`kaggle/gn_e5p/attempt1/gn5p/`, `a56a0bcf`; Amendment 18 a).
-**Attempt 2 is built, not run** (Amendment 17 c, e, h, `b3923bfb`; Amendment 18, `f13193cb`). E5p is a **pilot on
+**Attempt 2: run, bundle committed (`8eadc81e`)** (Amendment 17 c, e, h, `b3923bfb`; Amendment 18, `f13193cb`). E5p is a **pilot on
 train: mechanics and timing, no verdict.** It runs no gate scene and reads none. GN-VQ runs in neither E5p nor E5
 (Amendment 17 a).
 
 **Kaggle steps (attempt 2):**
+
+**Gotcha:** re-import the notebook before every attempt. Its first output must be the `OGC PREFLIGHT` lines; if it
+starts with discover's dict instead, it is a stale notebook: cancel it.
 
 0. **Upload the private dataset once** (Kaggle, Datasets, New Dataset): file `F:\ogc_backups\E5p_ogc_src_wrapped.zip`
    (3,738,955 bytes, SHA-1 `17e3fd7e`; it holds only `ogc-3dgs-49ccae72.zip`, stored, which holds `ogc-3dgs/` with its
@@ -3582,7 +3587,34 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   job records it. The chain's order is unchanged. Commit: `98d109fe`.
 - **Checked:** pytest `bench/gn/test_gn.py` 154 passed (155 after the preflight commit; its dry run in dataset mode with the real wrapper: every stage ok, 330 s) with `GN_OGC_SRC` (a local clone at the pin); the E5p dry run, one mode at a time (`GN_DRYRUN_OGC_MODE`): url (325 s), dataset (309 s), derived (262 s), every stage ok; in url and dataset `ogc_gram_ours` equals `ogc_gram` exactly on the CPU in every process. The estimate: `98d54d6a`.
 
-### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: attempt 1 no data, attempt 2 built, next to run)
+### A stale launch of attempt 2 (2026-10-09, about 18:50)
+
+- **What ran:** attempt 1's notebook cells (built at `bdd7ec55`; the notebook had not been re-imported) against the job
+  code of `27c7731b` (the notebook clones the branch at run time). So attempt 1's `gn5p/` and `gn5p_work/` were
+  restored (no attempt gate), only the first `wheels/` found was kept (`e3p-inria-pilot`'s, torch 2.10 keys), and
+  there was no preflight, no `--ogc_dataset_root` (the chain would have gone URL, then derived), no `--output_root`,
+  no `--ogc_preflight` and no bundle guard; the bundle would have been named `E5p_bundle.zip`.
+- **Dace cancelled it** during the gsplat wheel build, before any row: no data, no bundle, **not counted as an
+  attempt**.
+- **The relaunch with HEAD's notebook (attempt 2):** its preflight printed `url ok` (the chain uses the URL) and
+  `dataset FAIL` ("detected dubious ownership" on the copy Kaggle had unpacked; Amendment 18 note 1). The attempt gate
+  refused attempt 1's `gn5p/` and `gn5p_work/`. Both `wheels/` were merged, but neither held a torch 2.11.0+cu128 key,
+  so the wheel was rebuilt (cost only, 3,922.0 s; `timings.json`).
+- **Attempt 2's bundle** is committed data only (`8eadc81e`). Its `gn5p_meta_train.json` holds OGC's public commit
+  metadata (author, committer, message), which the `cat-file -p HEAD` step logged; it is kept unchanged by the bundle
+  convention, and `f428c93f` stops it for future runs (only HEAD and the tree id are recorded).
+- **Commits after the bundle:** `f32c36d1` (Amendment 18 note 1, alone; pushed after a pytest run with one failure
+  that did not reproduce in three reruns, 155 passed each: a flaky test, not identified; every later commit is gated
+  on pytest's exit code), `58805307` (the note's code, tests and dry-run change), `f428c93f` (HEAD and the tree id
+  only), then this HANDOFF.
+- **Amendment 18 note 1, checked:** pytest `bench/gn/test_gn.py` 160 passed with `GN_OGC_SRC` (5 fail against
+  `27c7731b`'s `e4p_ogc.py`: the tests of the fix); the E5p dry run, one mode at a time: url (402 s), dataset with the
+  zipped wrapper (381 s), dataset with the unpacked copy read-only, as Kaggle gave it (`GN_DRYRUN_OGC_DATASET_ROOT`,
+  kind `dir`; 528 s: cloned from the scratch copy, `scratch_files_n` 83, manifest 166 files, the attached folder
+  unchanged, the scratch copy removed), derived (338 s); every stage ok, and in url and both dataset runs
+  `ogc_gram_ours` equals `ogc_gram` exactly on the CPU in every process.
+
+### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: attempt 1 no data, attempt 2 run, bundle committed)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -3653,8 +3685,20 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - ~~**Run E5p on Kaggle.**~~ **Attempt 1 (2026-10-08): no data** (OGC's repository unavailable; bundle `a56a0bcf`;
   Amendment 18 a).
 - ~~**Amendment 18 and attempt 2's build.**~~ **Done (2026-10-09):** see "Amendment 18 and E5p attempt 2 (2026-10-09)".
-- **Next: run E5p attempt 2** ("E5p OGC dissection pilot"), attaching "E3p INRIA pilot", E5p attempt 1's output (the
-  torch 2.11 wheel) and "E5p OGC source 49ccae72"; see "E5p notebook", with its "After the run" reading order.
+- ~~**Run E5p attempt 2.**~~ **Done (2026-10-09): run, bundle committed (`8eadc81e`)**; the URL verified, every
+  row ok. See "E5p notebook", "After the run".
+- Next: Dace reads E5p attempt 2 (FINDINGS section 18 and its checker after that), and decides on Amendment 18 note 2 (drafted, not committed).
+- **A flaky test:** one pytest run before `f32c36d1` had one failure that three reruns did not reproduce; which test is
+  not known. Watch for it.
+- **E5's wheel:** attach E5p attempt 2's output for `wheels/`, pinned to that version (Kaggle attaches a notebook's
+  latest version by default); attempt 2 builds the torch 2.11.0+cu128 wheel. The E5p output attached to attempt 2 held
+  no torch 2.11 key.
+- **Amendment 18 note 1** (the dataset copy cloned from a scratch copy): the dataset source has not verified on Kaggle;
+  Amendment 18 e's pre-E5 note records it as untested unless a Kaggle preflight shows `dataset ok` before then.
+- **After E5p (latent, not hit):** `attempt_of` in `kaggle/build_gn_e5p_bench.py` (lines 336-341 at `27c7731b`)
+  calls `.get` on whatever `gn5p_attempt.json` holds. Valid JSON that is not an object (a list, a number) raises an
+  uncaught `AttributeError` and stops the restore cell. Only files this notebook writes are read, so it has not
+  happened; fix it with E5's notebook.
 - **Then (Amendment 17):** FINDINGS section 18; any dated note E5p calls for; E5's build (conflicts 7, 8, 11: the Deep
   Blending data path and its stand-in, the seven scenes' constants, the verdict, the multi-session notebook); the
   seven-scene feasibility note (e.3, h); the session-assignment note (e.4); E5.
@@ -3923,4 +3967,5 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   and E4q registered (Amendment 16, `1f0b7e15`); E4q ran (`1d986d1a`, FINDINGS section 17). Amendment 17 (`b3923bfb`)
   retires GN-VQ from any gate and registers E5p and E5, a replication and dissection of OGC inside C3DGS; E5p attempt 1
   produced no data (`a56a0bcf`), Amendment 18 (`f13193cb`) adds OGC's source chain and `ogc_gram_ours`, and attempt 2
-  is built. **Next: run E5p attempt 2.** The rest of E3's design (other codecs, INRIA checkpoints) is not written yet.
+  ran (bundle `8eadc81e`). **Next: Dace reads E5p attempt 2; then FINDINGS section 18.** The rest of E3's design (other
+  codecs, INRIA checkpoints) is not written yet.
