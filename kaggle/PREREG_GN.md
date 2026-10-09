@@ -2861,3 +2861,38 @@ and its rows, points, metrics and bars are unchanged except as stated here.
 - E4p and E4q stand as run, and FINDINGS sections 16 and 17 as written.
 - GN-VQ stays retired (Amendment 17 a), and Amendment 11 b's frozen method stays frozen. The licence-notice commit
   (`459f7318`) changed comments and one docstring in the frozen modules, and the code is unchanged.
+
+### Amendment 18 note 1 (2026-10-09, during E5p attempt 2's session and before any E5 code): the dataset copy on a read-only input owned by another user
+
+A bug fix, by Amendment 17 c (bug fixes by a dated note before any E5 code). It changes code only: no row, point,
+metric or bar of Amendments 17 and 18 changes, and neither does the chain's order or its verification. (Named
+"Amendment 18 note 1" because Amendment 17's own notes are also numbered "Note 1", "Note 2".)
+
+- **The evidence:** attempt 2's preflight (step 1b, commit `27c7731b`) printed
+  `OGC PREFLIGHT dataset FAIL ... git clone of the attached copy exited 128: fatal: detected dubious ownership in
+  repository at '/kaggle/input/datasets/daceyy/e5p-ogc-source-49ccae72/ogc-3dgs-49ccae72/ogc-3dgs/.git'`. Kaggle
+  had unpacked both the uploaded wrapper and the inner zip, and the copy's `.git` survived. Reading the copy's HEAD and
+  tree with `git -c safe.directory=* -C <copy>` worked, and both matched the pins: the clone is reached only after that
+  check (`kaggle/e4p_ogc.py`, `_try_dataset`). The local clone, `git -c safe.directory=* clone ... <copy> <dest>`,
+  with the same flag, failed with "detected dubious ownership". The URL verified, and the chain used it. Kaggle's git
+  version is not recorded (`gn5p_env.json` has no git field).
+- **The mechanism (inferred, not verified on Kaggle):** git's documentation for `git clone --local`, the default
+  when the source is a local path, says the option does not work with repositories owned by other users and that
+  `--no-local` must be given (`git-clone` documentation, read in Git 2.54's local copy). `safe.directory` is honoured
+  only in protected configuration, the system, global and command scopes (`git-config`, "Protected configuration"),
+  which `-c` is. Why the command-scope setting did not lift the clone's refusal, for instance because the local
+  transport does not pass command-line configuration to its `upload-pack` child (`local_repo_env` in git's
+  `environment.c`), is not verified: no git source was checked.
+- **The fix:** an unpacked copy is first copied into the job's own scratch directory (`<ogc_dir>_dataset` in the job,
+  `<work>/dataset<i>_x` in the preflight, both under `/tmp` and never under an output directory, which Amendment 18 c
+  already refuses), with its directories made writable. HEAD, tree and the clone then run on that copy, which the job
+  owns, as they already did for a zip. No git command names the attached files. The scratch copy is removed after the
+  attempt. Its working files' hashes join the bundle guard's file list (the manifest, outside the output) beside the
+  clone's, and only their count stays in the serialized records (the meta and the preflight file).
+- **Not yet verified on Kaggle:** the dataset source has not verified on Kaggle, and the fix is tested only through
+  the git commands it issues (ownership by another user cannot be set up in the tests without root). Amendment 18 e's
+  pre-E5 note records the dataset source as untested on Kaggle unless a Kaggle preflight shows `dataset ok` before
+  then.
+- **Not changed:** the attached dataset, the chain (URL, then dataset, else derived), the verification (HEAD
+  `49ccae72`, tree `9feebced`, a clean clone), `ogc_gram_ours`, the estimate. E5p attempt 2 runs with `27c7731b`, where
+  the URL verified; the fix applies to whichever run comes next.
