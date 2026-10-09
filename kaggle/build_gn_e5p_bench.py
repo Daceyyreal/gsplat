@@ -256,6 +256,8 @@ def ogc_matches(paths, ogc_root=None):
         for f in j.get("files", []):
             names.update({f["path"], os.path.basename(f["path"])})
             hashes.update({f["sha1"], f["git_blob"]})
+    # an empty file is no one's content (OGC has an empty tests/__init__.py): its hashes never refuse a bundle
+    hashes -= {hashlib.sha1(b"").hexdigest(), hashlib.sha1(b"blob 0\0").hexdigest()}
     copies += [os.path.realpath(d) for d in glob.glob(os.path.join(root, "ogc_*")) if os.path.isdir(d)]
     bad = []
     for path in paths:

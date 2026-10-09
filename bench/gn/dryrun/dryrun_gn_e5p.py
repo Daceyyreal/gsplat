@@ -721,6 +721,8 @@ if IMPL == "ogc":  # the guard (Amendment 18 c): nothing of OGC's in the bundle;
     except RuntimeError as e:
         assert "BUNDLE GUARD" in str(e) and "content is one of OGC's files" in str(e)
     assert not os.path.exists(rns["BUNDLE"])
+    open(planted, "w").close()  # an empty file matches OGC's empty tests/__init__.py by hash only: not refused
+    assert rns["ogc_matches"]([planted]) == []
     os.remove(planted)
     rns["write_bundle"](rns["GN5P_OUT"], rns["BUNDLE"])
 rns["JOB_FAILED"] = ["gn_e5p_train"]
