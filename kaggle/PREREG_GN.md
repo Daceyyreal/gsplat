@@ -2742,3 +2742,122 @@ rate and the upper end scaled:
 - **No Deep Blending data is read before E5:** no member of `tandt_db.zip`'s `db/` folder is fetched, and drjohnson's
   and playroom's INRIA members are read no further than Amendment 15 note i did.
 - **This amendment's own dated notes** are titled "Note 1", "Note 2" and so on, since i is a rule here.
+
+## Amendment 18 (2026-10-09, after E5p attempt 1, which produced no data, and before E5p attempt 2 or any E5 code)
+
+E5p attempt 1 ran on Kaggle on 2026-10-08 ("E5p OGC dissection pilot") and stopped before any row. Its bundle is
+committed unchanged in `kaggle/gn_e5p/attempt1/gn5p/` (`a56a0bcf`). This amendment records why (a), the Kaggle image
+change (b), and where OGC's code comes from and how it is verified (c). It also adds one report-only row, `ogc_gram_ours`
+(d), sets a fallback if no source of OGC's code verifies (e), and states what is unchanged (f). Amendment 17
+and its rows, points, metrics and bars are unchanged except as stated here.
+
+### a. E5p attempt 1: no data
+
+- **What failed:** cloning OGC's repository (`github.com/moholo-founder/ogc-3dgs`). The repository was unavailable
+  (HTTP 404) around 2026-10-08, so the clone into `/tmp/ogc_train` failed. The job stopped by Amendment 15 a's rule
+  ("no row runs") after the scene download and before the harness phase. It exited with code 3 after 240.0 s. No
+  protocol ii value, `.npz`, render or metric of train exists from attempt 1.
+- **A reporting bug:** `kaggle/e4p_ogc.ensure_clone` kept `git clone`'s return code and output only in its own record.
+  When the clone failed, the next check (`git rev-parse HEAD` in a directory that did not exist) raised `OgcMismatch`
+  with that check's message, and the record was lost. So the bundle shows "fatal: cannot change to '/tmp/ogc_train'"
+  under "OGC CLONE MISMATCH", not git's own reason the clone failed. The fix (code, after this amendment): a failed
+  clone raises with git's output, and the record goes into the meta file whether or not the check passes.
+- **Why the dry run did not catch it:** E5p's dry run passed only with `GN_DRYRUN_OGC_SRC` pointing at a local clone.
+  It never cloned from the URL while the repository was down.
+- **Attempt 2** reruns E5p whole, as c of Amendment 17 defines it, with c to e here. It restores only `wheels/` (the
+  gsplat wheel built in attempt 1) and `e3p_inria/` (E3p's pinned INRIA members) from attempt 1's output. Nothing of
+  attempt 1's job is reused. Bundle `E5p_bundle_2.zip`, arcname `gn5p/`. It attaches "E3p INRIA pilot", attempt 1's
+  output and "E5p OGC source 49ccae72".
+
+### b. The Kaggle image changed
+
+- **Attempt 1's image:** Python 3.13.15, torch 2.11.0+cu128 (CUDA 12.8), cuDNN 91900, NVIDIA driver 580.178.04, two
+  Tesla T4s (`gn5p_env.json`).
+- **E3q to E4q ran on:** Python 3.12.13, torch 2.10.0+cu128, cuDNN 91002, with the same driver.
+- **The gsplat wheel was rebuilt** for the new torch (key `33734f894b0a-95f8de51-torch2.11.0_cu128-sm7.5`, not restored;
+  build 3,974.2 s, install 4,119.8 s in all). Attempt 2 restores it (a).
+- **C3DGS's build:** `diff-gaussian-rasterization` failed on a missing fixed-width integer type. It was retried once with
+  `<cstdint>` force-included, Amendment 13 b's fallback, which no earlier build needed (E3q to E4q). The source was not
+  edited, and the build and imports then passed (`gn5p_c3dgs_build.json`). This is recorded as a deviation for every
+  run on this image.
+- **No primary compares across images:** E5's P1 and P2 and their `SE_noise` compare rows inside one forked process
+  (Amendment 17 b, d). Every session records its image (`*_env.json`), and any comparison across sessions or with
+  E4p or E4q is reported with both images named.
+
+### c. OGC's code: source chain and verification
+
+- **The chain,** tried in this order by every session before any row; the first source that verifies is used:
+  1. **the original URL,** `github.com/moholo-founder/ogc-3dgs`, cloned at run time;
+  2. **the attached private Kaggle dataset "E5p OGC source 49ccae72":** a zip of our own copy, cloned from the URL
+     earlier and restored from its own git pack (with its `.git`). It is private, it is never made public, and it is
+     used for research only, as the author confirmed (below). The session finds `ogc-3dgs-49ccae72.zip` under
+     `/kaggle/input/*/`, extracts it outside the output directory, and clones the extracted repository into the
+     working copy with `core.autocrlf` off. The zip's own working files are not used: they were written with
+     Windows line endings and without executable bits, so they do not hash to the tree;
+  3. **else (e):** OGC's rows are computed by `ogc_derived`.
+- **Verification, for each source:** HEAD's tree == `9feebced57d11c6204077baa717528952be811ce`, plus
+  HEAD == `49ccae72e75eec9877354ed72074827531f7fd79` when a `.git` exists (both do for 1 and 2). For 1 and 2 the
+  working copy must also be clean (`git status --porcelain` empty). This extends Amendment 15 a's commit check. A
+  source that fails verification is not used, and the chain moves on.
+- **Logged:** the bundle's meta records `ogc_source` (`url`, `dataset` or `derived`) and each attempted source's
+  outcome, hashes and git output, the failures included.
+- **Never in the bundle or the repository:** nothing of OGC's is committed or bundled. Before zipping, the bundle step
+  fails if any file matches a path or a SHA-1 of OGC's tree, using a list made at clone time. OGC's working copies
+  (`/tmp/ogc_*`) and the extracted dataset are never under the output directory.
+- **2026-10-09:** the repository is reachable again at the same commit. From this project's machine, `git ls-remote`
+  gave HEAD = `refs/heads/main` = `49ccae72…`, and a fresh clone's HEAD and tree matched the two hashes above. Our
+  restored copy has the same commit and tree, and its files are identical to the fresh clone's. Its zip (`.git`
+  included) verifies too: HEAD and tree match, `git fsck` passes, and a clone of it is clean with LF files.
+- **Use:** the author confirmed by email (2026-10-09) that the code is available for research purposes. The author
+  also states that the method is patented for commercial use. This study is noncommercial research. Our code derived
+  from theirs carries PolyForm Noncommercial 1.0.0's notice and that statement (`bench/gn/ogc_derived.py`, `459f7318`).
+
+### d. A new secondary row: `ogc_gram_ours` (report only)
+
+- **What it is:** our implementation of OGC's VQ, derived from their code (`bench/gn/ogc_derived.py`). It has their
+  trace-weighted draw, the expanded float32 assignment cost, the float64 ridge-to-the-mean update, their reseeding of
+  empty clusters and the final float assignment. This is the arithmetic that `bench/gn/test_gn.py` checks bit-identical
+  to their `gram_kmeans` on the CPU (E4q's `lad_all` with OGC's arithmetic).
+- **Settings, as `ogc_gram`'s:** metric `"gram"`, `lam` = 1e-3, 15 iterations, seed 0, chunk 25,000, on the process's
+  device.
+- **Where:** in every E5p and E5 process, computed in the same forked process at the same colour call as `ogc_gram`.
+  It uses the same inputs (`X`, the same `G` object) and the same metric. It is saved before any row is evaluated and
+  evaluated like every row (C3DGS's evaluation and protocol ii). It is not fine-tuned. Amendment 17 h's host-RSS
+  record covers it.
+- **Reported, per process, `ogc_gram_ours` against `ogc_gram`:**
+  - label agreement: the fraction of colour-quantized splats with the same label;
+  - codebook max abs diff: over the two float codebooks [4,096, 48], before C3DGS's int8 table;
+  - colour-array bytes: each colour array of the two `.npz` files, and the `.npz` totals;
+  - protocol ii PSNR difference: at j = 0, `ogc_gram_ours` minus `ogc_gram` in each of the two j = 0 processes, with
+    `SE_noise` for this pair computed as in Amendment 17 d (per scene in E5p; per scene and over the scenes in E5).
+- **Also report only:** E5p's `ogc_gram` (process 1) against E4q's train `ogc` row at j = 0 (`p0_ogc`). This compares
+  the `.npz` bytes, index entropy and distinct indices, codebook entropy and distinct entries, the colour-quantized
+  count, and PSNR_ii. An exact match is not expected: the metric is recomputed, and it is not bit-reproducible on the
+  GPU, as E4p against E4q shows. The images also differ (b).
+- **No bar, and no rule uses it.** `ogc_gram_ours` does not enter P1, P2, the secondaries of Amendment 17 d or E5's
+  verdict.
+- **Cost:** one more OGC-sized row per process. `bench/gn/e5_estimate.py` is rerun with it, and the new E5p and E5
+  totals are reported before attempt 2. Amendment 17 e.4's session-assignment note uses them.
+
+### e. If no source verifies
+
+- **At run time,** when neither the URL nor the dataset verifies (c), the chain ends at `derived`. OGC's rows
+  (`ogc_plain`, `ogc_scalar`, `ogc_gram`) are computed by `ogc_derived`. They keep their names, and an `impl` column
+  records `ogc` or `ogc_derived` per row. In such a process, `ogc_gram_ours` (d) would duplicate `ogc_gram`, so it is
+  not computed, and d's comparison is reported as unavailable.
+- **The validation of `ogc_derived`** is E5p's within-process comparison (d). For `"scalar"` and `"plain"`,
+  `ogc_derived` passes `tr(G_i) / 16 * I` and `I` through its `"gram"` path, as their code does (`vq.py:22-29`).
+  Amendment 17's test with their clone shows that this gives their modes' labels on small cases. **Only the `"gram"`
+  path is validated at full scale** (E5p, d). The `"plain"` and `"scalar"` rows by `ogc_derived` rest on the
+  small-case test and on that path.
+- **Before E5:** a dated note, written before any E5 code runs, states which sources E5 may use. It gives the hashes
+  checked and E5p's measures of d, and whether `derived` may compute E5's OGC rows. If the note does not allow it, an
+  E5 session whose chain ends at `derived` stops before any row.
+
+### f. Unchanged
+
+- Amendment 17's rows, points, metrics, primaries, bars and verdict rules; its engineering items e.1 to e.4 and h to
+  j, except that the estimate and the session-assignment note include d's row.
+- E4p and E4q stand as run, and FINDINGS sections 16 and 17 as written.
+- GN-VQ stays retired (Amendment 17 a), and Amendment 11 b's frozen method stays frozen. The licence-notice commit
+  (`459f7318`) changed comments and one docstring in the frozen modules, and the code is unchanged.

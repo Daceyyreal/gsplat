@@ -20,6 +20,14 @@ tables. Page numbers are the printed page numbers, which match the PDF's.
 The repository's `docs/paper.pdf` is not byte-identical to the arXiv PDF (both 22 pages); the arXiv PDF is the one
 cited below. File:line references to OGC's code are to commit `49ccae72`.
 
+- **2026-10-09:** the repository was unavailable (HTTP 404) around 2026-10-08, and E5p attempt 1's clone failed
+  (`kaggle/gn_e5p/attempt1/`). It is available again at the same commit. On 2026-10-09 `git ls-remote` gave HEAD
+  `49ccae72e75eec9877354ed72074827531f7fd79`, and a fresh clone's tree is `9feebced57d11c6204077baa717528952be811ce`,
+  equal to the copy cloned earlier.
+- **2026-10-09:** the author states that the method is patented for commercial use. The author confirmed by email that
+  the code is available for research purposes (paraphrased). The code's licence is unchanged (PolyForm Noncommercial
+  1.0.0).
+
 ## 2. arXiv 2609.28997 (OGC)
 
 ### a. The Gram matrix used in the VQ
