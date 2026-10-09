@@ -4582,3 +4582,14 @@ def test_e5_ogc_gram_ours_row_and_its_comparisons():
     assert cmp["values"]["n_colour_quantized"]["e4q"] == 803076 and cmp["values"]["index_entropy_bits"]["e5p"] is None
     assert not job.ogc_gram_vs_e4q(None, "train")["available"]
     assert not job.ours_vs_ogc_gram({"ogc_source": "derived"}, {}, None)["available"]
+
+
+def test_e5_estimate_with_ogc_gram_ours():
+    """Amendment 18 d: the runtime estimate with one more OGC-sized row per process (ogc_gram_ours: computed, saved,
+    evaluated by C3DGS and decoded like OGC's rows, not fine-tuned); extra_rows 0 is still Amendment 17 g's."""
+    import e5_estimate as est
+
+    a, b = est.estimate(0), est.estimate(1)
+    assert abs(a["e5_gpu_s"][0] - 59_872) < 1.5 and b["extra_rows"] == 1
+    assert [round(x) for x in b["e5p_s"]] == [4832, 5776] and [round(x) for x in b["e5_gpu_s"]] == [66193, 101091]
+    assert all(b["scenes_s"][s][i] > a["scenes_s"][s][i] for s in est.SCENES for i in (0, 1))

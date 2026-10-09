@@ -10,6 +10,9 @@ Method: every part at its measured rate at the lower end, and scaled at the uppe
 - per decoded row ``npz2ply.py`` per million splats, protocol ii and the fidelity renders per million test-view pixels;
 - per scene the fetch at treehill's rate, the download at treehill's to train's time, the runner, the GN pass, note ii.
 Loaded sizes as Amendment 15 note i's table; test views every 8th.
+
+``extra_rows`` (Amendment 18 d): rows computed at the colour call beyond OGC's three, each at OGC's measured rate, saved,
+evaluated by C3DGS and decoded like them, not fine-tuned. 0 reproduces Amendment 17 g; 1 adds ``ogc_gram_ours``.
 """
 import json
 import math
@@ -74,8 +77,8 @@ def units() -> dict:
             "download_s": download, "runner_s": runner, "gn_pass_s": gn, "note_ii_s": note}
 
 
-def scene_s(name: str, end: int, U: dict) -> float:
-    """One scene's job, ``end`` 0 (lower) or 1 (upper), in seconds."""
+def scene_s(name: str, end: int, U: dict, extra_rows: int = 0) -> float:
+    """One scene's job, ``end`` 0 (lower) or 1 (upper), in seconds; ``extra_rows`` more OGC-sized rows per process."""
     n, mb, ncam, w, h = SCENES[name]
     ntest = math.ceil(ncam / 8)
     vmpx = w * h / 1e6
@@ -87,25 +90,29 @@ def scene_s(name: str, end: int, U: dict) -> float:
              + U["note_ii_s"][end] * ((n / 1e6) if end else 1.0))
     decoded = 0
     for nft in PROCESS_FT:
-        rows = (U["c3dgs_vq_s"][end] + 3 * U["ogc_s_per_mq"][end] * nq + 3 * U["save_s_per_msplat"][end] * n / 1e6
-                + 4 * U["c3dgs_eval_s_per_test_mpx"][end] * tmpx)
+        k = 3 + extra_rows
+        rows = (U["c3dgs_vq_s"][end] + k * U["ogc_s_per_mq"][end] * nq + k * U["save_s_per_msplat"][end] * n / 1e6
+                + (k + 1) * U["c3dgs_eval_s_per_test_mpx"][end] * tmpx)
         ft = nft * (U["finetune_s"][end] * (vmpx / TRAIN_VIEW_MPX) * ((n / SCENES["train"][0]) if end else 1.0)
                     + U["c3dgs_eval_s_per_test_mpx"][end] * tmpx)
         total += U["rest_s"][end] * up + rows + ft
-        decoded += 4 + nft
+        decoded += 4 + extra_rows + nft
     per_row = (U["npz2ply_s_per_msplat"][end] * n / 1e6 + U["eval_ii_s_per_test_mpx"][end] * tmpx
                + U["fidelity_s_per_test_mpx"][end] * tmpx + U["load_ply_s_per_msplat"][end] * n / 1e6)
     return total + decoded * per_row
 
 
-def estimate() -> dict:
+def estimate(extra_rows: int = 0) -> dict:
+    """Amendment 17 g's estimate (``extra_rows`` 0), or with Amendment 18 d's ``ogc_gram_ours`` (1)."""
     U = units()
-    per = {s: [scene_s(s, 0, U), scene_s(s, 1, U)] for s in SCENES}
+    per = {s: [scene_s(s, 0, U, extra_rows), scene_s(s, 1, U, extra_rows)] for s in SCENES}
     e5 = [sum(per[s][i] for s in GATE) for i in (0, 1)]
     setup = sum(json.load(open(os.path.join(E4Q, "timings.json")))[k] for k in ("restore_s", "install_s", "c3dgs_build_s"))
-    return {"units": U, "scenes_s": per, "e5p_s": per["train"], "e5p_h": [x / 3600 for x in per["train"]],
+    return {"extra_rows": extra_rows, "units": U, "scenes_s": per, "e5p_s": per["train"], "e5p_h": [x / 3600 for x in per["train"]],
             "e5_gpu_s": e5, "e5_gpu_h": [x / 3600 for x in e5], "setup_s": setup}
 
 
 if __name__ == "__main__":
-    print(json.dumps(estimate(), indent=1))
+    import sys
+
+    print(json.dumps(estimate(int(sys.argv[1]) if len(sys.argv) > 1 else 0), indent=1))
