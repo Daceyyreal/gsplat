@@ -32,8 +32,13 @@ on Kaggle on 2026-10-02 ("E4q C3DGS dissection"); its bundle is committed data o
 FINDINGS section 17 quotes it (`290ca395`, checked by `bench/gn/check_s17.py`, `87275d9a`). **Amendment 17** (`b3923bfb`)
 retires GN-VQ from any gate and registers a replication and dissection of OGC inside C3DGS: **E5p**, a pilot on train,
 and **E5**, a gate on the seven untouched scenes. **E5p is built** (`adaff9be`, `824ef452`, `bdd7ec55`; notebook "E5p OGC dissection
-pilot"); see "E5p notebook" and "Section 17, Amendment 17 and the E5p build (2026-10-08)" below. **Next: run E5p on
-Kaggle.** No E5p or E5 data exists.
+pilot"); see "E5p notebook" and "Section 17, Amendment 17 and the E5p build (2026-10-08)" below. **E5p attempt 1 ran
+on 2026-10-08 and produced no data:** OGC's repository was unavailable (HTTP 404), the clone failed and no row ran;
+its bundle is committed data only (`kaggle/gn_e5p/attempt1/gn5p/`, `a56a0bcf`). **Amendment 18** (`f13193cb`) records
+it, the Kaggle image change, OGC's source chain (the URL, then the private Kaggle dataset "E5p OGC source 49ccae72",
+else our derived code), and a report-only row `ogc_gram_ours`; the licence-notice commit is `459f7318`, and E5p
+attempt 2 is built (see "Amendment 18 and E5p attempt 2 (2026-10-09)" below). **Next: run E5p attempt 2.** No E5p or E5
+data exists.
 
 ## Context and rules
 
@@ -135,7 +140,7 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `build_gn_e1_bench.py` / `gn_e1_bench.ipynb` | E1 notebook (build output; edit the builder, never the JSON). E0's notebook is left exactly as it ran |
 | `gn_e0_scene.py` | E0, one scene per process: render parity, GN pass (`gn_cache/<scene>.pt`), spectrum, Spearman, the 9 G0 codebooks (predicted vs measured, test and train GT metrics, reproduction fields at K = 65,536), the lifted-assignment check (gates only the refines), the ridge / proximal refines (a proximal rise marks that row invalid). Resumable per (scene, config, K, seed). |
 | `build_gn_bench.py` / `gn_bench.ipynb` | E0 notebook (build output; edit the builder, never the JSON) |
-| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check; since E3r the coefficient count is read from the metric's packed width, 15 or 16, and nothing changed at 15), `e3r.py` (E3r: C3DGS's int8 colour-table quantizer, GN-VQ with the floored 16 x 16 metric, the colour dMSE, the trace shares), `e3r_estimate.py` (Amendment 14 e's pre-run estimate and g's), `e3r_memory.py` (Amendment 14 g's memory check), `dryrun/fake_c3dgs/` (a CPU stand-in with C3DGS's call structure, for E3r's tests and dry run; since E5p its `render_and_eval` has C3DGS's shape, and with `E3R_FAKE_DEVICES=1` its renders and images carry emulated devices, so `--data_device cpu` raises C3DGS's own error without Amendment 17 e.2's fix), `g0.py` / `g1.py` / `g2.py` (the G0, G1 and G2a / H2b rules as code), `gn_vq.py` (E1's variant and the codec's quantizer; `report_metrics` adds reporting only), `e2b.py` (E2b's floored metric, selection, the fidelity and PSNR criteria, the rho = 0 reproduction check and the Spearman), `e2c.py` (E2c's grid, `rho_cv`, G2c and its reported items), `metric_store.py` (E3p's one-GPU-copy layout of `M`, Amendment 12 a: host metrics, one floored device buffer, `HostMetric` reads for `quad_form`; bit-identical to E2c's path on the CPU), `bd_sensitivity.py` (E2's BD measures reproduced, the 50-digit exact cubic, PCHIP, the shN stream), `check_s11.py` / `check_s12.py` / `check_s13.py` / `check_s14.py` / `check_s15.py` / `check_s16.py` / `check_s17.py` (re-check every number in FINDINGS sections 11-17 against the committed E2b, E2c, E2, E3p, E3q, E3r, E4p and E4q bundles; exit 0 = no failure; all run by pytest), `e3p_estimate.py` (FINDINGS section 13's post-hoc cost estimate for the frozen method at 4 K on the 13 INRIA scenes, from E3p's, E2c's and E2's files), `e4p.py` (E4p's pure pieces: the rows and OGC's call, the fork's state copy / restore / hash, the RNG states, row 4's isotropic metric, `.npz` bytes and index entropy, Amendment 15 c's components, note ii's geometry, coverage and power check, `HostRss`, the attempt rules), `e4q.py` (E4q's pure pieces, Amendment 16 b-c: the rows, the ladder's specs and `run_gn_vq` options, OGC's draw and reseeding in GN-VQ's code, the per-part clip, the `lam` and best-ladder selections, the table range against the int8 grid, the pooled-MSE PSNR, labels agreement, the chunk check, BD, the attempt rules), `e4q_estimate.py` (Amendment 16 e's runtime estimate, from E4p's measured parts), `e5.py` (E5p's and E5's pure pieces, Amendment 17: the rows and OGC's three metrics, E5p's processes, the one status rule, C3DGS's evaluation record, BD over three points, the attempt rules), `e5_estimate.py` (Amendment 17 g's runtime estimate, from E4q's measured parts); `gn_vq.gn_vq` takes E4q's opt-in options (`update`, `clip_bounds`, `after_update`, `final_float_assignment`, `assign_fn` / `update_fn`) and `diagnostics.update_centroids` the `ridge_mean` variant, the frozen path bit-identical, `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `test_gn.py` (148 CPU tests; two, `lad_all` against OGC's released `gram_kmeans` and OGC's metric modes, need a clone in `GN_OGC_SRC` and skip without it), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1, E2, E2b, E2c, E3p, E3q, E3r, E4p, E4q and E5p dry runs (E4p's, E4q's and E5p's need OGC's clone, `GN_DRYRUN_OGC_SRC` or GitHub), the writer-parity check and `check_chunked_distance.py`, E2c's path with the chunked `direct_distance`; not collected by pytest) |
+| `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check; since E3r the coefficient count is read from the metric's packed width, 15 or 16, and nothing changed at 15), `e3r.py` (E3r: C3DGS's int8 colour-table quantizer, GN-VQ with the floored 16 x 16 metric, the colour dMSE, the trace shares), `e3r_estimate.py` (Amendment 14 e's pre-run estimate and g's), `e3r_memory.py` (Amendment 14 g's memory check), `dryrun/fake_c3dgs/` (a CPU stand-in with C3DGS's call structure, for E3r's tests and dry run; since E5p its `render_and_eval` has C3DGS's shape, and with `E3R_FAKE_DEVICES=1` its renders and images carry emulated devices, so `--data_device cpu` raises C3DGS's own error without Amendment 17 e.2's fix), `g0.py` / `g1.py` / `g2.py` (the G0, G1 and G2a / H2b rules as code), `gn_vq.py` (E1's variant and the codec's quantizer; `report_metrics` adds reporting only), `e2b.py` (E2b's floored metric, selection, the fidelity and PSNR criteria, the rho = 0 reproduction check and the Spearman), `e2c.py` (E2c's grid, `rho_cv`, G2c and its reported items), `metric_store.py` (E3p's one-GPU-copy layout of `M`, Amendment 12 a: host metrics, one floored device buffer, `HostMetric` reads for `quad_form`; bit-identical to E2c's path on the CPU), `bd_sensitivity.py` (E2's BD measures reproduced, the 50-digit exact cubic, PCHIP, the shN stream), `check_s11.py` / `check_s12.py` / `check_s13.py` / `check_s14.py` / `check_s15.py` / `check_s16.py` / `check_s17.py` (re-check every number in FINDINGS sections 11-17 against the committed E2b, E2c, E2, E3p, E3q, E3r, E4p and E4q bundles; exit 0 = no failure; all run by pytest), `e3p_estimate.py` (FINDINGS section 13's post-hoc cost estimate for the frozen method at 4 K on the 13 INRIA scenes, from E3p's, E2c's and E2's files), `e4p.py` (E4p's pure pieces: the rows and OGC's call, the fork's state copy / restore / hash, the RNG states, row 4's isotropic metric, `.npz` bytes and index entropy, Amendment 15 c's components, note ii's geometry, coverage and power check, `HostRss`, the attempt rules), `e4q.py` (E4q's pure pieces, Amendment 16 b-c: the rows, the ladder's specs and `run_gn_vq` options, OGC's draw and reseeding in GN-VQ's code, the per-part clip, the `lam` and best-ladder selections, the table range against the int8 grid, the pooled-MSE PSNR, labels agreement, the chunk check, BD, the attempt rules), `e4q_estimate.py` (Amendment 16 e's runtime estimate, from E4p's measured parts), `e5.py` (E5p's and E5's pure pieces, Amendment 17: the rows and OGC's three metrics, E5p's processes, the one status rule, C3DGS's evaluation record, BD over three points, the attempt rules), `e5_estimate.py` (Amendment 17 g's runtime estimate, from E4q's measured parts); `gn_vq.gn_vq` takes E4q's opt-in options (`update`, `clip_bounds`, `after_update`, `final_float_assignment`, `assign_fn` / `update_fn`) and `diagnostics.update_centroids` the `ridge_mean` variant, the frozen path bit-identical, `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `ogc_derived.py` (every part derived from OGC's `vq.py`, PolyForm Noncommercial with its notices and the patent statement; `gram_kmeans_ours`, Amendment 18 d, e), `test_gn.py` (154 CPU tests; four, `lad_all` and `gram_kmeans_ours` against OGC's released `gram_kmeans`, OGC's metric modes and the source chain with their copy, need a clone in `GN_OGC_SRC` and skip without it), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1, E2, E2b, E2c, E3p, E3q, E3r, E4p, E4q and E5p dry runs (E4p's, E4q's and E5p's need OGC's clone, `GN_DRYRUN_OGC_SRC` or GitHub), the writer-parity check and `check_chunked_distance.py`, E2c's path with the chunked `direct_distance`; not collected by pytest) |
 | `.gitignore` | ignores only the 64 run-5 bundle files that were unpacked flat into `kaggle/` by hand (anchored names; nothing deleted; the committed copy is `run5/tilequant/`) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
@@ -1521,23 +1526,37 @@ own speed.
 
 ## E5p notebook (`bench/gn-vq`, `kaggle/gn_e5p_bench.ipynb`, Kaggle title "E5p OGC dissection pilot")
 
-**Built, not run** (Amendment 17 c, e, h, `b3923bfb`). E5p is a **pilot on train: mechanics and timing, no verdict.**
-It runs no gate scene and reads none. GN-VQ runs in neither E5p nor E5 (Amendment 17 a).
+**Attempt 1 ran on 2026-10-08 and produced no data** (`kaggle/gn_e5p/attempt1/gn5p/`, `a56a0bcf`; Amendment 18 a).
+**Attempt 2 is built, not run** (Amendment 17 c, e, h, `b3923bfb`; Amendment 18, `f13193cb`). E5p is a **pilot on
+train: mechanics and timing, no verdict.** It runs no gate scene and reads none. GN-VQ runs in neither E5p nor E5
+(Amendment 17 a).
 
-**Kaggle steps:**
+**Kaggle steps (attempt 2):**
 
-1. Import the notebook from
-   `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e5p_bench.ipynb` and title it
-   **E5p OGC dissection pilot**.
-2. Attach **"R5 tilequant"** (the run-5 output) and **"E3p INRIA pilot"** (the E3p notebook output).
-3. GPU T4 x2 (the job uses one), Internet on (the OGC clone and the dataset). Save & Run All.
-4. Bring back `/kaggle/working/E5p_bundle.zip` (look in `~/Downloads`); its arcname is `gn5p/`.
+1. Open the notebook "E5p OGC dissection pilot" and re-import it from
+   `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e5p_bench.ipynb` (8 cells; the markdown
+   names Amendment 18 and `ogc_gram_ours`).
+2. Attach **"E3p INRIA pilot"**, **E5p attempt 1's output** (its `wheels/` holds the torch 2.11.0+cu128 wheel) and the
+   private dataset **"E5p OGC source 49ccae72"**. "R5 tilequant" is optional (every attached `wheels/` is merged).
+3. GPU T4 x2 (the job uses one), Internet on (OGC's URL and the dataset). Save & Run All.
+4. Bring back `/kaggle/working/E5p_bundle_2.zip` (look in `~/Downloads`); its arcname is `gn5p/`.
 
 | Attach | Required | What E5p takes from it |
 |---|---|---|
-| **"R5 tilequant"** | no, but attach it | **`wheels/` only**: the gsplat wheel, reused when its key matches |
 | **"E3p INRIA pilot"** | no, but attach it | **`e3p_inria/` only**: train's three pinned members, re-checked by size and CRC32 |
-| this notebook's own earlier output | only to resume | `gn5p/` and `gn5p_work/` |
+| **E5p attempt 1's output** | no, but attach it | **`wheels/` only** (key `33734f894b0a-95f8de51-torch2.11.0_cu128-sm7.5` if the image is unchanged; otherwise a rebuild, about 66 min). Its `gn5p/` and `gn5p_work/` are **not** restored (no `gn5p_attempt.json`) |
+| **"E5p OGC source 49ccae72"** (private) | no, but attach it | `ogc-3dgs-49ccae72.zip` (or Kaggle's unpacked copy of it): OGC's code if the URL fails (Amendment 18 c) |
+| "R5 tilequant" | no | `wheels/` only |
+| this notebook's own attempt-2 output | only to resume | `gn5p/` and `gn5p_work/`, restored only when `gn5p/gn5p_attempt.json` says attempt 2 |
+
+**OGC's source (Amendment 18 c, e):** the job tries the URL, then the dataset under `/kaggle/input` (the zip, or an
+unpacked `ogc-3dgs*` directory with its `.git`, or without one by its files' tree), each verified by HEAD `49ccae72`,
+tree `9feebced` and a clean working copy; the dataset's copy is cloned out of its `.git` with `core.autocrlf` off (the
+zip's own files have Windows line endings and no executable bits, so they would not hash to the tree). If neither
+verifies, OGC's rows are computed by `bench/gn/ogc_derived.gram_kmeans_ours` (`impl` `ogc_derived`) and `ogc_gram_ours`
+is not computed. `ogc_source`, every attempt's hashes and git's output are in `gn5p_meta_train.json` (`ogc_clone`).
+OGC's copies (`/tmp/ogc_train`, `/tmp/ogc_train_dataset`) and their file list (`/tmp/ogc_train_manifest.json`) never go
+under `/kaggle/working`; the bundle step refuses any file matching one of OGC's paths or hashes.
 
 **What it does:** restore; install (as E4q); **build C3DGS once** (`gn5p_c3dgs_build.json`); then **one job**,
 `gn_e5p_train`, with `--keep_data`:
@@ -1547,16 +1566,18 @@ It runs no gate scene and reads none. GN-VQ runs in neither E5p nor E5 (Amendmen
   1. j = 0, seed 0, images on the GPU: `c3dgs`, `ogc_plain`, `ogc_scalar`, `ogc_gram`, then fine-tuning of `c3dgs` and
      `ogc_gram` (5,000 iterations);
   2. j = 0, seed 1, **images forced onto the CPU** (Amendment 17 c: exercises e.2): the same;
-  3. j = -1 and j = +1 (colour threshold 0.2e-6 and 1.8e-6), seed 0: the four rows.
+  3. j = -1 and j = +1 (colour threshold 0.2e-6 and 1.8e-6), seed 0: the four rows;
+  in every process, while OGC's rows come from their code, **`ogc_gram_ours`** (Amendment 18 d, report only, not
+  fine-tuned): our `gram_kmeans_ours` with `ogc_gram`'s settings from the same inputs and metric.
 
 Failures (Amendment 15 d, as E4q): one CPU retry on running out of GPU memory (the scene's later runs on the CPU); the
 scene dropped if its first process runs out of memory on the CPU before any result; a failed row recorded and the rest
 run; no rerun; no new C3DGS run after 11.5 h less the 1,800 s reserve. One status rule: a row is `ok` when protocol ii
 measured it and its process's checks held; C3DGS's evaluation is recorded beside it.
 
-**Outputs** (`E5p_bundle.zip`, arcname `gn5p/`; nothing of OGC's, no `.npz` / `.ply` / `.pt`):
+**Outputs** (`E5p_bundle_2.zip`, arcname `gn5p/`; nothing of OGC's, no `.npz` / `.ply` / `.pt`; `gn5p_attempt.json`):
 - `gn5p_results_train.csv`: `uncompressed`, `p<seed>_<row>` at j = 0 (fine-tuned rows `*_ft`), `j<+-j>_p0_<row>` at
-  j = -1 and +1 (status, reason, data device, OGC's metric, C3DGS's evaluation or its error, protocol ii per view,
+  j = -1 and +1 (status, reason, data device, OGC's metric, `impl`, `ogc_source`, C3DGS's evaluation or its error, protocol ii per view,
   bytes, per-array sizes, index entropy, codewords used, fidelity as mean PSNR and pooled-MSE PSNR, OGC's time, the
   table range against the int8 grid, the quantizer state at the save, labels surviving fine-tuning, per-row time, GPU
   peaks, host RSS at start and peak, OGC's second metric copy in bytes, checks, geometry SHA-1, the process's peaks);
@@ -1565,16 +1586,20 @@ measured it and its process's checks held; C3DGS's evaluation is recorded beside
   rows evaluated, raised, the errors), `gn`, note ii, `session_ram`;
 - `gn5p_summary.json`, `gn5p_c3dgs_build.json`, `gn5p_env.json`, `timings.json`, the log tail.
 
-**Estimate (Amendment 17 g, `bench/gn/e5_estimate.py`; an estimate):** 4,411-5,292 s, 1.2-1.5 h, plus setup (about
-420 s). Not included: the CPU images' cost in fine-tuning and in C3DGS's evaluation (process 2), a retry.
+**Estimate (`bench/gn/e5_estimate.py`, an estimate):** with `ogc_gram_ours` (`estimate(1)`, Amendment 18 d)
+4,832-5,776 s, 1.34-1.60 h, plus setup (about 420 s with the wheel restored; attempt 1's install took 4,120 s with a
+rebuild); Amendment 17 g's four rows were 4,411-5,292 s. E5 with the row: 66,193-101,091 GPU-seconds (18.4-28.1
+GPU-hours; Amendment 17 g: 59,873-93,859). Not included: the CPU images' cost in fine-tuning and in C3DGS's evaluation
+(process 2), a retry.
 
 **After the run:**
-1. Commit the bundle unchanged, data only, in `kaggle/gn_e5p/gn5p/` (check each file against its zip entry; CSVs
-   CR-insensitively).
+1. Commit the bundle unchanged, data only, in `kaggle/gn_e5p/attempt2/gn5p/` (check each file against its zip entry;
+   CSVs CR-insensitively).
 2. Check Dace's reading against the files before anything is written. Reading order in `gn5p_summary.json`:
    1. `build`; `scene_device`, `dropped`, `deviations`, `missing_or_failed`, `failed_steps`, `skipped_steps`, and
       `processes` (each attempt: device, kind, oom, checks failed; process `j0_p1` on the CPU);
-   2. `ogc_clone` (HEAD); `gn` (the full pass only); every row's `status` / `reason` / `checks_ok` in `rows`;
+   2. `ogc_source` and `ogc_clone` (each attempt: source, verified, hashes, error, git's output); `gn` (the full
+      pass only); every row's `status` / `reason` / `checks_ok` / `impl` in `rows`;
    3. **e.2:** `c3dgs_eval_per_process` (every row evaluated in every process, `j0_p1` included) and
       `eval_device_fix_per_process` (moved calls only in `j0_p1`); `per_row` `c3dgs_eval_error` empty;
    4. **h:** `ogc_rows_host_memory` (each OGC row's time, GPU peaks, host RSS at start and peak, and the second metric
@@ -1584,6 +1609,9 @@ measured it and its process's checks held; C3DGS's evaluation is recorded beside
       `SE_noise` (1 degree of freedom) in protocol ii, C3DGS's evaluation and bytes;
    6. `bd_points`, `bd` (degree 2 over three points) and `primaries_values` (P1, P2: values only, no verdict);
    7. `fidelity_per_angle_j0` (mean PSNR and pooled-MSE PSNR), `note_ii`;
+   7a. **Amendment 18 d:** `ogc_gram_ours_vs_ogc_gram` per process (label agreement, codebook max abs diff, per-array
+      bytes, `.npz` bytes, PSNR_ii), `differences_j0.ogc_gram_ours_minus_ogc_gram` (with `SE_noise`), and
+      `ogc_gram_vs_e4q_ogc` (report only; an exact match is not expected);
    8. `steps` (time, GPU peaks allocated and reserved, `host_rss_peak_bytes`) and `session_ram`; job time against
       Amendment 17 g.
 3. FINDINGS section 18 (E5p) and its checker. Then, by Amendment 17 c, any bug fix or process-count change as a dated
@@ -3496,7 +3524,53 @@ with Dace's additions h, i and j), then `adaff9be`, `824ef452`, `bdd7ec55` (E5p'
   s against the amendment's 59,872 (the amendment's scratch script used rounded constants for the download, runner and
   GN-pass times; the test allows 1.5 s).
 
-### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: built, next to run)
+### Amendment 18 and E5p attempt 2 (2026-10-09)
+
+Order, pytest before each commit, each pushed fast-forward after the ancestor check: `459f7318` (the licence notice),
+`f13193cb` (Amendment 18 and RELATED_WORK_OGC's dated lines, alone, approved by Dace with edits), then `8b486e3d` (the
+source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6` (discover merges every `wheels/`),
+`cb6005b1` (the bundle guard), `ae36618c` (attempt 2's notebook), `98d54d6a` (the dry run per source, the estimate), then this flush.
+
+- **What happened:** E5p attempt 1 (2026-10-08) stopped before any row: OGC's repository was unavailable (HTTP 404), and
+  `ensure_clone` dropped git's output, so the bundle shows only "cannot change to '/tmp/ogc_train'". The image had
+  changed (Python 3.13.15, torch 2.11.0+cu128, cuDNN 91900, driver 580.178.04 as before); the wheel was rebuilt
+  (3,974 s), and C3DGS's build needed Amendment 13 b's `<cstdint>` retry for the first time. On 2026-10-09 the repository
+  was reachable again at the same commit (`git ls-remote` HEAD `49ccae72`; a fresh clone's tree `9feebced`), and the
+  author confirmed by email that the code is available for research purposes and stated that the method is patented
+  for commercial use (paraphrase only; never quote the email).
+- **Dace's decisions:** Amendment 18 as drafted, with (c) an explicit chain (URL, then the private Kaggle dataset "E5p
+  OGC source 49ccae72", then `ogc_derived`, each verified by tree and HEAD, the source logged) and (e) stating that
+  `ogc_derived`'s `"plain"` and `"scalar"` are validated at full scale only through the `"gram"` path.
+- **Standing rule (Dace, 2026-10-09): Gram-weighted VQ is not proposed upstream to gsplat** (OGC's method is patented
+  for commercial use). PR #1063 (scalar k-means, `feat/png-weighted-kmeans`) is unaffected.
+- **OGC's code, outside the repository only:** the backup copy `F:\ogc_restore\ogc-3dgs` (restored from its own git
+  pack; HEAD and tree verified, files identical to a fresh clone) and its zip `F:\ogc_backups\ogc-3dgs-49ccae72.zip`
+  (with `.git`; verified: HEAD, tree, `fsck`, clean). The zip's working files are CRLF without executable bits (this
+  machine's `core.autocrlf`), so only its `.git` verifies; the job clones out of it. **The private Kaggle dataset "E5p
+  OGC source 49ccae72"** holds that zip: private, never made public, research use only. Nothing of OGC's is ever
+  committed, pushed or bundled.
+- **Licence notice (`459f7318`):** every part derived from reading their `vq.py` carries PolyForm Noncommercial 1.0.0's
+  URL, both Required Notice lines and the patent statement: `bench/gn/ogc_derived.py` (moved there: `ogc_init_probs`,
+  `ogc_init`, `make_reseed`, `ogc_arith`, `ogc_layout`; since `8b486e3d` also `gram_kmeans_ours`), and in place, comments
+  only, `diagnostics.update_centroids`' `ridge_mean` branches and `gn_vq`'s `final_float_assignment` (the frozen GN-VQ
+  path unchanged).
+- **The build:**
+  - `kaggle/e4p_ogc.ensure_source`: the URL, then `find_dataset` under `--ogc_dataset_root` (the zip first, then
+    unpacked copies), each verified (`verify_copy`: HEAD, tree from `cat-file -p HEAD`, `status --porcelain` empty;
+    without `.git`, the files' tree); else `derived`. `write_manifest` lists the verified copy's files (path, SHA-1,
+    git blob id) for the guard. Paths are double-quoted for a Windows shell; read-only git objects are removed.
+    `ensure_clone` (E4p, E4q) now raises with git clone's output.
+  - `bench/gn/ogc_derived.gram_kmeans_ours`: OGC's VQ as one chunked function in our layout; on the CPU it equals
+    their `gram_kmeans` exactly (three metrics, whole and chunked, reseeding, padding).
+  - E5's rows: `e5.fork_rows(impl)` adds `ogc_gram_ours` when OGC's rows are theirs; `e5.compare_tables`,
+    `e5.array_bytes`, `SECONDARY_DIFFERENCES`; the summary's `ogc_gram_ours_vs_ogc_gram` and `ogc_gram_vs_e4q_ogc`.
+  - The notebook: `ATTEMPT = 2`, `E5p_bundle_2.zip`, `gn5p_attempt.json`; restores every `wheels/` and `e3p_inria/`,
+    and `gn5p/` / `gn5p_work/` only from an attempt-2 output; passes `--ogc_dataset_root /kaggle/input` and
+    `--output_root /kaggle/working`; the bundle guard (`ogc_matches`).
+  - `e5_estimate.estimate(extra_rows)`: 0 is Amendment 17 g's; 1 adds `ogc_gram_ours`.
+- **Checked:** pytest `bench/gn/test_gn.py` 154 passed with `GN_OGC_SRC` (a local clone at the pin); the E5p dry run, one mode at a time (`GN_DRYRUN_OGC_MODE`): url (325 s), dataset (309 s), derived (262 s), every stage ok; in url and dataset `ogc_gram_ours` equals `ogc_gram` exactly on the CPU in every process. The estimate: `98d54d6a`.
+
+### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: attempt 1 no data, attempt 2 built, next to run)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -3564,7 +3638,11 @@ with Dace's additions h, i and j), then `adaff9be`, `824ef452`, `bdd7ec55` (E5p'
   (`87275d9a`).
 - ~~**Then the gate amendment.**~~ **Done (2026-10-06):** Amendment 17 (`b3923bfb`): GN-VQ retired; E5p and E5.
 - ~~**E5p's code.**~~ **Done (2026-10-08):** `adaff9be`, `824ef452`, `bdd7ec55` (see "Section 17, Amendment 17 and the E5p build").
-- **Next: run E5p on Kaggle** ("E5p OGC dissection pilot"; see "E5p notebook", with its "After the run" reading order).
+- ~~**Run E5p on Kaggle.**~~ **Attempt 1 (2026-10-08): no data** (OGC's repository unavailable; bundle `a56a0bcf`;
+  Amendment 18 a).
+- ~~**Amendment 18 and attempt 2's build.**~~ **Done (2026-10-09):** see "Amendment 18 and E5p attempt 2 (2026-10-09)".
+- **Next: run E5p attempt 2** ("E5p OGC dissection pilot"), attaching "E3p INRIA pilot", E5p attempt 1's output (the
+  torch 2.11 wheel) and "E5p OGC source 49ccae72"; see "E5p notebook", with its "After the run" reading order.
 - **Then (Amendment 17):** FINDINGS section 18; any dated note E5p calls for; E5's build (conflicts 7, 8, 11: the Deep
   Blending data path and its stand-in, the seven scenes' constants, the verdict, the multi-session notebook); the
   seven-scene feasibility note (e.3, h); the session-assignment note (e.4); E5.
@@ -3809,11 +3887,16 @@ with Dace's additions h, i and j), then `adaff9be`, `824ef452`, `bdd7ec55` (E5p'
 ## Open items
 
 - PR #1063 is open: respond to review only when Dace asks (standing rule: no comments unless asked).
+- **Standing rule (2026-10-09): no Gram-weighted VQ is proposed upstream to gsplat** (OGC's method is patented for
+  commercial use). PR #1063 (scalar k-means) is unaffected.
+- **OGC's code** stays outside the repository: `F:\ogc_restore\ogc-3dgs`, `F:\ogc_backups\ogc-3dgs-49ccae72.zip`, and
+  the private Kaggle dataset "E5p OGC source 49ccae72" (never public). Never commit, push or bundle any of its files;
+  paraphrase the author's email, never quote it.
 - `benchmarks/compression/results/*.csv` still hold the TorchPQ numbers; regenerating them is a
   follow-up, only if maintainers want the default flip.
 - `lint/format-code.sh` and the tests on a CUDA machine (locally only CPU).
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
-- **Related work:** `kaggle/RELATED_WORK_OGC.md` (2026-10-01, literature notes, not findings) on arXiv 2609.28997 (OGC: per-Gaussian S2 observation Gram, matrix-weighted Lloyd, a C3DGS drop-in) and 2609.15735 (global factorised Gram, sqrt + KLT, no VQ), with the metric-equivalence check (our M_i equals their S2 Gram in expectation) and open questions; read it before the C3DGS arm's pre-registration. PDFs and the `ogc-3dgs` clone (`49ccae72`, PolyForm Noncommercial) are not in the repo.
+- **Related work:** `kaggle/RELATED_WORK_OGC.md` (2026-10-01, literature notes, not findings) on arXiv 2609.28997 (OGC: per-Gaussian S2 observation Gram, matrix-weighted Lloyd, a C3DGS drop-in) and 2609.15735 (global factorised Gram, sqrt + KLT, no VQ), with the metric-equivalence check (our M_i equals their S2 Gram in expectation) and open questions; read it before the C3DGS arm's pre-registration. PDFs and the `ogc-3dgs` clone (`49ccae72`, PolyForm Noncommercial; the author states the method is patented for commercial use) are not in the repo.
 - **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3r / E3:** see "Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: built, next to run)". E0 is done
   and G0 passed (`kaggle/gn_e0/gn/`, FINDINGS section 8); E1 is done and G1 failed (`kaggle/gn_e1/gn1/`,
   FINDINGS section 9); E2 is done and G2a passed (`kaggle/gn_e2/gn2/`, FINDINGS section 10); E2b
@@ -3826,5 +3909,6 @@ with Dace's additions h, i and j), then `adaff9be`, `824ef452`, `bdd7ec55` (E5p'
   FINDINGS section 15). The C3DGS arm's integration design is `kaggle/E3_C3DGS_DESIGN.md`; it became E4 (`kaggle/E4_DESIGN.md`,
   decisions of 2026-10-01), pre-registered as E4p and E4 by Amendment 15 (`573142ac`, notes i and ii); E4p ran (`60c4839b`, FINDINGS section 16); E4 is withdrawn
   and E4q registered (Amendment 16, `1f0b7e15`); E4q ran (`1d986d1a`, FINDINGS section 17). Amendment 17 (`b3923bfb`)
-  retires GN-VQ from any gate and registers E5p and E5, a replication and dissection of OGC inside C3DGS; E5p is built.
-  **Next: run E5p.** The rest of E3's design (other codecs, INRIA checkpoints) is not written yet.
+  retires GN-VQ from any gate and registers E5p and E5, a replication and dissection of OGC inside C3DGS; E5p attempt 1
+  produced no data (`a56a0bcf`), Amendment 18 (`f13193cb`) adds OGC's source chain and `ogc_gram_ours`, and attempt 2
+  is built. **Next: run E5p attempt 2.** The rest of E3's design (other codecs, INRIA checkpoints) is not written yet.
