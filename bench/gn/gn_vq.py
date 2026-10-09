@@ -190,7 +190,8 @@ def gn_vq(
       acceptance), with the codebook that iteration's assignment used; ``info`` joins the update's history entry
       (E4q's reseeding of empty clusters);
     - ``final_float_assignment``: with ``final_quantized_assignment`` off, one more exact assignment against the
-      returned float codebook (OGC's last step, ``vq.py:87`` at ``49ccae72``);
+      returned float codebook (OGC's last step, ``vq.py:87`` at ``49ccae72``; derived from OGC's code, PolyForm
+      Noncommercial 1.0.0: see ``bench/gn/ogc_derived.py``'s header for its notice);
     - ``assign_fn`` / ``update_fn``: the assignment and update arithmetic (default ``diagnostics.assign_exact`` and
       ``diagnostics.update_centroids``, looked up at call time); a test swaps in OGC's arithmetic.
     ``rel_tol`` = ``-inf`` never stops early."""
@@ -262,6 +263,13 @@ def gn_vq(
             stopped = "rel_tol"
             break
     changed_float = None
+    # Derived from moholo-founder/ogc-3dgs at 49ccae72 (vq.py:87; this final assignment),
+    # licensed under PolyForm Noncommercial 1.0.0 <https://polyformproject.org/licenses/noncommercial/1.0.0>;
+    # written from the paper (arXiv 2609.28997, App. A) and from reading the released code. The author states that the
+    # method is patented for commercial use, so this code is for noncommercial research only. It stays in place so that
+    # the frozen method's code path is unchanged; see bench/gn/ogc_derived.py.
+    # Required Notice: Copyright (c) 2026 Krzysztof Pietroszek
+    # Required Notice: Licensee: Moholo Inc. Commercial licences: founders@moholo.co
     if final_float_assignment and not final_quantized_assignment:
         new_labels, _ = assign(x, M_packed, C, labels)
         changed_float = float((new_labels != labels).double().mean())

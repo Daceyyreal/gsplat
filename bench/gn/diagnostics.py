@@ -531,6 +531,13 @@ def share_in_l2_topk(
 
 REFINE_VARIANTS = ("ridge", "prox")
 # update_centroids also takes "ridge_mean" (E4q, Amendment 16 b): OGC's regularised update (vq.py:63-73 at 49ccae72)
+# Derived from moholo-founder/ogc-3dgs at 49ccae72 (vq.py:63-73; the "ridge_mean" branches of update_centroids),
+# licensed under PolyForm Noncommercial 1.0.0 <https://polyformproject.org/licenses/noncommercial/1.0.0>;
+# written from the paper (arXiv 2609.28997, App. A) and from reading the released code. The author states that the
+# method is patented for commercial use, so this code is for noncommercial research only. It stays in place so that
+# the frozen method's code path is unchanged; see bench/gn/ogc_derived.py.
+# Required Notice: Copyright (c) 2026 Krzysztof Pietroszek
+# Required Notice: Licensee: Moholo Inc. Commercial licences: founders@moholo.co
 UPDATE_VARIANTS = REFINE_VARIANTS + ("ridge_mean",)
 MONOTONE_RTOL = 1e-6  # the proximal objective may not rise by more (Amendment 3)
 

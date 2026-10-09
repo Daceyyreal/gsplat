@@ -4039,44 +4039,7 @@ def test_e4q_ladder_specs_iterations_and_final_assignment():
         e4q.ladder_spec("scalar")
 
 
-def _ogc_layout(t):
-    return t.float().reshape(t.shape[0], 16, 3).permute(0, 2, 1).contiguous()
-
-
-def _ogc_arith():
-    """OGC's arithmetic in gn_vq's call signatures, re-expressed from vq.py at 49ccae72 (the expanded float32 assignment
-    cost and its argmin; the float32 sums and float64 solve of the update with its clamps; the expanded float32
-    distortion for the reseeding). Test only: this is how lad_all is checked against their released function."""
-    def pre(x, M):
-        X, G = _ogc_layout(x), gm.unpack(M.float())
-        n = X.shape[0]
-        return X, G, G.reshape(n, 256), torch.einsum("nij,ncj->nci", G, X).reshape(n, 48)
-
-    def assign(x, M, C, current):
-        X, G, vecG, GX = pre(x, M)
-        Cd, K = _ogc_layout(C), C.shape[0]
-        Q = torch.einsum("kci,kcj->kij", Cd, Cd).reshape(K, 256).T.contiguous()
-        CT = Cd.reshape(K, 48).T.contiguous()
-        return (vecG @ Q - 2.0 * (GX @ CT)).min(1)[1], {}
-
-    def update(x, labels, M, C_prev, variant, eps):
-        X, G, vecG, GX = pre(x, M)
-        K = C_prev.shape[0]
-        SA = torch.zeros(K, 256).index_add_(0, labels, vecG).reshape(K, 16, 16).double()
-        SB = torch.zeros(K, 48).index_add_(0, labels, GX).reshape(K, 3, 16).double()
-        cnt = torch.bincount(labels, minlength=K).clamp(min=1).double()[:, None, None]
-        xbar = torch.zeros(K, 3, 16, dtype=torch.float64).index_add_(0, labels, X.double()) / cnt
-        ridge = eps * (torch.einsum("kii->k", SA) / 16).clamp(min=1e-12)[:, None, None] + 1e-20
-        Cn = torch.linalg.solve(SA + ridge * torch.eye(16, dtype=torch.float64)[None], (SB + ridge * xbar).transpose(1, 2))
-        return Cn.transpose(1, 2).float().permute(0, 2, 1).reshape(K, 48), 0
-
-    def distance(x, M, C, labels):
-        X, G, vecG, GX = pre(x, M)
-        cc = _ogc_layout(C)[labels]
-        xGx = torch.einsum("nci,nij,ncj->n", X, G, X)
-        return (vecG * torch.einsum("kci,kcj->kij", cc, cc).reshape(-1, 256)).sum(1) - 2 * (GX * cc.reshape(-1, 48)).sum(1) + xGx
-
-    return assign, update, distance
+from ogc_derived import ogc_arith as _ogc_arith, ogc_layout as _ogc_layout  # noqa: E402 (PolyForm Noncommercial 1.0.0)
 
 
 def e4q_lad_all_against_ogc(vqmod, x, M, K, q):

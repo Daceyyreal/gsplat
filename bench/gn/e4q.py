@@ -25,6 +25,7 @@ import diagnostics as gd
 import e4p
 import g2
 import gn_metric as gm
+from ogc_derived import make_reseed, ogc_init, ogc_init_probs  # noqa: F401 (PolyForm Noncommercial 1.0.0)
 
 # ------------------------------------------------------------------------------ the rows (Amendment 16 b)
 LADDER = ("lad_reseed", "lad_init_tr", "lad_clip_part", "lad_no_clip", "lad_ridge_mean", "lad_iters15", "lad_iters50",
@@ -124,55 +125,10 @@ def part_bounds(C: Tensor) -> Tuple[Tensor, Tensor]:
     return lo, hi
 
 
-def ogc_init_probs(M_rows: Tensor, chunk: int = 1 << 16) -> Tensor:
-    """OGC's draw weights for ``gram_kmeans``'s init, computed as it computes them: ``tr`` = ``einsum("nii->n", G)`` of
-    the unpacked float32 metric (the ``G`` OGC's row gets), clamped at 0, plus 1e-12, normalized (CPU float32)."""
-    M = M_rows.detach().float().cpu()
-    tr = torch.empty(M.shape[0], dtype=torch.float32)
-    for s in range(0, M.shape[0], chunk):
-        tr[s:s + chunk] = torch.einsum("nii->n", gm.unpack(M[s:s + chunk]))
-    p = tr.clamp(min=0) + 1e-12
-    return p / p.sum()
-
-
-def ogc_init(x: Tensor, M_rows: Tensor, K: int, seed: int = 0) -> Tuple[Tensor, Tensor]:
-    """OGC's start (``vq.py:21, 31-33``): K of the splats drawn without replacement with probability proportional to
-    ``tr(G_i)``, from a CPU generator seeded ``seed``; returns ``(C0 [K, 48], ids)`` with ``C0`` the drawn quantizer
-    inputs. With fewer splats than K, the rest are repeats drawn from the same generator, as OGC pads."""
-    n = x.shape[0]
-    gen = torch.Generator().manual_seed(seed)
-    ids = torch.multinomial(ogc_init_probs(M_rows), min(K, n), replacement=False, generator=gen)
-    if ids.numel() < K:
-        ids = torch.cat([ids, ids[torch.randint(0, ids.numel(), (K - ids.numel(),), generator=gen)]])
-    return x.detach()[ids.to(x.device)].clone(), ids
-
-
 def start_labels(x: Tensor, M_packed: Tensor, C0: Tensor, assign_fn: Optional[Callable] = None) -> Tensor:
     """The starting labels for a drawn codebook: one exact assignment (``diagnostics.assign_exact``) from all-zero labels."""
     assign = assign_fn or gd.assign_exact
     return assign(x, M_packed, C0, torch.zeros(x.shape[0], dtype=torch.long, device=x.device))[0]
-
-
-def make_reseed(x: Tensor, M_packed: Tensor, distance_fn: Optional[Callable] = None) -> Callable:
-    """``gn_vq``'s ``after_update`` for OGC's reseeding (``vq.py:74-84``): every cluster with no member in this
-    iteration's assignment takes the quantizer input of a splat of largest distortion (its distance, under the loop's
-    metric, to its centroid in the codebook the assignment used), the empty clusters the top distances in
-    ``torch.topk``'s order, one splat each. Reseeded entries are neither clipped nor tested: the hook runs after both."""
-    dist = distance_fn or gd.direct_distance
-
-    def hook(it: int, C_assigned: Tensor, C_new: Tensor, labels: Tensor):
-        K = C_new.shape[0]
-        empty = torch.bincount(labels, minlength=K) == 0
-        n = int(empty.sum())
-        if n == 0:
-            return C_new, {"reseeded": 0}
-        d = dist(x, M_packed, C_assigned, labels)
-        worst = torch.topk(d, n).indices
-        C_new = C_new.clone()
-        C_new[empty.to(C_new.device)] = x[worst.to(x.device)].to(C_new.dtype)
-        return C_new, {"reseeded": n}
-
-    return hook
 
 
 def ladder_options(spec: Dict, x: Tensor, M_loop: Tensor, C3: Tensor) -> Dict:
