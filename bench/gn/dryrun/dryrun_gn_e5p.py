@@ -531,12 +531,21 @@ for s in (0, 1):
     for row in e5.FT_ROWS:
         r = rr[e5.config_name(0, s, e5.ft_name(row))]
         assert r["kind"] == "finetuned" and r["labels_survived"] == "True" and r["c3dgs_PSNR"], r
+        # Amendment 18 note 2: the fine-tuned rows' quantizer at the save, codebook range and int8 limits
+        qa, tr, cb = json.loads(r["qa_at_save"]), json.loads(r["table_range"]), json.loads(r["codebook_int8"])
+        assert set(qa) == {"dc_scale", "dc_zero_point", "rest_scale", "rest_zero_point"}, qa
+        assert all(0 <= tr[p]["n_outside_grid"] <= tr[p]["n_values"] for p in ("dc", "rest")), tr
+        assert all(0.0 <= cb["at_limits"][p]["fraction_at_limits"] <= 1.0 for p in ("dc", "rest"))
+        assert 1 <= cb["distinct_codewords"] <= cb["K"], cb
 for j in (-1, 1):
     assert not any(e5.config_name(j, 0, e5.ft_name(r)) in rr for r in e5.FT_ROWS)
     assert float(rr[e5.config_name(j, 0, "ogc_gram")]["threshold"]) == e5.threshold(j)
 assert all(rr[e5.config_name(0, 1, r)]["data_device"] == "cpu" for r in e5.ROWS)
 summ = job.summarize(os.path.join(OUT, "gn5p"))["scenes"]["train"]
 assert set(summ["differences_j0"]) == set(e5.DIFFERENCES) | set(e5.FT_DIFFERENCES) | set(e5.SECONDARY_DIFFERENCES)
+# Amendment 18 note 2: every row but the uncompressed one has its values outside the grid in the summary
+assert all(v["n_outside_grid"] is not None for c, v in summ["per_row"].items() if c != "uncompressed"), \
+    {c: v["n_outside_grid"] for c, v in summ["per_row"].items()}
 ov = summ["ogc_gram_ours_vs_ogc_gram"]
 if IMPL == "ogc":  # Amendment 18 d: on the CPU, ours equals their gram_kmeans exactly, in every process
     assert ov["available"] and set(ov["per_process"]) == set(meta["processes"])

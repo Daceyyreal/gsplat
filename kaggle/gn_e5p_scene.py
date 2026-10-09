@@ -77,7 +77,8 @@ COLUMNS = [
     "c3dgs_eval_error", "npz_bytes", "size_MiB", "size_MB", "index_entropy_bits", "distinct_indices",
     "codebook_entropy_bits", "codebook_distinct", "arrays", "PSNR_ii", "SSIM_ii", "LPIPS_ii", "psnr_ii_per_view",
     "resolution_ii", "n_views_ii", "eval_ii_time_s", "fidelity_psnr", "fidelity_pooled_psnr", "fidelity_time_s",
-    "fidelity_cuda_peak", "fidelity_rss_peak", "ogc_time_s", "table_range", "qa_at_save", "labels_survived",
+    "fidelity_cuda_peak", "fidelity_rss_peak", "ogc_time_s", "table_range", "qa_at_save", "codebook_int8",
+    "labels_survived",
     "row_time_s", "row_cuda_peak_allocated", "row_cuda_peak_reserved", "row_rss_start_bytes", "row_rss_peak_bytes",
     "row_host_bytes_metric_copy", "checks_ok", "geometry_sha1", "npz2ply_time_s", "process_wall_s",
     "process_peak_allocated", "process_peak_reserved", "process_rss_peak", "model_sha1", "c3dgs_commit", "ogc_commit",
@@ -379,6 +380,7 @@ def _row_record(ctx, j: int, seed: int, row: str, attempt: int, rep: Dict, run: 
             "ogc_time_s": (r.get("ogc") or {}).get("time_s", ""),
             "table_range": json.dumps(r.get("table_range")) if r.get("table_range") else "",
             "qa_at_save": json.dumps(r.get("qa_at_save")) if r.get("qa_at_save") else "",
+            "codebook_int8": json.dumps(r.get("codebook_int8")) if r.get("codebook_int8") else "",
             "labels_survived": r.get("labels_survived", ""), "row_time_s": cost.get("time_s", ""),
             "row_cuda_peak_allocated": cost.get("cuda_peak_allocated", ""),
             "row_cuda_peak_reserved": cost.get("cuda_peak_reserved", ""),
@@ -586,7 +588,11 @@ def summarize(out_dir: str, scenes=tuple(SCENES)) -> Dict:
                                                        "index_entropy_bits", "labels_survived", "row_time_s",
                                                        "row_cuda_peak_allocated", "row_cuda_peak_reserved",
                                                        "row_rss_start_bytes", "row_rss_peak_bytes",
-                                                       "row_host_bytes_metric_copy", "table_range")} for r in rows}
+                                                       "row_host_bytes_metric_copy", "table_range", "qa_at_save",
+                                                       "codebook_int8")} for r in rows}
+        for v in per_row.values():  # Amendment 18 note 2: the values outside the int8 grid, per row and part
+            tr = json.loads(v["table_range"]) if v.get("table_range") else None
+            v["n_outside_grid"] = {p: tr[p]["n_outside_grid"] for p in ("dc", "rest")} if tr else None
         host_ogc = {c: {k: v[k] for k in ("row_time_s", "row_cuda_peak_allocated", "row_cuda_peak_reserved",
                                           "row_rss_start_bytes", "row_rss_peak_bytes", "row_host_bytes_metric_copy")}
                     for c, v in per_row.items() if v.get("ogc_metric") and not c.endswith(e5.FT_SUFFIX)}

@@ -4847,3 +4847,113 @@ def test_ogc_source_records_hold_no_commit_metadata(tmp_path):
         assert "author " not in text and "committer " not in text, text[:300]
         assert not email.search(text), email.search(text).group(0)
 
+
+def test_ft_rows_record_their_quantizer_and_codebook(tmp_path, monkeypatch):
+    """Amendment 18 note 2 (report only): every fine-tuned row records, right before its save, the colour quantizer the
+    save uses (qa_at_save, equal to the scale and zero point written into its .npz), the trained codebook's range
+    against that grid with the values outside it (table_range), and its int8 values at -128 or 127 and distinct int8
+    codewords (codebook_int8)."""
+    hooks, rep = _fork_in_process(tmp_path, monkeypatch)
+    rows = rep["fork"]["rows"]
+    ft = [r for r in rows if r.endswith("_ft")]
+    assert ft and all(rows[r]["status"] == "ok" for r in ft), {r: rows[r].get("status") for r in ft}
+    for name in ft:
+        r = rows[name]
+        assert set(r["qa_at_save"]) == {"dc_scale", "dc_zero_point", "rest_scale", "rest_zero_point"}
+        assert "qa_changed_by_record" not in r
+        K = r["codebook_int8"]["K"]
+        with np.load(r["npz"]) as z:
+            assert float(z["features_rest_scale"].reshape(-1)[0]) == pytest.approx(r["qa_at_save"]["rest_scale"])
+            assert int(z["features_rest_zero_point"].reshape(-1)[0]) == r["qa_at_save"]["rest_zero_point"]
+            # the ground truth: the int8 codebook actually written (the table's first K rows of each colour array)
+            dc = z["features_dc"][:K].reshape(K, -1).astype(np.int64)
+            rest = z["features_rest"][:K].reshape(K, -1).astype(np.int64)
+        for part, a in (("dc", dc), ("rest", rest)):
+            assert r["codebook_int8"]["at_limits"][part]["n_at_limits"] == int(((a == -128) | (a == 127)).sum()), part
+            assert r["codebook_int8"]["at_limits"][part]["n_values"] == a.size, part
+        assert r["codebook_int8"]["distinct_codewords"] == len({tuple(x) for x in np.concatenate([dc, rest], 1)})
+        for part in ("dc", "rest"):
+            tr = r["table_range"][part]
+            assert tr["n_values"] > 0 and 0 <= tr["n_outside_grid"] <= tr["n_values"]
+            assert tr["scale"] == pytest.approx(r["qa_at_save"][f"{part}_scale"])
+            lim = r["codebook_int8"]["at_limits"][part]
+            assert lim["n_values"] == tr["n_values"] and 0.0 <= lim["fraction_at_limits"] <= 1.0
+        cb = r["codebook_int8"]
+        assert 1 <= cb["distinct_codewords"] <= cb["K"] == 16
+
+
+def test_ft_codebook_record_counts_values_at_the_int8_limits():
+    """ft_codebook_record on a hand-made table: the values at -128 or 127 after C3DGS's int8 quantization, per part,
+    and the distinct int8 codewords; nothing written to the model."""
+    import types
+
+    import e3r
+    import e4p_hooks
+
+    g = types.SimpleNamespace(
+        features_dc_qa=torch.ao.quantization.FakeQuantize(dtype=torch.qint8),
+        features_rest_qa=torch.ao.quantization.FakeQuantize(dtype=torch.qint8))
+    g.features_dc_qa.scale.fill_(0.1)
+    g.features_rest_qa.scale.fill_(0.01)
+    dc = torch.zeros(5, 1, 3)
+    rest = torch.zeros(5, 15, 3)
+    dc[0, 0, 0] = 100.0   # far above the DC grid (127 * 0.1): clamped to 127
+    rest[1, 0, 0] = -5.0  # far below the AC grid (-128 * 0.01): clamped to -128
+    rest[2, 0, 0] = 0.05  # code 5: rows 0-3 all differ
+    g._features_dc, g._features_rest = dc, rest
+    before = (dc.clone(), rest.clone())
+    r = e4p_hooks.ft_codebook_record(g, 4, e3r.C3DGSQuantizer)  # the first 4 rows are the codebook
+    assert r["codebook_int8"]["at_limits"]["dc"] == {"n_at_limits": 1, "n_values": 12, "fraction_at_limits": 1 / 12}
+    assert r["codebook_int8"]["at_limits"]["rest"]["n_at_limits"] == 1 and r["codebook_int8"]["at_limits"]["rest"]["n_values"] == 180
+    assert r["table_range"]["dc"]["n_outside_grid"] == 1 and r["table_range"]["rest"]["n_outside_grid"] == 1
+    assert r["codebook_int8"]["distinct_codewords"] == 4 and r["codebook_int8"]["K"] == 4
+    assert torch.equal(g._features_dc, before[0]) and torch.equal(g._features_rest, before[1])
+
+
+def test_ft_codebook_record_never_calls_the_quantizers():
+    """Amendment 18 note 2: the record reads the colour quantizers' buffers and the raw table only. With real
+    FakeQuantize modules, whose observer moves when one is called (shown first), the full state (scale, zero point,
+    observer min and max) is unchanged by ft_codebook_record."""
+    import types
+
+    import e3r
+    import e4p_hooks
+
+    def model():
+        g = types.SimpleNamespace(
+            features_dc_qa=torch.ao.quantization.FakeQuantize(dtype=torch.qint8),
+            features_rest_qa=torch.ao.quantization.FakeQuantize(dtype=torch.qint8))
+        g._features_dc = torch.randn(6, 1, 3)
+        g._features_rest = torch.randn(6, 15, 3) * 0.1
+        g.features_dc_qa(g._features_dc)  # observed once, as after rendering
+        g.features_rest_qa(g._features_rest)
+        return g
+
+    g = model()
+    s0 = e4p_hooks.qa_snapshot(g)
+    g.features_rest_qa(g._features_rest * 50)  # a call moves the observer and the scale
+    assert set(e4p_hooks.qa_changed(s0, e4p_hooks.qa_snapshot(g))) >= {"features_rest_qa.scale", "features_rest_qa.max_val"}
+    g = model()
+    s0 = e4p_hooks.qa_snapshot(g)
+    e4p_hooks.ft_codebook_record(g, 4, e3r.C3DGSQuantizer)
+    assert e4p_hooks.qa_changed(s0, e4p_hooks.qa_snapshot(g)) == {}
+
+
+def test_ft_branch_refuses_a_record_that_moves_the_quantizers(tmp_path, monkeypatch):
+    """Amendment 18 note 2: if the record ever called a colour quantizer (here a record that does), the fine-tuning
+    branch records what moved and raises, so the fine-tuned row fails with the reason and nothing wrong is saved."""
+    import e4p_hooks
+
+    real = e4p_hooks.ft_codebook_record
+
+    def calling(g, K, q):
+        g.features_rest_qa(g._features_rest * 50)  # what the record must never do
+        return real(g, K, q)
+
+    monkeypatch.setattr(e4p_hooks, "ft_codebook_record", calling)
+    hooks, rep = _fork_in_process(tmp_path, monkeypatch)
+    rows = rep["fork"]["rows"]
+    ft = [r for r in rows if r.endswith("_ft")]
+    assert ft and all(rows[r].get("status") == "failed" for r in ft), {r: rows[r].get("status") for r in ft}
+    assert all("features_rest_qa" in "".join(rows[r]["qa_changed_by_record"]) for r in ft)
+    assert all("changed the colour quantizers" in rows[r].get("error", "") for r in ft), {r: rows[r].get("error") for r in ft}

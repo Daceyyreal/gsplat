@@ -69,6 +69,55 @@ def _import_e4p():
     return e3r, e4p, e4p_ogc, gm, ms
 
 
+def _import_e4q():
+    saved = list(sys.path)
+    sys.path.insert(0, os.path.join(REPO, "bench", "gn"))
+    try:
+        import e4q
+    finally:
+        sys.path[:] = saved
+    return e4q
+
+
+def ft_codebook_record(g, K: int, quantizer_cls) -> Dict:
+    """Amendment 18 note 2 (report only): a fine-tuned row's colour quantizer as its save will use it, and its trained
+    codebook (the table's first ``K`` rows, ``_features_dc`` with ``_features_rest``) against it: ``qa_at_save``
+    (``e3r_hooks._qa_state``, buffers read, no side effect), ``table_range`` (E4q's, with the values outside the int8
+    grid), and ``codebook_int8``: per part the fraction of the codebook's int8 values at -128 or 127, and the number of
+    distinct int8 codewords. Nothing is written to the model."""
+    qa = e3r_hooks._qa_state(g)
+    q = quantizer_cls.from_state(qa)
+    C = e3r_hooks._table(g)[:K].float()
+    _, codes, _ = q.quantize(C)
+    codes = codes.cpu()
+    lim = {}
+    for name, part in (("dc", codes[:, :3]), ("rest", codes[:, 3:])):
+        n_at, n = int(((part == -128) | (part == 127)).sum()), int(part.numel())
+        lim[name] = {"n_at_limits": n_at, "n_values": n, "fraction_at_limits": n_at / n if n else None}
+    return {"qa_at_save": qa, "table_range": _import_e4q().table_range(C, q),
+            "codebook_int8": {"K": int(K), "at_limits": lim, "distinct_codewords": int(torch.unique(codes, dim=0).shape[0])}}
+
+
+def qa_snapshot(g) -> Dict:
+    """The colour quantizers' full state, copied: scale, zero point and the observer's min and max (buffers read, no
+    module called). A call of ``features_dc_qa`` / ``features_rest_qa`` would move the observer and so the scale the
+    save uses (Amendment 18 note 2)."""
+    out = {}
+    for name in ("features_dc_qa", "features_rest_qa"):
+        m = getattr(g, name)
+        obs = getattr(m, "activation_post_process", None)
+        out[name] = {k: t.detach().clone().cpu() for k, t in (
+            ("scale", m.scale), ("zero_point", m.zero_point),
+            ("min_val", getattr(obs, "min_val", torch.empty(0))), ("max_val", getattr(obs, "max_val", torch.empty(0))))}
+    return out
+
+
+def qa_changed(before: Dict, after: Dict) -> Dict:
+    """The quantizer state entries that differ between two ``qa_snapshot``s (empty when nothing moved)."""
+    return {f"{n}.{k}": [before[n][k].tolist(), after[n][k].tolist()] for n in before for k in before[n]
+            if not torch.equal(before[n][k], after[n][k])}
+
+
 class Stop(Exception):
     """Raised after ``--eval_npz``'s evaluation; the wrapper records the run as a success."""
 
@@ -418,6 +467,14 @@ class ForkHooks(e3r_hooks.Hooks):
                     _, keep = self.state["join_inputs"]
                     idx = g._feature_indices.detach()
                     rec["labels_survived"] = bool(torch.equal(idx[~keep.to(idx.device)], self.tables[src][1].to(idx.device).long()))
+                    # Amendment 18 note 2 (report only): the quantizer this save uses and the trained codebook against
+                    # it; the quantizers' state must not move while it is recorded (no quantizer is called)
+                    qa_before = qa_snapshot(g)
+                    rec.update(ft_codebook_record(g, int(self.tables[src][0].shape[0]), self.e3r.C3DGSQuantizer))
+                    moved = qa_changed(qa_before, qa_snapshot(g))
+                    if moved:
+                        rec["qa_changed_by_record"] = moved
+                        raise RuntimeError(f"the fine-tuned row's record changed the colour quantizers: {sorted(moved)}")
                     os.makedirs(os.path.dirname(path), exist_ok=True)
                     self.orig["save_npz"](g, path, sort_morton=sort)
                 rec["npz"] = path
