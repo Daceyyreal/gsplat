@@ -16,6 +16,10 @@ reseeding's order, the expanded float32 assignment cost, the float64 ridge-to-th
 - ``make_reseed``: their reseeding (``vq.py:74-84``) as ``gn_vq``'s ``after_update``, for ``lad_reseed`` and ``lad_all``;
 - ``ogc_layout``, ``ogc_arith``: their assignment, update and reseed distance in ``gn_vq``'s call signatures, used only by
   the tests and the dry run to check ``lad_all`` against their released ``gram_kmeans``.
+- ``gram_kmeans_ours`` (Amendment 18 d, e): their whole VQ as one chunked function for the GPU, in our layout: the draw,
+  the Lloyd iterations with the expanded float32 assignment cost, the float64 ridge-to-the-mean update, the reseeding and
+  the final assignment, under their three metric modes (``vq.py:17-88``). E5p's ``ogc_gram_ours`` row, and E5's OGC rows
+  if no verified copy of their code is available.
 
 Two more derived parts stay inside the frozen method's modules, so that its path is unchanged, and point here:
 ``bench/gn/diagnostics.py``'s ``ridge_mean`` update (``vq.py:63-73``) and ``bench/gn/gn_vq.py``'s
@@ -24,7 +28,7 @@ Two more derived parts stay inside the frozen method's modules, so that its path
 No file of OGC's is copied, vendored or bundled; their code is used at run time from a pinned copy.
 """
 
-from typing import Callable, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -116,3 +120,90 @@ def ogc_arith():
         return (vecG * torch.einsum("kci,kcj->kij", cc, cc).reshape(-1, 256)).sum(1) - 2 * (GX * cc.reshape(-1, 48)).sum(1) + xGx
 
     return assign, update, distance
+
+
+METRICS = ("gram", "scalar", "plain")
+
+
+def metric_matrices(G: Tensor, metric: str) -> Tensor:
+    """The per-splat matrix a mode uses (``vq.py:22-29``): ``G`` itself (``"gram"``), ``tr(G_i) / q * I``
+    (``"scalar"``) or ``I`` (``"plain"``), ``[n, q, q]`` float32 on the CPU."""
+    if metric == "gram":
+        return G
+    if metric not in METRICS:
+        raise ValueError(f"{metric!r} is not one of OGC's metric modes {METRICS}")
+    n, q = G.shape[0], G.shape[-1]
+    w = torch.einsum("nii->n", G) / q if metric == "scalar" else torch.ones(n)
+    return w[:, None, None] * torch.eye(q)[None]
+
+
+def gram_kmeans_ours(x48: Tensor, M_rows: Tensor, K: int, lam: float = 1e-3, device: str = "cpu", chunk: int = 25_000,
+                     metric: str = "gram", iters: int = 15, seed: int = 0) -> Tuple[Tensor, Tensor, Dict]:
+    """OGC's VQ as this repository derives it (Amendment 18 d), on our inputs: ``x48`` the quantizer inputs ``[n, 48]``
+    in C3DGS's layout (index ``k * 3 + channel``) and ``M_rows`` the packed 16 x 16 metric of the same splats. Returns
+    ``(C [K, 48] in C3DGS's layout, labels [n] (CPU), info)``, as ``kaggle/e4p_ogc.ogc_codebook`` returns their call.
+
+    The per-splat terms (``vec(G_i)``, ``G_i x_i`` and ``x_i^T G_i x_i``) are formed once on the CPU in float32. Each
+    iteration assigns in chunks of ``chunk`` splats on ``device`` (cost ``<vec G_i, vec sum_c c c^T> - 2 <G_i x_i, c>``,
+    first minimum), then updates on the CPU: float32 sums of ``vec G_i`` and ``G_i x_i`` per cluster, then in float64
+    ``(sum G_i + rho I)^-1 (sum G_i x_i + rho xbar)`` with ``rho = lam * max(tr(sum G_i) / q, 1e-12) + 1e-20`` and
+    ``xbar`` the members' mean. Empty clusters take the inputs of the splats of largest distortion against the codebook
+    the assignment used, in ``topk``'s order. One more assignment against the returned codebook ends it. The start draws
+    ``min(K, n)`` splats without replacement in proportion to ``tr`` of the mode's matrix plus 1e-12, from a CPU
+    generator seeded ``seed``, padded by repeats when ``n < K``."""
+    import time
+
+    t = time.perf_counter()
+    X = ogc_layout(x48.detach().cpu())  # [n, 3, q]
+    n, _, q = X.shape
+    G = gm.unpack(M_rows.detach().float().cpu())
+    Gm = metric_matrices(G, metric)
+    gen = torch.Generator().manual_seed(seed)
+    p = torch.einsum("nii->n", Gm).clamp(min=0) + 1e-12
+    p = p / p.sum()
+    ids = torch.multinomial(p, min(K, n), replacement=False, generator=gen)
+    C = X[ids].clone()
+    if ids.numel() < K:
+        C = torch.cat([C, C[torch.randint(0, ids.numel(), (K - ids.numel(),), generator=gen)]])
+    vecG = Gm.reshape(n, q * q)
+    GX = torch.einsum("nij,ncj->nci", Gm, X).reshape(n, 3 * q)
+    xGx = torch.einsum("nci,nij,ncj->n", X, Gm, X)
+    labels = torch.zeros(n, dtype=torch.long)
+
+    def assign(C):
+        Cd = C.to(device)
+        Q = torch.einsum("kci,kcj->kij", Cd, Cd).reshape(K, q * q).T.contiguous()
+        CT = Cd.reshape(K, 3 * q).T.contiguous()
+        for s in range(0, n, chunk):
+            cost = vecG[s:s + chunk].to(device) @ Q - 2.0 * (GX[s:s + chunk].to(device) @ CT)
+            labels[s:s + chunk] = cost.min(1)[1].cpu()
+        return Cd
+
+    reseeded = []
+    eye = torch.eye(q, dtype=torch.float64)[None]
+    for _ in range(iters):
+        Cd = assign(C)
+        SA = torch.zeros(K, q * q).index_add_(0, labels, vecG).reshape(K, q, q).double()
+        SB = torch.zeros(K, 3 * q).index_add_(0, labels, GX).reshape(K, 3, q).double()
+        cnt = torch.bincount(labels, minlength=K)
+        xbar = torch.zeros(K, 3, q, dtype=torch.float64).index_add_(0, labels, X.double()) / cnt.clamp(min=1).double()[:, None, None]
+        rho = lam * (torch.einsum("kii->k", SA) / q).clamp(min=1e-12)[:, None, None] + 1e-20
+        C_new = torch.linalg.solve(SA + rho * eye, (SB + rho * xbar).transpose(1, 2)).transpose(1, 2).float()
+        empty = cnt == 0
+        reseeded.append(int(empty.sum()))
+        if reseeded[-1]:
+            dist = torch.zeros(n)
+            for s in range(0, n, chunk):
+                cc = Cd[labels[s:s + chunk].to(device)]
+                d = ((vecG[s:s + chunk].to(device) * torch.einsum("kci,kcj->kij", cc, cc).reshape(-1, q * q)).sum(1)
+                     - 2 * (GX[s:s + chunk].to(device) * cc.reshape(-1, 3 * q)).sum(1))
+                dist[s:s + chunk] = d.cpu() + xGx[s:s + chunk]
+            C_new[empty] = X[torch.topk(dist, reseeded[-1]).indices]
+        C = C_new
+    assign(C)
+    info = {"call": {"impl": "ogc_derived.gram_kmeans_ours", "K": int(K), "device": device, "metric": metric,
+                     "iters": int(iters), "chunk": int(chunk), "seed": int(seed), "lam": float(lam)},
+            "n_splats": int(n), "reseeded_per_iteration": reseeded, "host_bytes_G": G.numel() * G.element_size(),
+            "host_bytes_metric_copy": 0 if metric == "gram" else Gm.numel() * Gm.element_size(),
+            "time_s": time.perf_counter() - t}
+    return C.permute(0, 2, 1).reshape(K, 3 * q), labels, info

@@ -8,8 +8,10 @@ train only. Mechanics and timing: no verdict.
         --deadline <epoch seconds> --keep_data
 
 One job:
-1. INRIA's train members (E3p's pins), the dataset (E3p's download path), the OGC clone at its pin (a mismatch stops
-   before any row);
+1. INRIA's train members (E3p's pins), the dataset (E3p's download path), OGC's code by Amendment 18 c's chain: the URL,
+   then the attached private dataset ("E5p OGC source 49ccae72", ``--ogc_dataset_root``), each verified by HEAD and
+   tree; else ``derived`` (Amendment 18 e: OGC's rows by ``bench/gn/ogc_derived.py``). ``ogc_source``, every attempt
+   and its git output go into the meta file; OGC's copies and their file list stay outside the output directories;
 2. **no probe run** (nothing is selected on it: no ``rho``, ``lam`` fixed at 1e-3); E3r's harness phase without the
    cross-validation: the runner, protocol ii of the uncompressed model, the full-train-view 16 x 16 GN pass; note ii's
    geometry, orbit references and coverage (E4p's);
@@ -69,7 +71,7 @@ EVAL_FIX_ARG = "--eval_device_fix"  # Amendment 17 e.2 (the dry run clears it on
 UNCOMPRESSED = "uncompressed"
 COLUMNS = [
     "scene", "config", "j", "threshold", "process_seed", "row", "kind", "attempt", "status", "reason", "data_device",
-    "ogc_metric", "n_ckpt", "n_pruned", "n_kept_colour", "n_colour_quantized", "c3dgs_PSNR", "c3dgs_SSIM", "c3dgs_LPIPS",
+    "ogc_metric", "impl", "ogc_source", "n_ckpt", "n_pruned", "n_kept_colour", "n_colour_quantized", "c3dgs_PSNR", "c3dgs_SSIM", "c3dgs_LPIPS",
     "c3dgs_eval_error", "npz_bytes", "size_MiB", "size_MB", "index_entropy_bits", "distinct_indices",
     "codebook_entropy_bits", "codebook_distinct", "arrays", "PSNR_ii", "SSIM_ii", "LPIPS_ii", "psnr_ii_per_view",
     "resolution_ii", "n_views_ii", "eval_ii_time_s", "fidelity_psnr", "fidelity_pooled_psnr", "fidelity_time_s",
@@ -144,6 +146,10 @@ def main(argv=None):
     p.add_argument("--keep_data", action="store_true")
     p.add_argument("--ogc_dir", default="/tmp/ogc-3dgs")
     p.add_argument("--ogc_url", default=og.OGC_URL)
+    p.add_argument("--ogc_dataset_root", default=None, help="where to look for the private dataset (Kaggle: /kaggle/input)")
+    p.add_argument("--ogc_extract_dir", default=None, help="default: <ogc_dir>_dataset")
+    p.add_argument("--ogc_manifest", default=None, help="default: <ogc_dir>_manifest.json")
+    p.add_argument("--output_root", default=None, help="the session's output directory (Kaggle: /kaggle/working)")
     p.add_argument("--ogc_device", default=None, help="default: cuda if available, else cpu")
     args = p.parse_args(argv)
     if args.build_only:
@@ -155,6 +161,13 @@ def main(argv=None):
     if args.deadline is None:
         args.deadline = time.time() + 11 * 3600
     args.ogc_device = args.ogc_device or ("cuda" if torch.cuda.is_available() else "cpu")
+    args.ogc_extract_dir = args.ogc_extract_dir or args.ogc_dir.rstrip("/\\") + "_dataset"
+    args.ogc_manifest = args.ogc_manifest or args.ogc_dir.rstrip("/\\") + "_manifest.json"
+    for what in ("ogc_dir", "ogc_extract_dir", "ogc_manifest"):  # Amendment 18 c: never under an output directory
+        inside = og.under(getattr(args, what), (args.out_dir, args.work_dir, args.output_root))
+        if inside:
+            raise ValueError(f"--{what} {getattr(args, what)} is under the output directory {inside}: OGC's code and its "
+                             "file list never go there (Amendment 18 c)")
     parsed = r5a.parse_benchmark_sh(open(args.benchmark_sh).read())
     args.data_factor, args.cap_max = parsed["data_factors"][scene], parsed["cap_max"]
     args.data_dir = os.path.join(args.data_root, scene)
@@ -186,13 +199,18 @@ def main(argv=None):
     save()
     with r4.file_lock(os.path.join(args.data_root, f".{scene}_data.lock")):
         dl = steps.run("download_dataset", lambda: e2.ensure_data(args, args.data_factor))
-    try:  # the pinned clone, checked before any row
-        meta["ogc_clone"] = og.ensure_clone(args.ogc_dir, args.ogc_url)
-    except og.OgcMismatch as e:
-        meta["ogc_clone"] = {"ok": False, "error": str(e)}
-        save()
-        log(scene, str(e))
-        return 3
+    # OGC's code, by Amendment 18 c's chain, verified before any row
+    src = steps.run("ogc_source", lambda: og.ensure_source(
+        args.ogc_dir, args.ogc_url, dataset_root=args.ogc_dataset_root, extract_dir=args.ogc_extract_dir,
+        manifest_path=args.ogc_manifest))
+    src = src or {"ogc_source": "derived", "clone": None, "verified": False, "error": "the source step failed"}
+    meta["ogc_clone"] = src
+    meta["ogc_source"] = src["ogc_source"]
+    args.ogc_impl = e5.impl_of(src["ogc_source"])
+    args.ogc_clone = src.get("clone")
+    common.update(ogc_source=src["ogc_source"], ogc_commit=og.OGC_COMMIT if src.get("verified") else "")
+    log(scene, f"OGC source: {src['ogc_source']} (" + "; ".join(
+        f"{a['source']}: {'verified' if a.get('verified') else a.get('error')}" for a in src.get("attempts", [])) + ")")
     save()
     ctx = types.SimpleNamespace(args=args, scene=scene, meta=meta, save=save, steps=steps, common=common, dev=dev,
                                 have_model=fetched is not None, have_data=dl is not None, runner_state={},
@@ -332,7 +350,8 @@ def _row_record(ctx, j: int, seed: int, row: str, attempt: int, rep: Dict, run: 
     ce = r.get("c3dgs_eval") or {}
     return {**ctx.common, "config": e5.config_name(j, seed, row), "j": j, "threshold": e5.threshold(j),
             "process_seed": seed, "row": row, "kind": "finetuned" if row != base else "fork", "attempt": attempt,
-            "data_device": run.get("data_device", ""), "ogc_metric": e5.OGC_METRIC.get(base, ""),
+            "data_device": run.get("data_device", ""), "ogc_metric": e5.ROW_METRIC.get(base, ""),
+            "impl": (fr.get("rows", {}).get(base) or {}).get("impl", ""),
             "n_ckpt": counts.get("n_ckpt", ""), "n_pruned": counts.get("n_pruned", ""),
             "n_kept_colour": counts.get("n_kept_colour", ""), "n_colour_quantized": counts.get("n_colour_quantized", ""),
             "c3dgs_PSNR": ce.get("PSNR", ""), "c3dgs_SSIM": ce.get("SSIM", ""), "c3dgs_LPIPS": ce.get("LPIPS", ""),
@@ -395,8 +414,9 @@ def process(ctx, proc: Dict, first: bool, csv_path: str, c3dgs, run_oom, start_b
         report_path = os.path.join(args.work_dir, f"{name}_fork_report.json")
         e0.write_json(cfg_path, {"e5": True, "rows": list(e5.ROWS), "j": j, "threshold": e5.threshold(j),
                                  "m_path": full_cache, "rows_dir": os.path.join(out, "rows"), "report_path": report_path,
-                                 "seed": seed, "ogc": {"clone": args.ogc_dir, "commit": og.OGC_COMMIT,
-                                                       "device": args.ogc_device, "chunk": e5.OGC_CHUNK, "lam": e5.LAM},
+                                 "seed": seed, "ogc": {"clone": args.ogc_clone, "commit": og.OGC_COMMIT,
+                                                       "impl": args.ogc_impl, "device": args.ogc_device,
+                                                       "chunk": e5.OGC_CHUNK, "lam": e5.LAM},
                                  "finetune": {"rows": list(e5.FT_ROWS) if proc.get("finetune") else [],
                                               "iterations": e5.FINETUNE_ITERATIONS}})
         e4pjob.drop_runner(ctx)

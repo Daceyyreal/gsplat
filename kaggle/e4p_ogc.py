@@ -6,7 +6,9 @@ anything of it is used, and a mismatch raises (``OgcMismatch``). No file of it i
 bundle: only this module's own JSON summaries are bundled.
 
 - ``ensure_clone`` / ``load_vq``: the clone and its ``vq.py``, imported from the clone's path under the name
-  ``ogc_vq`` (C3DGS has its own ``compression.vq``).
+  ``ogc_vq`` (C3DGS has its own ``compression.vq``). ``ensure_source`` (E5p and E5, Amendment 18 c): the URL, then the
+  attached private dataset, each verified by HEAD and tree, else ``derived``; ``write_manifest`` lists the verified
+  copy's files for the bundle guard.
 - ``ogc_codebook``: rows 2 and 2b inside C3DGS's process, ``gram_kmeans`` as their C3DGS host calls it
   (``hosts/c3dgs_run.py:50-62``) on our unpacked 16 x 16 metric.
 - **Job 1** (Amendment 15 f, report only):
@@ -42,6 +44,9 @@ if os.path.join(REPO, "bench", "gn") not in sys.path:
 import e4p  # noqa: E402
 
 OGC_URL, OGC_COMMIT = e4p.OGC_URL, e4p.OGC_COMMIT
+OGC_TREE = "9feebced57d11c6204077baa717528952be811ce"  # HEAD's tree at OGC_COMMIT (Amendment 18 c)
+OGC_ZIP = "ogc-3dgs-49ccae72.zip"  # in the private Kaggle dataset "E5p OGC source 49ccae72" (Amendment 18 c)
+SOURCES = ("url", "dataset", "derived")
 METRICS = ("gram", "scalar", "plain")  # their modes (vq.py:11, 22-29 at 49ccae72); "plain" is their identity
 LICENCE = "PolyForm Noncommercial 1.0.0 (LICENSE at the pinned commit); used for noncommercial academic research"
 # Their Table 19 (arXiv 2609.28997v1, p. 22), row train: test PSNR (dB) of uniform SH degree reduction
@@ -69,7 +74,8 @@ def _run(cmd: str, cwd=None, env=None, timeout=None) -> Dict:
 
 def ensure_clone(dest: str, url: str = OGC_URL, commit: Optional[str] = None, timeout: float = 600.0) -> Dict:
     """Clone (or reuse) ``url`` at ``commit`` (default: the pin, ``OGC_COMMIT``) into ``dest``; raises
-    ``OgcMismatch`` unless HEAD is ``commit``."""
+    ``OgcMismatch`` unless HEAD is ``commit``. A failed clone raises with git's own output (Amendment 18 a: it was
+    dropped, and the message named only the missing directory)."""
     commit = commit or OGC_COMMIT
     t = time.time()
     rec = {"url": url, "commit_pinned": commit, "dest": dest, "licence": LICENCE, "steps": []}
@@ -77,6 +83,9 @@ def ensure_clone(dest: str, url: str = OGC_URL, commit: Optional[str] = None, ti
         shutil.rmtree(dest, ignore_errors=True)
         r = _run(f"git clone --quiet {shlex.quote(url)} {shlex.quote(dest)}", timeout=timeout)
         rec["steps"].append({k: v for k, v in r.items() if k != "_text"})
+        if r["returncode"] != 0:
+            raise OgcMismatch(f"OGC CLONE FAILED: git clone {url} exited {r['returncode']}: "
+                              + " | ".join(r["tail"][-8:]) + " (Amendment 15 a); no row runs")
         r = _run(f"git -C {shlex.quote(dest)} checkout --quiet {commit}", timeout=timeout)
         rec["steps"].append({k: v for k, v in r.items() if k != "_text"})
     r = _run(f"git -C {shlex.quote(dest)} rev-parse HEAD", timeout=60)
@@ -86,6 +95,247 @@ def ensure_clone(dest: str, url: str = OGC_URL, commit: Optional[str] = None, ti
     if not rec["ok"]:
         raise OgcMismatch(f"OGC CLONE MISMATCH: {dest} is at {rec['head']!r}, pinned {commit} (Amendment 15 a); "
                           "no row runs")
+    return rec
+
+
+# ------------------------------------------------------------------------------ the source chain (Amendment 18 c)
+def _q(path: str) -> str:
+    """A path for ``run_command``'s shell: double quotes on Windows (``cmd`` keeps single quotes), ``shlex`` elsewhere."""
+    return f'"{path}"' if os.name == "nt" else shlex.quote(path)
+
+
+def _rmtree(path: str) -> None:
+    """Remove a tree, read-only files included (git's objects are read-only on Windows)."""
+    import stat
+
+    def onerror(fn, p, _exc):
+        try:
+            os.chmod(p, stat.S_IWRITE)
+            fn(p)
+        except OSError:
+            pass
+
+    if os.path.lexists(path):
+        shutil.rmtree(path, onerror=onerror)
+
+
+def _step(rec: Dict, r: Dict) -> Dict:
+    rec.setdefault("steps", []).append({k: v for k, v in r.items() if k != "_text"})
+    return r
+
+
+def _last_line(r: Dict) -> str:
+    lines = (r.get("_text") or "").strip().splitlines()
+    return lines[-1].strip() if lines else ""
+
+
+def _git(path: str) -> str:
+    # safe.directory: an attached dataset's files belong to another user, and git refuses such a repository otherwise
+    return f"git -c safe.directory=* -C {_q(path)}"
+
+
+def repo_hashes(path: str, rec: Dict) -> Tuple[str, str]:
+    """``(HEAD, HEAD's tree)`` of the repository at ``path``, read from its object database (``rev-parse HEAD`` and
+    ``cat-file -p HEAD``'s ``tree`` line; no ``^`` or ``%``, which a Windows shell would eat)."""
+    head = _last_line(_step(rec, _run(f"{_git(path)} rev-parse HEAD", timeout=60)))
+    r = _step(rec, _run(f"{_git(path)} cat-file -p HEAD", timeout=60))
+    tree = next((ln.split()[1] for ln in (r.get("_text") or "").splitlines() if ln.startswith("tree ")), "")
+    return head, tree
+
+
+def files_tree(path: str, rec: Dict) -> str:
+    """The git tree hash of the files under ``path`` alone (no ``.git``): a scratch index outside ``path``, every file
+    added with its line endings untouched (``core.autocrlf`` off), then ``write-tree``."""
+    import tempfile
+
+    gd = tempfile.mkdtemp(prefix="ogc_treecheck_")
+    try:
+        base = f"git -c core.autocrlf=false -c safe.directory=* --git-dir={_q(gd)}"
+        _step(rec, _run(f"{base} init --quiet", timeout=60))
+        _step(rec, _run(f"{base} --work-tree={_q(path)} add -A", timeout=600))
+        return _last_line(_step(rec, _run(f"{base} --work-tree={_q(path)} write-tree", timeout=60)))
+    finally:
+        _rmtree(gd)
+
+
+def verify_copy(path: str, commit: str, tree: str, rec: Dict, need_clean: bool = True) -> bool:
+    """Amendment 18 c: with a ``.git``, HEAD == ``commit``, HEAD's tree == ``tree`` and (``need_clean``) a clean working
+    copy; without one, the tree of the files == ``tree``."""
+    if os.path.isdir(os.path.join(path, ".git")):
+        head, tr = repo_hashes(path, rec)
+        rec.update(has_git=True, head=head, tree=tr)
+        ok = head == commit and tr == tree
+        if need_clean:
+            r = _step(rec, _run(f"{_git(path)} status --porcelain", timeout=300))
+            rec["clean"] = r["returncode"] == 0 and not (r.get("_text") or "").strip()
+            ok = ok and rec["clean"]
+    else:
+        tr = files_tree(path, rec)
+        rec.update(has_git=False, head=None, tree=tr)
+        ok = tr == tree
+    rec["verified"] = bool(ok)
+    return rec["verified"]
+
+
+def find_dataset(root: Optional[str], max_depth: int = 5) -> List[Dict]:
+    """The dataset's candidates under ``root`` (Amendment 18 c), zips first: every ``OGC_ZIP``, then every directory
+    that holds an extracted copy (Kaggle may unpack an uploaded zip): ``ogc-3dgs*`` with its ``.git`` or ``vq.py``."""
+    zips, dirs = [], []
+    if not root or not os.path.isdir(root):
+        return []
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=True):
+        top = os.path.normpath(dirpath) == os.path.normpath(root)
+        depth = 0 if top else os.path.relpath(dirpath, root).count(os.sep) + 1
+        if OGC_ZIP in filenames:
+            zips.append({"kind": "zip", "path": os.path.join(dirpath, OGC_ZIP)})
+        name = os.path.basename(os.path.normpath(dirpath))
+        if not top and name.startswith("ogc-3dgs") and (".git" in dirnames or "vq.py" in filenames):
+            dirs.append({"kind": "dir", "path": dirpath})
+            dirnames[:] = []
+            continue
+        dirnames[:] = [] if depth >= max_depth else sorted(d for d in dirnames if d != ".git")
+    return sorted(zips, key=lambda c: c["path"]) + sorted(dirs, key=lambda c: c["path"])
+
+
+def _repo_root(top: str) -> str:
+    """The extracted copy's root: the directory holding ``.git`` (or ``vq.py``), at most two levels down."""
+    for dirpath, dirnames, filenames in os.walk(top):
+        if ".git" in dirnames or "vq.py" in filenames:
+            return dirpath
+        if os.path.relpath(dirpath, top).count(os.sep) >= 2:
+            dirnames[:] = []
+        dirnames[:] = sorted(d for d in dirnames if d != ".git")
+    return top
+
+
+def _try_url(dest: str, url: str, commit: str, tree: str, timeout: float) -> Dict:
+    rec = {"source": "url", "url": url, "dest": dest, "steps": []}
+    t = time.time()
+    _rmtree(dest)
+    r = _step(rec, _run(f"git clone --quiet -c core.autocrlf=false {_q(url)} {_q(dest)}", timeout=timeout))
+    if r["returncode"] != 0:
+        rec.update(verified=False, error=f"git clone exited {r['returncode']}: " + " | ".join(r["tail"][-8:]))
+    else:
+        _step(rec, _run(f"{_git(dest)} checkout --quiet {commit}", timeout=timeout))
+        if not verify_copy(dest, commit, tree, rec):
+            rec["error"] = f"MISMATCH: HEAD {rec.get('head')!r}, tree {rec.get('tree')!r}, clean {rec.get('clean')}"
+    rec["time_s"] = time.time() - t
+    if not rec.get("verified"):
+        _rmtree(dest)
+    return rec
+
+
+def _try_dataset(cand: Dict, dest: str, extract_dir: str, commit: str, tree: str, timeout: float) -> Dict:
+    """An attached copy: a zip is extracted into ``extract_dir`` (fresh), an unpacked one is read in place. With its
+    ``.git``, HEAD and tree are read from the object database, the copy is cloned into ``dest`` with ``core.autocrlf``
+    off and verified there (its own working files were written on Windows: CRLF, no executable bits). Without one, its
+    files are copied to ``dest`` and their tree is checked."""
+    import zipfile
+
+    rec = {"source": "dataset", "candidate": cand, "dest": dest, "steps": []}
+    t = time.time()
+    try:
+        top = cand["path"]
+        if cand["kind"] == "zip":
+            _rmtree(extract_dir)
+            os.makedirs(extract_dir)
+            with zipfile.ZipFile(cand["path"]) as z:
+                z.extractall(extract_dir)
+            top = extract_dir
+        root = _repo_root(top)
+        rec["root"] = root
+        _rmtree(dest)
+        if os.path.isdir(os.path.join(root, ".git")):
+            head, tr = repo_hashes(root, rec)
+            rec["source_hashes"] = {"head": head, "tree": tr}
+            if head != commit or tr != tree:
+                rec.update(verified=False, error=f"MISMATCH in the attached copy: HEAD {head!r}, tree {tr!r}")
+                return rec
+            r = _step(rec, _run(f"git -c safe.directory=* clone --quiet -c core.autocrlf=false --no-hardlinks "
+                                f"{_q(root)} {_q(dest)}", timeout=timeout))
+            if r["returncode"] != 0:
+                rec.update(verified=False, error=f"git clone of the attached copy exited {r['returncode']}: "
+                           + " | ".join(r["tail"][-8:]))
+                return rec
+            _step(rec, _run(f"{_git(dest)} checkout --quiet {commit}", timeout=timeout))
+        else:
+            shutil.copytree(root, dest)
+        if not verify_copy(dest, commit, tree, rec):
+            rec["error"] = f"MISMATCH: HEAD {rec.get('head')!r}, tree {rec.get('tree')!r}, clean {rec.get('clean')}"
+    except Exception as e:  # noqa: BLE001 (recorded; the chain moves on)
+        rec.update(verified=False, error=f"{type(e).__name__}: {e}")
+    finally:
+        rec["time_s"] = time.time() - t
+        if not rec.get("verified"):
+            _rmtree(dest)
+        if cand["kind"] == "zip":
+            _rmtree(extract_dir)
+    return rec
+
+
+def write_manifest(path: str, clone: str) -> Dict:
+    """Every file of the verified copy (``.git`` excluded): its path, SHA-1 and git blob id, for the bundle guard
+    (Amendment 18 c). Written outside the output directory; it names OGC's files and holds none of their content."""
+    import hashlib
+
+    files = []
+    for dirpath, dirnames, filenames in os.walk(clone):
+        dirnames[:] = sorted(d for d in dirnames if d != ".git")
+        for n in sorted(filenames):
+            with open(os.path.join(dirpath, n), "rb") as f:
+                data = f.read()
+            files.append({"path": os.path.relpath(os.path.join(dirpath, n), clone).replace(os.sep, "/"),
+                          "sha1": hashlib.sha1(data).hexdigest(),
+                          "git_blob": hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()})
+    with open(path, "w") as f:
+        json.dump({"clone": clone, "commit": OGC_COMMIT, "tree": OGC_TREE, "files": files}, f, indent=1)
+    return {"path": path, "n_files": len(files)}
+
+
+def under(path: str, roots) -> Optional[str]:
+    """The first of ``roots`` that contains ``path`` (or is it), else None."""
+    p = os.path.realpath(path)
+    for r in roots:
+        if r:
+            rr = os.path.realpath(r)
+            if p == rr or p.startswith(rr.rstrip(os.sep) + os.sep):
+                return r
+    return None
+
+
+def ensure_source(dest: str, url: str = OGC_URL, dataset_root: Optional[str] = None, extract_dir: Optional[str] = None,
+                  manifest_path: Optional[str] = None, commit: Optional[str] = None, tree: Optional[str] = None,
+                  timeout: float = 600.0) -> Dict:
+    """Amendment 18 c's chain: the URL, then the attached dataset (``find_dataset`` under ``dataset_root``), each
+    verified by tree and HEAD; the first that verifies is used. If neither verifies, ``ogc_source`` is "derived" and
+    ``clone`` None: the caller computes OGC's rows with ``bench/gn/ogc_derived.py`` (e). Every attempt's outcome,
+    hashes and git output are kept. A verified copy's files are listed in ``manifest_path`` (``write_manifest``)."""
+    commit, tree = commit or OGC_COMMIT, tree or OGC_TREE
+    extract_dir = extract_dir or dest + "_dataset"
+    t = time.time()
+    rec = {"commit_pinned": commit, "tree_pinned": tree, "dest": dest, "licence": LICENCE, "attempts": [],
+           "ogc_source": "derived", "clone": None, "verified": False}
+    a = _try_url(dest, url, commit, tree, timeout)
+    rec["attempts"].append(a)
+    if a.get("verified"):
+        rec.update(ogc_source="url", clone=dest, verified=True)
+    else:
+        cands = find_dataset(dataset_root)
+        if not cands:
+            rec["attempts"].append({"source": "dataset", "verified": False,
+                                    "error": f"no {OGC_ZIP} and no extracted ogc-3dgs copy under {dataset_root!r}"})
+        for c in cands:
+            a = _try_dataset(c, dest, extract_dir, commit, tree, timeout)
+            rec["attempts"].append(a)
+            if a.get("verified"):
+                rec.update(ogc_source="dataset", clone=dest, verified=True)
+                break
+    if rec["verified"]:
+        rec["head"], rec["tree"] = commit, tree
+        if manifest_path:
+            rec["manifest"] = write_manifest(manifest_path, dest)
+    rec["ok"] = rec["verified"]
+    rec["time_s"] = time.time() - t
     return rec
 
 

@@ -4410,3 +4410,140 @@ def test_e5_estimate_matches_amendment_17_g():
     assert f"{r['e5p_h'][0]:.1f}-{r['e5p_h'][1]:.1f} h plus setup" in a17
     assert f"-{r['e5_gpu_s'][1]:,.0f} GPU-seconds ({r['e5_gpu_h'][0]:.1f}-{r['e5_gpu_h'][1]:.1f} GPU-hours)" in a17
     assert abs(r["e5_gpu_s"][0] - 59_872) < 1.5
+
+
+# ------------------------------------------------------------------------------ Amendment 18: OGC's source chain
+def _git(*args, cwd=None):
+    import subprocess
+
+    return subprocess.run(["git", "-c", "core.autocrlf=false", *args], cwd=cwd, check=True, capture_output=True,
+                          text=True).stdout.strip()
+
+
+def _zip_dir(src, zpath, arc):
+    """``src`` (with its .git) zipped under ``arc/``, as the dataset's zip is."""
+    import zipfile
+
+    os.makedirs(os.path.dirname(zpath), exist_ok=True)
+    with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
+        for dirpath, _dirs, files in os.walk(src):
+            for n in files:
+                full = os.path.join(dirpath, n)
+                z.write(full, os.path.join(arc, os.path.relpath(full, src)))
+
+
+def _toy_repo(path):
+    """A one-commit repository standing in for OGC's (its commit and tree are the pins the chain checks)."""
+    os.makedirs(os.path.join(path, "sub"))
+    open(os.path.join(path, "vq.py"), "w", newline="\n").write("X = 1\n")
+    open(os.path.join(path, "sub", "a.txt"), "w", newline="\n").write("a\n")
+    _git("init", "-q", cwd=path)
+    _git("add", "-A", cwd=path)
+    _git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "c", cwd=path)
+    return _git("rev-parse", "HEAD", cwd=path), _git("cat-file", "-p", "HEAD", cwd=path).splitlines()[0].split()[1]
+
+
+def test_ogc_source_chain_url_then_dataset_then_derived(tmp_path):
+    """Amendment 18 c, on a stand-in repository: a URL that fails (git's output kept), then the dataset's zip (cloned
+    out of its .git, verified by HEAD, tree and a clean copy; the file list written), an unpacked copy with its .git,
+    an unpacked copy without (its files' tree), a copy at another tree (refused), and nothing verified -> derived."""
+    import e4p_ogc as og
+
+    repo = str(tmp_path / "repo")
+    commit, tree = _toy_repo(repo)
+    kw = dict(commit=commit, tree=tree)
+    bad_url = str(tmp_path / "no_such_repo")
+    r = og.ensure_source(str(tmp_path / "ogc_a"), url=repo, **kw)
+    assert r["ogc_source"] == "url" and r["verified"] and r["clone"] and r["attempts"][0]["clean"]
+    zroot = tmp_path / "input"
+    _zip_dir(repo, str(zroot / "ds" / og.OGC_ZIP), "ogc-3dgs")
+    man = str(tmp_path / "ogc_b_manifest.json")
+    r = og.ensure_source(str(tmp_path / "ogc_b"), url=bad_url, dataset_root=str(zroot), manifest_path=man, **kw)
+    a0, a1 = r["attempts"]
+    assert a0["source"] == "url" and not a0["verified"] and "git clone exited" in a0["error"] and a0["steps"][0]["tail"]
+    assert r["ogc_source"] == "dataset" and a1["candidate"]["kind"] == "zip" and a1["source_hashes"] == {"head": commit, "tree": tree}
+    assert open(os.path.join(r["clone"], "vq.py")).read() == "X = 1\n" and not os.path.exists(str(tmp_path / "ogc_b_dataset"))
+    m = json.load(open(man))
+    assert sorted(f["path"] for f in m["files"]) == ["sub/a.txt", "vq.py"] and r["manifest"]["n_files"] == 2
+    # an unpacked copy, with and without its .git
+    import shutil
+
+    up = tmp_path / "input2" / "ds" / "ogc-3dgs"
+    shutil.copytree(repo, str(up))
+    r = og.ensure_source(str(tmp_path / "ogc_c"), url=bad_url, dataset_root=str(tmp_path / "input2"), **kw)
+    assert r["ogc_source"] == "dataset" and r["attempts"][1]["candidate"]["kind"] == "dir"
+    og._rmtree(str(up / ".git"))
+    r = og.ensure_source(str(tmp_path / "ogc_d"), url=bad_url, dataset_root=str(tmp_path / "input2"), **kw)
+    assert r["ogc_source"] == "dataset" and r["attempts"][1]["has_git"] is False and r["attempts"][1]["tree"] == tree
+    open(str(up / "vq.py"), "w", newline="\n").write("X = 2\n")  # another tree: refused, and nothing else verifies
+    r = og.ensure_source(str(tmp_path / "ogc_e"), url=bad_url, dataset_root=str(tmp_path / "input2"), **kw)
+    assert r["ogc_source"] == "derived" and r["clone"] is None and not r["verified"] and len(r["attempts"]) == 2
+    assert "MISMATCH" in r["attempts"][1]["error"] and not os.path.exists(str(tmp_path / "ogc_e"))
+    r = og.ensure_source(str(tmp_path / "ogc_f"), url=bad_url, dataset_root=str(tmp_path / "none"), **kw)
+    assert r["ogc_source"] == "derived" and "no " + og.OGC_ZIP in r["attempts"][1]["error"]
+    # a URL at another commit is refused too
+    r = og.ensure_source(str(tmp_path / "ogc_g"), url=repo, commit="0" * 40, tree=tree)
+    assert r["ogc_source"] == "derived" and "MISMATCH" in r["attempts"][0]["error"]
+    assert og.under(str(tmp_path / "out" / "x"), (None, str(tmp_path / "out"))) and not og.under(str(tmp_path / "o2"), (str(tmp_path / "out"),))
+
+
+def test_ogc_source_chain_with_their_copy(tmp_path):
+    """Amendment 18 c with OGC's own repository (GN_OGC_SRC, a local clone at the pin): a failing URL, then a zip of the
+    copy with its .git (as the private dataset holds it) verifies by HEAD 49ccae72 and tree 9feebced."""
+    import e4p_ogc as og
+
+    clone = _ogc_clone(tmp_path)
+    if clone is None:
+        pytest.skip("GN_OGC_SRC is not set (a local clone of moholo-founder/ogc-3dgs or its URL)")
+    _zip_dir(clone, str(tmp_path / "input" / "ds" / og.OGC_ZIP), "ogc-3dgs")
+    r = og.ensure_source(str(tmp_path / "ogc_x"), url=str(tmp_path / "no_such"), dataset_root=str(tmp_path / "input"),
+                         manifest_path=str(tmp_path / "m.json"))
+    assert r["ogc_source"] == "dataset" and r["head"] == og.OGC_COMMIT and r["tree"] == og.OGC_TREE
+    assert any(f["path"] == "vq.py" for f in json.load(open(str(tmp_path / "m.json")))["files"])
+    r = og.ensure_source(str(tmp_path / "ogc_y"), url=clone)
+    assert r["ogc_source"] == "url" and r["attempts"][0]["tree"] == og.OGC_TREE
+
+
+def test_gram_kmeans_ours_reproduces_their_gram_kmeans(tmp_path):
+    """Amendment 18 d, e: ogc_derived.gram_kmeans_ours gives their released gram_kmeans's codebook and labels exactly on
+    the CPU, under the three metrics, whole and chunked, with reseeding, and with fewer splats than K (the padding).
+    Needs OGC's clone (GN_OGC_SRC)."""
+    import e4p_ogc as og
+    import ogc_derived as od
+
+    clone = _ogc_clone(tmp_path)
+    if clone is None:
+        pytest.skip("GN_OGC_SRC is not set (a local clone of moholo-founder/ogc-3dgs or its URL)")
+    vqmod = og.load_vq(clone)
+    x, M, _ = _e4q_dup_case()
+    for metric in od.METRICS:
+        for chunk in (x.shape[0], 97):
+            C, L, info = od.gram_kmeans_ours(x, M, 24, 1e-3, "cpu", chunk=chunk, metric=metric)
+            Co, Lo, _ = og.ogc_codebook(vqmod, x, M, 24, 1e-3, "cpu", chunk=chunk, metric=metric)
+            assert torch.equal(C, Co) and torch.equal(L, Lo), (metric, chunk)
+            assert sum(info["reseeded_per_iteration"]) > 0 and info["call"]["impl"] == "ogc_derived.gram_kmeans_ours"
+    # fewer splats than K: the start padded by repeats (no iteration: their reseeding then asks topk for more splats
+    # than exist, in their code as in ours)
+    xs, Ms = x[:10], M[:10]
+    C, L, _ = od.gram_kmeans_ours(xs, Ms, 16, 1e-3, "cpu", chunk=4, iters=0)
+    Co, Lo = vqmod.gram_kmeans(_ogc_layout(xs), gm.unpack(Ms.float()), 16, iters=0, device="cpu", chunk=4, seed=0)
+    assert C.shape == (16, 48) and torch.equal(C, Co.permute(0, 2, 1).reshape(16, 48)) and torch.equal(L, Lo.long())
+
+
+def test_gram_kmeans_ours_modes_and_layout():
+    """Without OGC's code: the three modes' matrices, C3DGS's layout in and out, labels in range, the second metric copy
+    counted only for "plain" and "scalar", and an unknown mode refused."""
+    import ogc_derived as od
+
+    x, M, _, _, _ = _e4q_case(n=120, K=8, seed=3)
+    G = gm.unpack(M.float())
+    assert torch.equal(od.metric_matrices(G, "gram"), G)
+    sc = od.metric_matrices(G, "scalar")
+    assert torch.allclose(sc[0], torch.einsum("ii->", G[0]) / 16 * torch.eye(16))
+    assert torch.equal(od.metric_matrices(G, "plain")[5], torch.eye(16))
+    with pytest.raises(ValueError):
+        od.metric_matrices(G, "euclid")
+    for metric in od.METRICS:
+        C, L, info = od.gram_kmeans_ours(x, M, 8, metric=metric, chunk=50)
+        assert C.shape == (8, 48) and L.shape == (120,) and int(L.max()) < 8 and L.dtype == torch.long
+        assert (info["host_bytes_metric_copy"] > 0) == (metric != "gram") and len(info["reseeded_per_iteration"]) == 15

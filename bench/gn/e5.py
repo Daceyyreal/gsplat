@@ -7,6 +7,7 @@ inside C3DGS. GN-VQ is retired from any gate (Amendment 17 a) and runs in neithe
 - fine-tuning (b, c): ``c3dgs`` and ``ogc_gram``, 5,000 iterations, in each j = 0 process;
 - E5p's processes (c), on train: j = 0 seeded 0 with the images on the scene's device; j = 0 seeded 1 with the images
   forced onto the CPU (it exercises e.2's evaluation fix); j = -1 and j = +1 seeded 0;
+- OGC's source (Amendment 18 c, e): the URL, then the private dataset, else ``derived``; ``impl_of``;
 - the one status rule: a row is ``ok`` when protocol ii measured it and its process's checks held. C3DGS's own
   evaluation is recorded beside it and never sets the status;
 - the differences at j = 0 (paired within each process), BD over three points (Amendment 9 a's fit, of degree 2 through
@@ -25,6 +26,17 @@ import g2
 ROWS = ("c3dgs", "ogc_plain", "ogc_scalar", "ogc_gram")
 OGC_ROWS = ROWS[1:]
 OGC_METRIC = {"ogc_plain": "plain", "ogc_scalar": "scalar", "ogc_gram": "gram"}  # vq.py:22-29 at 49ccae72
+ROW_METRIC = dict(OGC_METRIC)  # every row computed at the colour call, and its metric
+# Amendment 18 c, e: where OGC's rows come from ("ogc": their code from a verified copy; "derived": bench/gn/ogc_derived)
+SOURCES = ("url", "dataset", "derived")
+IMPLS = ("ogc", "derived")
+
+
+def impl_of(ogc_source: str) -> str:
+    """The implementation of OGC's rows for a source of the chain (Amendment 18 c, e)."""
+    if ogc_source not in SOURCES:
+        raise ValueError(f"{ogc_source!r} is not one of {SOURCES}")
+    return "derived" if ogc_source == "derived" else "ogc"
 FT_ROWS = ("c3dgs", "ogc_gram")
 FT_SUFFIX = "_ft"
 LAM = 1e-3  # OGC's default (vq.py:17); E4q's lam_cv on both development scenes
