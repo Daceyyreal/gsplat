@@ -4771,8 +4771,9 @@ def test_bundle_guard_with_the_copy_files_and_empty_files(tmp_path):
 def test_ogc_source_url_mode_matches_27c7731b(tmp_path):
     """Amendment 18 note 1 changes nothing on the URL path: with a URL that verifies (and an attached copy that is
     listed, not tried), ensure_source returns the same keys and values (ogc_source, clone, verified, head, tree,
-    manifest, dataset_candidates, the attempt's outcome and git commands) and writes the same manifest as the code at
-    27c7731b, loaded from git (E5p attempt 2 ran with it)."""
+    manifest, dataset_candidates, the attempt's outcome, and the git commands but the tree read, which no longer prints
+    the commit object) and writes the same manifest as the code at 27c7731b, loaded from git (E5p attempt 2 ran with
+    it)."""
     import importlib.util
     import shutil
     import subprocess
@@ -4807,5 +4808,42 @@ def test_ogc_source_url_mode_matches_27c7731b(tmp_path):
     ao, an = ro["attempts"][0], rn["attempts"][0]
     assert set(ao) == set(an), set(ao) ^ set(an)
     assert all(ao[k] == an[k] for k in ("source", "url", "dest", "verified", "head", "tree", "clean"))
-    assert [s["cmd"] for s in ao["steps"]] == [s["cmd"] for s in an["steps"]]
+    # the one intended difference (3b): the tree is read with "rev-parse HEAD:", not "cat-file -p HEAD"
+    co, cn = [s["cmd"] for s in ao["steps"]], [s["cmd"] for s in an["steps"]]
+    assert len(co) == len(cn) and [i for i, (x, y) in enumerate(zip(co, cn)) if x != y] == [3], (co, cn)
+    assert co[3].endswith("cat-file -p HEAD") and cn[3].endswith("rev-parse HEAD:")
+
+
+def test_ogc_source_records_hold_no_commit_metadata(tmp_path):
+    """The serialized records (ensure_source's, into the meta; the preflight's) hold HEAD and the tree id only: no
+    "author " or "committer " line and no e-mail address from the commit object, for the URL, an unpacked copy and a
+    zip, verified or refused (repo_hashes reads ``rev-parse HEAD:``, never ``cat-file -p HEAD``)."""
+    import re
+    import shutil
+
+    import e4p_ogc as og
+
+    repo = str(tmp_path / "repo")
+    commit, tree = _toy_repo(repo)  # committed as "t <t@t>"
+    kw = dict(commit=commit, tree=tree)
+    email = re.compile(r"[\w.+-]+@[\w-]+(\.[\w-]+)*")
+    inputs = {}
+    inputs["dir"] = tmp_path / "input_dir"
+    shutil.copytree(repo, str(inputs["dir"] / "slug" / "ogc-3dgs-49ccae72" / "ogc-3dgs"))
+    inputs["zip"] = tmp_path / "input_zip"
+    _zip_dir(repo, str(inputs["zip"] / "slug" / og.OGC_ZIP), "ogc-3dgs")
+    recs = [og.ensure_source(str(tmp_path / "ogc_url"), url=repo, **kw)]
+    for name, root in inputs.items():
+        recs.append(og.ensure_source(str(tmp_path / f"ogc_{name}"), url=str(tmp_path / "no_such"),
+                                     dataset_root=str(root), **kw))
+        recs.append(og.ensure_source(str(tmp_path / f"ogc_{name}_bad"), url=str(tmp_path / "no_such"),
+                                     dataset_root=str(root), commit=commit, tree="0" * 40))
+        recs.append(og.preflight(str(tmp_path / f"pf_{name}"), url=repo, dataset_root=str(root), **kw))
+    assert [r.get("ogc_source", r.get("first_ok")) for r in recs] == ["url", "dataset", "derived", "url", "dataset",
+                                                                       "derived", "url"]
+    for r in recs:
+        text = json.dumps(r)
+        assert tree in text  # the tree id is recorded
+        assert "author " not in text and "committer " not in text, text[:300]
+        assert not email.search(text), email.search(text).group(0)
 

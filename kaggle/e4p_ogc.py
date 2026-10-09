@@ -164,10 +164,11 @@ def _git(path: str) -> str:
 
 def repo_hashes(path: str, rec: Dict) -> Tuple[str, str]:
     """``(HEAD, HEAD's tree)`` of the repository at ``path``, read from its object database (``rev-parse HEAD`` and
-    ``cat-file -p HEAD``'s ``tree`` line; no ``^`` or ``%``, which a Windows shell would eat)."""
+    ``rev-parse HEAD:``, the tree of HEAD; no ``^`` or ``%``, which a Windows shell would eat). Only the two ids are
+    read and recorded: never the commit object (``cat-file -p HEAD`` would put its author, committer and message into
+    the serialized records)."""
     head = _last_line(_step(rec, _run(f"{_git(path)} rev-parse HEAD", timeout=60)))
-    r = _step(rec, _run(f"{_git(path)} cat-file -p HEAD", timeout=60))
-    tree = next((ln.split()[1] for ln in (r.get("_text") or "").splitlines() if ln.startswith("tree ")), "")
+    tree = _last_line(_step(rec, _run(f"{_git(path)} rev-parse HEAD:", timeout=60)))
     return head, tree
 
 
