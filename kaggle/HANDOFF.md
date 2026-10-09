@@ -3689,7 +3689,9 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   row ok. See "E5p notebook", "After the run".
 - Next: Dace reads E5p attempt 2 (FINDINGS section 18 and its checker after that), and decides on Amendment 18 note 2 (drafted, not committed).
 - **A flaky test:** one pytest run before `f32c36d1` had one failure that three reruns did not reproduce; which test is
-  not known. Watch for it.
+  not known. Not reproduced in 33 further runs at `8340f124` (2026-10-10: 20 plain, 5 with `-p no:cacheprovider`, 5 in
+  shuffled order, 3 in the repository; many under load, 152-198 s against the failing run's 98 s), so no fix; the gate
+  now keeps each run's log (see "Conventions"). Watch for it.
 - **E5's wheel:** attach E5p attempt 2's output for `wheels/`, pinned to that version (Kaggle attaches a notebook's
   latest version by default); attempt 2 builds the torch 2.11.0+cu128 wheel. The E5p output attached to attempt 2 held
   no torch 2.11 key.
@@ -3818,6 +3820,9 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 
 ## Conventions and gotchas
 
+- **pytest gate: exit code with pipefail; never pipe the summary through tail without it.** Commit only on pytest's own
+  exit code 0 (`set -o pipefail` whenever its output goes through a pipe), and keep each gate run's full output in a
+  log outside the repository, so a failure's traceback survives.
 - **Setup:** MipNeRF360, `examples/benchmarks/compression/mcmc.sh` settings (MCMC, cap 1M, data factor 4
   outdoor / 2 indoor, LPIPS VGG for eval). Data lives under `/tmp`, output in `/kaggle/working`.
   `MAX_JOBS=2` (higher values OOM the build).
