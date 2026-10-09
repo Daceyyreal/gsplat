@@ -3529,7 +3529,7 @@ with Dace's additions h, i and j), then `adaff9be`, `824ef452`, `bdd7ec55` (E5p'
 Order, pytest before each commit, each pushed fast-forward after the ancestor check: `459f7318` (the licence notice),
 `f13193cb` (Amendment 18 and RELATED_WORK_OGC's dated lines, alone, approved by Dace with edits), then `8b486e3d` (the
 source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6` (discover merges every `wheels/`),
-`cb6005b1` (the bundle guard), `ae36618c` (attempt 2's notebook), `98d54d6a` (the dry run per source, the estimate), then this flush.
+`cb6005b1` (the bundle guard), `ae36618c` (attempt 2's notebook), `98d54d6a` (the dry run per source, the estimate), the flush `a0953fc4`, then `7d2b3618` (the guard ignores the empty file's hashes: OGC's empty `tests/__init__.py` is git's empty blob, the only blob of their tree also in this repository).
 
 - **What happened:** E5p attempt 1 (2026-10-08) stopped before any row: OGC's repository was unavailable (HTTP 404), and
   `ensure_clone` dropped git's output, so the bundle shows only "cannot change to '/tmp/ogc_train'". The image had
