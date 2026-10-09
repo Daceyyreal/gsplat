@@ -40,7 +40,9 @@ else our derived code), and a report-only row `ogc_gram_ours`; the licence-notic
 attempt 2 **ran on 2026-10-09; its bundle is committed data only** (`kaggle/gn_e5p/attempt2/gn5p/`, `8eadc81e`; see
 "Amendment 18 and E5p attempt 2 (2026-10-09)" and "A stale launch of attempt 2" below). Amendment 18 note 1 (`f32c36d1`,
 code `58805307`) fixes the dataset source for a read-only copy owned by another user, and `f428c93f` records only HEAD
-and the tree id of OGC's copy. **Next: Dace reads E5p attempt 2 (FINDINGS section 18 and its checker after that), and decides on Amendment 18 note 2 (drafted, not committed).** No E5 data exists.
+and the tree id of OGC's copy. Amendment 18 note 2 (`c9d1dc49`, code `7ca78f4e`) records the fine-tuned rows'
+quantizer and codebook. **FINDINGS section 18** reports E5p attempt 2 (`9457b0c9`, checked by `bench/gn/check_s18.py`,
+`999f5107`). **Next: Amendment 18 e's pre-E5 note on which OGC sources E5 may use; then E5's build, the seven-scene feasibility note, the session-assignment note and E5** (see "Open items"). No E5 data exists.
 
 ## Context and rules
 
@@ -3614,7 +3616,29 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   unchanged, the scratch copy removed), derived (338 s); every stage ok, and in url and both dataset runs
   `ogc_gram_ours` equals `ogc_gram` exactly on the CPU in every process.
 
-### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: attempt 1 no data, attempt 2 run, bundle committed)
+### Amendment 18 notes 1-2 and FINDINGS section 18 (2026-10-09/10)
+
+- **Commits, in order:** `8eadc81e` (E5p attempt 2's bundle, data only), `f32c36d1` (Amendment 18 note 1, alone),
+  `58805307` (its code, tests and dry-run change), `f428c93f` (OGC's source records: HEAD and the tree id only),
+  `8340f124` (HANDOFF), `3f7dcdfb` (HANDOFF: the pytest gate), `c9d1dc49` (Amendment 18 note 2, alone), `7ca78f4e`
+  (its code and tests), `29819b12` (HANDOFF), `9457b0c9` (FINDINGS section 18, alone), `999f5107` (`check_s18` and its pytest
+  hook), then this flush.
+- **Dace's decisions:**
+  - the stale launch of 2026-10-09 (attempt 1's notebook cells against `27c7731b`, cancelled during the wheel build) is
+    not an attempt;
+  - `8eadc81e` is kept unchanged, with OGC's public commit metadata from `cat-file` in its `gn5p_meta_train.json`;
+    `f428c93f` stops it for future runs;
+  - no process-count change (Amendment 17 c allows one, upward only);
+  - the pytest gate: pytest's exit code decides, with `set -o pipefail` and a kept log (see "Conventions");
+  - section 18 approved with four edits: the BD-PSNR headline (+0.1292 dB, with +0.1690 dB at j = 0 and 3.48% more
+    bytes), "OGC's Lloyd with the identity metric (its init, reseeding and full-batch update, against C3DGS's minibatch
+    moving averages)", the two fine-tuned processes bracketing the paper's +0.09 dB (no interval with one scene), and
+    the `SE_noise` 0.00005.
+- **Checked:** `bench/gn/check_s18.py`: 117 recomputed numbers, 361 numeric tokens, 0 failures; 6 mutations of the
+  text caught (a changed number, an added number, the title's byte share, the 0.00005, a bracket value, "Lloyd update"
+  restored). pytest 166 before each of `9457b0c9` and `999f5107`.
+
+### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; next: Amendment 18 e's pre-E5 note)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -3687,7 +3711,19 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - ~~**Amendment 18 and attempt 2's build.**~~ **Done (2026-10-09):** see "Amendment 18 and E5p attempt 2 (2026-10-09)".
 - ~~**Run E5p attempt 2.**~~ **Done (2026-10-09): run, bundle committed (`8eadc81e`)**; the URL verified, every
   row ok. See "E5p notebook", "After the run".
-- Next: Dace reads E5p attempt 2 (FINDINGS section 18 and its checker after that), and decides on Amendment 18 note 2 (drafted, not committed).
+- ~~**FINDINGS section 18 (E5p attempt 2).**~~ **Done (2026-10-10):** `9457b0c9`, checked by `bench/gn/check_s18.py`
+  (`999f5107`).
+- **Next, in order:**
+  1. **Amendment 18 e's pre-E5 note** on which OGC sources E5 may use: the dataset source is untested on Kaggle (note
+     1); `ogc_derived` is validated through `"gram"` at full scale (FINDINGS section 18), its `"plain"` and `"scalar"`
+     only on small cases;
+  2. **E5's build:** the Deep Blending data path and its stand-in (Amendment 17 j), the seven scenes' constants, the
+     verdict, the multi-session notebook;
+  3. **the seven-scene feasibility note** (Amendment 17 e.3, with h's host memory). E5p's peaks: the step with the
+     images on the CPU 10.20 GB; OGC's rows 3.26-6.92 GB of RSS; the second metric copy 1,024 B per colour-quantized
+     splat;
+  4. **the session-assignment note** (Amendment 17 e.4);
+  5. **E5.**
 - **A flaky test:** one pytest run before `f32c36d1` had one failure that three reruns did not reproduce; which test is
   not known. Not reproduced in 33 further runs at `8340f124` (2026-10-10: 20 plain, 5 with `-p no:cacheprovider`, 5 in
   shuffled order, 3 in the repository; many under load, 152-198 s against the failing run's 98 s), so no fix; the gate
@@ -3707,9 +3743,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   calls `.get` on whatever `gn5p_attempt.json` holds. Valid JSON that is not an object (a list, a number) raises an
   uncaught `AttributeError` and stops the restore cell. Only files this notebook writes are read, so it has not
   happened; fix it with E5's notebook.
-- **Then (Amendment 17):** FINDINGS section 18; any dated note E5p calls for; E5's build (conflicts 7, 8, 11: the Deep
-  Blending data path and its stand-in, the seven scenes' constants, the verdict, the multi-session notebook); the
-  seven-scene feasibility note (e.3, h); the session-assignment note (e.4); E5.
+- ~~**Then (Amendment 17):** FINDINGS section 18; any dated note E5p calls for.~~ **Done:** section 18 above; Amendment
+  18 notes 1-2. The rest of the list is under "Next, in order".
 - ~~**E4's session assignment.**~~ **Moot:** E4 is withdrawn. Gate scenes stay untouched.
 - ~~**Engineering in E4q's build.**~~ **Done:** the reserved-memory fold (`e4p_hooks`, the wrapper) and OGC's chunk at
   25,000 with the chunk check on train; the fold is first exercised on a GPU by E4q's run.
@@ -3978,5 +4013,5 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   and E4q registered (Amendment 16, `1f0b7e15`); E4q ran (`1d986d1a`, FINDINGS section 17). Amendment 17 (`b3923bfb`)
   retires GN-VQ from any gate and registers E5p and E5, a replication and dissection of OGC inside C3DGS; E5p attempt 1
   produced no data (`a56a0bcf`), Amendment 18 (`f13193cb`) adds OGC's source chain and `ogc_gram_ours`, and attempt 2
-  ran (bundle `8eadc81e`). **Next: Dace reads E5p attempt 2; then FINDINGS section 18.** The rest of E3's design (other
-  codecs, INRIA checkpoints) is not written yet.
+  ran (bundle `8eadc81e`, FINDINGS section 18, `9457b0c9`). **Next: Amendment 18 e's pre-E5 note, then E5's build.** The
+  rest of E3's design (other codecs, INRIA checkpoints) is not written yet.
