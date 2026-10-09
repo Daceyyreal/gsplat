@@ -122,6 +122,9 @@ JOB_EXITS = {}
 JOB_SKIPPED = []
 for d in (GN5P_OUT, GN5P_WORK, INRIA_DIR, GN_CACHE):
     os.makedirs(d, exist_ok=True)
+_w = os.path.realpath(WORK)
+if os.path.realpath(OGC_ROOT) == _w or os.path.realpath(OGC_ROOT).startswith(_w + os.sep):
+    raise RuntimeError(f"OGC_ROOT {OGC_ROOT} is under {WORK}: OGC's code never goes into the output (Amendment 18 c)")
 
 
 def sh(cmd, cwd=None, env=None, log=None):
@@ -226,9 +229,38 @@ def is_e5p_file(name):
     return name.startswith("gn5p_") or name.startswith("gn_e5p_") or name == "timings.json"
 
 
+def ogc_matches(paths, ogc_root=None):
+    """Amendment 18 c's bundle guard: every file of `paths` that matches OGC's code, by the file lists the job wrote at
+    clone time (`<OGC_ROOT>/ogc_*_manifest.json`: path, SHA-1, git blob id): the same relative path or file name, the
+    same SHA-1 or git blob id, or a file inside an OGC copy. Returns [(path, why)]."""
+    import hashlib
+
+    root = OGC_ROOT if ogc_root is None else ogc_root
+    names, hashes, copies = set(), set(), []
+    for m in glob.glob(os.path.join(root, "ogc_*_manifest.json")):
+        j = json.load(open(m))
+        copies.append(os.path.realpath(j.get("clone") or m))
+        for f in j.get("files", []):
+            names.update({f["path"], os.path.basename(f["path"])})
+            hashes.update({f["sha1"], f["git_blob"]})
+    copies += [os.path.realpath(d) for d in glob.glob(os.path.join(root, "ogc_*")) if os.path.isdir(d)]
+    bad = []
+    for path in paths:
+        data = open(path, "rb").read()
+        sha1, blob = hashlib.sha1(data).hexdigest(), hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
+        rp = os.path.realpath(path)
+        why = ("its name is one of OGC's files" if os.path.basename(path) in names else
+               "its content is one of OGC's files" if sha1 in hashes or blob in hashes else
+               "it is inside an OGC copy" if any(rp == c or rp.startswith(c + os.sep) for c in copies) else None)
+        if why:
+            bad.append((path, why))
+    return bad
+
+
 def write_bundle(out_dir, bundle_path, arc="gn5p"):
     """Zip the top-level csv / json / png files of out_dir under arc/; returns their names. A file
-    that is not E5p's own is skipped with a warning (this also runs in a `finally`, so never raise)."""
+    that is not E5p's own is skipped with a warning. If any file matches OGC's code (`ogc_matches`), no bundle is
+    written and this raises (Amendment 18 c)."""
     import zipfile
 
     names, foreign = [], []
@@ -238,6 +270,11 @@ def write_bundle(out_dir, bundle_path, arc="gn5p"):
         (names if is_e5p_file(n) else foreign).append(n)
     if foreign:
         print(f"WARNING: not bundled, not E5p output: {foreign}", flush=True)
+    bad = ogc_matches([os.path.join(out_dir, n) for n in names])
+    if bad:
+        if os.path.exists(bundle_path):
+            os.remove(bundle_path)
+        raise RuntimeError(f"BUNDLE GUARD: {bad} match OGC's code; no bundle written (Amendment 18 c)")
     with zipfile.ZipFile(bundle_path + ".tmp", "w", zipfile.ZIP_DEFLATED) as z:
         for n in names:
             z.write(os.path.join(out_dir, n), arcname=f"{arc}/{n}")
@@ -420,7 +457,10 @@ try:
     run_gpu_queue(jobs, max(1, min(N_GPUS, len(jobs))), progress=progress, start_cutoff_s=START_CUTOFF_S)
 finally:
     print("log tails:", write_log_tails(jobs, GN5P_OUT), flush=True)
-    write_bundle(GN5P_OUT, BUNDLE)
+    try:  # this runs in a `finally`: the last cell writes the bundle again and raises
+        write_bundle(GN5P_OUT, BUNDLE)
+    except Exception as e:  # noqa: BLE001
+        print("BUNDLE NOT WRITTEN:", e, flush=True)
 JOB_FAILED = sorted(name for name, code in JOB_EXITS.items() if code != 0)
 print("exit codes:", JOB_EXITS, "\nfailed:", JOB_FAILED, "\nnot started (cutoff):", JOB_SKIPPED)
 """
@@ -456,7 +496,8 @@ for scene, s in SUMMARY["scenes"].items():
 
 code(
     r"""
-# The bundle holds only the top-level csv / json files of gn5p/ (nothing of OGC's: its clone stays in /tmp).
+# The bundle holds only the top-level csv / json files of gn5p/; nothing of OGC's (its copy stays in /tmp, and the
+# guard refuses any file matching one of its paths or hashes).
 # gn5p_work/ (the model directory, C3DGS's .npz outputs), e3p_inria/ and the wheel stay in /kaggle/working for a
 # resume; the C3DGS checkout and the GN metric are in /tmp.
 names = write_bundle(GN5P_OUT, BUNDLE)
