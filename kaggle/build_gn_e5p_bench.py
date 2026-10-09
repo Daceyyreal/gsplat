@@ -29,7 +29,8 @@ md(
 
 Kaggle notebook title: **E5p OGC dissection pilot** (`bench/gn-vq`, `kaggle/gn_e5p_bench.ipynb`).
 
-`kaggle/PREREG_GN.md` **Amendment 17** (c, e, h) fixes this run. **E5p is a pilot on train: mechanics and timing, no
+`kaggle/PREREG_GN.md` **Amendment 17** (c, e, h) fixes this run, with **Amendment 18** (attempt 2: OGC's source chain,
+the row `ogc_gram_ours`). **E5p is a pilot on train: mechanics and timing, no
 verdict.** GN-VQ is retired from any gate (Amendment 17 a); the study continues as a replication and dissection of OGC
 (arXiv 2609.28997) inside C3DGS. No gate scene is read.
 
@@ -44,8 +45,17 @@ the same quantizer input, quantized set and 16 x 16 metric:
 | `ogc_plain` | OGC's `vq.gram_kmeans`, `metric="plain"` (the identity) |
 | `ogc_scalar` | the same, `metric="scalar"` (`tr(G_i) / 16 * I`) |
 | `ogc_gram` | the same, `metric="gram"` (OGC's VQ) |
+| `ogc_gram_ours` | our derived implementation (`bench/gn/ogc_derived.gram_kmeans_ours`), `ogc_gram`'s settings; report only, not fine-tuned (Amendment 18 d) |
 
 OGC's call: 15 iterations, `lam` 1e-3, their init and reseeding, seed 0, chunk 25,000, our metric.
+
+**OGC's code** (Amendment 18 c), before any row: the URL (`github.com/moholo-founder/ogc-3dgs`), then the attached
+private dataset **"E5p OGC source 49ccae72"** (`ogc-3dgs-49ccae72.zip`), each verified by HEAD `49ccae72`, tree
+`9feebced` and a clean working copy; if neither verifies, OGC's rows are computed by `bench/gn/ogc_derived.py`
+(Amendment 18 e) and `ogc_gram_ours` is not computed. The source used (`ogc_source`), every attempt and git's output are
+in `gn5p_meta_train.json`. OGC's code is PolyForm Noncommercial; the author states that the method is patented for
+commercial use and that the code is available for research; it stays in `/tmp`, and the bundle step refuses any file
+that matches one of its paths or hashes.
 
 | Process | Colour threshold | Images | Fine-tuning (5,000 iterations) |
 |---|---|---|---|
@@ -57,8 +67,7 @@ OGC's call: 15 iterations, `lam` 1e-3, their init and reseeding, seed 0, chunk 2
 Every row's `.npz`: bytes, per-array sizes, index entropy, codewords used, protocol ii per view, note ii's orbit
 fidelity (mean PSNR and the PSNR of the pooled MSE), C3DGS's own evaluation (recorded beside the status, never setting
 it), its table's range against the int8 grid and the quantizer state at its save; each OGC row's time, GPU peaks and host
-RSS (Amendment 17 h). OGC (`moholo-founder/ogc-3dgs` at `49ccae72`, PolyForm Noncommercial) is cloned at run time,
-never copied or bundled.
+RSS (Amendment 17 h).
 
 Every step records its time, peak GPU memory (allocated and reserved) and the host RSS of the job and its children.
 
@@ -66,9 +75,11 @@ Every step records its time, peak GPU memory (allocated and reserved) and the ho
 
 | Attach | Required | What E5p takes from it |
 |---|---|---|
-| **"R5 tilequant"** (the run-5 notebook output) | no, but attach it | `wheels/` only: the gsplat wheel, reused when its key matches (otherwise it is built, about 73 min) |
 | **"E3p INRIA pilot"** (the E3p notebook output) | no, but attach it | `e3p_inria/` only: train's three members, each re-checked by size and CRC32 |
-| this notebook's own earlier output | only to resume | `gn5p/`, `gn5p_work/` |
+| **E5p attempt 1's output** (this notebook's first run) | no, but attach it | `wheels/` only: the gsplat wheel for torch 2.11.0+cu128, reused when its key matches (otherwise it is built, about 66 min). Its `gn5p/` and `gn5p_work/` are **not** restored |
+| **"E5p OGC source 49ccae72"** (private dataset) | no, but attach it | `ogc-3dgs-49ccae72.zip`: OGC's code if the URL fails (Amendment 18 c) |
+| "R5 tilequant" (the run-5 notebook output) | no | `wheels/` only (every attached `wheels/` is merged) |
+| this notebook's own attempt-2 output | only to resume | `gn5p/`, `gn5p_work/`, restored only when `gn5p/gn5p_attempt.json` says attempt 2 |
 
 | Step | What |
 |---|---|
@@ -78,7 +89,7 @@ Every step records its time, peak GPU memory (allocated and reserved) and the ho
 | 4 | build C3DGS once (`gn5p_c3dgs_build.json`) |
 | 5 | the job |
 | 6 | `gn5p_summary.json`: the j = 0 differences and their components, BD over the three points (P1 and P2 among the pairs, values only), C3DGS's evaluation per process, the OGC rows' host memory, note ii, the costs (no verdict) |
-| 7 | `E5p_bundle.zip` (top-level csv / json of `gn5p/`, arcname `gn5p/`); raises last if the job crashed |
+| 7 | `E5p_bundle_2.zip` (top-level csv / json of `gn5p/`, arcname `gn5p/`; refused if any file matches OGC's code); raises last if the job crashed |
 """
 )
 
@@ -110,8 +121,10 @@ GN5P_WORK = f"{WORK}/gn5p_work"  # model directory, C3DGS's .npz outputs, job lo
 GN_CACHE = "/tmp/gn5p_cache"  # the 16 x 16 GN metric and the orbit reference renders (recomputed on a resume)
 INRIA_DIR = f"{WORK}/e3p_inria"  # the fetched INRIA members (E3p's layout; not bundled)
 C3DGS_DIR = "/tmp/c3dgs"  # the C3DGS checkout the build makes
-OGC_ROOT = "/tmp"  # OGC's clone (ogc_train): never bundled
-BUNDLE = f"{WORK}/E5p_bundle.zip"
+OGC_ROOT = "/tmp"  # OGC's copy (ogc_train), its extract directory and file list (ogc_train_manifest.json): never bundled
+ATTEMPT = 2  # Amendment 18 a: attempt 1 (bundle a56a0bcf) produced no data
+ATTEMPT_FILE = f"{GN5P_OUT}/gn5p_attempt.json"  # marks this output, so a resume restores only attempt 2's results
+BUNDLE = f"{WORK}/E5p_bundle_{ATTEMPT}.zip"
 WHEEL_ROOT = f"{WORK}/wheels"
 INPUT_ROOT = "/kaggle/input"
 ALLOW_WHEEL_BUILD = True
@@ -286,14 +299,22 @@ def write_bundle(out_dir, bundle_path, arc="gn5p"):
 
 code(
     r"""
-# Optional inputs, walked recursively before any install: every gsplat wheels/ (merged) and, to
-# resume, this notebook's own output. E5p needs no checkpoint and no earlier result: its model comes from
-# INRIA's archive through E3p's and note i's pins, fetched and checked by the jobs. An attached E3p output's e3p_inria/
-# is reused after the jobs re-check each member's size and CRC32.
+# Optional inputs, walked recursively before any install: every gsplat wheels/ (attempt 1's output, run 5's), merged;
+# E3p's e3p_inria/, reused after the jobs re-check each member's size and CRC32; and, to resume, this notebook's own
+# attempt-2 output (gn5p/ and gn5p_work/ only where gn5p/gn5p_attempt.json says attempt 2: attempt 1's are never
+# restored, Amendment 18 a). The private dataset with OGC's code is read by the job itself (--ogc_dataset_root).
 
 
 def _depth(root, dirpath):
     return 0 if os.path.normpath(dirpath) == os.path.normpath(root) else os.path.relpath(dirpath, root).count(os.sep) + 1
+
+
+def attempt_of(output_dir):
+    # the attempt an attached output's gn5p/ belongs to (gn5p/gn5p_attempt.json), or None (attempt 1 wrote none)
+    try:
+        return json.load(open(os.path.join(output_dir, "gn5p", "gn5p_attempt.json"))).get("attempt")
+    except (OSError, ValueError):
+        return None
 
 
 def discover(root, max_depth=6):
@@ -306,10 +327,12 @@ def discover(root, max_depth=6):
             found["wheels"].append(dirpath)
             dirnames[:] = []
         if name in ("gn5p", "gn5p_work", "e3p_inria") and found[name] is None and depth > 0:
-            if name != "gn5p" or not foreign_artifacts(dirpath):
-                found[name] = dirpath
-            else:
+            if name == "gn5p" and foreign_artifacts(dirpath):
                 print(f"ignoring {dirpath}: E0-E4q result files {foreign_artifacts(dirpath)}, not E5p output")
+            elif name != "e3p_inria" and attempt_of(os.path.dirname(os.path.normpath(dirpath))) != ATTEMPT:
+                print(f"not restoring {dirpath}: not attempt {ATTEMPT}'s output (Amendment 18 a)")
+            else:
+                found[name] = dirpath
     return found
 
 
@@ -326,6 +349,7 @@ for key, dst in (("gn5p", GN5P_OUT), ("gn5p_work", GN5P_WORK), ("e3p_inria", INR
         print(f"restoring {FOUND[key]} -> {dst}")
         shutil.copytree(FOUND[key], dst, dirs_exist_ok=True)
 record_timing("restore_s", time.time() - t0)
+json.dump({"attempt": ATTEMPT, "amendment": "PREREG_GN.md Amendment 18"}, open(ATTEMPT_FILE, "w"), indent=2)
 stray = foreign_artifacts(GN5P_OUT)
 if stray:
     raise RuntimeError(f"{GN5P_OUT} holds E0-E4q result files {stray}. E5p reports only rows it produced; move them aside")
@@ -445,14 +469,14 @@ def e5p_job(scene):
         "--data_root", DATA_ROOT, "--inria_dir", f"{INRIA_DIR}/{scene}", "--c3dgs_dir", C3DGS_DIR,
         "--gn_cache_dir", GN_CACHE, "--work_dir", f"{GN5P_WORK}/{scene}", "--out_dir", GN5P_OUT,
         "--examples_dir", f"{SRC_DIR}/examples", "--python", PY, "--commit", COMMIT[:12], "--deadline", f"{DEADLINE:.0f}",
-        "--keep_data", "--ogc_dir", f"{OGC_ROOT}/ogc_{scene}",
+        "--keep_data", "--ogc_dir", f"{OGC_ROOT}/ogc_{scene}", "--ogc_dataset_root", INPUT_ROOT, "--output_root", WORK,
     ]
     name = f"gn_e5p_{scene}"
     return (name, " ".join(args), f"{SRC_DIR}/examples", f"{GN5P_WORK}/{name}.log")
 
 
 jobs = [e5p_job(s) for s in SCENES]
-progress = r"^\[(" + "|".join(SCENES) + r")\]|Traceback|Error|FAILED|MISMATCH|out of memory"
+progress = r"^\[(" + "|".join(SCENES) + r")\]|Traceback|Error|FAILED|MISMATCH|OGC source|out of memory"
 try:
     run_gpu_queue(jobs, max(1, min(N_GPUS, len(jobs))), progress=progress, start_cutoff_s=START_CUTOFF_S)
 finally:
@@ -481,7 +505,9 @@ for scene, s in SUMMARY["scenes"].items():
     if "missing" in s:
         print(scene, s["missing"])
         continue
-    print(f"== {scene}: device {s['scene_device']}, dropped {s['dropped']}")
+    print(f"== {scene}: device {s['scene_device']}, dropped {s['dropped']}, OGC source {s['ogc_source']}")
+    print("   ogc_gram_ours vs ogc_gram:", json.dumps(s["ogc_gram_ours_vs_ogc_gram"])[:1500])
+    print("   ogc_gram vs E4q's ogc:", json.dumps(s["ogc_gram_vs_e4q_ogc"])[:800])
     for d, c in s["differences_j0"].items():
         ps = (c["PSNR_ii"]["per_scene"].get(scene) or {})
         print(f"   {d:<30} D_sp {json.dumps(ps.get('D_sp'))}, D_s {ps.get('D_s')}, SE_noise {c['PSNR_ii'].get('SE_noise')}")
