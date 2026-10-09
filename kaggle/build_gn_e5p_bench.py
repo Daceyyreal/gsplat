@@ -77,13 +77,14 @@ Every step records its time, peak GPU memory (allocated and reserved) and the ho
 |---|---|---|
 | **"E3p INRIA pilot"** (the E3p notebook output) | no, but attach it | `e3p_inria/` only: train's three members, each re-checked by size and CRC32 |
 | **E5p attempt 1's output** (this notebook's first run) | no, but attach it | `wheels/` only: the gsplat wheel for torch 2.11.0+cu128, reused when its key matches (otherwise it is built, about 66 min). Its `gn5p/` and `gn5p_work/` are **not** restored |
-| **"E5p OGC source 49ccae72"** (private dataset) | no, but attach it | `ogc-3dgs-49ccae72.zip`: OGC's code if the URL fails (Amendment 18 c) |
+| **"E5p OGC source 49ccae72"** (private dataset) | no, but attach it | uploaded as `E5p_ogc_src_wrapped.zip` (holding `ogc-3dgs-49ccae72.zip`, stored); Kaggle unpacks the wrapper and leaves the inner zip with its `.git`. The job searches all of `/kaggle/input` for the inner zip, the wrapper, or an unpacked copy with `.git`: OGC's code if the URL fails (Amendment 18 c) |
 | "R5 tilequant" (the run-5 notebook output) | no | `wheels/` only (every attached `wheels/` is merged) |
 | this notebook's own attempt-2 output | only to resume | `gn5p/`, `gn5p_work/`, restored only when `gn5p/gn5p_attempt.json` says attempt 2 |
 
 | Step | What |
 |---|---|
 | 1 | config, helpers |
+| 1b | **OGC preflight**: every source checked (the URL and every dataset copy, even if the URL passes), one line each (ok / FAIL, HEAD, tree, reason); `gn5p_ogc_preflight.json`. The job's chain then uses the first that verifies |
 | 2 | find the optional inputs, before any install |
 | 3 | install gsplat (restored wheel or a build) and the example dependencies; `gn5p_env.json` |
 | 4 | build C3DGS once (`gn5p_c3dgs_build.json`) |
@@ -124,6 +125,7 @@ C3DGS_DIR = "/tmp/c3dgs"  # the C3DGS checkout the build makes
 OGC_ROOT = "/tmp"  # OGC's copy (ogc_train), its extract directory and file list (ogc_train_manifest.json): never bundled
 ATTEMPT = 2  # Amendment 18 a: attempt 1 (bundle a56a0bcf) produced no data
 ATTEMPT_FILE = f"{GN5P_OUT}/gn5p_attempt.json"  # marks this output, so a resume restores only attempt 2's results
+PREFLIGHT_FILE = f"{GN5P_OUT}/gn5p_ogc_preflight.json"  # step 1b's check of every OGC source (never restored)
 BUNDLE = f"{WORK}/E5p_bundle_{ATTEMPT}.zip"
 WHEEL_ROOT = f"{WORK}/wheels"
 INPUT_ROOT = "/kaggle/input"
@@ -301,6 +303,26 @@ def write_bundle(out_dir, bundle_path, arc="gn5p"):
 
 code(
     r"""
+# Step 1b: the OGC preflight (Amendment 18 c), before any install: every source is checked, the URL and every copy in the
+# attached dataset (anywhere under /kaggle/input: the inner zip, the wrapper, an unpacked copy with .git), even if the URL
+# passes; one line each. Each is copied under /tmp, verified as the job's chain verifies it, and removed. Only a report:
+# the job's chain still uses the first source that verifies (URL, then dataset, else derived).
+t0 = time.time()
+if not os.path.isdir(f"{SRC_DIR}/.git"):
+    sh(f"git clone --recursive --branch {BRANCH} {FORK_URL} {SRC_DIR}")
+sys.path.insert(0, f"{SRC_DIR}/kaggle")
+import e4p_ogc as og
+
+PREFLIGHT = og.preflight(f"{OGC_ROOT}/ogc_preflight", og.OGC_URL, dataset_root=INPUT_ROOT)
+print("\n".join(PREFLIGHT["lines"]), flush=True)
+json.dump(PREFLIGHT, open(PREFLIGHT_FILE, "w"), indent=2)
+record_timing("ogc_preflight_s", time.time() - t0)
+"""
+)
+
+
+code(
+    r"""
 # Optional inputs, walked recursively before any install: every gsplat wheels/ (attempt 1's output, run 5's), merged;
 # E3p's e3p_inria/, reused after the jobs re-check each member's size and CRC32; and, to resume, this notebook's own
 # attempt-2 output (gn5p/ and gn5p_work/ only where gn5p/gn5p_attempt.json says attempt 2: attempt 1's are never
@@ -349,7 +371,8 @@ print("wheel keys:", sorted(os.listdir(WHEEL_ROOT)) if os.path.isdir(WHEEL_ROOT)
 for key, dst in (("gn5p", GN5P_OUT), ("gn5p_work", GN5P_WORK), ("e3p_inria", INRIA_DIR)):
     if FOUND[key]:
         print(f"restoring {FOUND[key]} -> {dst}")
-        shutil.copytree(FOUND[key], dst, dirs_exist_ok=True)
+        shutil.copytree(FOUND[key], dst, dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns(os.path.basename(PREFLIGHT_FILE)))  # this session's preflight stays
 record_timing("restore_s", time.time() - t0)
 json.dump({"attempt": ATTEMPT, "amendment": "PREREG_GN.md Amendment 18"}, open(ATTEMPT_FILE, "w"), indent=2)
 stray = foreign_artifacts(GN5P_OUT)
@@ -472,6 +495,7 @@ def e5p_job(scene):
         "--gn_cache_dir", GN_CACHE, "--work_dir", f"{GN5P_WORK}/{scene}", "--out_dir", GN5P_OUT,
         "--examples_dir", f"{SRC_DIR}/examples", "--python", PY, "--commit", COMMIT[:12], "--deadline", f"{DEADLINE:.0f}",
         "--keep_data", "--ogc_dir", f"{OGC_ROOT}/ogc_{scene}", "--ogc_dataset_root", INPUT_ROOT, "--output_root", WORK,
+        "--ogc_preflight", PREFLIGHT_FILE,
     ]
     name = f"gn_e5p_{scene}"
     return (name, " ".join(args), f"{SRC_DIR}/examples", f"{GN5P_WORK}/{name}.log")

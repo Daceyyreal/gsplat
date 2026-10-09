@@ -152,6 +152,7 @@ def main(argv=None):
     p.add_argument("--ogc_extract_dir", default=None, help="default: <ogc_dir>_dataset")
     p.add_argument("--ogc_manifest", default=None, help="default: <ogc_dir>_manifest.json")
     p.add_argument("--output_root", default=None, help="the session's output directory (Kaggle: /kaggle/working)")
+    p.add_argument("--ogc_preflight", default=None, help="the notebook's preflight of every OGC source (JSON), recorded")
     p.add_argument("--ogc_device", default=None, help="default: cuda if available, else cpu")
     args = p.parse_args(argv)
     if args.build_only:
@@ -202,6 +203,10 @@ def main(argv=None):
     save()
     with r4.file_lock(os.path.join(args.data_root, f".{scene}_data.lock")):
         dl = steps.run("download_dataset", lambda: e2.ensure_data(args, args.data_factor))
+    if args.ogc_preflight and os.path.exists(args.ogc_preflight):  # every source, checked before the install
+        meta["ogc_preflight"] = json.load(open(args.ogc_preflight))
+        for line in meta["ogc_preflight"].get("lines", []):
+            log(scene, line)
     # OGC's code, by Amendment 18 c's chain, verified before any row
     src = steps.run("ogc_source", lambda: og.ensure_source(
         args.ogc_dir, args.ogc_url, dataset_root=args.ogc_dataset_root, extract_dir=args.ogc_extract_dir,
@@ -212,6 +217,8 @@ def main(argv=None):
     args.ogc_impl = e5.impl_of(src["ogc_source"])
     args.ogc_clone = src.get("clone")
     common.update(ogc_source=src["ogc_source"], ogc_commit=og.OGC_COMMIT if src.get("verified") else "")
+    for c in src.get("dataset_candidates") or []:
+        log(scene, f"OGC dataset candidate: {c['kind']} {c['path']}")
     log(scene, f"OGC source: {src['ogc_source']} (" + "; ".join(
         f"{a['source']}: {'verified' if a.get('verified') else a.get('error')}" for a in src.get("attempts", [])) + ")")
     save()
@@ -587,7 +594,8 @@ def summarize(out_dir: str, scenes=tuple(SCENES)) -> Dict:
         ours = ours_vs_ogc_gram(meta, procs, get)
         e4q_cmp = ogc_gram_vs_e4q(get(0, 0, "ogc_gram"), scene)
         out["scenes"][scene] = {
-            "ogc_source": meta.get("ogc_source"), "ogc_gram_ours_vs_ogc_gram": ours, "ogc_gram_vs_e4q_ogc": e4q_cmp,
+            "ogc_source": meta.get("ogc_source"), "ogc_preflight": (meta.get("ogc_preflight") or {}).get("sources"),
+            "ogc_gram_ours_vs_ogc_gram": ours, "ogc_gram_vs_e4q_ogc": e4q_cmp,
             "rows": rows, "per_row": per_row, "differences_j0": diffs, "fidelity_per_angle_j0": fid,
             "bd_points": points, "bd": bd, "primaries_values": primaries,
             "c3dgs_eval_per_process": {k: [a.get("c3dgs_eval") for a in v.get("attempts", [])] for k, v in procs.items()},

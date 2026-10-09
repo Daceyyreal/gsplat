@@ -4593,3 +4593,39 @@ def test_e5_estimate_with_ogc_gram_ours():
     assert abs(a["e5_gpu_s"][0] - 59_872) < 1.5 and b["extra_rows"] == 1
     assert [round(x) for x in b["e5p_s"]] == [4832, 5776] and [round(x) for x in b["e5_gpu_s"]] == [66193, 101091]
     assert all(b["scenes_s"][s][i] > a["scenes_s"][s][i] for s in est.SCENES for i in (0, 1))
+
+
+def test_ogc_source_wrapped_zip_and_preflight(tmp_path):
+    """Amendment 18 c on Kaggle's layouts: the uploaded wrapper (a zip holding only the copy's zip, stored) found deep
+    under the input root and verified; an unpacked wrapper (the inner zip at <slug>/) found first; the preflight checks
+    every source, the URL and each dataset copy, even when the URL verifies, one line each, and leaves no copy behind."""
+    import zipfile
+
+    import e4p_ogc as og
+
+    repo = str(tmp_path / "repo")
+    commit, tree = _toy_repo(repo)
+    kw = dict(commit=commit, tree=tree)
+    inner = str(tmp_path / og.OGC_ZIP)
+    _zip_dir(repo, inner, "ogc-3dgs")
+    deep = tmp_path / "input" / "datasets" / "someone" / "e5p-ogc-source-49ccae72"
+    deep.mkdir(parents=True)
+    with zipfile.ZipFile(str(deep / og.WRAPPED_ZIP), "w", zipfile.ZIP_STORED) as z:
+        z.write(inner, og.OGC_ZIP)
+    bad = str(tmp_path / "no_such")
+    r = og.ensure_source(str(tmp_path / "ogc_w"), url=bad, dataset_root=str(tmp_path / "input"), **kw)
+    assert r["ogc_source"] == "dataset" and r["attempts"][1]["candidate"]["kind"] == "wrapped"
+    assert [c["kind"] for c in r["dataset_candidates"]] == ["wrapped"] and not os.path.exists(str(tmp_path / "ogc_w_dataset"))
+    (tmp_path / "input" / "slug").mkdir()
+    import shutil
+
+    shutil.copy2(inner, str(tmp_path / "input" / "slug" / og.OGC_ZIP))
+    assert [c["kind"] for c in og.find_dataset(str(tmp_path / "input"))] == ["zip", "wrapped"]
+    pf = og.preflight(str(tmp_path / "pf"), url=repo, dataset_root=str(tmp_path / "input"), **kw)
+    assert [(x["source"], x["kind"], x["ok"]) for x in pf["sources"]] == [("url", "url", True), ("dataset", "zip", True),
+                                                                          ("dataset", "wrapped", True)]
+    assert pf["first_ok"] == "url" and len(pf["lines"]) == 4 and all(tree in ln for ln in pf["lines"][:3])
+    assert not os.path.exists(str(tmp_path / "pf"))
+    pf = og.preflight(str(tmp_path / "pf"), url=bad, dataset_root=str(tmp_path / "none"), **kw)
+    assert pf["first_ok"] == "derived" and not any(x["ok"] for x in pf["sources"]) and "FAIL" in pf["lines"][0]
+    assert "git clone exited" in pf["sources"][0]["reason"] and "no " + og.OGC_ZIP in pf["sources"][1]["reason"]

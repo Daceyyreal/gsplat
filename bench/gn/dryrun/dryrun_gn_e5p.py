@@ -6,20 +6,21 @@ INRIA's whose pins replace E3p's), for **train**. Every command the job runs goe
 (github.com/moholo-founder/ogc-3dgs, HEAD checked against ``49ccae72``; ``GN_DRYRUN_OGC_SRC`` may point at a local clone);
 C3DGS's ``compress.py`` and ``npz2ply.py`` are ``bench/gn/dryrun/fake_c3dgs/`` run in subprocesses through the **real**
 wrapper and the **real** hooks (``kaggle/e4p_hooks.py`` choosing ``kaggle/e5_hooks.py``), with **OGC's real
-``vq.gram_kmeans``** on the CPU under its three metrics. The stand-in's evaluation emulates devices
+``vq.gram_kmeans``** on the CPU under its three metrics (in ``derived`` mode, ``ogc_derived.gram_kmeans_ours``). The stand-in's evaluation emulates devices
 (``E3R_FAKE_DEVICES=1``, ``fake_c3dgs/utils/fake_devices.py``): a render on "cuda", the images on ``--data_device``, and
 C3DGS's own error when they differ. K is shrunk to the stand-in's 16; everything else is the job's.
 
 **OGC's source** (Amendment 18 c), by ``GN_DRYRUN_OGC_MODE``; run the dry run once per mode, one at a time:
 - ``url`` (default): the URL clone verifies (HEAD 49ccae72, tree 9feebced, clean);
-- ``dataset``: the URL fails as a missing repository does (exit 128), and a zip of OGC's copy with its ``.git`` (made
-  from ``GN_DRYRUN_OGC_SRC``, as the private dataset holds it) under the dataset root verifies;
+- ``dataset``: the URL fails as a missing repository does (exit 128), and the uploaded wrapper under a Kaggle-like
+  ``<input>/<slug>/`` tree verifies: ``GN_DRYRUN_OGC_WRAPPED`` (the real ``E5p_ogc_src_wrapped.zip``), or one made
+  from ``GN_DRYRUN_OGC_SRC`` (a zip holding the zip of OGC's copy with its ``.git``);
 - ``derived``: the URL fails and no dataset is attached: OGC's rows by ``ogc_derived`` and no ``ogc_gram_ours``.
 In ``url`` and ``dataset``, ``ogc_gram_ours`` runs beside their code in every process, and on the CPU it equals
 ``ogc_gram`` exactly (labels and codebook).
 
 Stages:
-(0) the notebook: cells compile in order; the Kaggle title "E5p OGC dissection pilot"; one job (train) with the deadline
+(0) the notebook: cells compile in order; the OGC preflight cell (every source, one line each); the Kaggle title "E5p OGC dissection pilot"; one job (train) with the deadline
     and its OGC clone; the build before it; no gate scene and no other development scene; no TorchPQ / PLAS;
 (1) the build, once, every pip install with --no-deps;
 (2) train, end to end: the four processes (j = 0 seeds 0 and 1, the second forced onto the CPU; j = -1 and +1); every row
@@ -125,20 +126,30 @@ URL_404 = ("remote: Repository not found.\nfatal: repository 'https://github.com
            "found\n")
 
 
+DATASET_SLUG = os.path.join(DATASET_ROOT, "e5p-ogc-source-49ccae72")  # as Kaggle mounts /kaggle/input/<slug>/
+
+
 def make_dataset_zip():
-    """The private dataset as attached: ogc-3dgs-49ccae72.zip holding ogc-3dgs/ with its .git, made from a clone of
+    """The private dataset as uploaded and not unpacked: <slug>/E5p_ogc_src_wrapped.zip holding ogc-3dgs-49ccae72.zip,
+    which holds ogc-3dgs/ with its .git. GN_DRYRUN_OGC_WRAPPED: the real upload; otherwise made from a clone of
     GN_DRYRUN_OGC_SRC (outside the repository, deleted with the scratch directory)."""
+    os.makedirs(DATASET_SLUG)
+    w = os.path.join(DATASET_SLUG, og.WRAPPED_ZIP)
+    if os.environ.get("GN_DRYRUN_OGC_WRAPPED"):
+        shutil.copy2(os.environ["GN_DRYRUN_OGC_WRAPPED"], w)
+        return w
     src = os.path.join(ROOT, "zip_src", "ogc-3dgs")
     subprocess.run(["git", "clone", "--quiet", OGC_SRC, src], check=True)
     subprocess.run(["git", "-C", src, "checkout", "--quiet", og.OGC_COMMIT], check=True)
-    z = os.path.join(DATASET_ROOT, "e5p-ogc-source-49ccae72", og.OGC_ZIP)
-    os.makedirs(os.path.dirname(z))
+    z = os.path.join(ROOT, "zip_src", og.OGC_ZIP)
     with zipfile.ZipFile(z, "w", zipfile.ZIP_DEFLATED) as zf:
         for dirpath, _dirs, files in os.walk(src):
             for n in files:
                 full = os.path.join(dirpath, n)
                 zf.write(full, os.path.join("ogc-3dgs", os.path.relpath(full, src)))
-    return z
+    with zipfile.ZipFile(w, "w", zipfile.ZIP_STORED) as zf:
+        zf.write(z, og.OGC_ZIP)
+    return w
 
 
 if MODE == "dataset":
@@ -396,7 +407,7 @@ srcs = [c["source"] for c in nb["cells"] if c["cell_type"] == "code"]
 for s in srcs:
     compile(s, "<cell>", "exec")
 idx = {k: next(i for i, s in enumerate(srcs) if m in s) for k, m in (
-    ("cfg", "def write_bundle"), ("restore", "def discover"), ("install", "wheel_key ="), ("build", "--build_only"),
+    ("cfg", "def write_bundle"), ("preflight", "og.preflight("), ("restore", "def discover"), ("install", "wheel_key ="), ("build", "--build_only"),
     ("jobs", "def e5p_job"), ("summary", "e5pjob.summarize"), ("bundle", "names = write_bundle"))}
 assert list(idx.values()) == list(range(len(srcs))), idx
 text = "".join(srcs)
@@ -422,7 +433,23 @@ bcalls = []
 bns.update(sh=lambda cmd, **k: bcalls.append(cmd), PY=sys.executable, SRC_DIR=REPO)
 exec(srcs[idx["build"]], bns)
 assert "--build_only" in bcalls[0] and "gn_e5p_scene.py" in bcalls[0] and bns["BUILD"]["failed_step"] == "no build record"
-print("(0) E5p notebook: 7 code cells in order, the Kaggle title, the attachments, one job (train) with the deadline and "
+PF_FILE = os.path.join(ROOT, "nb_pf", "gn5p", "gn5p_ogc_preflight.json")
+pns = {}
+exec(srcs[idx["cfg"]].replace('WORK = "/kaggle/working"', f"WORK = {os.path.join(ROOT, 'nb_pf')!r}")
+     .replace('INPUT_ROOT = "/kaggle/input"', f"INPUT_ROOT = {DATASET_ROOT!r}")
+     .replace('OGC_ROOT = "/tmp"', f"OGC_ROOT = {os.path.join(ROOT, 'pf')!r}")
+     .replace('GN_CACHE = "/tmp/gn5p_cache"', f"GN_CACHE = {os.path.join(ROOT, 'nb_pf', 'cache')!r}"), pns)
+pns.update(sh=lambda cmd, **k: None, SRC_DIR=REPO)
+exec(srcs[idx["preflight"]], pns)
+PF = json.load(open(PF_FILE))
+assert os.path.normpath(PF_FILE) == os.path.normpath(pns["PREFLIGHT_FILE"]) and PF["first_ok"] == MODE and len(PF["lines"]) == len(PF["sources"]) + 1
+assert [r["source"] for r in PF["sources"]] == ["url", "dataset"], PF["sources"]
+assert PF["sources"][0]["ok"] == (MODE == "url") and PF["sources"][1]["ok"] == (MODE == "dataset"), PF["sources"]
+assert not os.path.exists(os.path.join(ROOT, "pf", "ogc_preflight"))  # every copy removed
+if MODE == "dataset":
+    assert PF["sources"][1]["kind"] == "wrapped" and PF["sources"][1]["tree"] == og.OGC_TREE
+print("(0) OGC preflight lines:\n    " + "\n    ".join(PF["lines"]))
+print("(0) E5p notebook: 8 code cells in order, the OGC preflight (every source, one line each), the Kaggle title, the attachments, one job (train) with the deadline and "
       "its OGC clone, the build first, no other scene, no TorchPQ / PLAS / venv: ok")
 
 # (1) the build
@@ -434,7 +461,7 @@ print("(1) the build, once: every pip install with --no-deps: ok")
 
 # (2) train end to end, with the fix
 fake_data()
-assert job.main(argv(OUT)) == 0
+assert job.main(argv(OUT, **{"--ogc_preflight": PF_FILE})) == 0
 meta, rr = meta_of(OUT), rows_of(OUT)
 bad = {k: (r["status"], r["reason"][:200]) for k, r in rr.items() if r["status"] != "ok"}
 assert set(rr) == set(WANTED) and not bad, (set(WANTED) ^ set(rr), bad)
@@ -444,9 +471,11 @@ assert meta["ogc_source"] == MODE and src["ogc_source"] == MODE and src["verifie
 assert [a["source"] for a in src["attempts"]] == (["url"] if MODE == "url" else ["url", "dataset"]), src["attempts"]
 if MODE != "url":
     assert not src["attempts"][0]["verified"] and "Repository not found" in src["attempts"][0]["error"]
+assert meta["ogc_preflight"]["first_ok"] == MODE and meta["ogc_preflight"]["lines"] == PF["lines"]
 if MODE == "dataset":
     a1 = src["attempts"][1]
-    assert a1["candidate"]["kind"] == "zip" and a1["source_hashes"] == {"head": og.OGC_COMMIT, "tree": og.OGC_TREE}
+    assert a1["candidate"]["kind"] == "wrapped" and a1["source_hashes"] == {"head": og.OGC_COMMIT, "tree": og.OGC_TREE}
+    assert [c["kind"] for c in src["dataset_candidates"]] == ["wrapped"], src["dataset_candidates"]
     assert a1["clean"] and not os.path.exists(os.path.join(OUT, "ogc_train_dataset"))
 if MODE == "derived":
     assert "no " + og.OGC_ZIP in src["attempts"][1]["error"] and src["clone"] is None and "manifest" not in src
@@ -522,7 +551,9 @@ assert set(summ["ogc_rows_host_memory"]) == {e5.config_name(p["j"], p["seed"], r
 print(f"(2) OGC source {MODE} (impl {IMPL}): " + "; ".join(
     f"{a['source']}: {'verified' if a.get('verified') else a.get('error', '')[:60]}" for a in src["attempts"]))
 print(f"(2) train: {len(rr)} rows ok over 4 processes (j = 0 seeds 0 and 1, the second on the CPU; j = -1, +1); no probe, "
-      "no cross-validation, the full GN pass only; OGC's real gram_kmeans under plain / scalar / gram at chunk 25,000, the "
+      "no cross-validation, the full GN pass only; " + ("OGC's real gram_kmeans" if IMPL == "ogc" else
+                                                         "ogc_derived.gram_kmeans_ours (no verified copy)")
+      + " under plain / scalar / gram at chunk 25,000, the "
       "second metric copy for plain and scalar only, each OGC row's host RSS; the fine-tuned rows with their labels; "
       "C3DGS's evaluation of every row of every process through the fix (moved only in the CPU process); differences, "
       f"pooled fidelity and BD over three points (degree 2, {sum(v.get('computed', False) for v in bdv.values())} of 6 "

@@ -46,6 +46,9 @@ import e4p  # noqa: E402
 OGC_URL, OGC_COMMIT = e4p.OGC_URL, e4p.OGC_COMMIT
 OGC_TREE = "9feebced57d11c6204077baa717528952be811ce"  # HEAD's tree at OGC_COMMIT (Amendment 18 c)
 OGC_ZIP = "ogc-3dgs-49ccae72.zip"  # in the private Kaggle dataset "E5p OGC source 49ccae72" (Amendment 18 c)
+# The file uploaded as that dataset: a zip holding only OGC_ZIP, stored. Kaggle unpacks an uploaded zip, which leaves
+# OGC_ZIP itself (with its .git) in the dataset; if it does not unpack it, the wrapper is read here.
+WRAPPED_ZIP = "E5p_ogc_src_wrapped.zip"
 SOURCES = ("url", "dataset", "derived")
 METRICS = ("gram", "scalar", "plain")  # their modes (vq.py:11, 22-29 at 49ccae72); "plain" is their identity
 LICENCE = "PolyForm Noncommercial 1.0.0 (LICENSE at the pinned commit); used for noncommercial academic research"
@@ -177,10 +180,12 @@ def verify_copy(path: str, commit: str, tree: str, rec: Dict, need_clean: bool =
     return rec["verified"]
 
 
-def find_dataset(root: Optional[str], max_depth: int = 5) -> List[Dict]:
-    """The dataset's candidates under ``root`` (Amendment 18 c), zips first: every ``OGC_ZIP``, then every directory
-    that holds an extracted copy (Kaggle may unpack an uploaded zip): ``ogc-3dgs*`` with its ``.git`` or ``vq.py``."""
-    zips, dirs = [], []
+def find_dataset(root: Optional[str], max_depth: int = 8) -> List[Dict]:
+    """The dataset's candidates anywhere under ``root`` (Amendment 18 c; Kaggle mounts datasets at
+    ``/kaggle/input/<slug>/`` or deeper), in this order: every ``OGC_ZIP``; every ``WRAPPED_ZIP`` (the uploaded file, if
+    Kaggle did not unpack it); every directory holding an extracted copy, ``ogc-3dgs*`` with its ``.git`` (or, without
+    one, ``vq.py``: verified by its files' tree)."""
+    zips, wrapped, dirs = [], [], []
     if not root or not os.path.isdir(root):
         return []
     for dirpath, dirnames, filenames in os.walk(root, followlinks=True):
@@ -188,13 +193,16 @@ def find_dataset(root: Optional[str], max_depth: int = 5) -> List[Dict]:
         depth = 0 if top else os.path.relpath(dirpath, root).count(os.sep) + 1
         if OGC_ZIP in filenames:
             zips.append({"kind": "zip", "path": os.path.join(dirpath, OGC_ZIP)})
+        if WRAPPED_ZIP in filenames:
+            wrapped.append({"kind": "wrapped", "path": os.path.join(dirpath, WRAPPED_ZIP)})
         name = os.path.basename(os.path.normpath(dirpath))
         if not top and name.startswith("ogc-3dgs") and (".git" in dirnames or "vq.py" in filenames):
             dirs.append({"kind": "dir", "path": dirpath})
             dirnames[:] = []
             continue
         dirnames[:] = [] if depth >= max_depth else sorted(d for d in dirnames if d != ".git")
-    return sorted(zips, key=lambda c: c["path"]) + sorted(dirs, key=lambda c: c["path"])
+    key = lambda c: c["path"]  # noqa: E731
+    return sorted(zips, key=key) + sorted(wrapped, key=key) + sorted(dirs, key=key)
 
 
 def _repo_root(top: str) -> str:
@@ -226,7 +234,8 @@ def _try_url(dest: str, url: str, commit: str, tree: str, timeout: float) -> Dic
 
 
 def _try_dataset(cand: Dict, dest: str, extract_dir: str, commit: str, tree: str, timeout: float) -> Dict:
-    """An attached copy: a zip is extracted into ``extract_dir`` (fresh), an unpacked one is read in place. With its
+    """An attached copy: a zip is extracted into ``extract_dir`` (fresh; a wrapper first gives up its ``OGC_ZIP``), an
+    unpacked one is read in place. With its
     ``.git``, HEAD and tree are read from the object database, the copy is cloned into ``dest`` with ``core.autocrlf``
     off and verified there (its own working files were written on Windows: CRLF, no executable bits). Without one, its
     files are copied to ``dest`` and their tree is checked."""
@@ -236,12 +245,19 @@ def _try_dataset(cand: Dict, dest: str, extract_dir: str, commit: str, tree: str
     t = time.time()
     try:
         top = cand["path"]
-        if cand["kind"] == "zip":
+        if cand["kind"] in ("zip", "wrapped"):
             _rmtree(extract_dir)
             os.makedirs(extract_dir)
-            with zipfile.ZipFile(cand["path"]) as z:
-                z.extractall(extract_dir)
-            top = extract_dir
+            inner = cand["path"]
+            if cand["kind"] == "wrapped":
+                with zipfile.ZipFile(inner) as z:
+                    names = [n for n in z.namelist() if os.path.basename(n) == OGC_ZIP]
+                    if not names:
+                        raise FileNotFoundError(f"{inner} holds no {OGC_ZIP}: {z.namelist()[:10]}")
+                    inner = z.extract(names[0], os.path.join(extract_dir, "wrapper"))
+            top = os.path.join(extract_dir, "copy")
+            with zipfile.ZipFile(inner) as z:
+                z.extractall(top)
         root = _repo_root(top)
         rec["root"] = root
         _rmtree(dest)
@@ -268,7 +284,7 @@ def _try_dataset(cand: Dict, dest: str, extract_dir: str, commit: str, tree: str
         rec["time_s"] = time.time() - t
         if not rec.get("verified"):
             _rmtree(dest)
-        if cand["kind"] == "zip":
+        if cand["kind"] in ("zip", "wrapped"):
             _rmtree(extract_dir)
     return rec
 
@@ -319,8 +335,10 @@ def ensure_source(dest: str, url: str = OGC_URL, dataset_root: Optional[str] = N
     rec["attempts"].append(a)
     if a.get("verified"):
         rec.update(ogc_source="url", clone=dest, verified=True)
+        rec["dataset_candidates"] = find_dataset(dataset_root)  # listed, not tried (the URL verified)
     else:
         cands = find_dataset(dataset_root)
+        rec["dataset_candidates"] = cands
         if not cands:
             rec["attempts"].append({"source": "dataset", "verified": False,
                                     "error": f"no {OGC_ZIP} and no extracted ogc-3dgs copy under {dataset_root!r}"})
@@ -581,6 +599,44 @@ def compare_gram(A: torch.Tensor, M_packed: torch.Tensor, chunk: int = 1 << 16) 
             "trace_ratio_M_over_A": trM / trA if trA > 0 else None, "n_exactly_one_trace_zero": one_zero,
             "mixes": "the probes' variance with the differences of kaggle/RELATED_WORK_OGC.md section 3 (rasterizer, "
                      "resolution, principal point, which splats accumulate)"}
+
+
+# ------------------------------------------------------------------------------ the preflight (Amendment 18 c)
+def _brief(a: Dict) -> Dict:
+    return {"source": a["source"], "path": a.get("url") or (a.get("candidate") or {}).get("path"),
+            "kind": (a.get("candidate") or {}).get("kind", "url" if a["source"] == "url" else None),
+            "ok": bool(a.get("verified")), "head": a.get("head") or (a.get("source_hashes") or {}).get("head"),
+            "tree": a.get("tree") or (a.get("source_hashes") or {}).get("tree"), "reason": a.get("error") or "",
+            "time_s": a.get("time_s")}
+
+
+def preflight(work: str, url: str = OGC_URL, dataset_root: Optional[str] = None, commit: Optional[str] = None,
+              tree: Optional[str] = None, timeout: float = 600.0) -> Dict:
+    """Every source checked, the URL and every dataset candidate, whether or not an earlier one verifies: each copied
+    into its own directory under ``work`` (outside the output), verified as the chain verifies it, then removed. Only a
+    report: the job's chain (``ensure_source``) still takes the first source that verifies, URL first. ``lines``: one
+    printable line per source."""
+    commit, tree = commit or OGC_COMMIT, tree or OGC_TREE
+    _rmtree(work)
+    os.makedirs(work)
+    t = time.time()
+    attempts = [_try_url(os.path.join(work, "url"), url, commit, tree, timeout)]
+    cands = find_dataset(dataset_root)
+    for i, c in enumerate(cands):
+        attempts.append(_try_dataset(c, os.path.join(work, f"dataset{i}"), os.path.join(work, f"dataset{i}_x"),
+                                     commit, tree, timeout))
+    if not cands:
+        attempts.append({"source": "dataset", "verified": False,
+                         "error": f"no {OGC_ZIP}, {WRAPPED_ZIP} or extracted ogc-3dgs copy under {dataset_root!r}"})
+    _rmtree(work)
+    rows = [_brief(a) for a in attempts]
+    first = next((r["source"] for r in rows if r["ok"]), "derived")
+    lines = [f"OGC PREFLIGHT {r['source']:<7} {'ok  ' if r['ok'] else 'FAIL'} HEAD {r['head'] or '-'} tree "
+             f"{r['tree'] or '-'} {r['kind'] or ''} {r['path'] or ''}" + (f" -- {r['reason']}" if r["reason"] else "")
+             for r in rows]
+    lines.append(f"OGC PREFLIGHT the chain will use: {first} (pinned HEAD {commit}, tree {tree})")
+    return {"commit_pinned": commit, "tree_pinned": tree, "dataset_root": dataset_root, "candidates": cands,
+            "sources": rows, "first_ok": first, "lines": lines, "time_s": time.time() - t}
 
 
 def main(argv=None) -> int:
