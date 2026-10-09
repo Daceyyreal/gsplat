@@ -107,6 +107,31 @@ def _q(path: str) -> str:
     return f'"{path}"' if os.name == "nt" else shlex.quote(path)
 
 
+def _make_writable(top: str) -> None:
+    """Give the owner write permission on every directory under ``top`` (a copy keeps a read-only source's modes, and
+    a read-only directory's entries cannot be removed)."""
+    import stat
+
+    for dirpath, _dirs, _files in os.walk(top):
+        os.chmod(dirpath, os.stat(dirpath).st_mode | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRUSR)
+
+
+def _file_hashes(root: str) -> List[Dict]:
+    """Every file under ``root`` (``.git`` excluded): its path relative to ``root``, SHA-1 and git blob id."""
+    import hashlib
+
+    files = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(d for d in dirnames if d != ".git")
+        for n in sorted(filenames):
+            with open(os.path.join(dirpath, n), "rb") as f:
+                data = f.read()
+            files.append({"path": os.path.relpath(os.path.join(dirpath, n), root).replace(os.sep, "/"),
+                          "sha1": hashlib.sha1(data).hexdigest(),
+                          "git_blob": hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()})
+    return files
+
+
 def _rmtree(path: str) -> None:
     """Remove a tree, read-only files included (git's objects are read-only on Windows)."""
     import stat
@@ -234,8 +259,11 @@ def _try_url(dest: str, url: str, commit: str, tree: str, timeout: float) -> Dic
 
 
 def _try_dataset(cand: Dict, dest: str, extract_dir: str, commit: str, tree: str, timeout: float) -> Dict:
-    """An attached copy: a zip is extracted into ``extract_dir`` (fresh; a wrapper first gives up its ``OGC_ZIP``), an
-    unpacked one is read in place. With its
+    """An attached copy, always worked on in ``extract_dir`` (fresh, the job's own, outside the output): a zip is
+    extracted there (a wrapper first gives up its ``OGC_ZIP``); an unpacked one is copied there first (Amendment 18
+    note 1: git never opens the attached copy itself, which on Kaggle is read-only and another user's, and a local
+    clone of it failed git's ownership check). The working copy's file hashes go into ``rec["scratch_files"]`` for the
+    bundle guard's list only: ``ensure_source`` and ``preflight`` remove them before the record is returned. With its
     ``.git``, HEAD and tree are read from the object database, the copy is cloned into ``dest`` with ``core.autocrlf``
     off and verified there (its own working files were written on Windows: CRLF, no executable bits). Without one, its
     files are copied to ``dest`` and their tree is checked."""
@@ -244,10 +272,13 @@ def _try_dataset(cand: Dict, dest: str, extract_dir: str, commit: str, tree: str
     rec = {"source": "dataset", "candidate": cand, "dest": dest, "steps": []}
     t = time.time()
     try:
-        top = cand["path"]
-        if cand["kind"] in ("zip", "wrapped"):
-            _rmtree(extract_dir)
-            os.makedirs(extract_dir)
+        _rmtree(extract_dir)
+        os.makedirs(extract_dir)
+        top = os.path.join(extract_dir, "copy")
+        if cand["kind"] == "dir":  # Amendment 18 note 1: a copy the job owns, never the attached files themselves
+            shutil.copytree(cand["path"], top, symlinks=True)
+            _make_writable(top)
+        else:
             inner = cand["path"]
             if cand["kind"] == "wrapped":
                 with zipfile.ZipFile(inner) as z:
@@ -255,11 +286,11 @@ def _try_dataset(cand: Dict, dest: str, extract_dir: str, commit: str, tree: str
                     if not names:
                         raise FileNotFoundError(f"{inner} holds no {OGC_ZIP}: {z.namelist()[:10]}")
                     inner = z.extract(names[0], os.path.join(extract_dir, "wrapper"))
-            top = os.path.join(extract_dir, "copy")
             with zipfile.ZipFile(inner) as z:
                 z.extractall(top)
         root = _repo_root(top)
         rec["root"] = root
+        rec["scratch_files"] = _file_hashes(root)
         _rmtree(dest)
         if os.path.isdir(os.path.join(root, ".git")):
             head, tr = repo_hashes(root, rec)
@@ -284,25 +315,25 @@ def _try_dataset(cand: Dict, dest: str, extract_dir: str, commit: str, tree: str
         rec["time_s"] = time.time() - t
         if not rec.get("verified"):
             _rmtree(dest)
-        if cand["kind"] in ("zip", "wrapped"):
-            _rmtree(extract_dir)
+        _rmtree(extract_dir)
     return rec
 
 
-def write_manifest(path: str, clone: str) -> Dict:
-    """Every file of the verified copy (``.git`` excluded): its path, SHA-1 and git blob id, for the bundle guard
-    (Amendment 18 c). Written outside the output directory; it names OGC's files and holds none of their content."""
-    import hashlib
+def _drop_file_lists(attempts: List[Dict]) -> None:
+    """Replace each attempt's ``scratch_files`` by its count (``scratch_files_n``): the records are serialized (the
+    meta, the preflight file), and OGC's file list belongs only in the manifest (Amendment 18 note 1)."""
+    for a in attempts:
+        files = a.pop("scratch_files", None)
+        if files is not None:
+            a["scratch_files_n"] = len(files)
 
-    files = []
-    for dirpath, dirnames, filenames in os.walk(clone):
-        dirnames[:] = sorted(d for d in dirnames if d != ".git")
-        for n in sorted(filenames):
-            with open(os.path.join(dirpath, n), "rb") as f:
-                data = f.read()
-            files.append({"path": os.path.relpath(os.path.join(dirpath, n), clone).replace(os.sep, "/"),
-                          "sha1": hashlib.sha1(data).hexdigest(),
-                          "git_blob": hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()})
+
+def write_manifest(path: str, clone: str, extra_files: Optional[List[Dict]] = None) -> Dict:
+    """Every file of the verified copy (``.git`` excluded): its path, SHA-1 and git blob id, for the bundle guard
+    (Amendment 18 c), plus ``extra_files`` (the dataset copy's own working files, whose line endings differ:
+    Amendment 18 note 1). Written outside the output directory and never bundled; it names OGC's files and holds none
+    of their content."""
+    files = _file_hashes(clone) + list(extra_files or [])
     with open(path, "w") as f:
         json.dump({"clone": clone, "commit": OGC_COMMIT, "tree": OGC_TREE, "files": files}, f, indent=1)
     return {"path": path, "n_files": len(files)}
@@ -331,27 +362,31 @@ def ensure_source(dest: str, url: str = OGC_URL, dataset_root: Optional[str] = N
     t = time.time()
     rec = {"commit_pinned": commit, "tree_pinned": tree, "dest": dest, "licence": LICENCE, "attempts": [],
            "ogc_source": "derived", "clone": None, "verified": False}
-    a = _try_url(dest, url, commit, tree, timeout)
-    rec["attempts"].append(a)
-    if a.get("verified"):
-        rec.update(ogc_source="url", clone=dest, verified=True)
-        rec["dataset_candidates"] = find_dataset(dataset_root)  # listed, not tried (the URL verified)
-    else:
-        cands = find_dataset(dataset_root)
-        rec["dataset_candidates"] = cands
-        if not cands:
-            rec["attempts"].append({"source": "dataset", "verified": False,
-                                    "error": f"no {OGC_ZIP} and no extracted ogc-3dgs copy under {dataset_root!r}"})
-        for c in cands:
-            a = _try_dataset(c, dest, extract_dir, commit, tree, timeout)
-            rec["attempts"].append(a)
-            if a.get("verified"):
-                rec.update(ogc_source="dataset", clone=dest, verified=True)
-                break
-    if rec["verified"]:
-        rec["head"], rec["tree"] = commit, tree
-        if manifest_path:
-            rec["manifest"] = write_manifest(manifest_path, dest)
+    try:
+        a = _try_url(dest, url, commit, tree, timeout)
+        rec["attempts"].append(a)
+        if a.get("verified"):
+            rec.update(ogc_source="url", clone=dest, verified=True)
+            rec["dataset_candidates"] = find_dataset(dataset_root)  # listed, not tried (the URL verified)
+        else:
+            cands = find_dataset(dataset_root)
+            rec["dataset_candidates"] = cands
+            if not cands:
+                rec["attempts"].append({"source": "dataset", "verified": False,
+                                        "error": f"no {OGC_ZIP} and no extracted ogc-3dgs copy under {dataset_root!r}"})
+            for c in cands:
+                a = _try_dataset(c, dest, extract_dir, commit, tree, timeout)
+                rec["attempts"].append(a)
+                if a.get("verified"):
+                    rec.update(ogc_source="dataset", clone=dest, verified=True)
+                    break
+        if rec["verified"]:
+            rec["head"], rec["tree"] = commit, tree
+            if manifest_path:
+                used = next(a for a in rec["attempts"] if a.get("verified"))
+                rec["manifest"] = write_manifest(manifest_path, dest, used.get("scratch_files"))
+    finally:  # Amendment 18 note 1: on every path, OGC's file list goes to the manifest only, never into the record
+        _drop_file_lists(rec["attempts"])
     rec["ok"] = rec["verified"]
     rec["time_s"] = time.time() - t
     return rec
@@ -620,15 +655,19 @@ def preflight(work: str, url: str = OGC_URL, dataset_root: Optional[str] = None,
     _rmtree(work)
     os.makedirs(work)
     t = time.time()
-    attempts = [_try_url(os.path.join(work, "url"), url, commit, tree, timeout)]
-    cands = find_dataset(dataset_root)
-    for i, c in enumerate(cands):
-        attempts.append(_try_dataset(c, os.path.join(work, f"dataset{i}"), os.path.join(work, f"dataset{i}_x"),
-                                     commit, tree, timeout))
-    if not cands:
-        attempts.append({"source": "dataset", "verified": False,
-                         "error": f"no {OGC_ZIP}, {WRAPPED_ZIP} or extracted ogc-3dgs copy under {dataset_root!r}"})
-    _rmtree(work)
+    attempts = []
+    try:
+        attempts.append(_try_url(os.path.join(work, "url"), url, commit, tree, timeout))
+        cands = find_dataset(dataset_root)
+        for i, c in enumerate(cands):
+            attempts.append(_try_dataset(c, os.path.join(work, f"dataset{i}"), os.path.join(work, f"dataset{i}_x"),
+                                         commit, tree, timeout))
+        if not cands:
+            attempts.append({"source": "dataset", "verified": False,
+                             "error": f"no {OGC_ZIP}, {WRAPPED_ZIP} or extracted ogc-3dgs copy under {dataset_root!r}"})
+    finally:  # Amendment 18 note 1: on every path
+        _drop_file_lists(attempts)
+        _rmtree(work)
     rows = [_brief(a) for a in attempts]
     first = next((r["source"] for r in rows if r["ok"]), "derived")
     lines = [f"OGC PREFLIGHT {r['source']:<7} {'ok  ' if r['ok'] else 'FAIL'} HEAD {r['head'] or '-'} tree "

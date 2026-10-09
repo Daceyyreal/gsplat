@@ -120,8 +120,14 @@ OGC_SRC = os.environ.get("GN_DRYRUN_OGC_SRC", og.OGC_URL)
 MODE = os.environ.get("GN_DRYRUN_OGC_MODE", "url")  # Amendment 18 c: which link of the chain verifies
 assert MODE in e5.SOURCES, MODE
 IMPL = e5.impl_of(MODE)
-DATASET_ROOT = os.path.join(ROOT, "kaggle_input")  # the dataset root the job searches (a zip only in "dataset" mode)
-os.makedirs(DATASET_ROOT)
+# the dataset root the job searches (a zip only in "dataset" mode). GN_DRYRUN_OGC_DATASET_ROOT: a root prepared outside
+# instead (e.g. the unpacked, read-only layout Kaggle gave attempt 2; Amendment 18 note 1), used as it is;
+# GN_DRYRUN_OGC_DATASET_KIND: the candidate kind expected there (default "wrapped", the dry run's own root)
+EXT_DATASET_ROOT = os.environ.get("GN_DRYRUN_OGC_DATASET_ROOT")
+DATASET_ROOT = EXT_DATASET_ROOT or os.path.join(ROOT, "kaggle_input")
+DATASET_KIND = os.environ.get("GN_DRYRUN_OGC_DATASET_KIND", "wrapped")
+if not EXT_DATASET_ROOT:
+    os.makedirs(DATASET_ROOT)
 URL_404 = ("remote: Repository not found.\nfatal: repository 'https://github.com/moholo-founder/ogc-3dgs.git/' not "
            "found\n")
 
@@ -152,7 +158,7 @@ def make_dataset_zip():
     return w
 
 
-if MODE == "dataset":
+if MODE == "dataset" and not EXT_DATASET_ROOT:
     make_dataset_zip()
 BUILDS = {"n": 0}
 job.K_DEFAULT = e4pjob.K_DEFAULT = 16  # the stand-in's size
@@ -447,7 +453,7 @@ assert [r["source"] for r in PF["sources"]] == ["url", "dataset"], PF["sources"]
 assert PF["sources"][0]["ok"] == (MODE == "url") and PF["sources"][1]["ok"] == (MODE == "dataset"), PF["sources"]
 assert not os.path.exists(os.path.join(ROOT, "pf", "ogc_preflight"))  # every copy removed
 if MODE == "dataset":
-    assert PF["sources"][1]["kind"] == "wrapped" and PF["sources"][1]["tree"] == og.OGC_TREE
+    assert PF["sources"][1]["kind"] == DATASET_KIND and PF["sources"][1]["tree"] == og.OGC_TREE
 print("(0) OGC preflight lines:\n    " + "\n    ".join(PF["lines"]))
 print("(0) E5p notebook: 8 code cells in order, the OGC preflight (every source, one line each), the Kaggle title, the attachments, one job (train) with the deadline and "
       "its OGC clone, the build first, no other scene, no TorchPQ / PLAS / venv: ok")
@@ -474,8 +480,15 @@ if MODE != "url":
 assert meta["ogc_preflight"]["first_ok"] == MODE and meta["ogc_preflight"]["lines"] == PF["lines"]
 if MODE == "dataset":
     a1 = src["attempts"][1]
-    assert a1["candidate"]["kind"] == "wrapped" and a1["source_hashes"] == {"head": og.OGC_COMMIT, "tree": og.OGC_TREE}
-    assert [c["kind"] for c in src["dataset_candidates"]] == ["wrapped"], src["dataset_candidates"]
+    assert a1["candidate"]["kind"] == DATASET_KIND and a1["source_hashes"] == {"head": og.OGC_COMMIT, "tree": og.OGC_TREE}
+    assert [c["kind"] for c in src["dataset_candidates"]] == [DATASET_KIND], src["dataset_candidates"]
+    clone_cmd = next(st["cmd"] for st in a1["steps"] if " clone " in st["cmd"])
+    scratch = os.path.normpath(os.path.join(OUT, "ogc_train_dataset"))
+    assert scratch in os.path.normpath(clone_cmd) and os.path.normpath(DATASET_ROOT) not in os.path.normpath(clone_cmd), \
+        clone_cmd  # the clone's source is the job's scratch copy, never the attached files (Amendment 18 note 1)
+    assert a1["scratch_files_n"] > 50 and "scratch_files" not in a1
+    print(f"(2) dataset attempt: kind {a1['candidate']['kind']}, cloned from the scratch copy, scratch_files_n "
+          f"{a1['scratch_files_n']}, manifest {src['manifest']['n_files']} files")
     assert a1["clean"] and not os.path.exists(os.path.join(OUT, "ogc_train_dataset"))
 if MODE == "derived":
     assert "no " + og.OGC_ZIP in src["attempts"][1]["error"] and src["clone"] is None and "manifest" not in src

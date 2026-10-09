@@ -4466,7 +4466,9 @@ def test_ogc_source_chain_url_then_dataset_then_derived(tmp_path):
     assert r["ogc_source"] == "dataset" and a1["candidate"]["kind"] == "zip" and a1["source_hashes"] == {"head": commit, "tree": tree}
     assert open(os.path.join(r["clone"], "vq.py")).read() == "X = 1\n" and not os.path.exists(str(tmp_path / "ogc_b_dataset"))
     m = json.load(open(man))
-    assert sorted(f["path"] for f in m["files"]) == ["sub/a.txt", "vq.py"] and r["manifest"]["n_files"] == 2
+    # the clone's files, then the dataset copy's own working files (Amendment 18 note 1)
+    assert sorted(f["path"] for f in m["files"]) == ["sub/a.txt", "sub/a.txt", "vq.py", "vq.py"]
+    assert r["manifest"]["n_files"] == 4
     # an unpacked copy, with and without its .git
     import shutil
 
@@ -4629,3 +4631,181 @@ def test_ogc_source_wrapped_zip_and_preflight(tmp_path):
     pf = og.preflight(str(tmp_path / "pf"), url=bad, dataset_root=str(tmp_path / "none"), **kw)
     assert pf["first_ok"] == "derived" and not any(x["ok"] for x in pf["sources"]) and "FAIL" in pf["lines"][0]
     assert "git clone exited" in pf["sources"][0]["reason"] and "no " + og.OGC_ZIP in pf["sources"][1]["reason"]
+
+
+def test_ogc_source_unpacked_copy_is_copied_before_git_touches_it(tmp_path, monkeypatch):
+    """Amendment 18 note 1: an unpacked copy in the attached dataset (on Kaggle read-only and another user's) is copied
+    into the job's scratch directory first, and every git command runs on that copy, never on the attached files (E5p
+    attempt 2's preflight: reading HEAD and tree with -c safe.directory=* worked, the local clone failed with "detected
+    dubious ownership"). Ownership by another uid cannot be set up without root, so this checks the commands instead:
+    none names the attached path. It fails on 27c7731b, which clones straight from the attached copy. The scratch copy
+    is removed, the attached copy is untouched, and the copy's own working files are in the bundle guard's list."""
+    import shutil
+
+    import e4p_ogc as og
+
+    repo = str(tmp_path / "repo")
+    commit, tree = _toy_repo(repo)
+    up = tmp_path / "input" / "datasets" / "someone" / "slug" / "ogc-3dgs-49ccae72" / "ogc-3dgs"
+    shutil.copytree(repo, str(up))
+    cmds, real = [], og._run
+    monkeypatch.setattr(og, "_run", lambda cmd, **k: (cmds.append(cmd), real(cmd, **k))[1])
+    man = str(tmp_path / "m.json")
+    r = og.ensure_source(str(tmp_path / "ogc_s"), url=str(tmp_path / "no_such"), dataset_root=str(tmp_path / "input"),
+                         manifest_path=man, commit=commit, tree=tree)
+    a = r["attempts"][1]
+    assert r["ogc_source"] == "dataset" and a["candidate"]["kind"] == "dir" and a["verified"], a.get("error")
+    touching = [c for c in cmds if os.path.normpath(str(up)) in os.path.normpath(c) or up.as_posix() in c]
+    assert not touching, touching
+    assert os.path.normpath(a["root"]).startswith(os.path.normpath(str(tmp_path / "ogc_s_dataset")))
+    assert not os.path.exists(str(tmp_path / "ogc_s_dataset")) and os.path.isdir(str(up / ".git"))
+    assert a["scratch_files_n"] == 2 and "scratch_files" not in a
+    assert len(json.load(open(man))["files"]) == 4  # the clone's two files and the copy's two
+
+
+def test_ogc_source_records_never_hold_ogcs_file_list(tmp_path):
+    """Amendment 18 note 1: the records that are serialized (ensure_source's, into the meta; the preflight's, into
+    gn5p_ogc_preflight.json and the meta) hold no file list and none of the copy's file hashes, for an unpacked copy
+    and a zip alike; only a count. The manifest, outside the output, holds all four entries."""
+    import shutil
+
+    import e4p_ogc as og
+
+    repo = str(tmp_path / "repo")
+    commit, tree = _toy_repo(repo)
+    kw = dict(commit=commit, tree=tree)
+    hashes = {h for f in og._file_hashes(repo) for h in (f["sha1"], f["git_blob"])}
+    for layout in ("dir", "zip"):
+        root = tmp_path / f"input_{layout}"
+        if layout == "dir":
+            shutil.copytree(repo, str(root / "slug" / "ogc-3dgs-49ccae72" / "ogc-3dgs"))
+        else:
+            _zip_dir(repo, str(root / "slug" / og.OGC_ZIP), "ogc-3dgs")
+        man = str(tmp_path / f"m_{layout}.json")
+        r = og.ensure_source(str(tmp_path / f"ogc_{layout}"), url=str(tmp_path / "no_such"), dataset_root=str(root),
+                             manifest_path=man, **kw)
+        pf = og.preflight(str(tmp_path / f"pf_{layout}"), url=str(tmp_path / "no_such"), dataset_root=str(root), **kw)
+        assert r["ogc_source"] == "dataset" and pf["first_ok"] == "dataset", (layout, r["attempts"], pf["lines"])
+        for rec in (r, pf):
+            text = json.dumps(rec)
+            assert '"scratch_files"' not in text, layout
+            assert not [h for h in hashes if h in text], layout
+        assert r["attempts"][1]["scratch_files_n"] == 2 and len(json.load(open(man))["files"]) == 4
+
+
+def test_ogc_source_failed_dataset_copy_leaves_no_file_list(tmp_path):
+    """Amendment 18 note 1, the failure path: an unpacked copy and, separately, a zip whose tree is not the pin (the
+    stand-in repository with one more commit), and a URL that fails, so the chain ends at derived. Neither the chain's
+    record nor the preflight's holds a file list or any of the copy's hashes; the failed attempt keeps only the count."""
+    import shutil
+
+    import e4p_ogc as og
+
+    repo = str(tmp_path / "repo")
+    commit, tree = _toy_repo(repo)
+    other = str(tmp_path / "other")
+    shutil.copytree(repo, other)
+    open(os.path.join(other, "extra.py"), "w", newline="\n").write("Y = 2\n")
+    _git("add", "-A", cwd=other)
+    _git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "more", cwd=other)
+    hashes = {h for f in og._file_hashes(other) for h in (f["sha1"], f["git_blob"])}
+    kw = dict(commit=commit, tree=tree)
+    for layout in ("dir", "zip"):
+        root = tmp_path / f"input_{layout}"
+        if layout == "dir":
+            shutil.copytree(other, str(root / "slug" / "ogc-3dgs-49ccae72" / "ogc-3dgs"))
+        else:
+            _zip_dir(other, str(root / "slug" / og.OGC_ZIP), "ogc-3dgs")
+        r = og.ensure_source(str(tmp_path / f"ogc_{layout}"), url=str(tmp_path / "no_such"), dataset_root=str(root),
+                             manifest_path=str(tmp_path / f"m_{layout}.json"), **kw)
+        pf = og.preflight(str(tmp_path / f"pf_{layout}"), url=str(tmp_path / "no_such"), dataset_root=str(root), **kw)
+        assert r["ogc_source"] == "derived" and pf["first_ok"] == "derived", (layout, r["attempts"])
+        failed = r["attempts"][1]
+        assert failed["source"] == "dataset" and not failed["verified"] and "MISMATCH" in failed["error"]
+        assert failed["scratch_files_n"] == 3 and not os.path.exists(str(tmp_path / f"m_{layout}.json"))
+        for rec in (r, pf):
+            text = json.dumps(rec)
+            assert '"scratch_files"' not in text, layout
+            assert not [h for h in hashes if h in text], layout
+
+
+def test_bundle_guard_with_the_copy_files_and_empty_files(tmp_path):
+    """Amendment 18 note 1 with 7d2b3618: the manifest holds the clone's files and the dataset copy's own (CRLF)
+    working files, an empty one among them. The notebook's guard (its config cell's ogc_matches, run from the built
+    notebook) passes an empty file of ours, and refuses a non-empty OGC file in both its LF and its CRLF form."""
+    import shutil
+
+    import e4p_ogc as og
+
+    repo = str(tmp_path / "repo")
+    os.makedirs(os.path.join(repo, "tests"))
+    open(os.path.join(repo, "vq.py"), "w", newline="\n").write("X = 1\nY = 2\n")
+    open(os.path.join(repo, "tests", "__init__.py"), "w").close()
+    crlf = str(tmp_path / "copy")  # the dataset copy as written on Windows
+    os.makedirs(os.path.join(crlf, "tests"))
+    open(os.path.join(crlf, "vq.py"), "w", newline="\r\n").write("X = 1\nY = 2\n")
+    open(os.path.join(crlf, "tests", "__init__.py"), "w").close()
+    ogc_root = tmp_path / "tmp"
+    ogc_root.mkdir()
+    og.write_manifest(str(ogc_root / "ogc_train_manifest.json"), repo, og._file_hashes(crlf))
+    nb = json.load(open(os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle", "gn_e5p_bench.ipynb")))
+    cfg = next(c["source"] for c in nb["cells"] if c["cell_type"] == "code" and "def write_bundle" in c["source"])
+    for target in ('WORK = "/kaggle/working"', 'OGC_ROOT = "/tmp"', 'GN_CACHE = "/tmp/gn5p_cache"'):
+        assert target in cfg, f"the config cell no longer has {target!r}: the test would run against real paths"
+    ns = {}
+    exec(cfg.replace('WORK = "/kaggle/working"', f"WORK = {str(tmp_path / 'work')!r}")
+         .replace('OGC_ROOT = "/tmp"', f"OGC_ROOT = {str(ogc_root)!r}")
+         .replace('GN_CACHE = "/tmp/gn5p_cache"', f"GN_CACHE = {str(tmp_path / 'cache')!r}"), ns)
+    out = tmp_path / "work" / "gn5p"
+    empty = out / "gn5p_empty.json"
+    empty.write_bytes(b"")
+    lf, cr = out / "gn5p_lf.json", out / "gn5p_crlf.json"
+    shutil.copy2(os.path.join(repo, "vq.py"), str(lf))
+    shutil.copy2(os.path.join(crlf, "vq.py"), str(cr))
+    assert open(str(cr), "rb").read() != open(str(lf), "rb").read()
+    assert ns["ogc_matches"]([str(empty)]) == []
+    bad = dict(ns["ogc_matches"]([str(lf), str(cr), str(empty)]))
+    assert set(bad) == {str(lf), str(cr)} and all("content" in v for v in bad.values()), bad
+
+
+def test_ogc_source_url_mode_matches_27c7731b(tmp_path):
+    """Amendment 18 note 1 changes nothing on the URL path: with a URL that verifies (and an attached copy that is
+    listed, not tried), ensure_source returns the same keys and values (ogc_source, clone, verified, head, tree,
+    manifest, dataset_candidates, the attempt's outcome and git commands) and writes the same manifest as the code at
+    27c7731b, loaded from git (E5p attempt 2 ran with it)."""
+    import importlib.util
+    import shutil
+    import subprocess
+
+    import e4p_ogc as og
+
+    src = subprocess.run(["git", "-C", os.path.dirname(os.path.dirname(HERE)), "show", "27c7731b:kaggle/e4p_ogc.py"],
+                         check=True, capture_output=True).stdout
+    path = tmp_path / "e4p_ogc_27c7731b.py"
+    path.write_bytes(src)
+    spec = importlib.util.spec_from_file_location("e4p_ogc_27c7731b", str(path))
+    old = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(old)
+    repo = str(tmp_path / "repo")
+    commit, tree = _toy_repo(repo)
+    root = tmp_path / "input"
+    shutil.copytree(repo, str(root / "slug" / "ogc-3dgs-49ccae72" / "ogc-3dgs"))
+    out = {}
+    for name, mod in (("27c7731b", old), ("draft", og)):
+        man = str(tmp_path / f"m_{name}.json")
+        r = mod.ensure_source(str(tmp_path / "ogc_u"), url=repo, dataset_root=str(root), manifest_path=man,
+                              commit=commit, tree=tree)
+        out[name] = (r, json.load(open(man)))
+    (ro, mo), (rn, mn) = out["27c7731b"], out["draft"]
+    assert ro["ogc_source"] == "url" and ro["verified"] and ro["manifest"]["n_files"] == 2
+    assert set(ro) == set(rn), set(ro) ^ set(rn)
+    for k in ("ogc_source", "clone", "verified", "ok", "head", "tree", "dataset_candidates", "commit_pinned",
+              "tree_pinned", "dest", "licence"):
+        assert ro[k] == rn[k], k
+    assert ro["manifest"]["n_files"] == rn["manifest"]["n_files"] and mo == mn
+    assert len(ro["attempts"]) == len(rn["attempts"]) == 1
+    ao, an = ro["attempts"][0], rn["attempts"][0]
+    assert set(ao) == set(an), set(ao) ^ set(an)
+    assert all(ao[k] == an[k] for k in ("source", "url", "dest", "verified", "head", "tree", "clean"))
+    assert [s["cmd"] for s in ao["steps"]] == [s["cmd"] for s in an["steps"]]
+
