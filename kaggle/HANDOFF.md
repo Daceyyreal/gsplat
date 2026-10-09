@@ -1533,11 +1533,18 @@ train: mechanics and timing, no verdict.** It runs no gate scene and reads none.
 
 **Kaggle steps (attempt 2):**
 
+0. **Upload the private dataset once** (Kaggle, Datasets, New Dataset): file `F:\ogc_backups\E5p_ogc_src_wrapped.zip`
+   (3,738,955 bytes, SHA-1 `17e3fd7e`; it holds only `ogc-3dgs-49ccae72.zip`, stored, which holds `ogc-3dgs/` with its
+   `.git`), title **"E5p OGC source 49ccae72"**, visibility **Private**. Never make it public. Kaggle unpacks the
+   wrapper and keeps the inner zip (and its `.git`) intact; the job also reads the wrapper itself if it is not unpacked.
 1. Open the notebook "E5p OGC dissection pilot" and re-import it from
    `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e5p_bench.ipynb` (8 cells; the markdown
    names Amendment 18 and `ogc_gram_ours`).
 2. Attach **"E3p INRIA pilot"**, **E5p attempt 1's output** (its `wheels/` holds the torch 2.11.0+cu128 wheel) and the
    private dataset **"E5p OGC source 49ccae72"**. "R5 tilequant" is optional (every attached `wheels/` is merged).
+   Step 1b's output, before any install, has one `OGC PREFLIGHT` line per source (the URL and every dataset copy: ok /
+   FAIL, HEAD, tree, reason) and the source the chain will use; it is also in `gn5p_ogc_preflight.json` and the job's
+   meta (`ogc_preflight`).
 3. GPU T4 x2 (the job uses one), Internet on (OGC's URL and the dataset). Save & Run All.
 4. Bring back `/kaggle/working/E5p_bundle_2.zip` (look in `~/Downloads`); its arcname is `gn5p/`.
 
@@ -1545,7 +1552,7 @@ train: mechanics and timing, no verdict.** It runs no gate scene and reads none.
 |---|---|---|
 | **"E3p INRIA pilot"** | no, but attach it | **`e3p_inria/` only**: train's three pinned members, re-checked by size and CRC32 |
 | **E5p attempt 1's output** | no, but attach it | **`wheels/` only** (key `33734f894b0a-95f8de51-torch2.11.0_cu128-sm7.5` if the image is unchanged; otherwise a rebuild, about 66 min). Its `gn5p/` and `gn5p_work/` are **not** restored (no `gn5p_attempt.json`) |
-| **"E5p OGC source 49ccae72"** (private) | no, but attach it | `ogc-3dgs-49ccae72.zip` (or Kaggle's unpacked copy of it): OGC's code if the URL fails (Amendment 18 c) |
+| **"E5p OGC source 49ccae72"** (private) | no, but attach it | uploaded as `E5p_ogc_src_wrapped.zip`; found anywhere under `/kaggle/input` as the inner `ogc-3dgs-49ccae72.zip`, the wrapper, or an unpacked copy with `.git` (every path found is logged): OGC's code if the URL fails (Amendment 18 c) |
 | "R5 tilequant" | no | `wheels/` only |
 | this notebook's own attempt-2 output | only to resume | `gn5p/` and `gn5p_work/`, restored only when `gn5p/gn5p_attempt.json` says attempt 2 |
 
@@ -3568,7 +3575,12 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     and `gn5p/` / `gn5p_work/` only from an attempt-2 output; passes `--ogc_dataset_root /kaggle/input` and
     `--output_root /kaggle/working`; the bundle guard (`ogc_matches`).
   - `e5_estimate.estimate(extra_rows)`: 0 is Amendment 17 g's; 1 adds `ogc_gram_ours`.
-- **Checked:** pytest `bench/gn/test_gn.py` 154 passed with `GN_OGC_SRC` (a local clone at the pin); the E5p dry run, one mode at a time (`GN_DRYRUN_OGC_MODE`): url (325 s), dataset (309 s), derived (262 s), every stage ok; in url and dataset `ogc_gram_ours` equals `ogc_gram` exactly on the CPU in every process. The estimate: `98d54d6a`.
+- **The preflight and the wrapped upload (Dace, 2026-10-09, after the report):** Kaggle unpacks an uploaded zip and the
+  `.git` might not survive, so the dataset is uploaded as `F:\ogc_backups\E5p_ogc_src_wrapped.zip` (only the zip of
+  the copy, stored); `find_dataset` searches the whole input tree for the inner zip, the wrapper and unpacked copies;
+  the notebook's step 1b checks every source before the install and prints one line each (`og.preflight`), and the
+  job records it. The chain's order is unchanged. Commit: `98d109fe`.
+- **Checked:** pytest `bench/gn/test_gn.py` 154 passed (155 after the preflight commit; its dry run in dataset mode with the real wrapper: every stage ok, 330 s) with `GN_OGC_SRC` (a local clone at the pin); the E5p dry run, one mode at a time (`GN_DRYRUN_OGC_MODE`): url (325 s), dataset (309 s), derived (262 s), every stage ok; in url and dataset `ogc_gram_ours` equals `ogc_gram` exactly on the CPU in every process. The estimate: `98d54d6a`.
 
 ### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: attempt 1 no data, attempt 2 built, next to run)
 
