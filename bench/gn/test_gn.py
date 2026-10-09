@@ -4964,3 +4964,82 @@ def test_ft_branch_refuses_a_record_that_moves_the_quantizers(tmp_path, monkeypa
     assert ft and all(rows[r].get("status") == "failed" for r in ft), {r: rows[r].get("status") for r in ft}
     assert all("features_rest_qa" in "".join(rows[r]["qa_changed_by_record"]) for r in ft)
     assert all("changed the colour quantizers" in rows[r].get("error", "") for r in ft), {r: rows[r].get("error") for r in ft}
+
+
+# ------------------------------------------------------------------------------ E5s: OGC's source preflight alone
+def test_e5s_bundle_holds_no_ogc_file_and_no_commit_header(tmp_path, monkeypatch):
+    """E5s (kaggle/gn_e5s_preflight.ipynb, run from the built notebook): on a stand-in repository whose commit has an
+    author and a committer, with the URL and an unpacked read-only dataset copy both verifying, the bundle holds
+    gn5s_env.json and gn5s_ogc_preflight.json only: no file whose name or hashes are one of the stand-in's files, no
+    author or committer line, no file list; the manifest lies outside the output. The guard refuses a planted copy of
+    their file and a planted committer line. Without manifest_path the preflight's record is unchanged. The committed
+    notebook equals the builder's output."""
+    import hashlib
+    import re
+    import shutil
+    import stat
+    import zipfile
+
+    import e4p_ogc as og
+
+    kaggle = os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle")
+    sys.path.insert(0, kaggle)
+    import build_gn_e5s_preflight as b5s
+
+    built = str(tmp_path / "built.ipynb")
+    b5s.build(built)
+    assert open(built, "rb").read() == open(os.path.join(kaggle, "gn_e5s_preflight.ipynb"), "rb").read()
+    repo = str(tmp_path / "repo")
+    commit, tree = _toy_repo(repo)
+    assert re.search(r"^(author|committer) t <t@t>", _git("cat-file", "-p", "HEAD", cwd=repo), re.M)
+    monkeypatch.setattr(og, "OGC_URL", repo)
+    monkeypatch.setattr(og, "OGC_COMMIT", commit)
+    monkeypatch.setattr(og, "OGC_TREE", tree)
+    inp = tmp_path / "input"
+    copy = str(inp / "datasets" / "u" / "e5p-ogc-source-49ccae72" / "ogc-3dgs-49ccae72" / "ogc-3dgs")
+    shutil.copytree(repo, copy)
+    for dirpath, _dirs, files in os.walk(str(inp)):
+        for n in files:
+            os.chmod(os.path.join(dirpath, n), stat.S_IREAD)
+    nb = json.load(open(built))
+    cfg, pre, bun = [c["source"] for c in nb["cells"] if c["cell_type"] == "code"]
+    for target in ('WORK = "/kaggle/working"', 'OGC_ROOT = "/tmp"', 'INPUT_ROOT = "/kaggle/input"', 'SRC_DIR = "/tmp/gsplat"'):
+        assert target in cfg, f"the config cell no longer has {target!r}: the test would run against real paths"
+    ns = {}
+    exec(cfg.replace('WORK = "/kaggle/working"', f"WORK = {str(tmp_path / 'work')!r}")
+         .replace('OGC_ROOT = "/tmp"', f"OGC_ROOT = {str(tmp_path / 'tmp')!r}")
+         .replace('INPUT_ROOT = "/kaggle/input"', f"INPUT_ROOT = {str(inp)!r}")
+         .replace('SRC_DIR = "/tmp/gsplat"', f"SRC_DIR = {os.path.dirname(kaggle)!r}"), ns)
+    exec(pre, ns)
+    exec(bun, ns)
+    pf = ns["PREFLIGHT"]
+    assert [(r["source"], r["ok"]) for r in pf["sources"]] == [("url", True), ("dataset", True)], pf["lines"]
+    man = json.load(open(ns["MANIFEST"]))
+    assert not og.under(ns["MANIFEST"], [ns["WORK"]]) and pf["manifest"]["n_files"] == len(man["files"]) == 3 * 2
+    names = {f["path"] for f in man["files"]} | {os.path.basename(f["path"]) for f in man["files"]}
+    hashes = {f["sha1"] for f in man["files"]} | {f["git_blob"] for f in man["files"]}
+    assert {"vq.py", "sub/a.txt"} <= names
+    with zipfile.ZipFile(ns["BUNDLE"]) as z:
+        assert sorted(z.namelist()) == ["gn5s/gn5s_env.json", "gn5s/gn5s_ogc_preflight.json"]
+        for n in z.namelist():
+            data = z.read(n)
+            assert os.path.basename(n) not in names
+            assert hashlib.sha1(data).hexdigest() not in hashes
+            assert hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest() not in hashes
+            assert not re.search(rb"(author|committer) ", data), n
+            assert b"t@t" not in data and b"scratch_files\"" not in data, n
+    assert json.load(open(ns["ENV_FILE"]))["git_version"].startswith("git version")
+    out = ns["GN5S_OUT"]
+    planted = os.path.join(out, "gn5s_planted.json")
+    shutil.copyfile(os.path.join(repo, "vq.py"), planted)
+    with pytest.raises(RuntimeError, match="content is one of OGC's files"):
+        ns["write_bundle"](out, ns["BUNDLE"])
+    assert not os.path.exists(ns["BUNDLE"])
+    with open(planted, "w") as f:
+        json.dump({"tail": ["committer t <t@t> 1 +0000"]}, f)
+    with pytest.raises(RuntimeError, match="author or committer"):
+        ns["write_bundle"](out, ns["BUNDLE"])
+    os.remove(planted)
+    plain = og.preflight(str(tmp_path / "tmp" / "ogc_plain"), repo, dataset_root=str(inp))
+    assert "manifest" not in plain and set(plain) == {"commit_pinned", "tree_pinned", "dataset_root", "candidates",
+                                                       "sources", "first_ok", "lines", "time_s"}

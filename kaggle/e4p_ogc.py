@@ -647,25 +647,39 @@ def _brief(a: Dict) -> Dict:
 
 
 def preflight(work: str, url: str = OGC_URL, dataset_root: Optional[str] = None, commit: Optional[str] = None,
-              tree: Optional[str] = None, timeout: float = 600.0) -> Dict:
+              tree: Optional[str] = None, timeout: float = 600.0, manifest_path: Optional[str] = None) -> Dict:
     """Every source checked, the URL and every dataset candidate, whether or not an earlier one verifies: each copied
     into its own directory under ``work`` (outside the output), verified as the chain verifies it, then removed. Only a
     report: the job's chain (``ensure_source``) still takes the first source that verifies, URL first. ``lines``: one
-    printable line per source."""
+    printable line per source. With ``manifest_path`` (E5s, which keeps no copy for a bundle guard to read), the files
+    of every verified copy, and of the dataset copies' scratch working files, are listed there (``write_manifest``)
+    before the copies are removed; without it, nothing changes."""
     commit, tree = commit or OGC_COMMIT, tree or OGC_TREE
     _rmtree(work)
     os.makedirs(work)
     t = time.time()
-    attempts = []
+    attempts, files = [], []
+    cands = []
     try:
-        attempts.append(_try_url(os.path.join(work, "url"), url, commit, tree, timeout))
+        dest = os.path.join(work, "url")
+        attempts.append(_try_url(dest, url, commit, tree, timeout))
+        if attempts[-1].get("verified"):
+            files += _file_hashes(dest)
         cands = find_dataset(dataset_root)
         for i, c in enumerate(cands):
-            attempts.append(_try_dataset(c, os.path.join(work, f"dataset{i}"), os.path.join(work, f"dataset{i}_x"),
-                                         commit, tree, timeout))
+            dest = os.path.join(work, f"dataset{i}")
+            attempts.append(_try_dataset(c, dest, os.path.join(work, f"dataset{i}_x"), commit, tree, timeout))
+            files += attempts[-1].get("scratch_files") or []
+            if attempts[-1].get("verified"):
+                files += _file_hashes(dest)
         if not cands:
             attempts.append({"source": "dataset", "verified": False,
                              "error": f"no {OGC_ZIP}, {WRAPPED_ZIP} or extracted ogc-3dgs copy under {dataset_root!r}"})
+        manifest = None
+        if manifest_path:  # write_manifest's format; its files are the copies' (write_manifest would add all of work)
+            with open(manifest_path, "w") as f:
+                json.dump({"clone": work, "commit": commit, "tree": tree, "files": files}, f, indent=1)
+            manifest = {"path": manifest_path, "n_files": len(files)}
     finally:  # Amendment 18 note 1: on every path
         _drop_file_lists(attempts)
         _rmtree(work)
@@ -675,8 +689,11 @@ def preflight(work: str, url: str = OGC_URL, dataset_root: Optional[str] = None,
              f"{r['tree'] or '-'} {r['kind'] or ''} {r['path'] or ''}" + (f" -- {r['reason']}" if r["reason"] else "")
              for r in rows]
     lines.append(f"OGC PREFLIGHT the chain will use: {first} (pinned HEAD {commit}, tree {tree})")
-    return {"commit_pinned": commit, "tree_pinned": tree, "dataset_root": dataset_root, "candidates": cands,
-            "sources": rows, "first_ok": first, "lines": lines, "time_s": time.time() - t}
+    out = {"commit_pinned": commit, "tree_pinned": tree, "dataset_root": dataset_root, "candidates": cands,
+           "sources": rows, "first_ok": first, "lines": lines, "time_s": time.time() - t}
+    if manifest is not None:
+        out["manifest"] = manifest
+    return out
 
 
 def main(argv=None) -> int:
