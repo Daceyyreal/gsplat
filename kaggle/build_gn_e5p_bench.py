@@ -249,7 +249,7 @@ def write_bundle(out_dir, bundle_path, arc="gn5p"):
 
 code(
     r"""
-# Optional inputs, walked recursively before any install: the gsplat wheel (the run-5 output) and, to
+# Optional inputs, walked recursively before any install: every gsplat wheels/ (merged) and, to
 # resume, this notebook's own output. E5p needs no checkpoint and no earlier result: its model comes from
 # INRIA's archive through E3p's and note i's pins, fetched and checked by the jobs. An attached E3p output's e3p_inria/
 # is reused after the jobs re-check each member's size and CRC32.
@@ -260,13 +260,14 @@ def _depth(root, dirpath):
 
 
 def discover(root, max_depth=6):
-    found = {"wheels": None, "gn5p": None, "gn5p_work": None, "e3p_inria": None}
+    found = {"wheels": [], "gn5p": None, "gn5p_work": None, "e3p_inria": None}
     for dirpath, dirnames, filenames in os.walk(root, followlinks=True):
         depth = _depth(root, dirpath)
-        dirnames[:] = [] if depth >= max_depth else sorted(d for d in dirnames if not d.startswith("images"))
+        dirnames[:] = [] if depth >= max_depth else sorted(d for d in dirnames if not d.startswith(("images", ".git")))
         name = os.path.basename(os.path.normpath(dirpath))
-        if name == "wheels" and found["wheels"] is None:
-            found["wheels"] = dirpath
+        if name == "wheels":  # every attached wheels/ (run 5's, E5p attempt 1's), merged below
+            found["wheels"].append(dirpath)
+            dirnames[:] = []
         if name in ("gn5p", "gn5p_work", "e3p_inria") and found[name] is None and depth > 0:
             if name != "gn5p" or not foreign_artifacts(dirpath):
                 found[name] = dirpath
@@ -278,10 +279,11 @@ def discover(root, max_depth=6):
 t0 = time.time()
 FOUND = discover(INPUT_ROOT)
 print(json.dumps(FOUND, indent=2))
-if FOUND["wheels"]:
-    shutil.copytree(FOUND["wheels"], WHEEL_ROOT, dirs_exist_ok=True)
-else:
-    print("no wheels/ attached: the gsplat wheel will be built (about 73 min)")
+for w in FOUND["wheels"]:
+    shutil.copytree(w, WHEEL_ROOT, dirs_exist_ok=True)
+if not FOUND["wheels"]:
+    print("no wheels/ attached: the gsplat wheel will be built (about 66-73 min)")
+print("wheel keys:", sorted(os.listdir(WHEEL_ROOT)) if os.path.isdir(WHEEL_ROOT) else [])
 for key, dst in (("gn5p", GN5P_OUT), ("gn5p_work", GN5P_WORK), ("e3p_inria", INRIA_DIR)):
     if FOUND[key]:
         print(f"restoring {FOUND[key]} -> {dst}")
