@@ -100,6 +100,19 @@ compiling (no `ensurepip` for a venv).
   1e-3, on both scenes.
 - **C3DGS's own evaluation fails with the images on the CPU,** so treehill has none; protocol ii is unaffected.
 
+**E5p (section 18, branch `bench/gn-vq`): exploratory pilot of E5's replication of OGC inside C3DGS on train, no verdict
+(Amendment 17 c, Amendment 18).**
+- **The mechanics hold:** four forked C3DGS processes, every row `ok`, C3DGS's evaluation of every row with the images on
+  the CPU too, and OGC's code from its URL; the private dataset's copy failed git's ownership check in the preflight only.
+- **Our derived VQ (`ogc_gram_ours`) reproduces OGC's labels and codebook exactly** in all four processes on the GPU.
+- **On train OGC's VQ leads C3DGS's by +0.1292 dB BD-PSNR** (P1, -35.67% BD-rate; P2 +0.0641 dB / -25.84%; values
+  only), and by +0.1690 dB at j = 0 with 482,562.5 more bytes: OGC's Lloyd with the identity metric (its init, reseeding
+  and full-batch update, against C3DGS's minibatch moving averages) 47.9%, the trace weight 6.2%, the 16 x 16 metric
+  45.9%.
+- **Fine-tuning** reads `ogc_gram_ft` - `c3dgs_ft` +0.0211 and +0.2592 dB in the two processes (seed and image device
+  confounded) at unequal bytes: it shrinks OGC's `features_rest` by 32.5% and grows C3DGS's by 2.4% / 2.3%. The quantizer
+  mechanism is inferred; Amendment 18 note 2 records it from E5 on.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -178,6 +191,12 @@ compiling (no `ensurepip` for a venv).
   and the readings of code: this repository's job, hooks and stand-in, OGC's `vq.py` at `49ccae72` and C3DGS's source
   at `2a234af5`. The post hoc BD checks use `bench/gn/g2.py`'s fit. `bench/gn/check_s17.py` recomputes every number in
   the section from those files and checks each against the text.
+- Section 18: every number comes from `kaggle/gn_e5p/attempt2/gn5p/` (`8eadc81e`; one Kaggle session on 2x T4, rows
+  timestamped 2026-10-09T14:27 to 15:49, gsplat commit `27c7731b`, a built wheel and E3p's fetched train members
+  reused), unpacked unchanged. The exceptions are E4q's rows and section 17's values (`kaggle/gn_e4q/gn4q/`), E4p's
+  fine-tuned rows and section 16's note ii (`kaggle/gn_e4p/gn4p/`), the runtime estimate
+  (`bench/gn/e5_estimate.py`, `estimate(1)`, Amendment 18 d), the paper's Table 1, and the readings of code: this
+  repository's job and hooks, and C3DGS's source at `2a234af5`. `bench/gn/check_s18.py` recomputes every number in the section from those files and checks each against the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -3529,3 +3548,265 @@ A chain of paired differences from C3DGS's own VQ to OGC's, each computed within
   - the rate comparison on treehill, which had no sweep;
   - how many clusters each reseeding row reseeded in all;
   - why one camera (`00113` at -20 degrees) separates `lad_all` from `ogc` by about 8 dB.
+
+## 18. E5p: the OGC replication pilot inside C3DGS on train (exploratory, no verdict) — on train OGC's VQ leads C3DGS's by +0.1292 dB BD-PSNR (+0.1690 dB at j = 0, with 3.48% more bytes), its Lloyd with the identity metric and its 16 x 16 metric about equally, and our derived VQ reproduces OGC's labels and codebook exactly
+
+**E5p is a pilot on one development scene and has no verdict** (Amendment 17 c, `b3923bfb`; Amendment 18, `f13193cb`,
+both written before any E5p code; the code at `27c7731b`). It forks C3DGS's process at the colour VQ, as E4p and E4q
+did, and computes in each of four processes C3DGS's own VQ (`c3dgs`) and OGC's `gram_kmeans` under its three metrics
+(`ogc_plain`, `ogc_scalar`, `ogc_gram`), plus `ogc_gram_ours`, this repository's derived implementation (Amendment 18 d,
+report only). Nothing below is a result about a method on an unseen scene. Every number comes from
+`kaggle/gn_e5p/attempt2/gn5p/` (`8eadc81e`, attempt 2), except where another committed file is named. Items marked
+**post hoc** were read from the files after the fact; Amendments 17 and 18 did not plan them.
+
+**What ran:**
+- **The job completed** with exit code 0 and was not skipped by the start cutoff. It wrote 25 rows, all `ok`:
+  `uncompressed`, 7 in each of the two j = 0 processes (the five rows and the two fine-tuned ones) and 5 in each of
+  j = -1 and j = +1.
+- **Nothing failed:** no failed or skipped step, no drop, no deviation, no `cfg_args` mismatch; `missing_or_failed` is
+  empty and `done` true.
+- **No retry:** every process ran once (attempt 0), none ran out of memory, and no fork check failed. The scene ran with
+  `--data_device cuda`; process `j0_p1` forced the images onto the CPU, as Amendment 17 c sets.
+- **Attempt 1** (2026-10-08) produced no data (OGC's repository was unavailable; `a56a0bcf`). **A stale launch** on
+  2026-10-09 ran attempt 1's notebook cells against this code and was cancelled during the wheel build, before any
+  row: no data, not an attempt (HANDOFF, "A stale launch of attempt 2").
+
+### Inputs and checks
+
+Session: Python 3.13.15, torch 2.11.0+cu128 (CUDA 12.8), cuDNN 91900, driver 580.178.04, 2x Tesla T4; gsplat commit
+`27c7731b`. The image differs from E4q's (Python 3.12.13, torch 2.10.0+cu128), so the gsplat wheel was built
+(3,922.0 s; install 4,055.7 s in all). C3DGS built once (`gn5p_c3dgs_build.json`): ok, head `2a234af5`, 205.8 s of
+builds and 228.2 s in all, with 7 deviations: Amendment 13 b's six and the `<cstdint>` retry, which
+`diff-gaussian-rasterization` needed on this image (Amendment 18 b; its source not edited).
+
+| Check | train |
+|---|---|
+| INRIA members | E3p's attached copies (`present`), all 3 matching the pins; `point_cloud.ply` SHA-1 `187b6095`, E3p's |
+| `cfg_args` | no mismatch |
+| Camera frame against `cameras.json` | pass: 301 of 301, largest differences 1.78e-15 (position), 3.33e-16 (rotation) |
+| Test split against `cameras.json` | equal, 38 test views |
+| Train views, even / odd | 132 / 131 |
+| Uncompressed model, protocol ii (PSNR / SSIM / LPIPS) | 21.293 / 0.7926 / 0.2170 at 980x545, E4q's row to every digit shown |
+| Splats: in the checkpoint, pruned, keeping their own colour, colour-quantized | 1,026,508, 115,907, 107,525, 803,076 at j = 0 (E4q's); 636,165 at j = -1 and 878,651 at j = +1 |
+
+**The fork held:** every fork row's three checks passed (`checks_ok` in all 20), and within a process every row carries
+one geometry SHA-1, different between processes as in E4p and E4q: `87712a76` and `4d306a1c` at j = 0, `34b1e084` at
+j = -1, `c1c06bd2` at j = +1.
+
+### OGC's source (Amendment 18 c)
+
+- **The URL verified:** one attempt, HEAD `49ccae72`, tree `9feebced`, a clean working copy; its file list (83 files) was
+  written outside the output for the bundle guard. The dataset copy was listed (`dataset_candidates`, kind `dir`) and
+  not tried, as the chain says when the URL verifies.
+- **The private dataset failed in the preflight only** (`ogc_preflight`): its copy, unpacked by Kaggle with its `.git`,
+  had the right HEAD and tree, but the local clone failed with "detected dubious ownership". Amendment 18 note 1
+  (`f32c36d1`, code `58805307`) works on a scratch copy the job owns; the dataset source has still not verified on Kaggle.
+- **A recording note:** this bundle's meta holds OGC's public commit metadata (author, committer, message), which the
+  tree read logged through `cat-file`. It is kept unchanged; `f428c93f` records only HEAD and the tree id from now on.
+
+### `ogc_gram_ours` against `ogc_gram` (Amendment 18 d)
+
+In each process `ogc_gram_ours` ran on the GPU with `ogc_gram`'s settings from the same inputs and metric:
+
+| Process | Labels equal | Codebook max abs diff | Arrays with equal compressed bytes | `.npz` bytes, both | Protocol ii PSNR, both |
+|---|---|---|---|---|---|
+| j = 0, seed 0 | 803,076 of 803,076 | 0.0 | 22 of 22 | 14,349,600 | 21.1668 |
+| j = 0, seed 1 (images on the CPU) | 803,076 of 803,076 | 0.0 | 22 of 22 | 14,347,630 | 21.1689 |
+| j = -1 | 636,165 of 636,165 | 0.0 | 22 of 22 | 19,948,459 | 21.2042 |
+| j = +1 | 878,651 of 878,651 | 0.0 | 22 of 22 | 11,846,983 | 21.1320 |
+
+- **Labels and float codebooks are identical in all four processes,** and so are every array's compressed bytes, the
+  `.npz` totals and protocol ii's PSNR (difference 0.0 in both j = 0 processes, `SE_noise` 0.0). The arrays' contents
+  were not hashed, so "identical" stops at the labels and the codebook; the saved files are equal in size.
+- **So `ogc_derived`'s `"gram"` path is validated at full scale on the GPU** (Amendment 18 e). Its `"plain"` and
+  `"scalar"` paths rest on the small-case test.
+- **`ogc_gram` against E4q's `p0_ogc` (report only):** protocol ii -0.0033 dB, `.npz` bytes -549, index entropy
+  +0.0009 bits, distinct indices 111,621 in both, colour-quantized splats 803,076 in both. Not an exact match: the
+  metric is recomputed and not bit-reproducible on the GPU, and the image differs.
+
+### C3DGS's evaluation with the images on the CPU (Amendment 17 e.2)
+
+| Process | Calls through the fix | Calls that moved the ground truth | Rows C3DGS evaluated |
+|---|---|---|---|
+| j = 0, seed 0 | 798 | 0 | 7 of 7 |
+| j = 0, seed 1 (images on the CPU) | 798 | 798 | 7 of 7 |
+| j = -1 | 570 | 0 | 5 of 5 |
+| j = +1 | 570 | 0 | 5 of 5 |
+
+- **C3DGS evaluated every row in every process,** the fine-tuned rows and the CPU process included; no evaluation
+  raised. The fix moved the ground truth only where it was on the CPU (`ssim`, `psnr`, `lpips`).
+
+### The rows at j = 0
+
+Protocol ii on each row's decoded `.npz`, and C3DGS's evaluation. Means over the two processes, with the range for
+protocol ii's PSNR; codewords used are the distinct codebook entries among the quantized splats' stored indices
+(K = 4,096), per process 0 / 1; the index entropy is over the whole stored index array, in bits.
+
+| Row | Protocol ii PSNR: mean (range) | SSIM | LPIPS | C3DGS's PSNR | `.npz` bytes | Codewords used | Index entropy |
+|---|---|---|---|---|---|---|---|
+| `c3dgs` | 20.999 (20.995-21.003) | 0.7744 | 0.2361 | 21.507 | 13,866,052.5 | 2,496 / 2,209 | 10.45 / 10.34 |
+| `ogc_plain` | 21.080 (21.079-21.081) | 0.7780 | 0.2331 | 21.555 | 14,130,093 | 4,096 / 4,096 | 12.67 / 12.67 |
+| `ogc_scalar` | 21.090 (21.089-21.091) | 0.7785 | 0.2327 | 21.585 | 14,121,908 | 4,096 / 4,096 | 12.47 / 12.47 |
+| `ogc_gram` | 21.168 (21.167-21.169) | 0.7839 | 0.2259 | 21.648 | 14,348,615 | 4,096 / 4,096 | 12.78 / 12.78 |
+| `ogc_gram_ours` | 21.168 (21.167-21.169) | 0.7839 | 0.2259 | 21.648 | 14,348,615 | 4,096 / 4,096 | 12.78 / 12.78 |
+
+- **The uncompressed model** reads 21.293 / 0.7926 / 0.2170 (above). C3DGS's own VQ leaves 1,600-1,887 of its 4,096
+  entries without a splat; OGC's three metrics use all 4,096.
+- **C3DGS's own VQ differs between the two processes** by 0.0085 dB in protocol ii (E4q: 0.0088 dB).
+
+### The decomposition at j = 0
+
+Within process `p`, protocol ii's test PSNR of one row minus another's, n = 1 scene and two processes, so `SE_noise` =
+sqrt(`v_s`) / sqrt(2), with one degree of freedom:
+
+| Difference | `D_sp` 0 / 1 | `D_s` | `SE_noise` | Share of the total | `.npz` bytes | C3DGS's PSNR |
+|---|---|---|---|---|---|---|
+| `ogc_plain` - `c3dgs`: OGC's Lloyd with the identity metric (its init, reseeding and full-batch update, against C3DGS's minibatch moving averages) | +0.0758 / +0.0862 | +0.0810 | 0.0052 | 47.9% | +264,040.5 | +0.0479 |
+| `ogc_scalar` - `ogc_plain`: the trace weight | +0.0104 / +0.0106 | +0.0105 | 0.0001 | 6.2% | -8,185 | +0.0299 |
+| `ogc_gram` - `ogc_scalar`: the 16 x 16 metric against its trace | +0.0775 / +0.0774 | +0.0775 | 0.00005 | 45.9% | +226,707 | +0.0630 |
+| `ogc_gram` - `c3dgs`: the total | +0.1637 / +0.1742 | +0.1690 | 0.0052 | | +482,562.5 | +0.1408 |
+
+- **The three steps add to the total by construction** (the same processes, the same rows). E4q's `ogc` - `c3dgs` was
+  +0.1719 dB.
+- **Not comparable with E4q's 65.4% metric share** (FINDINGS section 17, post hoc). That chain went through GN-VQ's code
+  started from C3DGS's codebook; this one goes through OGC's own Lloyd with three metrics, which also fills every
+  codeword. The two decompositions split different paths between the same end points.
+- **Every step costs bytes except the trace weight;** the total is +482,562.5 bytes, +3.48% of `c3dgs`'s.
+
+### Rate and distortion over the three points (Amendment 17 d's BD, values only)
+
+Each row's curve has one process per point (seed 0): j = -1, 0, +1, the colour threshold 2e-7, 6e-7 and 1.8e-6. The
+fit is Amendment 9 a's, of degree 2 through every point, over the overlap of the two curves' ranges only.
+
+| Pair | BD-rate | BD-PSNR (dB) |
+|---|---|---|
+| `ogc_gram` against `c3dgs` (P1) | -35.67% | +0.1292 |
+| `ogc_gram` against `ogc_scalar` (P2) | -25.84% | +0.0641 |
+| `ogc_gram` against `ogc_plain` | -26.75% | +0.0725 |
+| `ogc_scalar` against `c3dgs` | -15.01% | +0.0666 |
+| `ogc_scalar` against `ogc_plain` | -2.48% | +0.0090 |
+| `ogc_plain` against `c3dgs` | -12.50% | +0.0574 |
+
+| Curve | Protocol ii PSNR, j = +1 to -1 | Span | Bytes, j = +1 to -1 | Byte ratio |
+|---|---|---|---|---|
+| `c3dgs` | 20.8448-21.1484 | 0.3036 dB | 11,328,966-19,545,426 | 1.725 |
+| `ogc_plain` | 20.9685-21.1753 | 0.2068 dB | 11,613,915-19,765,449 | 1.702 |
+| `ogc_scalar` | 20.9938-21.1758 | 0.1821 dB | 11,605,878-19,761,811 | 1.703 |
+| `ogc_gram` | 21.1320-21.2042 | 0.0722 dB | 11,846,983-19,948,459 | 1.684 |
+
+- **P1's BD-rate is fragile** (post hoc): the two curves share only 0.0165 dB of PSNR (21.1320-21.1484), with 1 of 3
+  points of each curve inside, so BD-rate integrates bytes over a sliver. BD-PSNR integrates over the byte overlap,
+  which is wide (11,846,983-19,545,426). P2 shares 0.0439 dB, with 2 of 3 points of `ogc_gram` and 1 of 3 of
+  `ogc_scalar` inside.
+- **`ogc_gram`'s curve is flat:** 0.0722 dB over a 1.684x range of bytes, against 0.3036 dB for `c3dgs`.
+- **Against E4q's train fit** (FINDINGS section 17): `ogc` against `c3dgs` read -33.76% and +0.1080 dB over five
+  points, -36.2 to -31.9% and +0.0946 to +0.1553 with one point dropped. E5p's P1, -35.67% and +0.1292 dB from three
+  points, lies inside both one-point-dropped ranges.
+- **The gap grows with the colour-quantized set** (post hoc, seed 0):
+
+| j | Colour threshold | Colour-quantized splats | `ogc_gram` - `c3dgs` | `ogc_gram` - `ogc_scalar` | `.npz` bytes, `ogc_gram` - `c3dgs` |
+|---|---|---|---|---|---|
+| -1 | 2e-7 | 636,165 | +0.0558 | +0.0284 | +403,033 |
+| 0 | 6e-7 | 803,076 | +0.1637 | +0.0775 | +472,711 |
+| +1 | 1.8e-6 | 878,651 | +0.2871 | +0.1382 | +518,017 |
+
+### Fine-tuning (5,000 iterations, j = 0)
+
+| Row | Protocol ii PSNR, process 0 / 1 | C3DGS's PSNR, 0 / 1 | `.npz` bytes, 0 / 1 | `features_rest` bytes, 0 / 1 |
+|---|---|---|---|---|
+| `c3dgs` | 21.0031 / 20.9947 | 21.515 / 21.499 | 13,876,889 / 13,855,216 | 3,203,748 / 3,195,605 |
+| `c3dgs_ft` | 21.1565 / 21.2846 | 21.635 / 21.696 | 13,936,459 / 13,909,862 | 3,281,910 / 3,270,267 |
+| `ogc_gram` | 21.1668 / 21.1689 | 21.653 / 21.643 | 14,349,600 / 14,347,630 | 3,277,763 / 3,277,763 |
+| `ogc_gram_ft` | 21.4157 / 21.3057 | 21.816 / 21.673 | 13,270,044 / 13,265,681 | 2,212,783 / 2,211,961 |
+
+- **`ogc_gram_ft` - `c3dgs_ft`:** +0.2592 / +0.0211 dB, mean +0.1402, `SE_noise` 0.1190 (one degree of freedom). The
+  two processes read +0.0211 and +0.2592 dB and bracket the paper's +0.09 dB (arXiv 2609.28997, its Table 1, the mean of
+  9 Mip-NeRF 360 scenes, one run each). With one scene there is no interval (Amendment 17 d's t-interval needs n ≥ 2),
+  and the comparison is at unequal bytes (below). Before fine-tuning the same pair reads +0.1637 / +0.1742.
+- **The two processes disagree:** `c3dgs_ft` reads 21.1565 and 21.2846, 0.128 dB apart, where `c3dgs` differs by 0.0085
+  dB. Process 0 and process 1 differ in both the seed and the images' device, so this run cannot separate the two.
+- **`ogc_gram_ft` in process 0 is above the uncompressed model** (21.4157 against 21.293), by 0.1225 dB; in process 1 by
+  0.0125 dB.
+- **The labels survived** fine-tuning in all four fine-tuned rows.
+- **The bytes move apart** (post hoc): fine-tuning shrinks `ogc_gram`'s `features_rest` by 32.5% in both processes and
+  grows `c3dgs`'s by 2.4% / 2.3%. After fine-tuning `ogc_gram` is -655,298 bytes against `c3dgs` (mean), where it was
+  +482,562.5 before. **The post-fine-tuning comparison is at unequal bytes.**
+- **A mechanism, inferred, not read from this bundle** (post hoc): before fine-tuning, `ogc_gram`'s AC codebook spans
+  -2.50 to +3.71 against an int8 grid of -0.85 to +0.90, with 254 of 184,320 values outside it (clamped at the save);
+  `c3dgs`'s spans -0.56 to +0.57, inside. C3DGS's fine-tuning trains the table and its `FakeQuantize` observer re-fits
+  the scale at every render (its source at `2a234af5`), so a wider grid would put most AC values on fewer int8 codes.
+  E4p's fine-tuned rows show the same: `ogc`'s `features_rest` fell by 32.4-32.5% in its three processes and `c3dgs`'s
+  grew by 2.2-2.4% (`kaggle/gn_e4p/gn4p/`). Attempt 2 did not record the quantizer after fine-tuning; Amendment 18 note 2
+  (`c9d1dc49`, code `7ca78f4e`) records it from E5 on.
+
+### Fidelity to the uncompressed model per angle (note ii a)
+
+Each row's renders against the uncompressed model's at the 38 test cameras orbited about the scene's up axis; `D_s` in
+dB as the mean PSNR / as the PSNR of the pooled MSE:
+
+| Angle (degrees) | `ogc_gram` - `c3dgs` | `ogc_plain` - `c3dgs` | `ogc_scalar` - `ogc_plain` | `ogc_gram` - `ogc_scalar` |
+|---|---|---|---|---|
+| -40 | +1.477 / +0.403 | +0.871 / +0.969 | +0.070 / +0.122 | +0.535 / -0.687 |
+| -20 | +1.770 / +0.721 | +0.938 / +0.666 | +0.051 / +0.042 | +0.781 / +0.013 |
+| -10 | +2.778 / +2.274 | +1.104 / +1.099 | +0.163 / +0.179 | +1.511 / +0.996 |
+| 0 | +3.456 / +3.426 | +1.120 / +1.153 | +0.164 / +0.164 | +2.172 / +2.109 |
+| +10 | +2.587 / +1.362 | +1.336 / +0.819 | -0.104 / +0.092 | +1.355 / +0.451 |
+| +20 | +1.326 / +0.130 | +0.808 / +0.781 | +0.084 / +0.119 | +0.434 / -0.770 |
+| +40 | +0.619 / -0.425 | +0.731 / +0.807 | +0.191 / +0.249 | -0.304 / -1.481 |
+
+- **`ogc_gram` - `c3dgs` peaks at 0 degrees** (+3.456 dB, mean PSNR) and falls toward +40 degrees (+0.619 dB), as in E4q.
+  The metric's step (`ogc_gram` - `ogc_scalar`) carries most of the peak; the trace weight's step stays within 0.249 dB
+  in either measure.
+- **The pooled-MSE measure is noisier** (`SE_noise` up to 0.189 dB, against 0.135 dB for the mean PSNR) and turns the
+  metric's step negative at -40 and +20 degrees as well; at +40 degrees both measures are negative.
+- **Note ii, as in E4p** (FINDINGS section 16): the smallest eigenvalue of the summed axis projectors over the 263
+  training cameras is 0.442 per camera; the training cameras lie 1.62 to 6.41 world units from the centre (median
+  3.71); 1 of the 38 test cameras (2.63%), and so 2.63% of the 228 orbit cameras, is farther from it than the farthest
+  training camera. Under the recomputed metric 102,320 splats have `tr` = 0 (E4p: 102,318); the median effective rank
+  of the rest is 2.51 of 16, and the lowest-rank third carries 0.269 of the trace.
+
+### Time and memory
+
+**Setup:** restore 29.0 s, the OGC preflight 23.1 s, install 4,055.7 s (the gsplat wheel built in 3,922.0 s), C3DGS
+build 231.3 s. **The job:** 5,429.7 s by its own clock (5,445.1 s in the queue), inside the estimate with `ogc_gram_ours`
+(`bench/gn/e5_estimate.py`, Amendment 18 d; 4,832-5,776 s). **The session:** setup plus the job, 9,784.1 s (2.72 h);
+the wheel build was cost only.
+
+The job's steps (wall time; host RSS is the step's, the job's process and its children; GB are 10^9 bytes):
+
+| Step | s | Host RSS GB |
+|---|---|---|
+| INRIA members / dataset download | 6.8 / 469.4 | - |
+| GN pass 16 x 16, all train views | 19.6 | - |
+| process j = 0, seed 0 / seed 1 (images on the CPU) | 1,449.7 / 1,456.5 | 7.53 / 10.20 |
+| process j = -1 / j = +1 | 676.9 / 702.5 | 7.19 / 7.92 |
+| per decoded row: `npz2ply.py` / protocol ii / fidelity renders | 11.2-11.4 / 8.2-8.7 / 2.7-2.8 | - |
+
+**Inside each process** (the hooks' costs, s): C3DGS's own VQ 129.7-131.0; each of OGC's rows 18.5-26.4 (rising with
+the colour-quantized set); C3DGS's evaluation of a row 58.0-60.3; fine-tuning 320.6-328.0 per row.
+
+**Memory:**
+- **GPU:** each process peaked at 4.91-4.92 GB allocated (5.38 GB reserved) with the images on the GPU and 2.99 GB (3.11
+  GB) with them on the CPU; OGC's rows at 4.37-4.45 GB and 2.48-2.51 GB.
+- **Host:** OGC's rows peaked at 3.26-6.92 GB of RSS. `"plain"` and `"scalar"` build a second metric copy of 1,024 bytes
+  per colour-quantized splat: 822,349,824 bytes at j = 0, 651,432,960 at j = -1, 899,738,624 at j = +1. The largest step
+  peak is the CPU-image process, 10.20 GB, of the session's 33.66 GB.
+
+### What E5p settles, and what it does not
+
+- **The mechanics hold:** the fork, the four processes, OGC's three metrics, fine-tuning, C3DGS's evaluation with the
+  images on the CPU (17 e.2), BD over three points, and the source chain's URL path.
+- **`ogc_derived`'s `"gram"` path equals OGC's code at full scale on the GPU** (labels and codebook in all four
+  processes; Amendment 18 e).
+- **The job's time is inside the estimate** (5,429.7 s against 4,832-5,776 s).
+- **On train, OGC's VQ leads C3DGS's by +0.1292 dB BD-PSNR** (P1, -35.67% BD-rate; values only), and by +0.1690 dB at
+  j = 0 with +482,562.5 bytes. OGC's Lloyd with the identity metric (its init, reseeding and full-batch update, against
+  C3DGS's minibatch moving averages) gives 47.9% of the j = 0 difference and the 16 x 16 metric against its trace 45.9%.
+  P2 reads +0.0641 dB and -25.84%.
+- **Not settled:**
+  - any claim on an unseen scene: train is a development scene, and E5p has no verdict;
+  - the dataset source on Kaggle, which has not verified;
+  - fine-tuning: its noise (`SE_noise` 0.1190 dB) and the seed and image-device confound between the two processes;
+  - why fine-tuning shrinks `ogc_gram`'s bytes: the quantizer mechanism is inferred, not recorded.
+- **No process-count change is proposed.** Amendment 17 c allows one, upward only, by a dated note before any E5 code;
+  that is Dace's decision.
