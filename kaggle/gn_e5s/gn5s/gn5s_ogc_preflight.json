@@ -1,0 +1,45 @@
+{
+  "commit_pinned": "49ccae72e75eec9877354ed72074827531f7fd79",
+  "tree_pinned": "9feebced57d11c6204077baa717528952be811ce",
+  "dataset_root": "/kaggle/input",
+  "candidates": [
+    {
+      "kind": "dir",
+      "path": "/kaggle/input/datasets/daceyy/e5p-ogc-source-49ccae72/ogc-3dgs-49ccae72/ogc-3dgs"
+    }
+  ],
+  "sources": [
+    {
+      "source": "url",
+      "path": "https://github.com/moholo-founder/ogc-3dgs.git",
+      "kind": "url",
+      "ok": true,
+      "head": "49ccae72e75eec9877354ed72074827531f7fd79",
+      "tree": "9feebced57d11c6204077baa717528952be811ce",
+      "reason": "",
+      "time_s": 0.5633423328399658
+    },
+    {
+      "source": "dataset",
+      "path": "/kaggle/input/datasets/daceyy/e5p-ogc-source-49ccae72/ogc-3dgs-49ccae72/ogc-3dgs",
+      "kind": "dir",
+      "ok": true,
+      "head": "49ccae72e75eec9877354ed72074827531f7fd79",
+      "tree": "9feebced57d11c6204077baa717528952be811ce",
+      "reason": "",
+      "time_s": 0.575742244720459
+    }
+  ],
+  "first_ok": "url",
+  "lines": [
+    "OGC PREFLIGHT url     ok   HEAD 49ccae72e75eec9877354ed72074827531f7fd79 tree 9feebced57d11c6204077baa717528952be811ce url https://github.com/moholo-founder/ogc-3dgs.git",
+    "OGC PREFLIGHT dataset ok   HEAD 49ccae72e75eec9877354ed72074827531f7fd79 tree 9feebced57d11c6204077baa717528952be811ce dir /kaggle/input/datasets/daceyy/e5p-ogc-source-49ccae72/ogc-3dgs-49ccae72/ogc-3dgs",
+    "OGC PREFLIGHT the chain will use: url (pinned HEAD 49ccae72e75eec9877354ed72074827531f7fd79, tree 9feebced57d11c6204077baa717528952be811ce)"
+  ],
+  "time_s": 1.2163312435150146,
+  "manifest": {
+    "path": "/tmp/ogc_preflight_manifest.json",
+    "n_files": 249
+  },
+  "notebook_time_s": 8.937790155410767
+}
