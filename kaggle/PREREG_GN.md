@@ -2973,3 +2973,171 @@ and 18, and it does not change the chain's order (URL, then dataset, else derive
     `ogc_gram_ours`, and Amendment 18 d's comparison is reported as unavailable for it (Amendment 18 e).
 - **Not changed:** E5's rows, points, primaries, bars and verdict (Amendments 17 d and 18 f); the chain and its
   verification (Amendment 18 c); `ogc_gram_ours` (18 d); the bundle guard.
+
+### Amendment 17 Note 1 (2026-10-10, before any E5 code): the seven scenes' feasibility (17 e.3 with 17 h)
+
+Amendment 17 e.3 asks for this dated note before any E5 code, with h's host memory. It is an estimate, not a
+measurement, and it read no gate-scene data beyond Amendment 15 note i's header read: no pixel, splat value, render or
+metric of bonsai, counter, kitchen, room, truck, drjohnson or playroom. Its arithmetic is `bench/gn/e5_feasibility.py`,
+checked by four tests in `bench/gn/test_gn.py`. GB are 10^9 bytes. (Titled "Amendment 17 Note 1"
+because it follows Amendment 18's notes in this file; 17 j numbers Amendment 17's own notes "Note 1", "Note 2".)
+
+**The model and its inputs.**
+- **GPU, the C3DGS process** (allocated bytes): note i's model, unchanged (`kaggle/gn_e4_note_i/feas7.py`: Amendment
+  14 g's terms, `bench/gn/e3r_memory.py` and `kaggle/gn_e3r_memory/e3r_memory.json`). Its sensitivity-pass columns are
+  reproduced exactly for all seven scenes (the test against `feas7.json`). The colour step's term is now OGC's
+  assignment at chunk 25,000 alone, 1,674,567,168 bytes (17 e.3; GN-VQ no longer runs), added to the upper end. The
+  result is multiplied by 1.14, E3r's reserved-over-allocated ratio, and compared with the T4's 15.64 GB (note i's
+  margin).
+- **Start device** (17 d): the GPU if that figure fits with the images on the GPU, else the CPU.
+- **`ogc_gram_ours`** (18 d) adds time, not peak. It runs after `ogc_gram` in the same process, one row at a time,
+  with the same chunk. In all four E5p processes its row peak is at or below `ogc_gram`'s (4,368,903,680 to
+  4,422,724,608 bytes against 4,407,650,304 to 4,450,079,232 with the images on the GPU; 2,477,716,992 against
+  2,505,985,024 on the CPU; `gn5p_results_train.csv`).
+- **GPU, the job's own steps** (outside note i's model; an estimate, report only): each step's peak is the runner it
+  holds plus the step's own increment. Every step works one view at a time and keeps nothing per view on the GPU, so
+  the increment is a per-splat part plus a per-pixel part of one view. Both parts are solved from E5p train's and E4q
+  treehill's measured increments, so the model gives both back. What each step holds, from the code:
+  - **the runner** (`kaggle/gn_e3p_scene.py:264`, `:286`): its splats on the GPU, 236 bytes per splat
+    (`e3r_memory.RUNNER_SPLAT_BYTES`), plus a fixed part of 95,041,008 bytes for its build and 103,631,700 bytes held
+    afterwards (the larger of the two scenes'). It is within 0.3% of both measured builds;
+  - **the 16 x 16 GN pass** (`bench/gn/gn_metric.py:326`, `:347`, `:349`): the accumulator per splat (`:270`), and per
+    view a 17-channel render of `[n, 17]` zero features with its backward (`:247`). Fitted: 943.6 bytes per splat and
+    685.8 per pixel;
+  - **protocol ii** (`kaggle/gn_e4p_scene.py:152`): per view the render, the ground truth moved to the GPU (it is cached
+    on the host, `:162`) and LPIPS's VGG activations (`:169`). Fitted: 215.4 bytes per splat and 2,485.8 per pixel.
+    This is the larger of the uncompressed model's evaluation and the rows' (the rows' was larger);
+  - **the orbit reference renders** (`:179`, `:184`: each render moved to the host as uint8): 243.3 bytes per splat and
+    140.4 per pixel. **The fidelity renders** (`:188`, `:201`): 437.0 bytes per splat and 125.1 per pixel;
+  - **note ii's coverage** (`:501`: the metric loaded on the host; `bench/gn/e4p.py:384`, `:391`: its eigenvalues in
+    float64, in chunks of 65,536 splats): a fixed increment of 5.39 GB, the same on both scenes to 0.001%.
+  - **One measured difference is not in the model:** E4q's note ii phase on treehill held a second runner (1.98 GB in
+    all), so its orbit and coverage peaks were about 1 GB above this model. E5's path holds one runner there (E5p train:
+    0.32 GB).
+- **Host** (17 h): the job's process plus C3DGS's process and its children, at a `"plain"` or `"scalar"` row (the
+  largest host state of a process). The terms:
+  - the images under `--data_device cpu`: views x W x H x 12 bytes (float32 RGB), counted only when the images are on
+    the CPU;
+  - OGC's `G`, 1,024 bytes per colour-quantized splat, and the second `[n, 16, 16]` copy (`vq.py:29` at `49ccae72`),
+    1,024 bytes more;
+  - the forked state's copy and the rows' saved states: 6 copies (the fork's, and `c3dgs`, `ogc_plain`, `ogc_scalar`,
+    `ogc_gram`, `ogc_gram_ours`). Each is taken at 91.7 bytes per splat, the largest recorded copy (`host_bytes`
+    94,134,548 on train at j = -1; treehill's was 39.9 bytes per splat);
+  - the rest of C3DGS's process: train's RSS at an OGC row's start with the images on the GPU (2,258,522,112 bytes),
+    less its copies, held fixed;
+  - the job's own process: linear in splats through its RSS when a C3DGS process starts (train 3,281,932,288 bytes,
+    treehill 4,224,339,968);
+  - the job's own steps (the coverage step is the largest): the job's RSS plus the larger measured growth per splat.
+- **Colour-quantized splats:** the bound n (every splat) decides. This is an inequality, not an estimate. An estimate
+  at E5p's largest measured ratio, j = +1 (878,651 / 1,026,508 = 0.856; 0.782 at j = 0, 0.620 at j = -1; treehill
+  0.878 at j = 0), is reported by the script.
+- **The host margin** is the calibration's largest gap, +11.92% (below), applied to every host figure.
+
+**Calibration** (the same model, on what E5p and E4q measured):
+
+| Case | Model | Measured | Gap |
+|---|---|---|---|
+| train, GPU, images on the GPU (E5p, process peak) | 6.23 allocated, 7.10 x 1.14 | 4.92 allocated, 5.38 reserved | none: the model is above |
+| train, GPU, images on the CPU (E5p p1) | 4.30, 4.90 x 1.14 | 2.99 allocated, 3.11 reserved | none |
+| treehill, GPU, images on the CPU (E4q, with GN-VQ's rows) | 11.31, 12.90 x 1.14 | 7.76 allocated, 8.51 reserved | none |
+| train, host, images on the CPU (E5p j = 0, p1) | 9.11 | 10.20 | +1.09 (+11.92%) |
+| train, host, images on the GPU (E5p j = +1) | 7.34 | 7.92 | +0.58 (+7.92%) |
+| treehill, host, images on the CPU (E4q p0) | 16.59 | 18.43 | +1.84 (+11.10%) |
+
+- **GPU: no margin.** The model is above every measured process peak. The colour step did not stack on the
+  sensitivity pass in either job: E5p's OGC rows peaked at 4.37-4.45 GB (2.48-2.51 GB with the images on the CPU),
+  below the process peaks. treehill's 7.76 GB lies inside the model's sensitivity range with the images on the CPU
+  (7.47-9.64 GB).
+- **One term under-predicts, the model does not:** E5p's train process peaked 0.37 GB above the sensitivity pass's
+  upper end (4.92 GB against E3q's 4.55 GB tie, on torch 2.11's image). That gap was added per splat to every scene's
+  upper end as a check. No start device changes (largest: kitchen at the contingency size, 14.96 GB with the images on
+  the GPU; drjohnson 13.20 GB with them on the CPU).
+- **Host: the model under-predicts all three cases,** by up to 11.92%, so that is the stated margin. The likely sources
+  are not separated: OGC's other per-splat arrays, and a uint8 copy of each image (a CPU-image process held 15.3 bytes
+  per pixel more on train against 12 modelled).
+
+**Per scene: the C3DGS process and the host.** GB. GPU columns are allocated bytes; "x 1.14" adds the colour step.
+Host is with the margin, at the bound n, at the scene's start device and with its images on the CPU after a 17 d
+retry:
+
+| Scene | Splats | Loaded size, views | Sensitivity, GPU images / CPU images | + colour x 1.14, GPU / CPU images | Start | Host at start | Host, CPU images (retry) |
+|---|---|---|---|---|---|---|---|
+| bonsai | 1,244,819 | 1559 x 1039, 292 | 8.70-9.29 / 3.02-3.62 | 12.50 / 6.03 | GPU | 9.27 | 15.62 |
+| | | contingency: 1600 x 1066, 292 | 9.04-9.63 / 3.06-3.65 | 12.89 / 6.08 | GPU | 9.27 | 15.96 |
+| counter | 1,222,956 | 1558 x 1038, 240 | 7.64-8.22 / 2.98-3.56 | 11.28 / 5.97 | GPU | 9.20 | 14.41 |
+| | | contingency: 1600 x 1066, 240 | 7.93-8.52 / 3.02-3.60 | 11.62 / 6.02 | GPU | 9.20 | 14.70 |
+| kitchen | 1,852,335 | 1558 x 1039, 279 | 9.57-10.44 / 4.15-5.03 | 13.82 / 7.64 | GPU | 11.27 | 17.34 |
+| | | contingency: 1600 x 1067, 279 | 9.90-10.78 / 4.19-5.06 | 14.20 / 7.68 | GPU | 11.27 | 17.67 |
+| room | 1,593,376 | 1557 x 1038, 311 | 9.70-10.45 / 3.67-4.42 | 13.83 / 6.95 | GPU | 10.42 | 17.17 |
+| | | contingency: 1600 x 1066, 311 | 10.07-10.83 / 3.71-4.46 | 14.25 / 7.00 | GPU | 10.42 | 17.54 |
+| truck | 2,541,226 | 979 x 546, 251 | 6.55-8.08 / 4.94-6.47 | 11.12 / 9.28 | GPU | 13.54 | 15.34 |
+| drjohnson | 3,405,153 | 1332 x 876, 263 | 10.50-12.36 / 6.82-8.68 | **16.00** / 11.80 | **CPU** | 20.50 | 20.50 |
+| playroom | 2,546,116 | 1264 x 832, 225 | 8.02-9.33 / 5.18-6.49 | 12.55 / 9.31 | GPU | 13.55 | 16.73 |
+
+**Per scene: the job's own steps.** GB, allocated (x 1.14 in parentheses); an estimate:
+
+| Scene | Loaded size | Runner build | GN pass 16 x 16 | Protocol ii | Orbit reference renders | Fidelity renders | Note ii coverage |
+|---|---|---|---|---|---|---|---|
+| bonsai | 1559 x 1039 | 0.39 (0.44) | 2.68 (3.06) | 4.69 (5.35) | 0.93 (1.06) | 1.14 (1.30) | 5.79 (6.60) |
+| | 1600 x 1066 | 0.39 (0.44) | 2.74 (3.13) | 4.91 (5.59) | 0.94 (1.07) | 1.15 (1.32) | 5.79 (6.60) |
+| counter | 1558 x 1038 | 0.38 (0.44) | 2.66 (3.03) | 4.68 (5.33) | 0.92 (1.05) | 1.13 (1.29) | 5.78 (6.59) |
+| | 1600 x 1066 | 0.38 (0.44) | 2.72 (3.10) | 4.90 (5.58) | 0.93 (1.06) | 1.14 (1.30) | 5.78 (6.59) |
+| kitchen | 1558 x 1039 | 0.53 (0.61) | 3.40 (3.87) | 4.96 (5.66) | 1.22 (1.39) | 1.55 (1.77) | 5.93 (6.76) |
+| | 1600 x 1067 | 0.53 (0.61) | 3.46 (3.94) | 5.18 (5.91) | 1.23 (1.40) | 1.56 (1.78) | 5.93 (6.76) |
+| room | 1557 x 1038 | 0.47 (0.54) | 3.09 (3.52) | 4.84 (5.52) | 1.09 (1.25) | 1.38 (1.57) | 5.87 (6.69) |
+| | 1600 x 1066 | 0.47 (0.54) | 3.15 (3.59) | 5.06 (5.77) | 1.11 (1.26) | 1.39 (1.58) | 5.87 (6.69) |
+| truck | 979 x 546 | 0.69 (0.79) | 3.47 (3.95) | 2.58 (2.94) | 1.40 (1.59) | 1.88 (2.14) | 6.09 (6.95) |
+| drjohnson | 1332 x 876 | 0.90 (1.02) | 4.92 (5.61) | 4.54 (5.18) | 1.90 (2.17) | 2.54 (2.90) | 6.30 (7.18) |
+| playroom | 1264 x 832 | 0.70 (0.79) | 3.83 (4.36) | 3.87 (4.41) | 1.47 (1.68) | 1.95 (2.22) | 6.09 (6.95) |
+
+- **No step on any scene is flagged:** every peak x 1.14 is below the T4's 15.64 GB. The largest is note ii's coverage
+  on drjohnson, 7.18 GB. At the largest measured reserved ratio of any job step (train's coverage, 7.61 / 5.71 = 1.33)
+  it would be 8.40 GB.
+- **What bounds each step in the code today:** the coverage's chunk of 65,536 splats (`bench/gn/e4p.py:384`); every
+  render step works one view at a time (`gn_metric.py:349`; `gn_e4p_scene.py:161`, `:183`, `:199`). The GN pass's
+  accumulator and the runner grow with n, which this note bounds. **E5's build needs no new chunking for memory.**
+- **The job-only host peaks** are 6.69-12.78 GB, below each scene's host figure above.
+
+**Loaded sizes, and what this note covers** (17 d: a loaded size the note does not cover makes the scene a drop):
+- **Note i's header read expects the smaller size,** the first row of each scene: `images_2` at ceil(full / 2) for
+  the four MipNeRF360 indoor scenes (`SCENE_META`), tandt_db's 979 x 546 for truck, and the `cameras.json` size for
+  drjohnson and playroom.
+- **The contingency rows** (bonsai, counter, kitchen, room) are INRIA's `-r -1` cap of the full image
+  (`e3p_inria.inria_image_size`, width 1,600), in case `cfg_args` names `images`, or a pixel of rounding separates
+  `images_2` from ceil(full / 2). They only prevent a needless drop under 17 d's loaded-size rule; they change no
+  expectation.
+- **Covered, per scene:** a loaded size of at most the larger row's W x H pixels (1600 x 1067 for the four indoor
+  scenes; 979 x 546, 1332 x 876 and 1264 x 832 for the others), with the camera count above. Every term grows with
+  W x H, so a smaller size only lowers it. Not covered: `images` at `-r 1` (the full size) for the indoor scenes.
+- `cfg_args` has not been read for any gate scene. E5's code reads it, and the first image, before the scene's first
+  C3DGS run (17 d).
+
+**Feasibility: every scene fits, at every covered size, and none is predicted to drop.**
+- Six scenes start with their images on the GPU. The tightest are kitchen and room at the contingency size (14.20 and
+  14.25 GB of 15.64).
+- **drjohnson starts on the CPU.** With the images on the GPU its upper end is 16.00 GB, above the T4. With them on the
+  CPU it is 11.80 GB, so 17 d's CPU retry is not its plan. Its lower end with the images on the GPU, 13.88 GB, would
+  fit, but the start device follows the upper end.
+- 17 d's memory rule still decides at run time.
+
+**Host totals for pairing** (17 h: two scenes running at the same time in one session need a sum below 0.8 x the
+session's RAM; E5p's and E4q's sessions had 33,658,318,848 bytes, so the limit is 26.93 GB). Each scene's two host
+peaks are in the table above: at its start device, and with its images on the CPU after a 17 d retry.
+- **At the start devices:** 14 of 21 pairs fit, every pair of bonsai, counter, kitchen, room, truck and playroom except
+  truck with playroom (27.09 GB). drjohnson fits with no other scene (20.50 GB alone; 29.70 GB with counter, the
+  smallest).
+- **If either scene of a pair falls back to its CPU images:** 4 pairs still fit. They are bonsai with counter (25.16
+  GB), bonsai with room (26.82), counter with kitchen (26.87) and counter with room (26.74).
+- **If both fall back:** no pair fits (30.04-38.17 GB).
+- **The pairing rule belongs to Note 2** (17 e.4), which assigns sessions and GPUs: pair only scenes whose sum still
+  fits if either falls back to its CPU images; any other scene runs alone. This note assigns none.
+
+**What the model leaves out.**
+- Tile instances on an indoor or Deep Blending view: note i's bracket from bicycle and train.
+- In the job's steps, any term other than per splat and per pixel of one view, from two measured scenes.
+- The colour-quantized counts of the gate scenes, bounded by n.
+- The time the CPU images cost.
+- Any image other than E5p's (17 b; each session records its own).
+
+**This note changes no row, point, primary, bar or verdict** (Amendments 17 d and 18 f). It changes no scene: whether
+a scene runs is still settled by 17 d's memory rule and its loaded-size check.
