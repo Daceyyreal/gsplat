@@ -3141,3 +3141,76 @@ peaks are in the table above: at its start device, and with its images on the CP
 
 **This note changes no row, point, primary, bar or verdict** (Amendments 17 d and 18 f). It changes no scene: whether
 a scene runs is still settled by 17 d's memory rule and its loaded-size check.
+
+### Amendment 17 Note 2 (2026-10-10, before any E5 code): clarifications for E5's build
+
+Amendment 17 d-j and Amendment 18 leave some points of E5's build silent or open to more than one reading. This note
+settles them before any E5 code, as Dace decided on 2026-10-10. It changes no row, point, primary, bar or verdict rule
+beyond the readings below. The session assignment (17 e.4) becomes **Note 3**. Each item is numbered as in the build
+plan (C1-C13; C10 is this note's own numbering).
+
+**Processes and devices.**
+- **C1: no forced device.** E5's four processes (17 d: j = 0 with seed 0, j = 0 with seed 1, j = -1 and j = +1 with
+  seed 0) all run on the scene's start device, as Note 1 gives it: the GPU for bonsai, counter, kitchen, room, truck and
+  playroom, the CPU for drjohnson. E5p forced its seed-1 process onto the CPU to exercise e.2 (17 c); 17 d does not, so
+  E5 does not. Seed 0 and seed 1 are therefore no longer confounded with the images' device, unlike E5p (FINDINGS
+  section 18, "Fine-tuning").
+- **C13: the CPU-evaluation fix (17 e.2) stays on for every process.** It moves values only when the ground truth and
+  the render are on different devices, so it is a no-op when they match: E5p's three GPU processes moved 0 of their
+  798, 570 and 570 calls (FINDINGS section 18).
+
+**The scene's checkpoint and loaded size (17 d).**
+- **C3: what drops a scene before it starts.** A scene is not started, and is reported `dropped` with the reason, only
+  if:
+  - its `cfg_args` give `sh_degree` other than 3: OGC's metric has 16 coefficients per colour channel (bands 0-3); or
+  - its loaded size (from `cfg_args` and the first image of that set, by INRIA's size rule) is not one Note 1 covers.
+- **`eval` and `white_background`** are read from `cfg_args`, recorded and reported, and do not drop a scene: every row
+  of a scene shares its checkpoint, so P1, P2 and `SE_noise`, all paired within a scene, are unaffected. **`eval` =
+  False is flagged in the report:** the test views were then seen in training.
+- **C4: Deep Blending's data factor is 1** (the images as distributed in tandt_db's `db/<scene>`). The job checks at
+  run time that data factor 1 gives Note 1's sizes, 1332 x 876 for drjohnson and 1264 x 832 for playroom (note i's
+  header read). The build cannot check this: no `db/` member is read before E5 (17 j). A mismatch falls under C3's
+  loaded-size rule: if the size is not one Note 1 covers, the scene is reported dropped, with the reason.
+
+**Failures, retries and the deadline.**
+- **C9: an out-of-memory failure after results exist.** Results are any row's protocol ii measurement or `.npz` bytes
+  (17 i), so a process that has saved its rows has results. If such a process then runs out of GPU memory, it takes
+  17 d's CPU retry, and that retry is 17 i's one whole rerun with the same seed. If the retry also fails, the scene is
+  `incomplete` (17 d), never dropped: a drop precedes a scene's results (15 d, 17 d). A scene that already starts on
+  the CPU (drjohnson) has no CPU fallback. Its one rerun after results exist is on the CPU with the same seed, and if
+  that fails the scene is incomplete.
+- **C6: the deadline.** Processes not started because of 17 f's deadline (11.5 h less the 1,800 s reserve) may run in a
+  later session. Each process records the Kaggle image it ran on (Python, torch, CUDA, cuDNN, driver). Any BD curve
+  (one process per point) or j = 0 pair (two processes) whose processes ran on different images is reported as
+  spanning images; nothing else changes (18 b). Note 3 keeps each scene's four processes in one session where it can.
+- **C11: host memory.** A session with less total RAM than Note 1's 33.66 GB (33,658,318,848 bytes) runs its lanes
+  one scene at a time, whatever Note 3 pairs.
+- **C12: OGC's source.** Sessions whose source chains end differently (URL, dataset or `derived`; Amendment 18 note 3)
+  are allowed. Each row records its `impl`; 18 d's comparison is unavailable for any process at `derived`.
+
+**The verdict (17 d).**
+- **C2: a missing P.** A scene whose two curves share no byte range has no BD-PSNR for that primary. Its P enters
+  `P_bar` as 0 and counts as not positive. Why: a 0 cannot flip `P_bar`'s sign; it only shrinks `P_bar`'s magnitude by
+  (n - 1) / n and so makes criterion 3 (`P_bar` against 2 x `SE_noise`) harder to pass. The scene's j = 0 pairs still
+  enter `SD_pool` and `SE_noise`, and n is unchanged.
+- **C7: rounding.** As 17 d says, every compared value is rounded to 9 decimals before it is compared. With
+  r(x) = round(x, 9), a primary P passes iff all three hold:
+  1. r(`P_bar`) > 0;
+  2. #{s : r(P_s) > 0} >= ceil(0.7 n), computed in integers as (7 n + 9) // 10 (5 of 7, 5 of 6, 4 of 5, as 17 d
+     lists);
+  3. r(`P_bar`) > 2 x r(`SE_noise`).
+
+  E2c's code (`bench/gn/e2c.py`) rounded the value when it compared it with 0 (`:196`, `:200`), and the difference
+  when it compared it with a bar (`:244`, `:251`: r(b - bar) >= 0, r(mean - bar) <= 0). Here criteria 1 and 2 are
+  identical either way. Criterion 3 can differ from r(`P_bar` - 2 x `SE_noise`) > 0 only when `P_bar` and
+  2 x `SE_noise` lie within about 1e-9 of each other.
+- **C5: where the verdict is computed.** Locally, by `bench/gn/e5_verdict.py`, over every session's committed bundle.
+  A session's own summary holds per-scene parts only, never a verdict.
+- **C8: notebooks and bundles.** 17 d's "one notebook per session" is read as one Kaggle notebook per session, titled
+  "E5 OGC replication gate S1", "E5 OGC replication gate S2" and so on. Each writes its own bundle,
+  `E5_bundle_S1.zip`, `E5_bundle_S2.zip` and so on, arcname `gn5/`; a 17 i rerun after a dated bug-fix note adds
+  `_a2` (`E5_bundle_S1_a2.zip`).
+
+**Not changed:** E5's scenes, rows, points, primaries and their bars, the verdict order (`incomplete` > `fail` >
+`pass`), the n >= 5 rule, the secondaries, Amendment 18's source chain and `ogc_gram_ours`, and Note 1's model and
+covered sizes.
