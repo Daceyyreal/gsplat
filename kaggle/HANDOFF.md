@@ -48,9 +48,10 @@ uid 65534), so Amendment 18 note 1's fix holds on Kaggle; **Amendment 18 note 3*
 dataset and, if neither verifies, `derived`. **Amendment 17 Note 1** (`8cfbde58`, script `0d82d013`) records the
 seven scenes' feasibility: every scene fits, drjohnson starts with its images on the CPU, and E5's build needs no new
 chunking for memory. **Amendment 17 Note 2** (`4b92cba6`) settles E5's build (C1-C13), and **E5's build is done**
-(`46a4c099` through `7de7f690`; its dry run on all seven stand-in scenes over two sessions passes). **Next: Amendment 17
-Note 3, a correction to Note 1's host memory (drafted; `npz2ply` was left out); then Note 4, the session assignment;
-then E5** (see "Open items"). No E5 data exists.
+(`46a4c099` through `7de7f690`; its dry run on all seven stand-in scenes over two sessions passes). **Amendment 17
+Note 3** (`4f920bc0`, code `a04628e7`) corrects Note 1's host memory (npz2ply and four other job steps had been left out).
+**Next: Note 4, the session assignment (two options drafted for Dace to choose); then E5** (see "Open items"). No E5
+data exists.
 
 ## Context and rules
 
@@ -90,7 +91,8 @@ runs. **E4q built and ran** (`kaggle/gn_e4q_scene.py`, notebook "E4q C3DGS disse
 source preflight, `6f8caaf1`; bundle `631e3c7b`): URL and dataset ok. **Amendment 18 note 3** (`9bb5f1b8`): E5's
 sources. **Amendment 17 Note 1** (`8cfbde58`, `bench/gn/e5_feasibility.py` `0d82d013`): the seven scenes'
 feasibility. **Amendment 17 Note 2** (`4b92cba6`) and **E5's build** (`46a4c099`, `7ee0b66f`, `cc31744f`,
-`32c01c58`, `73b4fd1a`, `3b8bd80e`, `30d2aaec`, `7de7f690`; notebooks "E5 OGC replication gate S1" / "S2"). No E5 data.
+`32c01c58`, `73b4fd1a`, `3b8bd80e`, `30d2aaec`, `7de7f690`; notebooks "E5 OGC replication gate S1" / "S2").
+**Amendment 17 Note 3** (`4f920bc0`, `bench/gn/e5_feasibility.py` `a04628e7`): Note 1's host memory corrected. No E5 data.
 `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
 
 Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): `PR_DRAFT_weighted_kmeans.md`,
@@ -167,7 +169,7 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `../bench/gn/` | `sh_basis.py`, `gn_metric.py`, `batched.py` (chunked batched linalg and the finite check; the fix for the first Kaggle crash), `diagnostics.py` (spectrum, Spearman, predicted / measured, lifted exact assignment and its check, refines, end-to-end exactness check; since E3r the coefficient count is read from the metric's packed width, 15 or 16, and nothing changed at 15), `e3r.py` (E3r: C3DGS's int8 colour-table quantizer, GN-VQ with the floored 16 x 16 metric, the colour dMSE, the trace shares), `e3r_estimate.py` (Amendment 14 e's pre-run estimate and g's), `e3r_memory.py` (Amendment 14 g's memory check), `dryrun/fake_c3dgs/` (a CPU stand-in with C3DGS's call structure, for E3r's tests and dry run; since E5p its `render_and_eval` has C3DGS's shape, and with `E3R_FAKE_DEVICES=1` its renders and images carry emulated devices, so `--data_device cpu` raises C3DGS's own error without Amendment 17 e.2's fix), `g0.py` / `g1.py` / `g2.py` (the G0, G1 and G2a / H2b rules as code), `gn_vq.py` (E1's variant and the codec's quantizer; `report_metrics` adds reporting only), `e2b.py` (E2b's floored metric, selection, the fidelity and PSNR criteria, the rho = 0 reproduction check and the Spearman), `e2c.py` (E2c's grid, `rho_cv`, G2c and its reported items), `metric_store.py` (E3p's one-GPU-copy layout of `M`, Amendment 12 a: host metrics, one floored device buffer, `HostMetric` reads for `quad_form`; bit-identical to E2c's path on the CPU), `bd_sensitivity.py` (E2's BD measures reproduced, the 50-digit exact cubic, PCHIP, the shN stream), `check_s11.py` / `check_s12.py` / `check_s13.py` / `check_s14.py` / `check_s15.py` / `check_s16.py` / `check_s17.py` (re-check every number in FINDINGS sections 11-17 against the committed E2b, E2c, E2, E3p, E3q, E3r, E4p and E4q bundles; exit 0 = no failure; all run by pytest), `e3p_estimate.py` (FINDINGS section 13's post-hoc cost estimate for the frozen method at 4 K on the 13 INRIA scenes, from E3p's, E2c's and E2's files), `e4p.py` (E4p's pure pieces: the rows and OGC's call, the fork's state copy / restore / hash, the RNG states, row 4's isotropic metric, `.npz` bytes and index entropy, Amendment 15 c's components, note ii's geometry, coverage and power check, `HostRss`, the attempt rules), `e4q.py` (E4q's pure pieces, Amendment 16 b-c: the rows, the ladder's specs and `run_gn_vq` options, OGC's draw and reseeding in GN-VQ's code, the per-part clip, the `lam` and best-ladder selections, the table range against the int8 grid, the pooled-MSE PSNR, labels agreement, the chunk check, BD, the attempt rules), `e4q_estimate.py` (Amendment 16 e's runtime estimate, from E4p's measured parts), `e5.py` (E5p's and E5's pure pieces, Amendment 17: the rows and OGC's three metrics, E5p's and E5's processes, the one status rule, C3DGS's evaluation record, BD over three points, the attempt rules; E5's verdict (Note 2: a missing P enters P_bar as 0 with its reason, every compared value rounded to 9 decimals, incomplete > fail > pass) and secondaries; `process_action` (17 d, 17 i, C9); `image_key`), `e5_estimate.py` (Amendment 17 g's runtime estimate, from E4q's measured parts), `e5_verdict.py` (E5's verdict, computed locally over every session's committed bundle, Note 2 C5: rows merged by (scene, config), a conflicting row in one attempt refused, a higher attempt replacing a scene; drops from the metas; `e5.verdict` plus the per-row measures, fidelity per angle, 18 d per process, where each scene ran), `e5_feasibility.py` (Amendment 17
 Note 1's arithmetic: note i's C3DGS model with OGC's chunk at 25,000, the start devices, the contingency `-r -1` sizes,
 the job's own steps as per-splat and per-pixel parts solved from E5p train and E4q treehill, the host peaks at the
-start device and after a CPU retry with the calibration margin, the pairs under 0.8 x RAM; no data read); `gn_vq.gn_vq` takes E4q's opt-in options (`update`, `clip_bounds`, `after_update`, `final_float_assignment`, `assign_fn` / `update_fn`) and `diagnostics.update_centroids` the `ridge_mean` variant, the frozen path bit-identical, `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `ogc_derived.py` (every part derived from OGC's `vq.py`, PolyForm Noncommercial with its notices and the patent statement; `gram_kmeans_ours`, Amendment 18 d, e), `test_gn.py` (188 CPU tests; four, `lad_all` and `gram_kmeans_ours` against OGC's released `gram_kmeans`, OGC's metric modes and the source chain with their copy, need a clone in `GN_OGC_SRC` and skip without it), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1, E2, E2b, E2c, E3p, E3q, E3r, E4p, E4q, E5p, E5s and E5 dry runs (E4p's, E4q's, E5p's, E5s's and E5's need OGC's clone, `GN_DRYRUN_OGC_SRC` or GitHub; E5s's takes `GN_DRYRUN_OGC_WRAPPED` for the real upload), the writer-parity check and `check_chunked_distance.py`, E2c's path with the chunked `direct_distance`; `fake_db.py`, the Deep Blending stand-in (tandt_db's `db/<scene>` layout, synthetic images and COLMAP model, an INRIA-style `cameras.json`); not collected by pytest) |
+start device and after a CPU retry with the calibration margin, the pairs under 0.8 x RAM; no data read); `gn_vq.gn_vq` takes E4q's opt-in options (`update`, `clip_bounds`, `after_update`, `final_float_assignment`, `assign_fn` / `update_fn`) and `diagnostics.update_centroids` the `ridge_mean` variant, the frozen path bit-identical, `selftest.py` (the notebook's smoke tests; `--device cpu` is the CPU stand-in), `fixtures/` (the committed toy and end-to-end scenes, `.npz` + `.json`, Amendment 4) and `make_fixtures.py` (wrote them), `toy_render.py` (CPU renderer for tests), `toy_noise.py` / `.json` (Amendment 1), `ogc_derived.py` (every part derived from OGC's `vq.py`, PolyForm Noncommercial with its notices and the patent statement; `gram_kmeans_ours`, Amendment 18 d, e), `test_gn.py` (189 CPU tests; four, `lad_all` and `gram_kmeans_ours` against OGC's released `gram_kmeans`, OGC's metric modes and the source chain with their copy, need a clone in `GN_OGC_SRC` and skip without it), `dryrun/` (`fake_env.py` with the shared CPU stand-in, the E0, E1, E2, E2b, E2c, E3p, E3q, E3r, E4p, E4q, E5p, E5s and E5 dry runs (E4p's, E4q's, E5p's, E5s's and E5's need OGC's clone, `GN_DRYRUN_OGC_SRC` or GitHub; E5s's takes `GN_DRYRUN_OGC_WRAPPED` for the real upload), the writer-parity check and `check_chunked_distance.py`, E2c's path with the chunked `direct_distance`; `fake_db.py`, the Deep Blending stand-in (tandt_db's `db/<scene>` layout, synthetic images and COLMAP model, an INRIA-style `cameras.json`); not collected by pytest) |
 | `.gitignore` | ignores only the 64 run-5 bundle files that were unpacked flat into `kaggle/` by hand (anchored names; nothing deleted; the committed copy is `run5/tilequant/`) |
 
 CPU dry runs are **not in the repo**. They live in the scratchpad of session `51b5c32d`:
@@ -3714,14 +3716,24 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - **A correction:** "9.83 GB reserved for note ii's coverage" was this model's earlier prediction (treehill's 7.37 GB x
   train's reserved ratio), not a measurement. Train measured 5.71 GB allocated and 7.61 GB reserved for coverage.
 
-### Amendment 17 Note 2 and E5's build (2026-10-10)
+### Amendment 17 Notes 2-3 and E5's build (2026-10-10)
 
-- **Commits, in order** (pytest before each with pipefail and a kept log; the ancestor check; fast-forward pushes):
-  `4b92cba6` (Amendment 17 Note 2, alone: E5's build clarifications C1-C13), `46a4c099` (the seven scenes' constants,
-  Deep Blending's data path and its stand-in), `7ee0b66f` (the verdict and secondaries), `cc31744f` (a missing P with
-  its reason), `32c01c58` (the Deep Blending stand-in through gsplat's real parser), `73b4fd1a` (the job and its attempt
-  rules), `3b8bd80e` (the combiner `e5_verdict.py`), `30d2aaec` (the session notebooks and the job-level dry run, with
-  the GN-cache fix), `7de7f690` (npz2ply logged per row), then this flush. pytest 188 at `7de7f690`.
+- **Commits, in order** (pytest before each with pipefail and a kept log, never alongside a dry run; the ancestor check;
+  fast-forward pushes): `4b92cba6` (Amendment 17 Note 2, alone: E5's build clarifications C1-C13), `46a4c099` (the
+  seven scenes' constants, Deep Blending's data path and its stand-in), `7ee0b66f` (the verdict and secondaries),
+  `cc31744f` (a missing P with its reason), `32c01c58` (the Deep Blending stand-in through gsplat's real parser),
+  `73b4fd1a` (the job and its attempt rules), `3b8bd80e` (the combiner `e5_verdict.py`), `30d2aaec` (the session
+  notebooks and the job-level dry run, with the GN-cache fix), `7de7f690` (npz2ply logged per row), `6931dd9a`
+  (HANDOFF), `4f920bc0` (Amendment 17 Note 3, alone: a correction to Note 1's host memory; its citations of
+  `e5_feasibility.py` pinned to `0d82d013`), `a04628e7` (`e5_feasibility.py` with Note 3's five job steps and a test that
+  reproduces Note 3's table from `PREREG_GN.md`), then this flush. pytest 189 at `a04628e7`.
+- **Dace's decisions:**
+  - C1-C13 as Note 2 (below);
+  - a missing P's reason reported apart ("no shared byte range", Note 2 C2; "row missing after rerun", 17 d), the
+    outcome logic unchanged;
+  - npz2ply logged per row (report only, `7de7f690`);
+  - Note 3 approved as drafted;
+  - no dry run alongside the pytest gate on this machine (17 GB of RAM; together they raised MemoryError).
 - **Dace's decisions (Note 2):** C1 no forced device (seed 0 and 1 no longer confounded with the images' device); C2 a
   missing P enters P_bar as 0 (a 0 cannot flip its sign); C3 dropped only on `sh_degree` != 3 or a loaded size Note 1
   does not cover, `eval` = False flagged; C4 Deep Blending's factor 1, checked at run time; C5 the verdict locally over
@@ -3761,15 +3773,38 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   load, the runner's build, a row's protocol ii, the fidelity renders). npz2ply peaked at 7.06-7.30 GB on train (E5p)
   and 15.95-16.39 GB on treehill (E4q). With them, the start-device host peaks rise for kitchen (11.27 -> 12.10 GB),
   room (10.42 -> 10.87), truck (13.54 -> 15.36) and playroom (13.55 -> 15.39); 12 of 21 pairs fit at the start devices
-  (Note 1: 14); the retry-safe pairs are the same 4. **Draft: Amendment 17 Note 3** (a correction to Note 1's host
-  memory); the session assignment becomes **Note 4**.
+  (Note 1: 14); the retry-safe pairs are the same 4. **Amendment 17 Note 3** (`4f920bc0`, code `a04628e7`) records this;
+  the session assignment becomes **Note 4**.
 - **drjohnson's CPU images, timed on train (E5p j0_p1 against j0_p0):** process wall time x1.005 (1,453.8 / 1,446.8 s),
   C3DGS's evaluation x1.012 (413.7 / 408.6 s, 7 rows), fine-tuning x1.007 (651.0 / 646.4 s, 2 rows); the seed differs
   too. `e5_estimate.estimate(1)` per scene (s): bonsai 10,909-14,377; counter 9,937-12,885; kitchen 11,028-16,874; room
   11,384-16,422; truck 5,572-8,770; drjohnson 9,434-18,316 (x1.0125: 9,552-18,545); playroom 7,930-13,447. Input for
   Note 4.
+- **PENDING** (Dace, verbatim): "Note 4 (the session assignment, 17 e.4), draft only. Two options; Dace chooses.
+  A. Strict retry-safe pairing: pair only bonsai-counter, bonsai-room, counter-kitchen, counter-room; truck, drjohnson
+  and playroom run alone.
+  B. Pair at the start devices (Note 3's 12 pairs under 0.8 x 33.66 GB), plus a queue rule: a scene needing 17 d's CPU
+  retry waits until the other lane's scene has finished (a lane lock), so two scenes' CPU-image host peaks never
+  overlap; a retry the deadline cuts off runs in a later session (Note 2 C6). No protocol rule changes. Dace leans to B.
+  For each option:
+  - sessions and per-lane scene order (longest-processing-time first or better);
+  - each lane's predicted time (lower and upper estimate) against 11.5 h less setup (~420 s with the wheel restored)
+    and the 1,800 s reserve;
+  - the host peak at every overlap;
+  - the number of sessions and session-hours against a 30 h/week Kaggle GPU budget;
+  - which scenes risk the deadline.
+  For B also: the code change (the lane lock), a dry-run test (an injected GPU OOM in one lane while the other runs;
+  the retry starts only after the other finishes), and whether Note 4 must state it as a rule. No code until Dace
+  chooses; show both plans side by side."
+- **Inputs for Note 4:**
+  - the estimates per scene (s, `e5_estimate.estimate(1)`): bonsai 10,909-14,377; counter 9,937-12,885; kitchen
+    11,028-16,874; room 11,384-16,422; truck 5,572-8,770; drjohnson 9,552-18,545 (with the CPU ratio x1.0125); playroom
+    7,930-13,447;
+  - the corrected host peaks (Note 3; GB, start device / after a CPU retry): bonsai 9.27 / 15.96; counter 9.20 /
+    14.70; kitchen 12.10 / 17.67; room 10.87 / 17.54; truck 15.36 / 15.36; drjohnson 20.50 / 20.50; playroom 15.39 /
+    16.73 (`e5_feasibility.feasibility()`: `host_at_start`, `host_cpu`, each pair's `retry_safe`).
 
-### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-2 and E5's build: done; next: Note 3, the host-memory correction)
+### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-3 and E5's build: done; next: Note 4, the session assignment)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -3849,16 +3884,15 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - ~~**The seven-scene feasibility note** (Amendment 17 e.3, with h's host memory).~~ **Done (2026-10-10):** Amendment
   17 Note 1 (`8cfbde58`), `bench/gn/e5_feasibility.py` (`0d82d013`).
 - ~~**E5's build.**~~ **Done (2026-10-10):** Amendment 17 Note 2 (`4b92cba6`) and `46a4c099`-`7de7f690` (see "Amendment 17
-  Note 2 and E5's build"). No new chunking for memory was needed (Note 1).
+  Notes 2-3 and E5's build"). No new chunking for memory was needed (Note 1).
+- ~~**Amendment 17 Note 3, a correction to Note 1's host memory.**~~ **Done (2026-10-10):** `4f920bc0`, code `a04628e7`.
 - **Next, in order:**
-  1. **Amendment 17 Note 3, a correction to Note 1's host memory** (drafted, not committed): the five job steps Note 1
-     left out, npz2ply the large one; then `e5_feasibility.py` with them and a test;
-  2. **Amendment 17 Note 4, the session assignment** (17 e.4), before any E5 run, with `kaggle/e5_sessions.json` and
-     the retry-safe pairing rule (a pair must still fit under 0.8 x RAM if either scene falls back to its CPU images):
-     only bonsai, counter, kitchen and room can be paired (bonsai-counter, bonsai-room, counter-kitchen, counter-room);
-     truck, drjohnson and playroom would each run alone. It weighs this against the sessions and the time
-     (`e5_estimate.estimate(1)`, drjohnson x1.0125 for its CPU images);
-  3. **E5.**
+  1. **Amendment 17 Note 4, the session assignment** (17 e.4), before any E5 run, with `kaggle/e5_sessions.json`:
+     draft only, two options (A: strict retry-safe pairing; B: pairing at the start devices with a lane lock for CPU
+     retries); Dace chooses (see PENDING in "Amendment 17 Notes 2-3 and E5's build");
+  2. **E5.**
+- **The unexplained npz2ply failure** (one dry run, 2026-10-10, room's rerun `ogc_gram`): not reproduced alone or under
+  RAM pressure; every npz2ply call is now logged per row (`npz2ply_log`, `7de7f690`). Watch for it.
 - **A flaky test:** one pytest run before `f32c36d1` had one failure that three reruns did not reproduce; which test is
   not known. Not reproduced in 33 further runs at `8340f124` (2026-10-10: 20 plain, 5 with `-p no:cacheprovider`, 5 in
   shuffled order, 3 in the repository; many under load, 152-198 s against the failing run's 98 s), so no fix; the gate
@@ -4134,7 +4168,7 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - `lint/format-code.sh` and the tests on a CUDA machine (locally only CPU).
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
 - **Related work:** `kaggle/RELATED_WORK_OGC.md` (2026-10-01, literature notes, not findings) on arXiv 2609.28997 (OGC: per-Gaussian S2 observation Gram, matrix-weighted Lloyd, a C3DGS drop-in) and 2609.15735 (global factorised Gram, sqrt + KLT, no VQ), with the metric-equivalence check (our M_i equals their S2 Gram in expectation) and open questions; read it before the C3DGS arm's pre-registration. PDFs and the `ogc-3dgs` clone (`49ccae72`, PolyForm Noncommercial; the author states the method is patented for commercial use) are not in the repo.
-- **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3r / E3:** see "Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-2 and E5's build: done; next: Note 3, the host-memory correction)". E0 is done
+- **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3r / E3:** see "Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-3 and E5's build: done; next: Note 4, the session assignment)". E0 is done
   and G0 passed (`kaggle/gn_e0/gn/`, FINDINGS section 8); E1 is done and G1 failed (`kaggle/gn_e1/gn1/`,
   FINDINGS section 9); E2 is done and G2a passed (`kaggle/gn_e2/gn2/`, FINDINGS section 10); E2b
   (Amendments 9 and 10, exploratory) is done, and works in fidelity terms but not by the PSNR criterion
@@ -4150,6 +4184,6 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   produced no data (`a56a0bcf`), Amendment 18 (`f13193cb`) adds OGC's source chain and `ogc_gram_ours`, and attempt 2
   ran (bundle `8eadc81e`, FINDINGS section 18, `9457b0c9`); E5s found both OGC sources ok (`631e3c7b`), and Amendment 18
   note 3 (`9bb5f1b8`) sets E5's sources; Amendment 17 Note 1 (`8cfbde58`) records the seven scenes' feasibility.
-  Amendment 17 Note 2 (`4b92cba6`) and E5's build (`46a4c099`-`7de7f690`) followed. **Next: Note 3 (host memory),
-  Note 4 (the session assignment), then E5.** The
+  Amendment 17 Note 2 (`4b92cba6`), E5's build (`46a4c099`-`7de7f690`) and Note 3 (`4f920bc0`) followed. **Next: Note 4
+  (the session assignment), then E5.** The
   rest of E3's design (other codecs, INRIA checkpoints) is not written yet.
