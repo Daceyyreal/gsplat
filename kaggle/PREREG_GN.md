@@ -2934,3 +2934,42 @@ point, primary, bar or verdict, and no value any row writes or measures.
   the row fails.
 - **Not changed:** every row, point, metric, primary, bar and verdict of Amendments 17 and 18; the fine-tuning itself;
   E5p attempt 2's bundle, which stands as run.
+
+### Amendment 18 note 3 (2026-10-10, after E5s and before any E5 code): OGC's sources for E5 (Amendment 18 e)
+
+Amendment 18 e asks for this dated note before any E5 code runs. It says which sources E5 may use for OGC's code and
+whether `derived` may compute E5's OGC rows. It changes no row, point, metric, primary, bar or verdict of Amendments 17
+and 18, and it does not change the chain's order (URL, then dataset, else derived) or how each source is verified.
+
+- **The hashes checked** (Amendment 18 c), for every source at every session's start: HEAD
+  `49ccae72e75eec9877354ed72074827531f7fd79` and HEAD's tree `9feebced57d11c6204077baa717528952be811ce`, plus a clean
+  clone. The private dataset "E5p OGC source 49ccae72" was uploaded as `E5p_ogc_src_wrapped.zip` (3,738,955 bytes, SHA-1
+  `17e3fd7efc5ea986fcfa8d5c8117839eef8fa138`). That file holds only `ogc-3dgs-49ccae72.zip`, stored (3,738,815 bytes,
+  SHA-1 `ee954d9912317ffee28004d9ed525511094a315f`). Both SHA-1s were recomputed from `F:\ogc_backups` on 2026-10-10.
+  The chain checks HEAD and tree, not these file hashes.
+- **The URL** (`github.com/moholo-founder/ogc-3dgs`) verified in E5p attempt 2 (bundle `8eadc81e`, FINDINGS section
+  18): one attempt, HEAD `49ccae72`, tree `9feebced`, a clean working copy. E5 may use it.
+- **The dataset: ok.** E5s ("E5s OGC source preflight", notebook at `6f8caaf1`; bundle `E5s_bundle.zip`, SHA-1
+  `98a307be43518e7f8bda694b86bac4a5aa5c07b6`, committed unchanged in `kaggle/gn_e5s/gn5s/`, `631e3c7b`) ran E5p's
+  preflight alone on Kaggle with Amendment 18 note 1's fix: accelerator None, only this dataset attached, git 2.43.0.
+  Its line (`gn5s_ogc_preflight.json`):
+  `OGC PREFLIGHT dataset ok   HEAD 49ccae72e75eec9877354ed72074827531f7fd79 tree 9feebced57d11c6204077baa717528952be811ce dir /kaggle/input/datasets/daceyy/e5p-ogc-source-49ccae72/ogc-3dgs-49ccae72/ogc-3dgs`.
+  The URL verified in the same session. E5 may use the dataset.
+- **The ownership on Kaggle** (`gn5s_env.json`): the job ran as uid 0, and the attached copy is owned by uid 65534 (gid
+  65534, mode 0755). This is the ownership mismatch Amendment 18 note 1 addressed. Note 1's fix is verified on Kaggle:
+  the copy verified, through the code at `6f8caaf1`, whose dataset path clones only from a scratch copy the job owns
+  (the bundle records the outcome, not the git commands). The git-internal mechanism stays inferred, as note 1 says.
+- **`derived`:** it may compute E5's three OGC rows (`ogc_plain`, `ogc_scalar`, `ogc_gram`) if neither source verifies at
+  a session's start.
+  - **Grounds:**
+    - **`"gram"`:** `ogc_derived`'s `"gram"` path matched OGC's `gram_kmeans` in all four E5p processes on the GPU
+      (FINDINGS section 18). The labels and the float codebooks were identical (codebook max abs diff 0.0), every
+      colour array compressed to the same number of bytes, and protocol ii's PSNR was equal. The arrays' contents were
+      not hashed.
+    - **`"plain"` and `"scalar"`:** they go through the same path, with `I` and `tr(G_i) / 16 * I` as the metric. On
+      small cases they give OGC's labels (Amendment 18 e). At full scale they rest on that test and on the `"gram"`
+      path.
+  - **Recorded:** the `impl` column records `ogc` or `ogc_derived` per row. A session at `derived` does not compute
+    `ogc_gram_ours`, and Amendment 18 d's comparison is reported as unavailable for it (Amendment 18 e).
+- **Not changed:** E5's rows, points, primaries, bars and verdict (Amendments 17 d and 18 f); the chain and its
+  verification (Amendment 18 c); `ogc_gram_ours` (18 d); the bundle guard.
