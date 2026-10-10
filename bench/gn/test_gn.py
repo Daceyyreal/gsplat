@@ -5330,3 +5330,194 @@ def test_e5_db_download_from_a_stand_in_zip(tmp_path, monkeypatch):
     assert ed.ensure_data(args, 1) == 0.0  # the marker is there
     with pytest.raises(ValueError):
         ed.download_db_scene("truck", str(tmp_path / "x"), str(tmp_path / ".lock"), url=z, opener=zipfile.ZipFile)
+
+
+# ------------------------------------------------------------------------------ E5's verdict (Amendment 17 d, Note 2)
+_E5_BYTES = {-1: 2.0e7, 0: 1.4e7, 1: 1.1e7}
+_E5_PSNR = {-1: 21.15, 0: 21.00, 1: 20.85}
+
+
+def _e5_scene(gram=0.15, scalar=0.07, plain=0.06, seed1=0.004, byte_scale=None, ft=(0.1, 0.12), ours=0.0, image=None):
+    """A synthetic E5 scene: every row's curve at j = -1, 0, +1 (seed 0) as c3dgs's shifted up by the row's PSNR offset,
+    the j = 0 process seeded 1 with ``seed1`` added to ``ogc_gram`` only, fine-tuned rows and ``ogc_gram_ours``."""
+    import e5
+
+    off = {"c3dgs": 0.0, "ogc_plain": plain, "ogc_scalar": scalar, "ogc_gram": gram, e5.OURS_ROW: gram + ours}
+    scale = {"c3dgs": 1.0, "ogc_plain": 1.01, "ogc_scalar": 1.01, "ogc_gram": 1.03, e5.OURS_ROW: 1.03}
+    scale.update(byte_scale or {})
+    psnr, nbytes = {}, {}
+    for p in e5.E5_PROCESSES:
+        j, seed = p["j"], p["seed"]
+        for r, o in off.items():
+            psnr[(j, seed, r)] = _E5_PSNR[j] + o + (seed1 if (seed == 1 and r in ("ogc_gram", e5.OURS_ROW)) else 0.0)
+            nbytes[(j, seed, r)] = int(_E5_BYTES[j] * scale[r])
+        if p["finetune"]:
+            psnr[(j, seed, "c3dgs_ft")], nbytes[(j, seed, "c3dgs_ft")] = 21.1, 14_000_000
+            psnr[(j, seed, "ogc_gram_ft")] = 21.1 + ft[seed]
+            nbytes[(j, seed, "ogc_gram_ft")] = 13_000_000
+    img = image or {}
+    return {"psnr": psnr, "bytes": nbytes, "image": {(p["j"], p["seed"]): img.get((p["j"], p["seed"]), "img-A")
+                                                     for p in e5.E5_PROCESSES}}
+
+
+def test_e5_processes_and_thresholds():
+    """Note 2 C1: E5's four processes in 17 d's order, none with a forced device, fine-tuning in both j = 0 ones;
+    17 d's ceil(0.7 n) in integers: 5 of 7, 5 of 6, 4 of 5."""
+    import e5
+
+    assert [(p["j"], p["seed"], p["device"], p["finetune"]) for p in e5.E5_PROCESSES] == [
+        (0, 0, None, True), (0, 1, None, True), (-1, 0, None, False), (1, 0, None, False)]
+    assert [e5.positives_needed(n) for n in range(1, 11)] == [math.ceil(0.7 * n - 1e-12) for n in range(1, 11)]
+    assert (e5.positives_needed(7), e5.positives_needed(6), e5.positives_needed(5)) == (5, 5, 4)
+
+
+def test_e5_noise_follows_17d():
+    """D_s, v_s = sum of squared deviations over the two processes, SD_pool = sqrt(mean v_s), SE = SD_pool / sqrt(2n);
+    a scene with a missing value is left out of the pool."""
+    import e5
+
+    nz = e5.noise({"a": [1.0, 0.8], "b": [0.5, 0.7], "c": [0.3, None]})
+    assert nz["n"] == 2 and nz["per_scene"]["c"]["v_s"] is None
+    assert abs(nz["per_scene"]["a"]["D_s"] - 0.9) < 1e-12 and abs(nz["per_scene"]["a"]["v_s"] - 0.02) < 1e-12
+    assert abs(nz["SD_pool"] - math.sqrt(0.02)) < 1e-12 and abs(nz["SE_noise"] - math.sqrt(0.02) / 2) < 1e-12
+    one = e5.noise({"train": [0.1637, 0.1742]})  # FINDINGS section 18's P1 pair: SE_noise 0.0052 (rounded)
+    assert round(one["SE_noise"], 4) == 0.0052 and abs(one["per_scene"]["train"]["D_s"] - 0.16895) < 1e-12
+
+
+def test_e5_criteria_branches_and_rounding():
+    """17 d's three criteria with Note 2 C2 (a missing P enters P_bar as 0, not positive) and C7 (every compared value
+    rounded to 9 decimals; strict comparisons). Branches: pass; criterion 2 alone; criterion 3 alone; criterion 1 cannot
+    fail alone (criterion 3 implies it); P_bar exactly 0; P_bar below 1e-9; P_bar equal to 2 x SE after rounding; the
+    count exactly at the threshold and one below, for n = 7, 6, 5; a P below 1e-9 not positive; a missing P."""
+    import random
+
+    import e5
+
+    S7 = [f"s{i}" for i in range(7)]
+    ok = e5.criteria(dict.fromkeys(S7, 0.1), 0.01)
+    assert ok["pass"] and ok["c1_mean_positive"] and ok["c2_count"] and ok["c3_above_noise"]
+    c2 = e5.criteria(dict(zip(S7, [1.0] * 4 + [-0.01] * 3)), 0.01)
+    assert c2["c1_mean_positive"] and c2["c3_above_noise"] and not c2["c2_count"] and not c2["pass"]
+    assert (c2["n_positive"], c2["positives_needed"]) == (4, 5)
+    c3 = e5.criteria(dict.fromkeys(S7, 0.05), 0.03)
+    assert c3["c1_mean_positive"] and c3["c2_count"] and not c3["c3_above_noise"] and not c3["pass"]
+    rng = random.Random(0)
+    for _ in range(2000):  # criterion 3 implies criterion 1, so no case fails criterion 1 alone
+        r = e5.criteria({s: rng.uniform(-0.2, 0.2) for s in S7}, abs(rng.gauss(0, 0.05)))
+        assert not (r["c3_above_noise"] and not r["c1_mean_positive"])
+    zero = e5.criteria(dict(zip(S7, [0.1, -0.1] * 3 + [0.0])), 0.0)
+    assert zero["P_bar"] == 0.0 and not zero["c1_mean_positive"] and not zero["pass"]
+    tiny = e5.criteria(dict.fromkeys(S7, 4e-10), 0.0)
+    assert tiny["P_bar"] > 0 and not tiny["c1_mean_positive"] and tiny["n_positive"] == 0
+    tie = e5.criteria(dict.fromkeys(S7, 0.1), 0.05)  # r(P_bar) = 0.1, 2 x r(SE) = 0.1: not strictly above
+    assert tie["c1_mean_positive"] and tie["c2_count"] and not tie["c3_above_noise"]
+    tie2 = e5.criteria(dict.fromkeys(S7, 0.1000000004), 0.05)  # above 2 x SE unrounded, equal after rounding
+    assert not tie2["c3_above_noise"]
+    above = e5.criteria(dict.fromkeys(S7, 0.100000001), 0.05)
+    assert above["c3_above_noise"] and above["pass"]
+    for n, need in ((7, 5), (6, 5), (5, 4)):
+        names = [f"s{i}" for i in range(n)]
+        at = e5.criteria(dict(zip(names, [0.3] * need + [-0.01] * (n - need))), 0.001)
+        below = e5.criteria(dict(zip(names, [0.3] * (need - 1) + [-0.01] * (n - need + 1))), 0.001)
+        assert at["c2_count"] and at["pass"] and not below["c2_count"] and not below["pass"], n
+    miss = e5.criteria(dict(zip(S7, [0.2] * 6 + [None])), 0.01)
+    assert miss["P_missing"] == ["s6"] and miss["n_positive"] == 6 and abs(miss["P_bar"] - 1.2 / 7) < 1e-12
+    assert miss["n"] == 7 and miss["pass"]
+
+
+def test_e5_verdict_end_to_end_branches():
+    """The verdict on synthetic scenes through the real BD fit: pass; fail (P2 alone); incomplete by n < 5 (three
+    drops), by a primary row missing after the rerun, and over a fail; a scene whose curves share no byte range (its P
+    missing, entering as 0); images spanning a curve and a pair (Note 2 C6); every part reported."""
+    import e5
+
+    scenes = {f"s{i}": _e5_scene(gram=0.15 + 0.01 * i) for i in range(7)}
+    v = e5.verdict(scenes, {})
+    p1, p2 = v["primaries"]["P1"]["criteria"], v["primaries"]["P2"]["criteria"]
+    assert v["outcome"] == "pass" and p1["pass"] and p2["pass"] and v["n"] == 7 and not v["incomplete_reasons"]
+    assert all(0.05 < x < 0.3 for x in p1["P"].values()) and p1["P_missing"] == []
+    assert v["primaries"]["P1"]["noise"]["n"] == 7 and p1["SE_noise"] > 0
+    for key in ("P", "P_bar", "n_positive", "positives_needed", "SE_noise"):
+        assert key in p1
+    assert set(v["primaries"]["P1"]["per_scene"]["s0"]) == {"bd", "curves", "spans_images"}
+    flat = {f"s{i}": _e5_scene(gram=0.07, scalar=0.07, seed1=0.02 * (-1) ** i) for i in range(7)}
+    vf = e5.verdict(flat, {})
+    assert vf["outcome"] == "fail" and vf["primaries"]["P1"]["criteria"]["pass"]
+    assert not vf["primaries"]["P2"]["criteria"]["pass"]
+    four = {k: scenes[k] for k in ("s0", "s1", "s2", "s3")}
+    dropped = {"s4": "cfg_args gives sh_degree 2", "s5": "the loaded size is above Note 1's", "s6": "OOM on the CPU"}
+    v4 = e5.verdict(four, dropped)
+    assert v4["outcome"] == "incomplete" and v4["n"] == 4 and v4["dropped"] == dropped
+    assert v4["primaries"]["P1"]["criteria"]["pass"]  # the parts are computed and reported anyway
+    assert "n = 4" in v4["incomplete_reasons"][0]
+    holed = dict(scenes)
+    hole = _e5_scene()
+    del hole["psnr"][(-1, 0, "ogc_scalar")]
+    holed["s3"] = hole
+    vh = e5.verdict(holed, {})
+    assert vh["outcome"] == "incomplete" and vh["missing_primary_rows"] == {"s3": ["j-1_p0_ogc_scalar"]}
+    assert e5.config_name(-1, 0, "ogc_scalar") == "j-1_p0_ogc_scalar"
+    vfi = e5.verdict({k: flat[k] for k in ("s0", "s1", "s2", "s3")}, {})
+    assert vfi["outcome"] == "incomplete"  # incomplete > fail
+    apart = dict(scenes)
+    apart["s6"] = _e5_scene(byte_scale={"ogc_gram": 2.5})  # ogc_gram's bytes above every c3dgs point: no shared range
+    va = e5.verdict(apart, {})
+    c = va["primaries"]["P1"]["criteria"]
+    assert c["P_missing"] == ["s6"] and c["n_positive"] == 6
+    assert va["primaries"]["P1"]["per_scene"]["s6"]["bd"]["computed"] is False
+    spans = _e5_scene(image={(1, 0): "img-B", (0, 1): "img-C"})
+    sp = e5.verdict({**scenes, "s0": spans}, {})["primaries"]["P1"]["per_scene"]["s0"]["spans_images"]
+    assert sp == {"curves": True, "j0_pair": True}
+    assert va["primaries"]["P1"]["per_scene"]["s1"]["spans_images"] == {"curves": False, "j0_pair": False}
+
+
+def test_e5_verdict_secondaries():
+    """17 d's secondaries and 18 d's: ogc_scalar - ogc_plain and ogc_plain - c3dgs (BD and the j = 0 noise), BD-rate
+    for every pair, the fine-tuned difference's t-interval next to +0.09 (inside and outside), the pre-fine-tuning
+    difference next to +0.49, and ogc_gram_ours - ogc_gram (unavailable where a session ran derived)."""
+    from scipy.stats import t as student_t
+
+    import e5
+
+    scenes = {f"s{i}": _e5_scene(ft=(0.05 + 0.02 * i, 0.07 + 0.02 * i)) for i in range(6)}
+    v = e5.verdict(scenes, {})
+    sec = v["secondaries"]
+    assert set(sec) >= {"ogc_scalar_vs_ogc_plain", "ogc_plain_vs_c3dgs", "bd_all_pairs",
+                        "finetuned_ogc_gram_minus_c3dgs", "pre_finetuning_ogc_gram_minus_c3dgs",
+                        "ogc_gram_ours_minus_ogc_gram"}
+    assert len(sec["bd_all_pairs"]["s0"]) == 6 and all(x["computed"] for x in sec["bd_all_pairs"]["s0"].values())
+    ft = sec["finetuned_ogc_gram_minus_c3dgs"]
+    vals = [0.06 + 0.02 * i for i in range(6)]
+    mean = sum(vals) / 6
+    sd = math.sqrt(sum((x - mean) ** 2 for x in vals) / 5)
+    half = student_t.ppf(0.975, 5) * sd / math.sqrt(6)
+    assert abs(ft["mean"] - mean) < 1e-12 and abs(ft["interval"][0] - (mean - half)) < 1e-12
+    assert ft["paper_db"] == 0.09 and ft["paper_inside"] is bool(mean - half <= 0.09 <= mean + half)
+    far = e5.verdict({f"s{i}": _e5_scene(ft=(0.5, 0.5 + 1e-3 * i)) for i in range(6)}, {})
+    assert far["secondaries"]["finetuned_ogc_gram_minus_c3dgs"]["paper_inside"] is False
+    pre = sec["pre_finetuning_ogc_gram_minus_c3dgs"]
+    assert pre["paper_db"] == 0.49 and abs(pre["mean"] - (0.15 + 0.002)) < 1e-9
+    ours = sec["ogc_gram_ours_minus_ogc_gram"]
+    assert ours["n"] == 6 and all(ours["available"].values()) and abs(ours["mean_D_s"]) < 1e-12
+    derived = _e5_scene()
+    for key in [k for k in derived["psnr"] if k[2] == e5.OURS_ROW]:
+        del derived["psnr"][key]
+    vd = e5.verdict({**scenes, "s0": derived}, {})
+    assert vd["secondaries"]["ogc_gram_ours_minus_ogc_gram"]["available"]["s0"] is False
+    assert vd["outcome"] == "pass"  # ogc_gram_ours enters no rule (18 d)
+
+
+def test_e5_scene_data_from_rows():
+    """``scene_data`` reads E5's results rows: config names to (j, seed, row), rows not ``ok`` left out (so a primary
+    row failed by protocol ii counts as missing), each process's image kept."""
+    import e5
+
+    rows = [{"config": "p0_c3dgs", "status": "ok", "PSNR_ii": "21.0", "npz_bytes": "14000000", "image": "A"},
+            {"config": "j-1_p0_ogc_gram", "status": "ok", "PSNR_ii": "21.2", "npz_bytes": "2.06e7", "image": "B"},
+            {"config": "p1_ogc_scalar", "status": "failed", "PSNR_ii": "", "npz_bytes": "", "image": "A"},
+            {"config": "p0_ogc_gram_ft", "status": "ok", "PSNR_ii": "21.3", "npz_bytes": "13000000", "image": "A"},
+            {"config": "uncompressed", "status": "ok", "PSNR_ii": "21.3", "npz_bytes": "", "image": "A"}]
+    sd = e5.scene_data(rows)
+    assert sd["psnr"] == {(0, 0, "c3dgs"): 21.0, (-1, 0, "ogc_gram"): 21.2, (0, 0, "ogc_gram_ft"): 21.3}
+    assert sd["bytes"][(-1, 0, "ogc_gram")] == 20_600_000 and sd["image"] == {(0, 0): "A", (-1, 0): "B"}
+    assert "p1_ogc_scalar" in e5.missing_primary(sd) and len(e5.missing_primary(sd)) == 10
