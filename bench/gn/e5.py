@@ -403,3 +403,52 @@ def verdict(scenes: Dict[str, Dict], dropped: Optional[Dict[str, str]] = None) -
                                                                          for s, d in ours.items()}},
         },
     }
+
+
+# ------------------------------------------------------------------------------ E5's attempt rules (17 d, 17 i; Note 2 C9)
+def process_action(attempts: List[Dict], first_process: bool, scene_results_before: bool) -> Dict:
+    """What a process does after its latest attempt. Each attempt: ``device`` ("cuda" / "cpu"), ``oom``,
+    ``results_exist`` (it saved a row's ``.npz`` or measured one: 17 i's results), ``primary_missing`` (a primary row
+    missing from it) and ``after_results`` (it started when the scene already had results).
+    ``scene_results_before``: the scene's earlier processes have results.
+
+    - out of GPU memory with the images on the GPU, never on the CPU before: the CPU retry (17 d); when results exist,
+      that retry is 17 i's one rerun (C9), allowed once;
+    - out of memory on the CPU: in the scene's first process before any result, the scene is dropped (17 d, 15 d);
+      with results, one rerun on the CPU with the same seed (C9: a scene already on the CPU has no other fallback);
+    - any other failure that loses a primary row: with results, one whole rerun with the same seed (17 i, 15 d); before
+      any result, the scene stops and may be rerun only after a dated bug-fix note (17 i), never dropped;
+    - otherwise done (a row still missing after the rerun makes E5 incomplete, 17 d)."""
+    last = attempts[-1]
+    results = scene_results_before or any(a.get("results_exist") for a in attempts)
+    reruns = sum(1 for a in attempts[1:] if a.get("after_results"))
+    on_cpu_before = any(a["device"] == "cpu" for a in attempts[:-1])
+    if last.get("oom"):
+        if last["device"] == "cuda" and not on_cpu_before:
+            if results and reruns >= 1:
+                return {"action": "done", "reason": "out of memory after its one rerun (17 i): its rows stay missing"}
+            return {"action": "retry_cpu", "device": "cpu", "kind": "rerun" if results else "cpu_retry",
+                    "after_results": results}
+        if first_process and not results:
+            return {"action": "drop_scene", "reason": "out of memory with the images on the CPU, in the scene's first "
+                                                      "process, before any of its results (17 d, Amendment 15 d)"}
+        if results and reruns == 0:
+            return {"action": "rerun", "device": "cpu", "kind": "rerun", "after_results": True}
+        return {"action": "done", "reason": "out of memory on the CPU after its one rerun (17 i)"}
+    if last.get("primary_missing"):
+        if results:
+            if reruns == 0:
+                return {"action": "rerun", "device": last["device"], "kind": "rerun", "after_results": True}
+            return {"action": "done", "reason": "a primary row still missing after the one rerun (17 i, 17 d)"}
+        return {"action": "stop_scene", "reason": "a failure that is not out of memory, before any of the scene's results: "
+                                                  "the scene may be rerun only after a dated bug-fix note (17 i)"}
+    return {"action": "done"}
+
+
+def image_key(env: Optional[Dict]) -> str:
+    """Note 2 C6: the Kaggle image a process ran on (Python, torch with its CUDA, cuDNN, the driver)."""
+    env = env or {}
+    smi = env.get("nvidia_smi") or ""
+    driver = smi.split(",")[1].strip() if smi.count(",") >= 2 else ""
+    return (f"py{env.get('python', '?')}|torch{env.get('torch', '?')}|cuda{env.get('torch_cuda', '?')}"
+            f"|cudnn{env.get('cudnn', '?')}|driver{driver or '?'}")

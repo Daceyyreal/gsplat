@@ -5584,3 +5584,76 @@ def test_e5_db_stand_in_through_gsplats_real_parser(tmp_path):
         split = ei.split_check(p.image_names, list(val.indices), sd["cameras_json"])
         assert split["equals_cameras_json_head"] and split["n_test"] == (n + 7) // 8
         assert es.loaded_size_check(scene, dict(images="images", resolution=1), d, cams)["ok"]
+
+
+def test_e5_process_action_branches():
+    """E5's attempt rules (17 d, 17 i; Note 2 C9): the CPU retry before results; the CPU retry after results as 17 i's
+    one rerun, and no second; a drop only for the first process out of memory on the CPU before any result; a scene
+    already on the CPU (drjohnson) rerun on the CPU once after results; a non-OOM failure before any result stops the
+    scene (17 i, never a drop); after results one whole rerun with the same seed, then done (incomplete)."""
+    import e5
+
+    A = lambda device, oom=False, res=False, miss=False, after=False: dict(  # noqa: E731
+        device=device, oom=oom, results_exist=res, primary_missing=miss, after_results=after)
+    act = e5.process_action
+    assert act([A("cuda", oom=True)], True, False) == {"action": "retry_cpu", "device": "cpu", "kind": "cpu_retry",
+                                                        "after_results": False}
+    r = act([A("cuda", oom=True, res=True)], True, False)
+    assert r["action"] == "retry_cpu" and r["kind"] == "rerun" and r["after_results"]
+    r = act([A("cuda", oom=True)], False, True)  # a later process: the scene has results
+    assert r["action"] == "retry_cpu" and r["after_results"]
+    assert act([A("cuda", oom=True), A("cpu", oom=True)], True, False)["action"] == "drop_scene"
+    assert act([A("cpu", oom=True)], True, False)["action"] == "drop_scene"  # drjohnson's first process, no result
+    r = act([A("cpu", oom=True, res=True)], True, False)  # drjohnson after its rows were saved: no CPU fallback
+    assert r == {"action": "rerun", "device": "cpu", "kind": "rerun", "after_results": True}
+    assert act([A("cpu", oom=True, res=True), A("cpu", oom=True, after=True)], True, False)["action"] == "done"
+    assert act([A("cuda", oom=True, res=True), A("cpu", oom=True, after=True)], True, False)["action"] == "done"
+    assert act([A("cpu", oom=True)], False, True)["action"] == "rerun"  # a later process on the CPU, results exist
+    assert act([A("cuda", miss=True)], True, False)["action"] == "stop_scene"
+    assert act([A("cuda", miss=True, res=True)], True, False) == {"action": "rerun", "device": "cuda", "kind": "rerun",
+                                                                  "after_results": True}
+    assert act([A("cuda", miss=True, res=True), A("cuda", miss=True, after=True)], True, False)["action"] == "done"
+    assert act([A("cuda", miss=True)], False, True)["action"] == "rerun"
+    assert act([A("cuda", oom=True), A("cpu", miss=True, res=True)], True, False)["action"] == "rerun"  # retry != rerun
+    assert act([A("cuda")], True, False) == {"action": "done"}
+    k = e5.image_key({"python": "3.13.15", "torch": "2.11.0+cu128", "torch_cuda": "12.8", "cudnn": 91900,
+                      "nvidia_smi": "Tesla T4, 580.178.04, 15360 MiB"})
+    assert k == "py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04"
+    assert e5.image_key({}) == "py?|torch?|cuda?|cudnn?|driver?"
+
+
+def test_e5_job_refusals_columns_and_a_summary_without_verdict(tmp_path):
+    """The E5 job refuses a scene outside the seven and a missing --session; its CSV adds session and image to E5p's
+    columns; its session summary has per-scene parts and no verdict (Note 2 C5)."""
+    _kaggle_path()
+    repo = os.path.dirname(os.path.dirname(HERE))
+    if repo not in sys.path:
+        sys.path.insert(0, repo)
+    import e5
+    import gn_e5_scene as job
+    import gn_e5p_scene as e5pjob
+
+    base = ["--c3dgs_dir", str(tmp_path / "c"), "--out_dir", str(tmp_path / "o")]
+    with pytest.raises(ValueError, match="not an E5 gate scene"):
+        job.main(base + ["--scene", "train", "--session", "S1"])
+    with pytest.raises(ValueError, match="--session is required"):
+        job.main(base + ["--scene", "bonsai"])
+    assert [c for c in job.COLUMNS if c not in e5pjob.COLUMNS] == ["session", "image"]
+    out = tmp_path / "gn5"
+    out.mkdir()
+    csvp = str(out / "gn5_results_bonsai.csv")
+    for p in e5.E5_PROCESSES:
+        for row in e5.process_rows(p, "ogc"):
+            j = p["j"]
+            off = {"c3dgs": 0.0, "ogc_plain": 0.05, "ogc_scalar": 0.06, "ogc_gram": 0.15}.get(row, 0.1)
+            job.append_row(csvp, {"scene": "bonsai", "config": e5.config_name(j, p["seed"], row), "status": "ok",
+                                  "PSNR_ii": 21.0 + 0.15 * (-j) + off + (0.003 if p["seed"] else 0.0),
+                                  "npz_bytes": int({-1: 2.0e7, 0: 1.4e7, 1: 1.1e7}[j] * (1.03 if "ogc" in row else 1.0)),
+                                  "session": "S1", "image": "img-A"})
+    json.dump({"scene": "bonsai", "start_device": "cuda", "scene_device": "cuda", "processes": {}, "sessions": []},
+              open(str(out / "gn5_meta_bonsai.json"), "w"))
+    s = job.summarize(str(out), ["bonsai"])
+    assert set(s) == {"note", "scenes"} and '"outcome"' not in json.dumps(s) and '"verdict"' not in json.dumps(s)
+    parts = s["scenes"]["bonsai"]["per_scene_parts"]
+    assert set(parts) == {"P1", "P2", "ogc_scalar_vs_ogc_plain", "ogc_plain_vs_c3dgs"}
+    assert parts["P1"]["P"] > 0 and parts["P1"]["P_missing_reason"] is None and len(parts["P1"]["D_sp"]) == 2
