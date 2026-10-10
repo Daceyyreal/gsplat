@@ -66,6 +66,36 @@ EVAL_FIX_ARG = "--eval_device_fix"  # Note 2 C13: on for every process
 UNCOMPRESSED = "uncompressed"
 _i = e5pjob.COLUMNS.index("attempt") + 1
 COLUMNS = e5pjob.COLUMNS[:_i] + ["session", "image"] + e5pjob.COLUMNS[_i:]
+_j = COLUMNS.index("npz2ply_time_s") + 1
+COLUMNS = COLUMNS[:_j] + ["npz2ply_log"] + COLUMNS[_j:]
+NPZ2PLY_TAIL = 2000
+NPZ2PLY_LOG: Dict[str, Dict] = {}  # npz path -> its npz2ply call's record (report only)
+
+
+def npz_to_ply_logged(py: str, c3dgs_dir: str, npz: str, ply: str, timeout: float = 1800.0) -> Dict:
+    """``e3q_c3dgs.npz_to_ply``, the same command through the same ``run_command``, returning the same record, and
+    keeping the call's return code and the last 2,000 characters of its output for the row (report only).
+    ``run_command`` captures stdout and stderr together, so the tail is of both."""
+    res = c3.run_command(f"{py} npz2ply.py {shlex.quote(npz)} --ply_file {shlex.quote(ply)}", cwd=c3dgs_dir,
+                         timeout=timeout)
+    NPZ2PLY_LOG[npz] = {"returncode": res["returncode"], "output_tail": (res.get("_text") or "")[-NPZ2PLY_TAIL:],
+                        "time_s": res.get("time_s"), "ply_written": os.path.exists(ply)}
+    return {k: v for k, v in res.items() if k != "_text"} | {"ok": res["returncode"] == 0 and os.path.exists(ply),
+                                                             "ply": ply}
+
+
+def npz2ply_record(meta: Dict, label: str, npz: Optional[str]) -> Optional[Dict]:
+    """The row's npz2ply call: return code and output tail (``NPZ2PLY_LOG``), and the step's wall time and peak host
+    RSS (the job and its children, as ``Steps`` records them)."""
+    if not npz:
+        return None
+    rec = dict(NPZ2PLY_LOG.get(npz) or {})
+    step = next((s for s in reversed(meta.get("steps", [])) if s["name"] == f"npz2ply_{label}"), None)
+    if step is not None:
+        rec.update(step_status=step.get("status"), step_time_s=step.get("time_s"), step_error=step.get("error"),
+                   rss_start_bytes=(step.get("host_rss") or {}).get("rss_start_bytes"),
+                   rss_peak_bytes=(step.get("host_rss") or {}).get("rss_peak_bytes"))
+    return rec or None
 
 
 def log(scene: str, msg: str) -> None:
@@ -226,7 +256,12 @@ def main(argv=None):
     ctx = types.SimpleNamespace(args=args, scene=scene, meta=meta, save=save, steps=steps, common=common, dev=dev,
                                 have_model=fetched is not None, have_data=have_data, runner_state={},
                                 n_splats=es.N_SPLATS[scene])
-    rc = fork_job(ctx)
+    real_npz_to_ply = c3.npz_to_ply
+    c3.npz_to_ply = npz_to_ply_logged  # report only: the same call, its return code and output kept
+    try:
+        rc = fork_job(ctx)
+    finally:
+        c3.npz_to_ply = real_npz_to_ply
     meta["timings_s"]["job"] = meta["timings_s"].get("job", 0.0) + (time.perf_counter() - t_job)
     meta["failed_steps"] = [s["name"] for s in meta["steps"] if s["status"] in ("error", "oom")]
     meta["skipped_steps"] = [s["name"] for s in meta["steps"] if s["status"] == "skipped"]
@@ -436,6 +471,9 @@ def process(ctx, proc: Dict, first: bool, csv_path: str, c3dgs, run_oom, start_b
         for row in rows:
             rec = e5pjob._row_record(ctx, j, seed, row, k, rep, {**run, "data_device": device}, measured.get(row))
             rec.update(session=args.session, image=args.image)
+            r_ = fr.get("rows", {}).get(row, {})
+            log_ = npz2ply_record(meta, f"{name}_{row}", run.get("npz") if row == "c3dgs" else r_.get("npz"))
+            rec["npz2ply_log"] = json.dumps(log_) if log_ else ""
             status, reason = e5.row_status(rec.get("PSNR_ii"), fr.get("checks_failed", []))
             if status != "ok" and reason is None:
                 r = fr.get("rows", {}).get(row, {})

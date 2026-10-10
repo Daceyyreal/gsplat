@@ -5638,7 +5638,7 @@ def test_e5_job_refusals_columns_and_a_summary_without_verdict(tmp_path):
         job.main(base + ["--scene", "train", "--session", "S1"])
     with pytest.raises(ValueError, match="--session is required"):
         job.main(base + ["--scene", "bonsai"])
-    assert [c for c in job.COLUMNS if c not in e5pjob.COLUMNS] == ["session", "image"]
+    assert [c for c in job.COLUMNS if c not in e5pjob.COLUMNS] == ["session", "image", "npz2ply_log"]
     out = tmp_path / "gn5"
     out.mkdir()
     csvp = str(out / "gn5_results_bonsai.csv")
@@ -5758,3 +5758,50 @@ def test_e5_notebooks_are_the_builders_output(tmp_path):
         code = "".join(c["source"] for c in nb["cells"] if c["cell_type"] == "code")
         assert f'SESSION = "{s}"' in code and "E5_bundle_{SESSION}" in code and "e5_sessions.json" in code
         assert "e5_verdict" not in code and "verdict(" not in code
+
+
+def test_e5_npz2ply_is_logged_without_changing_the_call(tmp_path, monkeypatch):
+    """Report only: E5's job decodes each row's .npz with the same npz2ply command through the same run_command and
+    gets the same record back as e3q_c3dgs.npz_to_ply; it keeps the return code and the last 2,000 characters of the
+    output, and the row record adds the step's wall time and peak host RSS. A failed call (nonzero, no .ply) is logged
+    with its output."""
+    _kaggle_path()
+    repo = os.path.dirname(os.path.dirname(HERE))
+    if repo not in sys.path:
+        sys.path.insert(0, repo)
+    import shlex
+
+    import e3q_c3dgs as c3
+    import gn_e5_scene as job
+
+    calls = []
+
+    def fake(cmd, cwd=None, env=None, timeout=None):
+        calls.append((cmd, cwd, timeout))
+        ply = shlex.split(cmd)[-1]
+        ok = "bad" not in cmd
+        if ok:
+            open(ply, "wb").write(b"ply")
+        text = ("x" * 3000 + "decoded") if ok else ("Traceback ...\nMemoryError: unable to allocate" + " " * 10)
+        return {"cmd": cmd, "cwd": cwd, "returncode": 0 if ok else 1, "time_s": 1.5, "tail": text.splitlines()[-60:],
+                "output_lines": len(text.splitlines()), "_text": text}
+
+    monkeypatch.setattr(c3, "run_command", fake)
+    npz, ply = str(tmp_path / "a" / "point_cloud.npz"), str(tmp_path / "a" / "decoded.ply")
+    os.makedirs(os.path.dirname(npz))
+    want = c3.npz_to_ply("PY", "/c3", npz, ply)
+    os.remove(ply)
+    got = job.npz_to_ply_logged("PY", "/c3", npz, ply)
+    assert calls[0] == calls[1] and got == want and got["ok"]
+    log = job.NPZ2PLY_LOG[npz]
+    assert log["returncode"] == 0 and len(log["output_tail"]) == 2000 and log["output_tail"].endswith("decoded")
+    meta = {"steps": [{"name": "npz2ply_j0_p0_a0_ogc_gram", "status": "ok", "time_s": 11.2,
+                       "host_rss": {"rss_start_bytes": 3_000_000_000, "rss_peak_bytes": 7_100_000_000}}]}
+    rec = job.npz2ply_record(meta, "j0_p0_a0_ogc_gram", npz)
+    assert rec["rss_peak_bytes"] == 7_100_000_000 and rec["step_time_s"] == 11.2 and rec["returncode"] == 0
+    bad = str(tmp_path / "bad" / "point_cloud.npz")
+    os.makedirs(os.path.dirname(bad))
+    r = job.npz_to_ply_logged("PY", "/c3", bad, str(tmp_path / "bad" / "decoded.ply"))
+    assert not r["ok"] and job.NPZ2PLY_LOG[bad]["returncode"] == 1 and "MemoryError" in job.NPZ2PLY_LOG[bad]["output_tail"]
+    assert not job.NPZ2PLY_LOG[bad]["ply_written"] and job.npz2ply_record({}, "x", None) is None
+    assert "npz2ply_log" in job.COLUMNS and job.COLUMNS.index("npz2ply_log") == job.COLUMNS.index("npz2ply_time_s") + 1

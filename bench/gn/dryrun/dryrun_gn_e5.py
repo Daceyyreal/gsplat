@@ -474,6 +474,10 @@ FAIL["oom"] = []
 for s in ("bonsai", "counter", "kitchen", "room"):
     m = meta_of(W1, s)
     assert m["done"] and not m["unsettled_processes"] and m["scene_device"] in ("cuda", "cpu"), (s, m["missing_or_failed"])
+for c, r in rows_of(W1, "bonsai").items():  # report only: every decoded row carries its npz2ply call's record
+    if c != "uncompressed":
+        lg = json.loads(r["npz2ply_log"])
+        assert lg["returncode"] == 0 and lg["ply_written"] and lg["rss_peak_bytes"] and lg["step_time_s"] is not None, (c, lg)
 room = meta_of(W1, "room")
 ra = room["processes"]["j-1_p0"]["attempts"]
 assert [(a["device"], a["kind"], a["after_results"]) for a in ra] == [("cuda", "first", False), ("cpu", "rerun", True)], ra
