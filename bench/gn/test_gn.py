@@ -5657,3 +5657,87 @@ def test_e5_job_refusals_columns_and_a_summary_without_verdict(tmp_path):
     parts = s["scenes"]["bonsai"]["per_scene_parts"]
     assert set(parts) == {"P1", "P2", "ogc_scalar_vs_ogc_plain", "ogc_plain_vs_c3dgs"}
     assert parts["P1"]["P"] > 0 and parts["P1"]["P_missing_reason"] is None and len(parts["P1"]["D_sp"]) == 2
+
+
+def _e5_bundle(root, name, session, attempt, scenes, seed1=0.004, skip=(), image="img-A", metas=None, tweak=None):
+    """A synthetic session bundle (``<root>/<name>/gn5/``) with E5's CSV columns: every row of ``scenes`` (minus the
+    configs in ``skip``), the attempt file and a meta per scene."""
+    import gn_e5_scene as job
+
+    import e5
+
+    d = os.path.join(root, name, "gn5")
+    os.makedirs(d, exist_ok=True)
+    json.dump({"attempt": attempt, "session": session, "e5": True}, open(os.path.join(d, "gn5_attempt.json"), "w"))
+    for k, scene in enumerate(scenes):
+        path = os.path.join(d, f"gn5_results_{scene}.csv")
+        for p in e5.E5_PROCESSES:
+            for row in e5.process_rows(p, "ogc"):
+                cfg = e5.config_name(p["j"], p["seed"], row)
+                if (scene, cfg) in skip:
+                    continue
+                j = p["j"]
+                off = {"c3dgs": 0.0, "ogc_plain": 0.05, "ogc_scalar": 0.06, "ogc_gram": 0.15 + 0.01 * k,
+                       e5.OURS_ROW: 0.15 + 0.01 * k}.get(row, 0.12)
+                psnr = 21.0 + 0.15 * (-j) + off + (seed1 * (1 + k % 3) if p["seed"] else 0.0)
+                nb = int({-1: 2.0e7, 0: 1.4e7, 1: 1.1e7}[j] * (1.03 if "ogc" in row else 1.0))
+                rec = {"scene": scene, "config": cfg, "status": "ok", "PSNR_ii": f"{psnr:.6f}", "npz_bytes": nb,
+                       "session": session, "image": image, "distinct_indices": 4096 if "ogc" in row else 2400,
+                       "arrays": json.dumps({"features_rest": {"compressed_bytes": nb // 4}})}
+                if tweak:
+                    rec = tweak(scene, cfg, rec)
+                job.append_row(path, rec)
+        json.dump((metas or {}).get(scene, {"scene": scene}), open(os.path.join(d, f"gn5_meta_{scene}.json"), "w"))
+    return d
+
+
+def test_e5_verdict_combines_session_bundles(tmp_path):
+    """bench/gn/e5_verdict.py over synthetic bundles: two sessions (one holding the other's restored rows unchanged)
+    give E5's verdict over the seven scenes; a conflicting row in the same attempt is refused; a 17 i rerun bundle
+    (attempt 2) replaces the scene's rows; a drop recorded before results removes the scene from n; a scene with no
+    rows makes E5 incomplete; the output names every bundle and where each scene ran."""
+    _kaggle_path()
+    repo = os.path.dirname(os.path.dirname(HERE))
+    if repo not in sys.path:
+        sys.path.insert(0, repo)
+    import e5_verdict as ev
+
+    S = ["bonsai", "counter", "kitchen", "room", "truck", "drjohnson", "playroom"]
+    root = str(tmp_path / "gn_e5")
+    _e5_bundle(root, "S1", "S1", 1, S[:4])
+    _e5_bundle(root, "S2", "S2", 1, S[4:], image="img-B")
+    _e5_bundle(root, "S2_restored_S1", "S1", 1, S[:1])  # S1's bonsai restored into S2: identical rows, kept once
+    v = ev.verdict(root)
+    assert v["outcome"] == "pass" and v["n"] == 7 and not v["dropped"], v["incomplete_reasons"]
+    assert v["where"]["truck"] == {"sessions": ["S2"], "images": ["img-B"]}
+    assert {b["name"] for b in v["bundles"]} == {"S1", "S2", "S2_restored_S1"}
+    assert v["per_row_measures"]["bonsai"]["p0_ogc_gram"]["distinct_indices"] == 4096
+    assert v["ogc_gram_ours_per_process"]["bonsai:j0_p0"]["available"]
+    assert set(v["fidelity_per_angle_j0"]) == set(__import__("e5").DIFFERENCES)
+    out = str(tmp_path / "v.json")
+    assert ev.main([root, "--out", out]) == 0 and json.load(open(out))["outcome"] == "pass"
+
+    conflict = str(tmp_path / "conflict")
+    _e5_bundle(conflict, "S1", "S1", 1, S)
+    _e5_bundle(conflict, "S2", "S2", 1, ["room"], tweak=lambda s, c, r: {**r, "PSNR_ii": "30.0"} if c == "p0_c3dgs" else r)
+    with pytest.raises(ev.BundleConflict, match="p0_c3dgs"):
+        ev.verdict(conflict)
+
+    rerun = str(tmp_path / "rerun")
+    _e5_bundle(rerun, "S1", "S1", 1, S, skip={("room", "j-1_p0_ogc_scalar")})
+    assert ev.verdict(rerun)["outcome"] == "incomplete"
+    _e5_bundle(rerun, "S1_a2", "S1", 2, ["room"])
+    vr = ev.verdict(rerun)
+    assert vr["outcome"] == "pass" and vr["where"]["room"]["sessions"] == ["S1"]
+
+    drops = str(tmp_path / "drops")
+    meta = {"drjohnson": {"scene": "drjohnson", "dropped": {"reason": "loaded size not covered", "before_results": True}}}
+    _e5_bundle(drops, "S1", "S1", 1, S[:6], metas=meta)
+    vd = ev.verdict(drops)
+    assert vd["dropped"] == {"drjohnson": "loaded size not covered"} and vd["n"] == 6
+    assert vd["outcome"] == "incomplete" and "playroom" in vd["missing_primary_rows"]  # never run: rows missing
+    full = str(tmp_path / "full6")
+    _e5_bundle(full, "S1", "S1", 1, S[:5] + ["playroom"], metas=meta)
+    _e5_bundle(full, "S2", "S2", 1, ["drjohnson"], metas=meta)
+    vf = ev.verdict(full)
+    assert vf["outcome"] == "pass" and vf["n"] == 6 and "drjohnson" not in vf["primaries"]["P1"]["P"]
