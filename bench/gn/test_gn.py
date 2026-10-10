@@ -5805,3 +5805,48 @@ def test_e5_npz2ply_is_logged_without_changing_the_call(tmp_path, monkeypatch):
     assert not r["ok"] and job.NPZ2PLY_LOG[bad]["returncode"] == 1 and "MemoryError" in job.NPZ2PLY_LOG[bad]["output_tail"]
     assert not job.NPZ2PLY_LOG[bad]["ply_written"] and job.npz2ply_record({}, "x", None) is None
     assert "npz2ply_log" in job.COLUMNS and job.COLUMNS.index("npz2ply_log") == job.COLUMNS.index("npz2ply_time_s") + 1
+
+
+def test_e5_feasibility_reproduces_amendment_17_note_3():
+    """Amendment 17 Note 3: the five left-out job steps' constants equal E5p's and E4q's committed steps; the module
+    reproduces Note 3's per-scene table in kaggle/PREREG_GN.md (Note 1's figures, the five steps, the corrected host
+    peaks) to the digit printed, and its pairing: 12 of 21 pairs at the start devices, the same 4 retry-safe pairs."""
+    import re
+
+    import e5_feasibility as ef
+
+    kg = os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle")
+    for scene, path in (("train", os.path.join(kg, "gn_e5p", "attempt2", "gn5p", "gn5p_meta_train.json")),
+                        ("treehill", os.path.join(kg, "gn_e4q", "gn4q", "gn4q_meta_treehill.json"))):
+        steps = json.load(open(path))["steps"]
+        for g, by in ef.JOB_HOST_STEPS.items():
+            v = [(s["host_rss"]["rss_start_bytes"], s["host_rss"]["rss_peak_bytes"]) for s in steps if s["name"].startswith(g)]
+            assert by[scene] == (max(a for a, _ in v), max(b for _, b in v), max(b - a for a, b in v)), (scene, g)
+    text = open(os.path.join(kg, "PREREG_GN.md"), encoding="utf-8").read()
+    note = text[text.index("### Amendment 17 Note 3"):]
+    table = {}
+    for line in note.splitlines():
+        cells = [c.strip().replace("*", "") for c in line.strip().strip("|").split("|")]
+        if len(cells) == 9 and cells[0] in ef.SCENES:
+            table[cells[0]] = cells
+    assert set(table) == set(ef.SCENES)
+    f = ef.feasibility()
+    g = lambda x: f"{x / 1e9:.2f}"  # noqa: E731
+    for r in f["rows"]:
+        c = table[r["scene"]]
+        hs = max((k["host_steps_note3"] for k in r["cases"]), key=lambda d: d["npz2ply_"])
+        assert c[1] == f"{r['n']:,}"
+        assert c[2] == f"{g(r['note1_host_at_start'])} / {g(r['note1_host_cpu'])}", r["scene"]
+        assert c[3:8] == [g(hs[s]) for s in ("npz2ply_", "load_ply_", "build_runner", "eval_ii_", "fidelity_")], r["scene"]
+        assert c[8] == f"{g(r['host_at_start'])} / {g(r['host_cpu'])}", r["scene"]
+    assert sum(p["host_at_start_fits"] for p in f["pairs"]) == 12
+    safe = {p["pair"]: round(p["retry_safe"] / 1e9, 2) for p in f["pairs"] if p["retry_safe_fits"]}
+    assert safe == {("bonsai", "counter"): 25.16, ("bonsai", "room"): 26.83, ("counter", "kitchen"): 26.87,
+                    ("counter", "room"): 26.74}
+    for name in ("kitchen-truck", "kitchen-playroom"):
+        a, b = name.split("-")
+        p = next(p for p in f["pairs"] if p["pair"] == (a, b))
+        assert not p["host_at_start_fits"] and p["host_at_start"] > ef.PAIR_LIMIT
+    no_margin = ef.host_steps(ef.E4Q_TREEHILL["n"])["npz2ply_"]
+    assert round(no_margin / 1e9, 2) == 18.99 and round(ef.host_steps(ef.E5P["n"])["npz2ply_"] / 1e9, 2) == 7.31
+    assert re.search(r"18\.99 GB on treehill \(16\.39 measured\)", note.replace("\n", " "))

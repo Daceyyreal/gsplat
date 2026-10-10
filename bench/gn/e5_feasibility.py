@@ -45,6 +45,14 @@ images on the CPU, the largest host state of a process):
 Then the calibration's gap, where the model under-predicts, as a stated margin (``calibration``). The job's own host
 peak (its coverage step is the largest on both scenes) is its RSS plus the larger measured growth per splat.
 
+**Amendment 17 Note 3** (a correction to Note 1's host memory): the job's steps on every decoded row that Note 1 left
+out, ``npz2ply`` (C3DGS's ``npz2ply.py``, a child process decoding every splat, ``kaggle/e3q_c3dgs.py:251-256``), the
+``.ply`` load (``e3p_inria.read_inria_ply``, ``kaggle/gn_e4p_scene.py:537``), the runner's build, a row's protocol ii
+and the fidelity renders (``JOB_HOST_STEPS``, ``host_steps``): each its start, linear in splats through train's and
+treehill's largest starts, plus its growth, per splat for ``npz2ply`` and the ``.ply`` load (the larger measured rate),
+fixed for the other three (the larger measured growth), times the host margin. A scene's host peak is the larger of
+Note 1's and these (they run after C3DGS's process, so on either device). Note 1's figures stay in ``note1_*``.
+
     python bench/gn/e5_feasibility.py
 """
 
@@ -117,6 +125,22 @@ JOB_STEPS = {
     "note_ii_coverage": {"train": (5_709_031_424, 319_033_856), "treehill": (7_369_182_720, 1_979_110_400)},
 }
 RESIDENT = {"train": 319_138_304, "treehill": 996_599_296}  # the runner held between steps (npz_stats_*, the largest)
+# Amendment 17 Note 3: the job's steps on every decoded row that Note 1 left out. (largest start, largest peak, largest
+# growth over the step), host RSS of the job and its children: E5p train (gn5p_meta_train.json), E4q treehill
+# (gn4q_meta_treehill.json); the growth per splat or fixed (read from the code: see the docstring)
+JOB_HOST_STEPS = {
+    "npz2ply_": {"train": (3_290_284_032, 7_300_112_384, 4_018_180_096),
+                 "treehill": (4_178_509_824, 16_386_199_552, 12_229_480_448)},
+    "load_ply_": {"train": (3_290_284_032, 3_624_845_312, 338_759_680),
+                  "treehill": (4_178_509_824, 4_791_574_528, 844_730_368)},
+    "build_runner": {"train": (3_630_616_576, 4_456_071_168, 2_192_109_568),
+                     "treehill": (5_533_196_288, 5_611_913_216, 2_130_014_208)},
+    "eval_ii_": {"train": (3_454_193_664, 3_454_197_760, 408_064_000),
+                 "treehill": (4_741_521_408, 4_741_996_544, 546_144_256)},
+    "fidelity_": {"train": (3_454_193_664, 3_454_197_760, 4_096), "treehill": (4_741_992_448, 4_741_996_544, 4_096)},
+}
+JOB_HOST_KIND = {"npz2ply_": "per_splat", "load_ply_": "per_splat", "build_runner": "fixed", "eval_ii_": "fixed",
+                 "fidelity_": "fixed"}
 SAVED_COPIES = 6  # the fork's copy + the 5 rows' saved states (kaggle/e4p_hooks.py: copy, saved[row])
 
 
@@ -243,6 +267,18 @@ def job_steps(n: int) -> Dict:
     return out
 
 
+def host_steps(n: int, margin: float = 0.0) -> Dict[str, float]:
+    """Note 3: each left-out step's predicted host peak (bytes), times 1 + ``margin``."""
+    a, b = E5P["n"], E4Q_TREEHILL["n"]
+    out = {}
+    for step, by in JOB_HOST_STEPS.items():
+        (sa, _pa, ga), (sb, _pb, gb) = by["train"], by["treehill"]
+        start = _lin(n, a, sa, b, sb)
+        grow = max(ga / a, gb / b) * n if JOB_HOST_KIND[step] == "per_splat" else max(ga, gb)
+        out[step] = (start + grow) * (1 + margin)
+    return out
+
+
 def job_rss(n: int) -> float:
     """The job's own process before a C3DGS process starts: linear in splats through train's and treehill's."""
     return _lin(n, E5P["n"], E5P["job_rss_at_c3dgs_start"], E4Q_TREEHILL["n"], E4Q_TREEHILL["job_rss_at_c3dgs_start"])
@@ -320,16 +356,22 @@ def feasibility() -> Dict:
                 h[dev] = {"bound": host(n, z["W"], z["H"], views, n, cal["host_margin"]),
                           "estimate": host(n, z["W"], z["H"], views, round(n * q_ratio), cal["host_margin"])}
                 h[dev]["peak"] = max(h[dev]["bound"]["predicted"], hj)
+            hs = host_steps(n, cal["host_margin"])
+            note1_start, note1_cpu = h[g["start_device"]]["peak"], h["cpu"]["peak"]
             cases.append({**z, "pixels": z["W"] * z["H"], "gpu": g, "host": h,
-                          "job_gpu": job_step_peaks(n, z["W"], z["H"]),
-                          "host_at_start": h[g["start_device"]]["peak"], "host_cpu": h["cpu"]["peak"]})
+                          "job_gpu": job_step_peaks(n, z["W"], z["H"]), "host_steps_note3": hs,
+                          "note1_host_at_start": note1_start, "note1_host_cpu": note1_cpu,
+                          "host_at_start": max(note1_start, max(hs.values())),
+                          "host_cpu": max(note1_cpu, max(hs.values()))})
         cover = max(cases, key=lambda k: k["pixels"])
         rows.append({"scene": s, "n": n, "cases": cases, "job_steps": js, "host_job_only": hj,
                      "covered_max_pixels": cover["pixels"], "covered_views": cover["views"],
                      "feasible": all(k["gpu"]["feasible"] for k in cases),
                      "start_device": "cuda" if all(k["gpu"]["start_device"] == "cuda" for k in cases) else "cpu",
                      "host_at_start": max(k["host_at_start"] for k in cases),
-                     "host_cpu": max(k["host_cpu"] for k in cases)})
+                     "host_cpu": max(k["host_cpu"] for k in cases),
+                     "note1_host_at_start": max(k["note1_host_at_start"] for k in cases),
+                     "note1_host_cpu": max(k["note1_host_cpu"] for k in cases)})
     pairs = []
     for i, a in enumerate(rows):
         for b in rows[i + 1:]:
@@ -337,6 +379,9 @@ def feasibility() -> Dict:
             for key in ("host_at_start", "host_cpu"):
                 p[key] = a[key] + b[key]
                 p[f"{key}_fits"] = p[key] < PAIR_LIMIT
+            # Note 1's retry-safe rule (for the session assignment): still below the limit if either falls back
+            p["retry_safe"] = max(a["host_cpu"] + b["host_at_start"], a["host_at_start"] + b["host_cpu"])
+            p["retry_safe_fits"] = p["retry_safe"] < PAIR_LIMIT
             pairs.append(p)
     flags = [(r["scene"], k["case"], s) for r in rows for k in r["cases"] for s, v in k["job_gpu"].items() if v["flag"]]
     return {"rows": rows, "pairs": pairs, "job_flags": flags, "calibration": cal, "q_ratio": q_ratio, "ogc_25k": OGC_25K, "t4": T4,
