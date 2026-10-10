@@ -3214,3 +3214,69 @@ plan (C1-C13; C10 is this note's own numbering).
 **Not changed:** E5's scenes, rows, points, primaries and their bars, the verdict order (`incomplete` > `fail` >
 `pass`), the n >= 5 rule, the secondaries, Amendment 18's source chain and `ogc_gram_ours`, and Note 1's model and
 covered sizes.
+
+### Amendment 17 Note 3 (2026-10-10, before any E5 run): a correction to Note 1's host memory
+
+Note 1 (17 e.3 with 17 h) modelled the host peak of the C3DGS process and of three of the job's own steps: the 16 x 16
+GN pass, note ii's coverage and protocol ii of the uncompressed model (`bench/gn/e5_feasibility.py` at `0d82d013`: `:91-93`, `:104-106`,
+`:234-249`, `:309`, `:322`). It left out five of the job's steps that run on every decoded row: C3DGS's `npz2ply.py`,
+the `.ply` load, the runner's build, protocol ii of the row, and note ii's fidelity renders. E5p and E4q measured
+them. One is large: **`npz2ply` peaked at 7.06-7.30 GB on train and 15.95-16.39 GB on treehill**. This note adds them.
+It is an estimate, it reads no gate-scene data, and it changes no row, point, primary, bar or verdict.
+
+**What was measured** (host RSS of the job's process and its children, the steps' starts and peaks; E5p train,
+`kaggle/gn_e5p/attempt2/gn5p/gn5p_meta_train.json`; E4q treehill, `kaggle/gn_e4q/gn4q/gn4q_meta_treehill.json`):
+
+| Step | train: start / peak / largest growth, GB | treehill: start / peak / largest growth, GB |
+|---|---|---|
+| `npz2ply` (24 / 25 rows) | 3.06-3.29 / 7.06-7.30 / 4.02 | 3.73-4.18 / 15.95-16.39 / 12.23 |
+| `load_ply` | 3.06-3.29 / 3.39-3.62 / 0.34 | 3.73-4.18 / 4.34-4.79 / 0.84 |
+| `build_runner` | 1.01-3.63 / 3.20-4.46 / 2.19 | 1.67-5.53 / 3.80-5.61 / 2.13 |
+| protocol ii of a row (`eval_ii_*`) | 2.06-3.45 / 2.47-3.45 / 0.41 | 1.84-4.74 / 2.39-4.74 / 0.55 |
+| fidelity renders | 3.38-3.45 / 3.38-3.45 / 0.00 | 3.73-4.74 / 3.73-4.74 / 0.00 |
+
+**The model** (the same form as Note 1's job steps):
+- each step's start, linear in splats through the two scenes' largest starts;
+- its growth:
+  - **per splat** for `npz2ply` (C3DGS's `npz2ply.py` decodes every splat to INRIA's `.ply` in a child process,
+    `kaggle/e3q_c3dgs.py:251-256`) and for the `.ply` load (`e3p_inria.read_inria_ply`, every splat into tensors,
+    `kaggle/gn_e4p_scene.py:537`), at the larger measured rate (`npz2ply` 3.92 KB per splat, train's; treehill's was
+    3.23);
+  - **fixed** for the runner's build, a row's protocol ii and the fidelity renders, whose growth did not rise with
+    splats on the two scenes, at the larger measured growth;
+- times Note 1's host margin, 1 + 11.92%.
+- The model is above both measured scenes: without the margin, `npz2ply` reads 7.31 GB on train (7.30 measured) and
+  18.99 GB on treehill (16.39 measured).
+- These steps run in the job's process after C3DGS's process has ended, so they do not depend on where C3DGS's images
+  are.
+
+**Per scene** (GB; a scene's host peak is the larger of Note 1's figure and these steps'):
+
+| Scene | Splats | Note 1: start device / CPU retry | `npz2ply` | `.ply` load | runner build | protocol ii | fidelity | Corrected: start device / CPU retry |
+|---|---|---|---|---|---|---|---|---|
+| bonsai | 1,244,819 | 9.27 / 15.96 | 9.22 | 4.22 | 6.69 | 4.59 | 3.98 | 9.27 / 15.96 |
+| counter | 1,222,956 | 9.20 / 14.70 | 9.11 | 4.21 | 6.67 | 4.58 | 3.97 | 9.20 / 14.70 |
+| kitchen | 1,852,335 | 11.27 / 17.67 | 12.10 | 4.66 | 7.15 | 4.91 | 4.30 | **12.10** / 17.67 |
+| room | 1,593,376 | 10.42 / 17.54 | 10.87 | 4.48 | 6.95 | 4.77 | 4.16 | **10.87** / 17.54 |
+| truck | 2,541,226 | 13.54 / 15.34 | 15.36 | 5.17 | 7.69 | 5.27 | 4.66 | **15.36** / **15.36** |
+| drjohnson | 3,405,153 | 20.50 / 20.50 | 19.46 | 5.80 | 8.35 | 5.72 | 5.11 | 20.50 / 20.50 |
+| playroom | 2,546,116 | 13.55 / 16.73 | 15.39 | 5.17 | 7.69 | 5.27 | 4.66 | **15.39** / 16.73 |
+
+- **Four scenes' host peaks at their start device rise:** kitchen, room, truck and playroom, through `npz2ply`. truck's
+  CPU-retry figure rises by 0.02 GB. drjohnson's, bonsai's and counter's do not change.
+- **Feasibility is unchanged:** these are host figures. No GPU figure, start device or covered size changes, and the
+  largest host peak, drjohnson's 20.50 GB, is below the session's 33.66 GB.
+
+**Pairing** (17 h: below 0.8 x 33,658,318,848 bytes = 26.93 GB):
+- **At the start devices:** 12 of 21 pairs fit (Note 1: 14). They are bonsai with counter, kitchen, room, truck or
+  playroom; counter with kitchen, room, truck or playroom; kitchen with room; and room with truck or playroom.
+  kitchen-truck and kitchen-playroom no longer fit.
+- **Retry-safe** (the sum still below the limit if either scene falls back to its CPU images; Note 1's rule for the
+  session-assignment note): the same 4 pairs as Note 1, bonsai-counter 25.16 GB, bonsai-room 26.83, counter-kitchen
+  26.87, counter-room 26.74. truck, drjohnson and playroom still run alone.
+
+**The session assignment becomes Note 4** (17 e.4), which uses these figures. `bench/gn/e5_feasibility.py` gains these
+five steps after this note, with a test that it reproduces the table above.
+
+**Not changed:** E5's rows, points, primaries, bars and verdict; Note 1's GPU model, start devices and covered sizes;
+Note 2.
