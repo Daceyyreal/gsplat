@@ -5043,3 +5043,146 @@ def test_e5s_bundle_holds_no_ogc_file_and_no_commit_header(tmp_path, monkeypatch
     plain = og.preflight(str(tmp_path / "tmp" / "ogc_plain"), repo, dataset_root=str(inp))
     assert "manifest" not in plain and set(plain) == {"commit_pinned", "tree_pinned", "dataset_root", "candidates",
                                                        "sources", "first_ok", "lines", "time_s"}
+
+
+# ------------------------------------------------------------------------------ Amendment 17 Note 1: E5's feasibility
+def test_e5_feasibility_reproduces_note_i_where_the_inputs_are_unchanged():
+    """Amendment 15 note i's sensitivity columns (kaggle/gn_e4_note_i/feas7.json) at note i's sizes, for all seven
+    scenes: the splat counts, sizes, views, images and both ends on either device, exactly. Only the colour term
+    changed (OGC's chunk at 25,000 alone, 17 e.3)."""
+    import e5_feasibility as ef
+
+    note_i = {r["scene"]: r for r in json.load(open(os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle",
+                                                                 "gn_e4_note_i", "feas7.json")))["rows"]}
+    f = ef.feasibility()
+    assert [r["scene"] for r in f["rows"]] == list(note_i) == ef.SCENES
+    assert ef.OGC_25K == 1_674_567_168 and f["t4"] == 15.64e9 and f["reserve"] == 1.14
+    for r in f["rows"]:
+        k, ni = r["cases"][0], note_i[r["scene"]]
+        assert (r["n"], k["W"], k["H"], k["views"]) == (ni["n"], ni["W"], ni["H"], ni["n_images"])
+        for key in ("images", "cuda_lo", "cuda_hi", "cpu_lo", "cpu_hi"):
+            assert abs(k["gpu"][key] / 1e9 - ni[key]) < 1e-9, (r["scene"], key)
+        for dev in ("cuda", "cpu"):
+            assert k["gpu"][f"{dev}_colour"] == k["gpu"][f"{dev}_hi"] + ef.OGC_25K
+        assert k["gpu"]["cuda_colour_reserved"] < ni["cuda_colour_reserved"] * 1e9  # 1.67 GB replaces 1.76 GB
+    assert [r["start_device"] for r in f["rows"]] == ["cuda"] * 5 + ["cpu", "cuda"]
+    assert all(r["feasible"] for r in f["rows"])
+
+
+def test_e5_feasibility_measured_constants_match_the_bundles():
+    """Every measured peak the model quotes equals the committed E5p attempt-2 and E4q bundles."""
+    import csv
+    import re
+
+    import e5_feasibility as ef
+
+    kg = os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle")
+    for const, d, scene in ((ef.E5P, os.path.join(kg, "gn_e5p", "attempt2", "gn5p"), "train"),
+                            (ef.E4Q_TREEHILL, os.path.join(kg, "gn_e4q", "gn4q"), "treehill")):
+        pre = "gn5p" if scene == "train" else "gn4q"
+        rows = [r for r in csv.DictReader(open(os.path.join(d, f"{pre}_results_{scene}.csv"), newline=""))
+                if r["process_peak_allocated"]]
+        meta_text = open(os.path.join(d, f"{pre}_meta_{scene}.json")).read()
+        meta = json.loads(meta_text)
+        assert meta["n_splats"] == const["n"] and meta["session_ram"]["total_bytes"] == ef.SESSION_RAM
+        assert {r["resolution_ii"] for r in rows} == {f"[[{const['W']}, {const['H']}]]"}
+        for dev in const["process_alloc"]:
+            on = [r for r in rows if r["data_device"] == dev]
+            ogc = [r for r in on if "_ogc" in r["config"] and not r["config"].endswith(("_ft", "_lamcv"))]
+            assert const["process_alloc"][dev] == max(int(r["process_peak_allocated"]) for r in on)
+            assert const["process_reserved"][dev] == max(int(r["process_peak_reserved"]) for r in on)
+            assert const["c3dgs_rss_peak"][dev] == max(int(r["process_rss_peak"]) for r in on)
+            got = [int(r["row_cuda_peak_allocated"]) for r in ogc]
+            assert const["ogc_row_alloc"][dev] == (min(got), max(got))
+            if scene == "train" and dev == "cuda":
+                assert const["ogc_row_rss_start_cuda"] == max(int(r["row_rss_start_bytes"]) for r in ogc)
+        steps = meta["steps"]
+        c3 = [s for s in steps if re.match(r"c3dgs_j", s["name"])]
+        assert const["job_rss_at_c3dgs_start"] == max(s["host_rss"]["rss_start_bytes"] for s in steps
+                                                      if s["name"].startswith("c3dgs_"))
+        for dev, peak in const["step_rss_peak"].items():
+            dd = "cpu" if scene == "treehill" else dev
+            assert peak == max(s["host_rss"]["rss_peak_bytes"] for s in c3
+                               if (scene == "treehill" or ("_p1_" in s["name"]) == (dd == "cpu")))
+        assert const["copy_bytes_max"] == max(int(x) for x in re.findall(r'"host_bytes": (\d+)', meta_text))
+        for name, (alloc, res, rss) in const["job_steps"].items():
+            s = next(s for s in steps if s["name"] == name)
+            assert (s["cuda_peak"]["allocated"], s["cuda_peak"]["reserved"], s["host_rss"]["rss_peak_bytes"]) == (alloc, res, rss)
+        # the job's own steps: each step's peak and the runner held before it (the trivial step preceding it)
+        def held_before(i):  # the runner held: the last trivial step before step i
+            return next(steps[j]["cuda_peak"]["allocated"] for j in range(i - 1, -1, -1)
+                        if steps[j]["name"] in ("protocol_ii_views", "note_ii_geometry"))
+
+        for step, by in ef.JOB_STEPS.items():
+            peak, held = by[scene]
+            if step == "build_runner":
+                assert peak == next(s for s in steps if s["name"] == "build_runner")["cuda_peak"]["allocated"]
+                continue
+            got = [(s["cuda_peak"]["allocated"], held_before(i)) for i, s in enumerate(steps)
+                   if s["name"] == step or (step in ("eval_ii", "fidelity") and s["name"].startswith(step + "_j"))]
+            assert (peak, held) == max(got), (step, max(got))
+        assert ef.RESIDENT[scene] == max(s["cuda_peak"]["allocated"] for s in steps if s["name"].startswith("npz_stats_"))
+        nq = {r["config"].split("_")[0]: int(r["n_colour_quantized"]) for r in rows if r["config"].endswith("_c3dgs")}
+        assert const["nq"]["j0"] == nq["p0"] == nq["p1"]
+        if scene == "train":
+            assert (const["nq"]["j-1"], const["nq"]["j+1"]) == (nq["j-1"], nq["j+1"])
+            # ogc_gram_ours adds time, not peak: its row peak is at or below ogc_gram's in every process
+            by = {r["config"]: int(r["row_cuda_peak_allocated"]) for r in rows}
+            for p in ("p0", "p1", "j-1_p0", "j+1_p0"):
+                assert by[f"{p}_ogc_gram_ours"] <= by[f"{p}_ogc_gram"]
+
+
+def test_e5_feasibility_calibration_rows():
+    """The model on E5p's train and E4q's treehill: the GPU model is above every measured process peak (no GPU
+    margin); the host model is below every measured step peak, and the largest gap (train, images on the CPU,
+    11.92%) is the stated host margin."""
+    import e5_feasibility as ef
+
+    cal = ef.calibration()
+    tg, th = cal["train_gpu"], cal["treehill_gpu"]
+    assert tg["model_cuda"] == 6_225_315_328 and tg["model_cpu"] == 4_296_146_128
+    assert round(th["model_cpu"]) == 11_312_233_198
+    assert tg["sensitivity_cuda"][1] == 4_550_748_160  # E3q's tie
+    assert tg["sensitivity_hi_gap_cuda"] == 370_297_856
+    assert not cal["gpu_under_predicted"]
+    assert th["sensitivity_cpu"][0] < th["measured_process"]["cpu"] < th["sensitivity_cpu"][1]
+    got = [(r["case"], round(r["model"]), r["measured"]) for r in cal["host"]]
+    assert got == [("train, images on the CPU (j = 0, p1)", 9_114_323_248, 10_201_067_520),
+                   ("train, images on the GPU (j = +1)", 7_339_931_648, 7_921_479_680),
+                   ("treehill, images on the CPU (E4q p0)", 16_591_206_869, 18_432_110_592)]
+    assert all(r["gap"] > 0 for r in cal["host"])
+    assert abs(cal["host_margin"] - (10_201_067_520 / 9_114_323_248 - 1)) < 1e-12
+
+
+def test_e5_feasibility_job_steps_and_the_contingency_size():
+    """The job's own steps: each increment's per-splat and per-pixel parts give train's and treehill's measured
+    increments back; the coverage's increment is the same on both scenes (its chunking); the runner's model is within
+    0.3% of both builds; no step on any scene is flagged at x 1.14. The four indoor scenes carry a second, contingency
+    size (INRIA's -r -1 cap) with its own GPU peaks, start device and host peaks."""
+    import e5_feasibility as ef
+
+    for step in ef.JOB_STEPS:
+        f = ef.step_fit(step)
+        for scene, c in (("train", ef.E5P), ("treehill", ef.E4Q_TREEHILL)):
+            peak, held = ef.JOB_STEPS[step][scene]
+            if f["kind"] == "splats+pixels":
+                assert abs(f["per_splat"] * c["n"] + f["per_pixel"] * c["W"] * c["H"] - (peak - held)) < 1e-3
+                assert f["per_splat"] >= 0 and f["per_pixel"] >= 0
+            elif f["kind"] == "runner":
+                assert abs(f["per_splat"] * c["n"] + f["fixed"] - peak) / peak < 0.003
+            else:
+                assert abs((peak - held) - f["increment"]) / f["increment"] < 1e-4
+    f = ef.feasibility()
+    assert f["job_flags"] == []
+    for r in f["rows"]:
+        want = 2 if r["scene"] in ("bonsai", "counter", "kitchen", "room") else 1
+        assert len(r["cases"]) == want, r["scene"]
+        for k in r["cases"]:
+            assert set(k["job_gpu"]) == set(ef.JOB_STEPS)
+            assert all(v["reserved"] < ef.T4 for v in k["job_gpu"].values())
+            assert set(k["host"]) == {"cuda", "cpu"} and k["host_cpu"] >= k["host_at_start"]
+        if want == 2:
+            small, big = r["cases"]
+            assert big["pixels"] > small["pixels"] and big["W"] == 1600 and big["H"] in (1066, 1067)
+            assert big["gpu"]["cuda_colour_reserved"] > small["gpu"]["cuda_colour_reserved"]
+            assert r["covered_max_pixels"] == big["pixels"]
