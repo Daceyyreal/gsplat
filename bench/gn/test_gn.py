@@ -5741,3 +5741,20 @@ def test_e5_verdict_combines_session_bundles(tmp_path):
     _e5_bundle(full, "S2", "S2", 1, ["drjohnson"], metas=meta)
     vf = ev.verdict(full)
     assert vf["outcome"] == "pass" and vf["n"] == 6 and "drjohnson" not in vf["primaries"]["P1"]["P"]
+
+
+def test_e5_notebooks_are_the_builders_output(tmp_path):
+    """kaggle/gn_e5_bench_S1.ipynb and _S2.ipynb equal kaggle/build_gn_e5_bench.py's output; each names its session,
+    its title and bundle (Note 2 C8), reads its lanes from kaggle/e5_sessions.json, and computes no verdict (C5)."""
+    k = _kaggle_path()
+    import build_gn_e5_bench as b5
+
+    for s in b5.SESSIONS:
+        out = str(tmp_path / f"{s}.ipynb")
+        b5.build(out, s)
+        assert open(out, "rb").read() == open(os.path.join(k, f"gn_e5_bench_{s}.ipynb"), "rb").read(), s
+        nb = json.load(open(out))
+        assert nb["cells"][0]["source"].startswith(f"# E5 OGC replication gate {s}")
+        code = "".join(c["source"] for c in nb["cells"] if c["cell_type"] == "code")
+        assert f'SESSION = "{s}"' in code and "E5_bundle_{SESSION}" in code and "e5_sessions.json" in code
+        assert "e5_verdict" not in code and "verdict(" not in code

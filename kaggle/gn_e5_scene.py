@@ -309,6 +309,10 @@ def fork_job(ctx) -> int:
         row["timestamp"] = time.strftime("%Y-%m-%dT%H:%M:%S")
         append_row(csv_path, row)
 
+    if not os.path.exists(full_cache) and "full" in (meta.get("gn") or {}):
+        # the metric's cache is per session (/tmp): a later session (Note 2 C6) recomputes it; the earlier record kept
+        meta.setdefault("gn_history", []).append({**meta["gn"].pop("full"), "replaced_in_session": args.session,
+                                                  "reason": "no cache in this session: the metric is recomputed"})
     if not meta.get("dropped") and not meta.get("stopped_17i") and ctx.have_model and ctx.have_data and (
             not os.path.exists(full_cache) or UNCOMPRESSED not in done_configs()):
         h_args = types.SimpleNamespace(**vars(args))

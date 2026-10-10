@@ -155,20 +155,24 @@ def make_db_dir(data_dir: str, W: int, H: int, n: int) -> Dict:
     return {"names": names, "c2ws": c2ws, "cameras_json": inria_cameras_json(names, c2ws, W, H)}
 
 
-def make_db_zip(path: str, scenes: Dict[str, Tuple[int, int, int]]) -> Dict[str, List[str]]:
-    """``scenes``: name -> (W, H, n_images). Returns each scene's member names."""
+def make_db_zip(path: str, scenes: Dict[str, Tuple[int, int, int]], views: Dict[str, Tuple[List[str], List]] = None,
+                images: Dict[str, List[bytes]] = None) -> Dict[str, List[str]]:
+    """``scenes``: name -> (W, H, n_images). ``views``: name -> (image names, camera-to-world matrices), else
+    ``names_of`` / ``orbit_c2ws``; ``images``: name -> each image's bytes, else noise JPEGs. Returns each scene's
+    member names."""
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     out = {}
+    views, images = views or {}, images or {}
     with zipfile.ZipFile(path, "w", zipfile.ZIP_STORED) as z:
         z.writestr("tandt/train/images/00001.jpg", jpeg(8, 6, 0))  # another scene's member: must not be fetched
         for s, (W, H, n) in scenes.items():
-            names = names_of(n)
+            names, c2ws = views.get(s, (names_of(n), orbit_c2ws(n)))
             members = []
             for i, name in enumerate(names):
                 m = f"db/{s}/images/{name}"
-                z.writestr(m, jpeg(W, H, i))
+                z.writestr(m, images[s][i] if s in images else jpeg(W, H, i))
                 members.append(m)
-            for fname, b in colmap_bytes(W, H, names, orbit_c2ws(n)).items():
+            for fname, b in colmap_bytes(W, H, names, c2ws).items():
                 m = f"db/{s}/sparse/0/{fname}"
                 z.writestr(m, b)
                 members.append(m)
