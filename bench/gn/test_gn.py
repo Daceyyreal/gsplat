@@ -5439,7 +5439,7 @@ def test_e5_verdict_end_to_end_branches():
     assert v["primaries"]["P1"]["noise"]["n"] == 7 and p1["SE_noise"] > 0
     for key in ("P", "P_bar", "n_positive", "positives_needed", "SE_noise"):
         assert key in p1
-    assert set(v["primaries"]["P1"]["per_scene"]["s0"]) == {"bd", "curves", "spans_images"}
+    assert set(v["primaries"]["P1"]["per_scene"]["s0"]) == {"bd", "curves", "spans_images", "P_missing_reason"}
     flat = {f"s{i}": _e5_scene(gram=0.07, scalar=0.07, seed1=0.02 * (-1) ** i) for i in range(7)}
     vf = e5.verdict(flat, {})
     assert vf["outcome"] == "fail" and vf["primaries"]["P1"]["criteria"]["pass"]
@@ -5521,3 +5521,33 @@ def test_e5_scene_data_from_rows():
     assert sd["psnr"] == {(0, 0, "c3dgs"): 21.0, (-1, 0, "ogc_gram"): 21.2, (0, 0, "ogc_gram_ft"): 21.3}
     assert sd["bytes"][(-1, 0, "ogc_gram")] == 20_600_000 and sd["image"] == {(0, 0): "A", (-1, 0): "B"}
     assert "p1_ogc_scalar" in e5.missing_primary(sd) and len(e5.missing_primary(sd)) == 10
+
+
+def test_e5_missing_p_reasons_and_the_noise_they_keep():
+    """A missing P is reported with its reason, per scene and in the summary: "no shared byte range" (Note 2 C2) or "row
+    missing after rerun" (17 d); the outcome logic is unchanged. A scene with no shared byte range for P1 keeps its
+    j = 0 pairs: its v_s enters SD_pool and n is unchanged in SE_noise = SD_pool / sqrt(2n)."""
+    import e5
+
+    scenes = {f"s{i}": _e5_scene(gram=0.15 + 0.01 * i, seed1=0.003 * (i + 1)) for i in range(7)}
+    scenes["s6"] = _e5_scene(byte_scale={"ogc_gram": 2.5}, seed1=0.02)
+    v = e5.verdict(scenes, {})
+    p1 = v["primaries"]["P1"]
+    assert v["missing_P"]["P1"] == {"s6": e5.MISSING_NO_RANGE} and p1["criteria"]["P_missing_reason"] == {"s6": e5.MISSING_NO_RANGE}
+    assert p1["per_scene"]["s6"]["P_missing_reason"] == e5.MISSING_NO_RANGE and p1["P"]["s6"] is None
+    assert p1["per_scene"]["s0"]["P_missing_reason"] is None
+    nz = p1["noise"]
+    assert nz["n"] == 7 and nz["per_scene"]["s6"]["v_s"] is not None
+    d = [e5.j0_diffs(sd, "ogc_gram", "c3dgs") for sd in scenes.values()]
+    v_s = [(x - (x + y) / 2) ** 2 + (y - (x + y) / 2) ** 2 for x, y in d]
+    assert abs(nz["SD_pool"] - math.sqrt(sum(v_s) / 7)) < 1e-15
+    assert abs(nz["SE_noise"] - nz["SD_pool"] / math.sqrt(14)) < 1e-15
+    assert abs(p1["criteria"]["SE_noise"] - nz["SE_noise"]) < 1e-15 and p1["criteria"]["n"] == 7
+    holed = dict(scenes)
+    hole = _e5_scene()
+    del hole["psnr"][(-1, 0, "ogc_scalar")]
+    holed["s3"] = hole
+    vh = e5.verdict(holed, {})
+    assert vh["missing_P"]["P2"] == {"s3": e5.MISSING_ROW, "s6": e5.MISSING_NO_RANGE}
+    assert vh["outcome"] == "incomplete" and vh["missing_P"]["P1"] == {"s6": e5.MISSING_NO_RANGE}
+

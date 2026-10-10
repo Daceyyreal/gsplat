@@ -218,6 +218,9 @@ ROUND = 9  # 17 d; Note 2 C7: every compared value rounded to 9 decimals before 
 PAPER_FT_DB = 0.09
 PAPER_PRE_FT_DB = 0.49
 SECONDARY_BD_PAIRS = {"ogc_scalar_vs_ogc_plain": ("ogc_scalar", "ogc_plain"), "ogc_plain_vs_c3dgs": ("ogc_plain", "c3dgs")}
+# why a scene's P is missing (reported only; either way it enters P_bar as 0 and is not positive)
+MISSING_NO_RANGE = "no shared byte range (Amendment 17 Note 2 C2)"
+MISSING_ROW = "row missing after rerun (17 d)"
 
 
 def r9(x: float) -> float:
@@ -315,14 +318,24 @@ def criteria(P: Dict[str, Optional[float]], se_noise: Optional[float]) -> Dict:
 def pair_parts(scenes: Dict[str, Dict], a: str, b: str) -> Dict:
     """One pair over the scenes: each scene's BD-PSNR and BD-rate (``bd``), its j = 0 differences, the noise, and
     whether its curves or pair span images."""
-    per, P, diffs = {}, {}, {}
+    per, P, diffs, why = {}, {}, {}, {}
     for s, sd in scenes.items():
-        res = bd({a: curve(sd, a), b: curve(sd, b)}, [(a, b)])[f"{a}_vs_{b}"]
+        ca, cb = curve(sd, a), curve(sd, b)
+        res = bd({a: ca, b: cb}, [(a, b)])[f"{a}_vs_{b}"]
         value = res.get("bd_psnr_db") if res.get("computed") else None
         P[s] = value
+        if value is not None:
+            why[s] = None
+        elif len(ca[0]) < len(POINTS) or len(cb[0]) < len(POINTS):
+            why[s] = MISSING_ROW
+        else:
+            why[s] = MISSING_NO_RANGE
+        # the j = 0 pairs come from the j = 0 processes alone, whatever the BD fit gave: a scene whose curves share no
+        # byte range keeps its v_s in SD_pool and its place in n (Note 2 C2)
         diffs[s] = j0_diffs(sd, a, b)
-        per[s] = {"bd": res, "curves": {a: curve(sd, a), b: curve(sd, b)}, "spans_images": spans_images(sd, a, b)}
-    return {"per_scene": per, "P": P, "noise": noise(diffs)}
+        per[s] = {"bd": res, "curves": {a: ca, b: cb}, "spans_images": spans_images(sd, a, b),
+                  "P_missing_reason": why[s]}
+    return {"per_scene": per, "P": P, "P_missing_reason": {s: w for s, w in why.items() if w}, "noise": noise(diffs)}
 
 
 def t_interval(values: Sequence[float], level: float = 0.975) -> Dict:
@@ -358,7 +371,9 @@ def verdict(scenes: Dict[str, Dict], dropped: Optional[Dict[str, str]] = None) -
     primaries = {}
     for name, (a, b) in PRIMARY_PAIRS.items():
         parts = pair_parts(scenes, a, b)
-        primaries[name] = {"pair": [a, b], **parts, "criteria": criteria(parts["P"], parts["noise"]["SE_noise"])}
+        c = criteria(parts["P"], parts["noise"]["SE_noise"])
+        c["P_missing_reason"] = parts["P_missing_reason"]
+        primaries[name] = {"pair": [a, b], **parts, "criteria": c}
     reasons = []
     if n < MIN_SCENES:
         reasons.append(f"n = {n} after drops, below {MIN_SCENES} (17 d)")
@@ -375,6 +390,7 @@ def verdict(scenes: Dict[str, Dict], dropped: Optional[Dict[str, str]] = None) -
     return {
         "outcome": outcome, "incomplete_reasons": reasons, "n": n, "scenes": sorted(scenes), "dropped": dropped,
         "missing_primary_rows": missing, "primaries": primaries,
+        "missing_P": {name: p["P_missing_reason"] for name, p in primaries.items()},
         "secondaries": {
             **secondaries,
             "bd_all_pairs": bd_rates,
