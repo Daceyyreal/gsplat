@@ -5551,3 +5551,36 @@ def test_e5_missing_p_reasons_and_the_noise_they_keep():
     assert vh["missing_P"]["P2"] == {"s3": e5.MISSING_ROW, "s6": e5.MISSING_NO_RANGE}
     assert vh["outcome"] == "incomplete" and vh["missing_P"]["P1"] == {"s6": e5.MISSING_NO_RANGE}
 
+
+def test_e5_db_stand_in_through_gsplats_real_parser(tmp_path):
+    """Amendment 17 j: gsplat's real COLMAP parser (``examples/datasets/colmap.py``, pycolmap) on the Deep Blending
+    stand-in at data factor 1 (Note 2 C4): it loads every image and the one PINHOLE camera; the camera-frame check
+    against the stand-in's INRIA-style cameras.json passes; the split check (every 8th by sorted name, INRIA's test
+    cameras first) agrees; the loaded-size check passes. Skipped where pycolmap, cv2 or piexif is not installed."""
+    pytest.importorskip("pycolmap")
+    pytest.importorskip("cv2")
+    pytest.importorskip("piexif")
+    k = _kaggle_path()
+    ex = os.path.join(os.path.dirname(k), "examples")
+    for path in (ex, os.path.join(HERE, "dryrun")):
+        if path not in sys.path:
+            sys.path.insert(0, path)
+    import e3p_inria as ei
+    import e5_scenes as es
+    import fake_db
+    from datasets.colmap import Dataset, Parser
+
+    for scene, (W, H, n) in {"drjohnson": (133, 88, 26), "playroom": (126, 83, 22)}.items():
+        d = str(tmp_path / scene)
+        sd = fake_db.make_db_dir(d, W, H, n)
+        cams = str(tmp_path / f"{scene}_cameras.json")
+        json.dump(sd["cameras_json"], open(cams, "w"))
+        p = Parser(d, factor=es.DATA_FACTOR[scene], normalize=False, test_every=8)
+        assert len(p.image_names) == n and p.imsize_dict == {1: (W, H)} and len(p.points) == n
+        assert all(len(x) == 0 for x in p.params_dict.values())  # PINHOLE: no distortion
+        val = Dataset(p, split="val")
+        frame = ei.camera_frame_check(p.image_names, p.camtoworlds, sd["cameras_json"])
+        assert frame["pass"] and frame["n_matched"] == n
+        split = ei.split_check(p.image_names, list(val.indices), sd["cameras_json"])
+        assert split["equals_cameras_json_head"] and split["n_test"] == (n + 7) // 8
+        assert es.loaded_size_check(scene, dict(images="images", resolution=1), d, cams)["ok"]
