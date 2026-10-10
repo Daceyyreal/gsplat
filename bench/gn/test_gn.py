@@ -5186,3 +5186,147 @@ def test_e5_feasibility_job_steps_and_the_contingency_size():
             assert big["pixels"] > small["pixels"] and big["W"] == 1600 and big["H"] in (1066, 1067)
             assert big["gpu"]["cuda_colour_reserved"] > small["gpu"]["cuda_colour_reserved"]
             assert r["covered_max_pixels"] == big["pixels"]
+
+
+# ------------------------------------------------------------------------------ E5's build: the seven scenes, Deep Blending
+def _kaggle_path():
+    k = os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle")
+    if k not in sys.path:
+        sys.path.insert(0, k)
+    return k
+
+
+def test_e5_scenes_constants_match_note_i_and_note_1():
+    """kaggle/e5_scenes.py against Amendment 15 note i's header read (21 pins, 7 splat counts, Deep Blending's cameras),
+    Amendment 17 Note 1 (start devices, covered pixels and views, via bench/gn/e5_feasibility.py) and the benchmark
+    scripts' data factors (Note 2 C4: 1 for Deep Blending)."""
+    k = _kaggle_path()
+    import e3p_inria as ei
+    import e5_feasibility as ef
+    import e5_scenes as es
+    import tilequant_run5_analysis as r5a
+
+    hr = json.load(open(os.path.join(k, "gn_e4_note_i", "header_read.json")))
+    assert set(es.SCENES) == set(hr["pins"]) == set(es.INRIA_PINS) == set(es.DATASET) == set(es.DATA_FACTOR)
+    assert hr["archive_bytes"] == ei.ARCHIVE_BYTES and hr["directory_matches_e3p_pins"]
+    for s, kinds in es.INRIA_PINS.items():
+        for kind in ("ply", "cameras", "cfg_args"):
+            want = {key: v for key, v in hr["pins"][s][kind].items()}
+            want["crc32"] = int(want["crc32"], 16)
+            assert kinds[kind] == want, (s, kind)
+        assert set(kinds) == set(ei.FILE_NAMES)
+    f = ef.feasibility()
+    for r in f["rows"]:
+        s = r["scene"]
+        assert es.N_SPLATS[s] == r["n"]
+        assert es.START_DEVICE[s] == r["start_device"]
+        assert es.COVERED[s] == (r["covered_max_pixels"], r["covered_views"])
+    assert es.START_DEVICE["drjohnson"] == "cpu" and sum(v == "cuda" for v in es.START_DEVICE.values()) == 6
+    for ds, script in es.BENCHMARK_SH.items():
+        p = r5a.parse_benchmark_sh(open(os.path.join(os.path.dirname(k), "examples", "benchmarks", "compression",
+                                                      script)).read())
+        for s in es.SCENES:
+            if es.DATASET[s] == ds:
+                assert es.DATA_FACTOR[s] == p["data_factors"][s]
+    for s, m in es.DB_META.items():
+        d = hr["deep_blending"][s]
+        assert es.DATASET[s] == "db" and es.DATA_FACTOR[s] == 1
+        assert (m["width"], m["height"], m["n_cameras"]) == (d["max_w"], d["max_h"], d["n_cameras"])
+        assert es.COVERED[s] == (m["width"] * m["height"], m["n_cameras"])
+        assert es.N_SPLATS[s] == d["ply_header"]["n_vertex"]
+    assert es.RERUN_NOTES == {}
+
+
+def test_e5_cfg_check_drops_only_on_sh_degree():
+    """Note 2 C3: sh_degree != 3 drops the scene; eval and white_background are recorded, eval = False flagged."""
+    _kaggle_path()
+    import e5_scenes as es
+
+    ok = es.cfg_check(dict(eval=True, images="images_2", resolution=1, sh_degree=3, white_background=False))
+    assert ok["drop_reason"] is None and ok["flags"] == []
+    assert "sh_degree 2" in es.cfg_check(dict(eval=True, sh_degree=2))["drop_reason"]
+    no_eval = es.cfg_check(dict(eval=False, sh_degree=3, white_background=True))
+    assert no_eval["drop_reason"] is None and no_eval["white_background"] is True
+    assert len(no_eval["flags"]) == 1 and "seen in training" in no_eval["flags"][0]
+
+
+def test_e5_loaded_size_check_against_note_1(tmp_path):
+    """17 d with Notes 1 and 2: note i's size and the -r -1 contingency size are covered; the full size at -r 1, one
+    pixel too many, more views than Note 1's, or no images are not (the scene is reported dropped)."""
+    _kaggle_path()
+    import e5_scenes as es
+    from PIL import Image
+
+    def scene(name, image_set, size, n_cams):
+        d = tmp_path / name
+        (d / image_set).mkdir(parents=True)
+        Image.new("RGB", size, (90, 90, 90)).save(str(d / image_set / "000.jpg"))
+        cams = tmp_path / f"{name}_cameras.json"
+        cams.write_text(json.dumps([{"id": i} for i in range(n_cams)]))
+        return str(d), str(cams)
+
+    d, c = scene("b_i2", "images_2", (1559, 1039), 292)
+    r = es.loaded_size_check("bonsai", dict(images="images_2", resolution=1), d, c)
+    assert r["ok"] and r["loaded_size"] == [1559, 1039] and r["views"] == 292
+    d, c = scene("b_full", "images", (3118, 2078), 292)
+    r = es.loaded_size_check("bonsai", dict(images="images", resolution=-1), d, c)
+    assert r["ok"] and r["loaded_size"] == [1600, 1066]  # the contingency row
+    r = es.loaded_size_check("bonsai", dict(images="images", resolution=1), d, c)
+    assert not r["ok"] and "above Note 1's covered" in r["reason"] and r["loaded_size"] == [3118, 2078]
+    d, c = scene("k_full", "images", (3115, 2078), 279)
+    assert es.loaded_size_check("kitchen", dict(images="images", resolution=-1), d, c)["loaded_size"] == [1600, 1067]
+    d, c = scene("b_views", "images_2", (1559, 1039), 293)
+    r = es.loaded_size_check("bonsai", dict(images="images_2", resolution=1), d, c)
+    assert not r["ok"] and "293 views" in r["reason"]
+    d, c = scene("dj", "images", (1332, 876), 263)
+    assert es.loaded_size_check("drjohnson", dict(images="images", resolution=1), d, c)["ok"]
+    d, c = scene("dj_big", "images", (1333, 876), 263)
+    assert not es.loaded_size_check("drjohnson", dict(images="images", resolution=1), d, c)["ok"]
+    r = es.loaded_size_check("playroom", dict(images="images_8", resolution=1), d, c)
+    assert not r["ok"] and "no images" in r["reason"]
+
+
+def test_e5_db_download_from_a_stand_in_zip(tmp_path, monkeypatch):
+    """Amendment 17 j: Deep Blending's download on tandt_db's db/<scene> layout, against a local stand-in zip (synthetic
+    images, a synthetic COLMAP model); no network (the remote opener raises). Only db/<scene>/{images,sparse} is
+    written; the stand-in parser reads the model back; a second call fetches nothing; ensure_data dispatches db."""
+    import types
+    import zipfile
+
+    _kaggle_path()
+    if os.path.join(HERE, "dryrun") not in sys.path:
+        sys.path.insert(0, os.path.join(HERE, "dryrun"))
+    import e5_data as ed
+    import fake_db
+    import tilequant_run4 as r4
+
+    def no_network(url):
+        raise AssertionError(f"the test reached the network: {url}")
+
+    monkeypatch.setattr(ed, "_remote", no_network)
+    z = str(tmp_path / "tandt_db.zip")
+    members = fake_db.make_db_zip(z, {"drjohnson": (12, 8, 5), "playroom": (10, 6, 4)})
+    data = tmp_path / "data" / "drjohnson"
+    ed.download_db_scene("drjohnson", str(data), str(tmp_path / ".lock"), url=z, opener=zipfile.ZipFile)
+    got = sorted(os.path.relpath(os.path.join(dp, n), str(data)).replace(os.sep, "/")
+                 for dp, _d, fs in os.walk(str(data)) for n in fs)
+    want = sorted([m.split("db/drjohnson/", 1)[1] for m in members["drjohnson"]] + [r4.DATA_MARKER])
+    assert got == want
+    (W, H), poses = fake_db.read_colmap_bin(str(data / "sparse" / "0"))
+    assert (W, H) == (12, 8) and sorted(poses) == sorted(os.listdir(str(data / "images")))
+    assert all(np.allclose(p[:3, :3] @ p[:3, :3].T, np.eye(3), atol=1e-9) for p in poses.values())
+    assert json.load(open(str(data / r4.DATA_MARKER)))["files"] == len(members["drjohnson"])
+    opened = []
+
+    def counting(path):
+        opened.append(path)
+        return zipfile.ZipFile(path)
+
+    before = {n: os.path.getmtime(os.path.join(str(data / "images"), n)) for n in os.listdir(str(data / "images"))}
+    ed.download_db_scene("drjohnson", str(data), str(tmp_path / ".lock"), url=z, opener=counting)
+    assert opened == [z]
+    assert before == {n: os.path.getmtime(os.path.join(str(data / "images"), n)) for n in os.listdir(str(data / "images"))}
+    args = types.SimpleNamespace(scene="drjohnson", data_dir=str(data), data_root=str(tmp_path / "data"))
+    assert ed.ensure_data(args, 1) == 0.0  # the marker is there
+    with pytest.raises(ValueError):
+        ed.download_db_scene("truck", str(tmp_path / "x"), str(tmp_path / ".lock"), url=z, opener=zipfile.ZipFile)
