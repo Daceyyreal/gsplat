@@ -3834,7 +3834,10 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   leaving about 1,938 s of S1 lane 0's 5,884 s spare.
 - **One error in the committed note:** Note 4 prints S2's session-hours as 4.32-7.71 h; the code gives 7.70 h
   (7.7048). The total (16.0-24.9 h) and every lane figure are right. `test_e5_sessions_reproduce_amendment_17_note_4`
-  checks the hours against the code, not that line. **PENDING (Dace):** whether to correct it by a dated erratum.
+  checks the hours against the code, not that line. **Corrected (2026-10-12):** "Amendment 17 Note 4, erratum"
+  (`1b532e40`, alone): 7.70 h; the total, every lane figure and the assignment unchanged.
+- **Dace approved (2026-10-12)** the rewording of Note 4's rule (b): "the job measures nothing more after the cut",
+  followed by Dace's addition verbatim. **E5 S1 is next.**
 - **What the code does** (`3dcf7ae0`): each C3DGS run records `timeout_s` and `deadline_bound`; before every attempt the
   guard compares `e5_estimate.process_high_s` with the deadline less the reserve less now; on a cut, `deadline_cut()`
   keeps each row's C3DGS evaluation from the fork's report and moves any results rows of that attempt out of the CSV
@@ -3968,8 +3971,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   2. **E5 S2** (attach S1's output), then **E5 S3** (attach S1's and S2's); an S4 only if S3 leaves a deferred
      process (its notebook built then, Note 4);
   3. the combined verdict, locally (`bench/gn/e5_verdict.py` over the committed bundles, Note 2 C5).
-- **Note 4's S2 session-hours** are printed as 4.32-7.71 h; the code gives 7.70 h. **PENDING (Dace):** a dated
-  erratum or not.
+- ~~**Note 4's S2 session-hours** are printed as 4.32-7.71 h; the code gives 7.70 h.~~ **Corrected (2026-10-12):** the
+  erratum `1b532e40`. Dace approved rule (b)'s rewording the same day.
 - **The unexplained npz2ply failure** (one dry run, 2026-10-10, room's rerun `ogc_gram`): not reproduced alone or under
   RAM pressure; every npz2ply call is now logged per row (`npz2ply_log`, `7de7f690`). Watch for it.
 - **A flaky test:** one pytest run before `f32c36d1` had one failure that three reruns did not reproduce; which test is
