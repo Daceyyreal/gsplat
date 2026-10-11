@@ -3394,3 +3394,8 @@ points, primaries, bars and verdict, 17 d's memory rule, and 17 i for every othe
 
 **Not changed:** E5's scenes, rows, points, primaries, bars and verdict (Amendments 17 d and 18 f); Note 1's model, start
 devices and covered sizes; Note 1's pairing rule as Note 3 restates it; Note 2 (C6 is read here, not changed); Note 3.
+
+### Amendment 17 Note 4, erratum (2026-10-12, before any E5 run)
+
+S2's session-hours read 4.32-7.71 h; the correct high figure is 7.70 h (7.7048 h, `e5_estimate`). The 16.0-24.9 h
+total, every lane figure and the assignment are unchanged.
