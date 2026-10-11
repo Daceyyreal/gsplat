@@ -3280,3 +3280,117 @@ five steps after this note, with a test that it reproduces the table above.
 
 **Not changed:** E5's rows, points, primaries, bars and verdict; Note 1's GPU model, start devices and covered sizes;
 Note 2.
+
+### Amendment 17 Note 4 (2026-10-11, before any E5 run): the session assignment (17 e.4)
+
+Amendment 17 e.4 asks for this dated note before any E5 run: which scenes run in which session and on which GPU, from
+e.3 (Notes 1 and 3) and g (with Amendment 18 d's row), under h's host-memory rule. It also says how E5's job handles
+the deadline (17 f; Note 2 C6). It is an estimate, it reads no gate-scene data, and it changes no row, point, primary,
+bar or verdict. The assignment is committed as `kaggle/e5_sessions.json`.
+
+**Inputs.**
+- **Time per scene:** `bench/gn/e5_estimate.estimate(1)` (17 g with 18 d's `ogc_gram_ours`), low to high: bonsai
+  10,909-14,377 s; counter 9,937-12,885; kitchen 11,028-16,874; room 11,384-16,422; truck 5,572-8,770; playroom
+  7,930-13,447; drjohnson 9,552-18,546. drjohnson's images are on the CPU throughout (Note 1), so its figures are
+  multiplied by 1.01255, the largest of E5p's three CPU-against-GPU ratios at j = 0 (`gn5p_meta_train.json`, process
+  `j0_p1` against `j0_p0`: C3DGS's evaluation 413.65 / 408.52 s over 7 rows; the process's wall time 1.0048; fine-tuning
+  1.0072).
+- **Time per process:** the same estimate split into a scene's part before its processes (the fetch, the download, the
+  runner, protocol ii of the uncompressed model, the GN pass, note ii) and its four processes, each with its decoded
+  rows (`npz2ply`, the `.ply` load, protocol ii, the fidelity renders). The parts sum to the scene's figure. On E5p's
+  train (attempt 2) the split gives 1,586-1,708 s for a j = 0 process and 785-874 s for j = -1 or +1. The measured
+  processes, the C3DGS run plus the decoding steps named for it, took 1,609 and 1,616 s at j = 0 and 791 and 816 s at
+  j = -1 and +1. Per process at the high end (s; j = 0 seeds 0 and 1, then j = -1 and +1): kitchen 6,061, 6,061, 2,005,
+  2,005; room 5,719, 5,719, 2,127, 2,127; counter 4,429, 4,429, 1,670, 1,670; drjohnson 7,022, 7,022, 1,832, 1,832;
+  truck 2,916, 2,916, 1,099, 1,099; bonsai 4,865, 4,865, 1,973, 1,973; playroom 4,921, 4,921, 1,426, 1,426.
+- **Setup:** about 420 s with the wheel restored (E4q: restore 58.2 s, install 160.0 s, C3DGS's build 202.4 s). E5's
+  OGC preflight adds about 23 s (E5p attempt 2: 23.1 s), which the spare times below absorb.
+- **The limits,** counted from setup's end: a C3DGS run must end by **39,180 s** (17 f: 11.5 h less the 1,800 s reserve,
+  less setup; the job's timeout ends a C3DGS run there, `kaggle/gn_e5_scene.py:315`), and a scene starts by **33,780 s**
+  (the notebook's start cutoff, 9.5 h less setup). A lane's predicted end below includes its last process's decoded
+  rows, so it is held to 39,180 s too.
+- **Host:** Note 3's corrected peaks (GB, start device / after a CPU retry): bonsai 9.27 / 15.96; counter 9.20 / 14.70;
+  kitchen 12.10 / 17.67; room 10.87 / 17.54; truck 15.36 / 15.36; drjohnson 20.50 / 20.50; playroom 15.39 / 16.73. The
+  limit is 0.8 x 33,658,318,848 bytes = 26.93 GB (17 h).
+
+**The rule: Note 1's retry-safe pairing, as Note 3 restates it, unchanged.** Two scenes run at the same time only if
+their summed host peaks stay below 26.93 GB when either falls back to its CPU images. The retry-safe pairs are
+bonsai-counter, bonsai-room, counter-kitchen and counter-room, and only scenes from these pairs overlap. truck,
+drjohnson and playroom run alone. No lane lock is used.
+
+**The assignment** (three sessions; lane i on GPU i; scenes in the order given; times in s from setup's end, low to
+high):
+
+| Session | Lane | Scenes, in order | Second scene starts | Lane ends | Spare at the high end |
+|---|---|---|---|---|---|
+| S1 | 0 | kitchen, room | 11,028-16,874 | 22,412-33,296 | 5,884 |
+| S1 | 1 | counter | - | 9,937-12,885 | 26,295 |
+| S2 | 0 | drjohnson, truck | 9,552-18,546 | 15,124-27,317 | 11,863 |
+| S3 | 0 | bonsai, playroom | 10,909-14,377 | 18,839-27,824 | 11,356 |
+
+- Every scene starts before 33,780 s, and every lane ends before 39,180 s at the high end with no retry.
+- **Why three sessions:** kitchen is retry-safe only with counter, so nothing may follow counter in lane 1 while kitchen
+  or room may still run. truck, drjohnson and playroom must each run alone, and together they need 40,762 s at the high
+  end, more than one lane's 39,180 s.
+- **Order:** within a lane the longer scene runs first. S2 and S3 have one lane each, so their second GPU stays idle, as
+  does S1's lane 1 after counter. Every session still uses the accelerator *GPU T4 x2*, whose sessions had Note 1's
+  33.66 GB of RAM.
+- **Sessions run in the order S1, S2, S3.** Each later session attaches every earlier E5 session's output of the same
+  attempt; the notebook restores each scene from the output with the most settled processes.
+
+**The host peak at every overlap** (GB; only S1 has two lanes):
+
+| Overlap | When | Both at their start devices | First scene on CPU images | Second scene on CPU images |
+|---|---|---|---|---|
+| kitchen with counter | from the start | 21.30 | 26.87 | 26.79 |
+| room with counter | only if counter outlasts kitchen (counter ends 9,937-12,885; room starts 11,028-16,874) | 20.07 | 26.74 | 25.57 |
+
+Every figure is below 26.93 GB. In S2 and S3 one scene runs at a time: drjohnson 20.50, truck 15.36, bonsai 9.27 (15.96
+after a CPU retry), playroom 15.39 (16.73).
+
+**Session-hours** (setup included): S1 6.34-9.37 h, S2 4.32-7.71 h, S3 5.35-7.85 h; **16.0-24.9 h in all**, against
+Kaggle's 30 GPU-hours a week. This assumes the week's quota is unused when S1 starts; a session that does not fit the
+week's remaining quota waits for the next week.
+
+**The deadline.** These are readings of 17 f and Note 2 C6, set against 17 i. No protocol rule changes: the rows,
+points, primaries, bars and verdict, 17 d's memory rule, and 17 i for every other failure stay as written.
+- **(a) No process starts that is not predicted to finish.** Before each attempt of a process (its first run, a CPU
+  retry, a rerun, or a deferred process resumed), the job compares the process's high estimate (above, x 1.01255 when
+  its images are on the CPU) with the time left: the deadline, less the reserve, less the current time. If the estimate
+  is larger, the process does not start and is deferred to a later session (Note 2 C6), with the estimate and the time
+  left recorded. Within a scene the processes keep their order (17 d): once one is deferred, the scene's later
+  processes are deferred with it. The existing rule (no C3DGS run starts with less than 60 s left) stays.
+- **(b) A process the deadline's timeout ends anyway is "deadline-cut".** If a C3DGS run is ended by the timeout the
+  deadline sets (the time left, when that is shorter than the job's 4 h run timeout), the attempt is recorded as
+  `deadline_cut` and the process is deferred under C6. The process reruns whole, with the same seed and on the same
+  device, in a later session. It is not a failure: it uses up no 17 i rerun, and it does not stop or drop the scene,
+  even when it is the scene's first process before any results. A run ended by the 4 h run timeout itself is not
+  deadline-cut and stays a failure under 17 i. The job measures nothing more from a cut attempt: none of its outputs is
+  decoded or evaluated after the cut, and none counts as a result (17 i). Any rows the cut attempt had already measured
+  (protocol ii or C3DGS's evaluation) are kept, report-only, in its attempt record, marked `deadline_cut`, and excluded
+  from the verdict. The verdict uses only the whole rerun's rows. Its large files (`.npz`, `.ply`) are deleted after
+  their paths and bytes are listed in the attempt's record. A process left running after the timeout is killed, and
+  the kill is recorded. **This reads C6
+  against 17 i:** the timeout is the deadline's own mechanism (17 f, Amendment 14 d), so a run it ends is read as a
+  process not run because of the deadline (C6), not as a process that failed (17 i). If a cut attempt was itself 17 i's
+  rerun (or a CPU retry), its kind carries over to the attempt that replaces it.
+- **Where deferred processes run:** in the next session. A scene with an unsettled process is carried over and runs
+  after that session's own lane. S2 and S3 have one lane, so the carried scene runs alone and Note 1's rule holds. If
+  S3 leaves one, a session S4 with one lane runs only carried-over scenes; its notebook is built then. The carry-over is
+  done by the notebook from the restored outputs, not by editing `kaggle/e5_sessions.json`.
+
+**Known risks.**
+- **S1, lane 0:** a retry of a kitchen j = 0 process at the high end (6,061 s) would end the lane 177 s past 39,180 s.
+  Under (a), room's j = +1 process (high end 2,127 s, with 1,950 s left at its start) is then deferred to S2, not lost.
+  A retry of a room j = 0 process (5,719 s) still fits. S1's lane 1, S2 and S3 absorb any single retry (the largest,
+  drjohnson's j = 0 process on the CPU, is 7,022 s against S2's 11,863 s).
+- **The wheel:** E5's notebooks attach E5p attempt 2's output, pinned to that version, whose `wheels/` holds the gsplat
+  wheel for torch 2.11.0+cu128. If the image's key changed, the wheel is rebuilt. In E5p that took 3,974.2 s (attempt 1)
+  and 3,922.0 s (attempt 2), and setup took 4,366.7 and 4,339.0 s in all. That is up to 3,946 s above the 420 s
+  assumed here, which still fits S1 lane 0's 5,884 s of spare time, leaving about 1,938 s. With a rebuild, a retry of
+  any S1 lane-0 process defers that lane's last process under (a).
+- **Less RAM than 33.66 GB:** Note 2 C11 applies. The session runs its lanes one scene at a time, and processes the
+  deadline then keeps from starting are deferred under (a) and C6.
+
+**Not changed:** E5's scenes, rows, points, primaries, bars and verdict (Amendments 17 d and 18 f); Note 1's model, start
+devices and covered sizes; Note 1's pairing rule as Note 3 restates it; Note 2 (C6 is read here, not changed); Note 3.
