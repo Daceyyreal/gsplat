@@ -5850,3 +5850,82 @@ def test_e5_feasibility_reproduces_amendment_17_note_3():
     no_margin = ef.host_steps(ef.E4Q_TREEHILL["n"])["npz2ply_"]
     assert round(no_margin / 1e9, 2) == 18.99 and round(ef.host_steps(ef.E5P["n"])["npz2ply_"] / 1e9, 2) == 7.31
     assert re.search(r"18\.99 GB on treehill \(16\.39 measured\)", note.replace("\n", " "))
+
+
+def test_e5_sessions_reproduce_amendment_17_note_4():
+    """Amendment 17 Note 4: kaggle/e5_sessions.json is plan A (each gate scene once; S2 and S3 one lane); every pair of
+    scenes that can overlap is retry-safe (Note 1's rule as Note 3 restates it); the per-process split sums to
+    Amendment 17 g's scene figures and brackets E5p's measured train processes; Note 4's lane table, per-process high
+    ends and overlap peaks in kaggle/PREREG_GN.md are reproduced to the digit printed; every scene starts by 33,780 s and
+    every lane ends by 39,180 s at the high end."""
+    import itertools
+    import re
+
+    import e5_estimate as est
+    import e5_feasibility as ef
+    import e5_scenes as es
+
+    kg = os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle")
+    A = json.load(open(os.path.join(kg, "e5_sessions.json")))["sessions"]
+    assert list(A) == ["S1", "S2", "S3"]
+    assert sorted(s for d in A.values() for lane in d["lanes"] for s in lane) == sorted(es.SCENES)
+    assert [len(d["lanes"]) for d in A.values()] == [2, 1, 1]
+    U = est.units()
+    # the split: parts sum to scene_s; E5p's train processes (C3DGS run + its decoding steps) inside low-high
+    for s in list(es.SCENES) + ["train"]:
+        for e in (0, 1):
+            pre, procs = est.scene_parts(s, e, U, 1)
+            assert abs(pre + sum(procs) - est.scene_s(s, e, U, 1)) < 1e-6, (s, e)
+    meta = json.load(open(est.E5P_TRAIN))
+    dec = ("npz2ply_", "load_ply_", "eval_ii_", "fidelity_", "build_runner")
+    lo, hi = est.scene_parts("train", 0, U, 1)[1], est.scene_parts("train", 1, U, 1)[1]
+    for i, k in enumerate(("j0_p0", "j0_p1", "j-1_p0", "j+1_p0")):
+        m = meta["runs"][k + "_a0"]["time_s"] + sum(x.get("time_s", 0) for x in meta["steps"]
+                                                    if x["name"].startswith(dec) and k + "_a0" in x["name"])
+        assert lo[i] < m < hi[i], (k, lo[i], m, hi[i])
+    r = est.cpu_ratios()
+    assert max(r, key=r.get) == "eval" and round(est.cpu_ratio(), 5) == 1.01255
+    # Note 4's text
+    text = open(os.path.join(kg, "PREREG_GN.md"), encoding="utf-8").read()
+    note = text[text.index("### Amendment 17 Note 4"):]
+    flat = " ".join(note.split())
+    DEADLINE, CUTOFF = 39_180, 33_780
+    assert DEADLINE == 11.5 * 3600 - 1800 - 420 and CUTOFF == 9.5 * 3600 - 420
+    f0 = lambda x: f"{x:,.0f}"  # noqa: E731
+    rng = lambda a, b: f"{f0(a)}-{f0(b)}"  # noqa: E731
+    table = [[c.strip() for c in line.strip().strip("|").split("|")] for line in note.splitlines()
+             if re.match(r"\| S\d \|", line)]
+    got = []
+    for sid, d in A.items():
+        for i, lane in enumerate(d["lanes"]):
+            L = [est.lane_times(lane, e, es.START_DEVICE, U) for e in (0, 1)]
+            assert all(x["start"] < CUTOFF for x in L[1]["scenes"]) and L[1]["end"] < DEADLINE
+            second = rng(L[0]["scenes"][1]["start"], L[1]["scenes"][1]["start"]) if len(lane) > 1 else "-"
+            got.append([sid, str(i), ", ".join(lane), second, rng(L[0]["end"], L[1]["end"]), f0(DEADLINE - L[1]["end"])])
+    assert table == got, (table, got)
+    for s in es.SCENES:
+        hs = ", ".join(f0(est.process_high_s(s, i, es.START_DEVICE[s], U)) for i in range(4))
+        assert f"{s} {hs}" in flat, s
+    # every pair that can overlap in a two-lane session is retry-safe; Note 4's overlap peaks
+    f = ef.feasibility()
+    pairs = {p["pair"]: p for p in f["pairs"]}
+    host = {x["scene"]: (x["host_at_start"], x["host_cpu"]) for x in f["rows"]}
+    g = lambda x: f"{x / 1e9:.2f}"  # noqa: E731
+    for d in A.values():
+        if len(d["lanes"]) < 2:
+            continue
+        for a, b in itertools.product(*d["lanes"]):
+            p = pairs.get((a, b)) or pairs[(b, a)]
+            assert p["retry_safe_fits"], (a, b)
+            row = (f"| {a} with {b} |", f"| {g(host[a][0] + host[b][0])} | {g(host[a][1] + host[b][0])} | "
+                                         f"{g(host[a][0] + host[b][1])} |")
+            line = next(x for x in note.splitlines() if x.startswith(row[0]))
+            assert line.endswith(row[1]), (line, row)
+    # session-hours with setup (17 g's setup_s), checked against the code (Note 4 prints S2's high end as 7.71; 7.70)
+    setup = est.estimate(1)["setup_s"]
+    hours = {sid: [(max(est.lane_times(l, e, es.START_DEVICE, U)["end"] for l in d["lanes"]) + setup) / 3600
+                   for e in (0, 1)] for sid, d in A.items()}
+    assert {k: [round(x, 2) for x in v] for k, v in hours.items()} == {"S1": [6.34, 9.37], "S2": [4.32, 7.70],
+                                                                         "S3": [5.35, 7.85]}
+    assert [round(sum(v[e] for v in hours.values()), 1) for e in (0, 1)] == [16.0, 24.9]
+    assert "16.0-24.9 h in all" in flat

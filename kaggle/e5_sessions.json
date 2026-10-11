@@ -1,0 +1,8 @@
+{
+  "note": "kaggle/PREREG_GN.md Amendment 17 Note 4: plan A, Note 1's retry-safe pairing (as Note 3 restates it); lane i on GPU i, scenes in order; sessions run S1, S2, S3; a scene with an unsettled process is carried into the next session, after its own lane",
+  "sessions": {
+    "S1": {"lanes": [["kitchen", "room"], ["counter"]]},
+    "S2": {"lanes": [["drjohnson", "truck"]]},
+    "S3": {"lanes": [["bonsai", "playroom"]]}
+  }
+}

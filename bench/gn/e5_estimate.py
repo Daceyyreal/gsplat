@@ -13,6 +13,9 @@ Loaded sizes as Amendment 15 note i's table; test views every 8th.
 
 ``extra_rows`` (Amendment 18 d): rows computed at the colour call beyond OGC's three, each at OGC's measured rate, saved,
 evaluated by C3DGS and decoded like them, not fine-tuned. 0 reproduces Amendment 17 g; 1 adds ``ogc_gram_ours``.
+
+Amendment 17 Note 4 (the session assignment) adds ``scene_parts`` (the same estimate per process), ``cpu_ratio`` and
+``process_high_s`` (its deadline guard) and ``lane_times``.
 """
 import json
 import math
@@ -100,6 +103,72 @@ def scene_s(name: str, end: int, U: dict, extra_rows: int = 0) -> float:
     per_row = (U["npz2ply_s_per_msplat"][end] * n / 1e6 + U["eval_ii_s_per_test_mpx"][end] * tmpx
                + U["fidelity_s_per_test_mpx"][end] * tmpx + U["load_ply_s_per_msplat"][end] * n / 1e6)
     return total + decoded * per_row
+
+
+def scene_parts(name: str, end: int, U: dict, extra_rows: int = 0) -> tuple:
+    """Amendment 17 Note 4: ``scene_s`` split into the part before the processes (fetch, download, runner, protocol ii
+    of the uncompressed model, GN pass, note ii) and the four processes in ``e5.E5_PROCESSES``' order, each with its
+    decoded rows. The parts sum to ``scene_s`` (to rounding); ``scene_s`` itself is left as Amendment 17 g quotes it."""
+    n, mb, ncam, w, h = SCENES[name]
+    ntest = math.ceil(ncam / 8)
+    vmpx = w * h / 1e6
+    tmpx, px_ratio = ntest * vmpx, (ncam - ntest) * vmpx / (TRAIN_VIEWS * TRAIN_VIEW_MPX)
+    up = max(1.0, px_ratio) if end else 1.0
+    nq = n * QF[end] / 1e6
+    pre = ((0.0 if name == "train" else U["fetch_s_per_mb"] * mb) + U["download_s"][end] + U["runner_s"][end]
+           + U["eval_ii_s_per_test_mpx"][end] * tmpx + U["gn_pass_s"][end] * up
+           + U["note_ii_s"][end] * ((n / 1e6) if end else 1.0))
+    per_row = (U["npz2ply_s_per_msplat"][end] * n / 1e6 + U["eval_ii_s_per_test_mpx"][end] * tmpx
+               + U["fidelity_s_per_test_mpx"][end] * tmpx + U["load_ply_s_per_msplat"][end] * n / 1e6)
+    k = 3 + extra_rows
+    procs = []
+    for nft in PROCESS_FT:
+        rows = (U["c3dgs_vq_s"][end] + k * U["ogc_s_per_mq"][end] * nq + k * U["save_s_per_msplat"][end] * n / 1e6
+                + (k + 1) * U["c3dgs_eval_s_per_test_mpx"][end] * tmpx)
+        ft = nft * (U["finetune_s"][end] * (vmpx / TRAIN_VIEW_MPX) * ((n / SCENES["train"][0]) if end else 1.0)
+                    + U["c3dgs_eval_s_per_test_mpx"][end] * tmpx)
+        procs.append(U["rest_s"][end] * up + rows + ft + (4 + extra_rows + nft) * per_row)
+    return pre, procs
+
+
+E5P_TRAIN = os.path.join(REPO, "kaggle", "gn_e5p", "attempt2", "gn5p", "gn5p_meta_train.json")
+
+
+def cpu_ratios() -> dict:
+    """E5p attempt 2 on train, process ``j0_p1`` (images on the CPU) against ``j0_p0`` (on the GPU): the process's wall
+    time, C3DGS's evaluation (7 rows) and fine-tuning (2 rows). Note 4 takes the largest."""
+    runs = json.load(open(E5P_TRAIN))["runs"]
+
+    def cost(k, pre):
+        return sum(v["time_s"] for n, v in runs[k]["wrapper"]["e4p"]["fork"]["cost"].items() if n.startswith(pre))
+
+    out = {"wall": runs["j0_p1_a0"]["wrapper"]["wall_s"] / runs["j0_p0_a0"]["wrapper"]["wall_s"]}
+    out.update({p.rstrip("_"): cost("j0_p1_a0", p) / cost("j0_p0_a0", p) for p in ("eval_", "finetune_")})
+    return out
+
+
+def cpu_ratio() -> float:
+    return max(cpu_ratios().values())
+
+
+def process_high_s(scene: str, index: int, device: str, U: dict = None, extra_rows: int = 1) -> float:
+    """Note 4 (a): process ``index`` of ``e5.E5_PROCESSES`` on ``scene`` at the high end, its decoded rows included,
+    times ``cpu_ratio()`` when its images are on the CPU."""
+    s = scene_parts(scene, 1, U or units(), extra_rows)[1][index]
+    return s * (cpu_ratio() if device == "cpu" else 1.0)
+
+
+def lane_times(scenes, end: int, devices: dict, U: dict = None, extra_rows: int = 1) -> dict:
+    """Note 4: one lane's scenes in order, ``end`` 0 (low) or 1 (high); each scene's start and end in s from setup's end,
+    a scene on the CPU (``devices``) times ``cpu_ratio()``."""
+    U, r, t, out = U or units(), cpu_ratio(), 0.0, []
+    for s in scenes:
+        pre, procs = scene_parts(s, end, U, extra_rows)
+        x = r if devices.get(s) == "cpu" else 1.0
+        out.append({"scene": s, "start": t, "processes": [p * x for p in procs]})
+        t += (pre + sum(procs)) * x
+        out[-1]["end"] = t
+    return {"scenes": out, "end": t}
 
 
 def estimate(extra_rows: int = 0) -> dict:
