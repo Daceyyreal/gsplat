@@ -5929,3 +5929,196 @@ def test_e5_sessions_reproduce_amendment_17_note_4():
                                                                          "S3": [5.35, 7.85]}
     assert [round(sum(v[e] for v in hours.values()), 1) for e in (0, 1)] == [16.0, 24.9]
     assert "16.0-24.9 h in all" in flat
+
+
+def test_e5_deadline_rules_note_4():
+    """Amendment 17 Note 4: the guard (a) defers only when the high estimate exceeds the time left; a run is deadline-cut
+    (b) only when the deadline, not the 4 h run timeout, set its timeout; cut attempts are invisible to 17 i's attempt
+    rules: a cut alone leaves the process deferred (never a stop or a drop, even the first process before any result),
+    and a cut rerun does not use up 17 i's one rerun."""
+    import e5
+
+    assert e5.deadline_guard(6061.0, 6061.0) is None and e5.deadline_guard(10.0, 5000.0) is None
+    assert "deadline guard (Note 4 a)" in e5.deadline_guard(6061.2, 5000.0)
+    assert e5.is_deadline_cut({"returncode": "timeout", "deadline_bound": True})
+    assert not e5.is_deadline_cut({"returncode": "timeout", "deadline_bound": False})  # the run timeout: 17 i
+    assert not e5.is_deadline_cut({"returncode": 0, "deadline_bound": True}) and not e5.is_deadline_cut(None)
+    A = lambda device="cuda", oom=False, res=False, miss=False, after=False, cut=False: dict(  # noqa: E731
+        device=device, oom=oom, results_exist=res, primary_missing=miss, after_results=after, deadline_cut=cut)
+    act = e5.process_action
+    cut = A(miss=True, cut=True)
+    assert act([cut], True, False)["action"] == "deferred"  # the first process, no result: not stopped
+    assert act([cut, cut], True, True)["action"] == "deferred"
+    assert act([cut, A(miss=True)], True, False)["action"] == "stop_scene"  # a real failure still follows 17 i
+    assert act([A(miss=True, res=True), A(miss=True, after=True, cut=True)], True, False)["action"] == "rerun"
+    assert act([A(miss=True, res=True), A(miss=True, after=True, cut=True), A(miss=True, after=True)],
+               True, False)["action"] == "done"  # the one rerun, used once
+    # a cut CPU retry: the rules ask for the CPU retry again (its kind carries over)
+    assert act([A(oom=True), A("cpu", cut=True, miss=True)], True, False)["action"] == "retry_cpu"
+    assert act([A(oom=True), A("cpu", cut=True), A("cpu", oom=True)], True, False)["action"] == "drop_scene"
+    assert e5.scene_data([{"config": "p0_c3dgs", "status": "ok", "PSNR_ii": "1", "npz_bytes": "2",
+                           "deadline_cut": True}])["psnr"] == {}
+
+
+def _e5_process_ctx(tmp_path, monkeypatch, scene="kitchen", left_s=1e6, session="S1"):
+    """A fake ctx for gn_e5_scene.process: no runner; measure_npz and the row record faked; every attempt's C3DGS run
+    is ``ctx.fake_runs.pop(0)``, a function of (name, out, report_path) returning the run dict."""
+    import time
+    import types
+
+    _kaggle_path()
+    import gn_e5_scene as job
+
+    monkeypatch.setattr(job.e4pjob, "drop_runner", lambda ctx: None)
+    monkeypatch.setattr(job.e4pjob, "measure_npz", lambda ctx, label, npz, with_fidelity=True: (
+        {"npz": {"bytes": os.path.getsize(npz)}} if "nopii" in open(npz).read()
+        else {"eval_ii": {"psnr": float(open(npz).read())}, "npz": {"bytes": os.path.getsize(npz)}}))
+
+    def row_record(ctx, j, seed, row, k, rep, run, m):
+        return {**ctx.common, "config": job.e5.config_name(j, seed, row), "j": j, "process_seed": seed, "row": row,
+                "attempt": k, "PSNR_ii": ((m or {}).get("eval_ii") or {}).get("psnr", ""),
+                "npz_bytes": ((m or {}).get("npz") or {}).get("bytes", "")}
+
+    monkeypatch.setattr(job.e5pjob, "_row_record", row_record)
+    os.makedirs(tmp_path, exist_ok=True)
+    work = tmp_path / "work"
+    work.mkdir(exist_ok=True)
+    cache = tmp_path / "full16.pt"
+    cache.write_text("m")
+    skips = []
+    args = types.SimpleNamespace(session=session, image=f"img-{session}", work_dir=str(work), ogc_impl="ogc",
+                                 ogc_clone=None, ogc_device="cpu", deadline=time.time() + 1800.0 + left_s,
+                                 reserve_s=1800.0)
+    ctx = types.SimpleNamespace(args=args, scene=scene, meta={"processes": {}, "scene_device": "cuda", "deviations": [],
+                                                              "steps": []},
+                                save=lambda: None, steps=types.SimpleNamespace(skip=lambda n, w: skips.append((n, w))),
+                                common={"scene": scene, "session": session, "image": args.image}, runner_state={},
+                                deferred_earlier=None, fake_runs=[], skips=skips)
+    calls = []
+
+    def c3dgs(name, wa, device, thr):
+        calls.append((name, device))
+        out = os.path.join(args.work_dir, name)
+        return ctx.fake_runs.pop(0)(name, out, os.path.join(args.work_dir, f"{name}_fork_report.json"))
+
+    ctx.calls = calls
+    kw = dict(csv_path=str(tmp_path / f"gn5_results_{scene}.csv"), c3dgs=c3dgs, run_oom=lambda run: False,
+              start_blocker=lambda: (None, False), full_cache=str(cache))
+    return job, ctx, kw
+
+
+def _fake_ok_run(psnr, missing=()):
+    """A finished C3DGS run: every row's .npz written (its content its protocol ii PSNR, or no protocol ii)."""
+    def run(name, out, report_path):
+        import e5
+
+        rows = {}
+        os.makedirs(os.path.join(out, "rows"), exist_ok=True)
+        for r in ["c3dgs"] + list(e5.fork_rows("ogc")) + [e5.ft_name(x) for x in e5.FT_ROWS]:
+            p = os.path.join(out, "rows", f"{r}.npz")
+            open(p, "w").write("nopii" if r in missing else str(psnr))
+            rows[r] = {"npz": p, "status": "ok"}
+        return {"returncode": 0, "npz": rows["c3dgs"]["npz"], "deadline_bound": False, "timeout_s": 14400.0,
+                "wrapper": {"status": "ok", "e4p": {"fork": {"rows": rows, "checks_failed": []}}}}
+    return run
+
+
+def _fake_cut_run(evals):
+    """A run the deadline's timeout ended: two rows saved, ``evals`` rows already evaluated by C3DGS, a decoded .ply."""
+    def run(name, out, report_path):
+        rows = {}
+        os.makedirs(os.path.join(out, "rows"), exist_ok=True)
+        for r in ("c3dgs", "ogc_plain"):
+            p = os.path.join(out, "rows", f"{r}.npz")
+            open(p, "w").write("partial")
+            rows[r] = {"npz": p, "status": "saved"}
+        for r, v in evals.items():
+            rows.setdefault(r, {})["c3dgs_eval"] = {"PSNR": v}
+        json.dump({"fork": {"rows": rows, "phase": "eval"}}, open(report_path, "w"))
+        open(os.path.join(os.path.dirname(out), f"{name}_c3dgs.ply"), "w").write("ply")
+        return {"returncode": "timeout", "deadline_bound": True, "timeout_s": 5000.0, "time_s": 5000.0}
+    return run
+
+
+def test_e5_guard_defers_a_process_and_the_scenes_later_ones(tmp_path, monkeypatch):
+    """Note 4 a: kitchen's j = 0 seed 0 process (high estimate 6,061 s) with 5,000 s left is deferred, not started, with
+    its estimate and the time left; the scene's later processes are deferred with it (17 d's order) though they would
+    fit; on the CPU the estimate is x the CPU ratio; with time enough the process starts."""
+    import e5
+    import e5_estimate as est
+
+    job, ctx, kw = _e5_process_ctx(tmp_path, monkeypatch, left_s=5000.0)
+    for i, proc in enumerate(e5.E5_PROCESSES):
+        job.process(ctx, proc, first=(i == 0), index=i, **kw)
+    assert ctx.calls == []
+    P = ctx.meta["processes"]
+    d0 = P["j0_p0"]["deferred"]
+    assert "deadline guard (Note 4 a)" in d0["reason"] and round(d0["high_s"]) == 6061 and d0["left_s"] < 5000.0
+    assert d0["device"] == "cuda" and not P["j0_p0"]["settled"] and P["j0_p0"]["attempts"] == []
+    for k in ("j0_p1", "j-1_p0", "j+1_p0"):
+        assert "an earlier process of the scene (j0_p0) is deferred" in P[k]["deferred"]["reason"], k
+    assert est.process_high_s("kitchen", 2, "cuda") < 5000.0  # j = -1 alone would have fitted
+    assert est.process_high_s("kitchen", 0, "cpu") == pytest.approx(est.process_high_s("kitchen", 0, "cuda")
+                                                                     * est.cpu_ratio())
+    job, ctx, kw = _e5_process_ctx(tmp_path / "b", monkeypatch, left_s=7000.0)
+    ctx.fake_runs = [_fake_ok_run(25.0)]
+    job.process(ctx, e5.E5_PROCESSES[0], first=True, index=0, **kw)
+    assert ctx.calls == [("j0_p0_a0", "cuda")] and ctx.meta["processes"]["j0_p0"]["outcome"] == "done"
+
+
+def test_e5_deadline_cut_keeps_measured_values_and_its_rerun(tmp_path, monkeypatch):
+    """Note 4 b: the scene's first process is cut after two rows were evaluated by C3DGS: the attempt is deadline_cut,
+    the two values are kept in its record (report only), its .npz and .ply files listed and deleted, no result exists,
+    the scene is neither stopped nor dropped and the process is deferred. A cut attempt's results rows are moved out of
+    the CSV into its record, so the verdict's scene_data never sees them. In the next session the process reruns whole
+    on the same device; a primary row then missing after results takes 17 i's one rerun, which the cut did not use up;
+    the rerun's rows are the scene's."""
+    import e5
+
+    job, ctx, kw = _e5_process_ctx(tmp_path, monkeypatch)
+    ctx.fake_runs = [_fake_cut_run({"c3dgs": 21.5, "ogc_plain": 21.7})]
+    job.process(ctx, e5.E5_PROCESSES[0], first=True, index=0, **kw)
+    pr = ctx.meta["processes"]["j0_p0"]
+    (att,) = pr["attempts"]
+    assert att["deadline_cut"] and att["kind"] == "first" and att["session"] == "S1" and att["n_measured"] == 2
+    assert att["kept"]["c3dgs_eval"] == {"c3dgs": {"PSNR": 21.5}, "ogc_plain": {"PSNR": 21.7}}
+    assert {f["path"] for f in att["files"]} >= {os.path.join("j0_p0_a0", "rows", "c3dgs.npz"), "j0_p0_a0_c3dgs.ply"}
+    assert sorted(att["deleted"]) == sorted([os.path.join("j0_p0_a0", "rows", "c3dgs.npz"),
+                                             os.path.join("j0_p0_a0", "rows", "ogc_plain.npz"), "j0_p0_a0_c3dgs.ply"])
+    assert not any(os.path.exists(os.path.join(ctx.args.work_dir, p)) for p in att["deleted"])
+    assert "deadline-cut (Note 4 b)" in pr["deferred"]["reason"] and not pr["settled"]
+    assert not ctx.meta.get("stopped_17i") and not ctx.meta.get("dropped") and not ctx.meta.get("results_exist")
+    assert not os.path.exists(kw["csv_path"]) and ctx.meta["deadline_cuts"][0]["n_measured"] == 2
+    # a later process of the scene, in the same session, is deferred with it (17 d's order)
+    job.process(ctx, e5.E5_PROCESSES[1], first=False, index=1, **kw)
+    assert "(j0_p0) is deferred" in ctx.meta["processes"]["j0_p1"]["deferred"]["reason"]
+    # a cut attempt's results rows (if any had reached the CSV) are moved into its record
+    job.append_row(kw["csv_path"], {"scene": "kitchen", "config": "j-1_p0_c3dgs", "attempt": 0, "session": "S1",
+                                    "status": "ok", "PSNR_ii": "30.0", "npz_bytes": "9"})
+    job.append_row(kw["csv_path"], {"scene": "kitchen", "config": "j-1_p0_c3dgs", "attempt": 0, "session": "S0",
+                                    "status": "ok", "PSNR_ii": "29.0", "npz_bytes": "9"})  # another session's: kept
+    ctx.deferred_earlier = None
+    ctx.fake_runs = [_fake_cut_run({})]
+    job.process(ctx, e5.E5_PROCESSES[2], first=False, index=2, **kw)
+    a2 = ctx.meta["processes"]["j-1_p0"]["attempts"][0]
+    assert a2["n_measured"] == 1 and a2["kept"]["rows"][0]["PSNR_ii"] == "30.0" and a2["kept"]["rows"][0]["deadline_cut"]
+    assert [r["session"] for r in job.read_rows(kw["csv_path"], "kitchen")] == ["S0"]
+    # the next session: the first process reruns whole on the same device; 17 i's one rerun is still there
+    ctx.args.session, ctx.args.image, ctx.deferred_earlier = "S2", "img-S2", None
+    ctx.common.update(session="S2", image="img-S2")
+    ctx.fake_runs = [_fake_ok_run(25.0, missing=("ogc_gram",)), _fake_ok_run(26.0)]
+    job.process(ctx, e5.E5_PROCESSES[0], first=True, index=0, **kw)
+    assert ctx.calls[-2:] == [("j0_p0_a1", "cuda"), ("j0_p0_a2", "cuda")]
+    kinds = [(a["attempt"], a["kind"], bool(a.get("deadline_cut")), a["session"]) for a in pr["attempts"]]
+    assert kinds == [(0, "first", True, "S1"), (1, "first", False, "S2"), (2, "rerun", False, "S2")]
+    assert pr["settled"] and pr["outcome"] == "done" and pr["final_attempt"] == 2 and "deferred" not in pr
+    rows = job.read_rows(kw["csv_path"], "kitchen")
+    sd = e5.scene_data(rows)
+    assert sd["psnr"][(0, 0, "c3dgs")] == 26.0 and sd["psnr"][(0, 0, "ogc_plain")] == 26.0
+    assert {r["attempt"] for r in rows if r["config"].startswith("p0_")} == {"2"}
+    assert pr["attempts"][0]["kept"]["c3dgs_eval"]["c3dgs"] == {"PSNR": 21.5}  # still in the record, report only
+    json.dump(ctx.meta, open(tmp_path / "gn5_meta_kitchen.json", "w"))
+    S = job.summarize(str(tmp_path), scenes=["kitchen"])["scenes"]["kitchen"]
+    a = S["processes"]["j0_p0"]["attempts"]
+    assert [(x["deadline_cut"], x["n_measured"]) for x in a] == [(True, 2), (None, None), (None, None)]
+    assert [(c["process"], c["n_measured"]) for c in S["deadline_cuts"]] == [("j0_p0", 2), ("j-1_p0", 1)]

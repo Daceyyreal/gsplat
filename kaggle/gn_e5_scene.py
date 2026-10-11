@@ -24,12 +24,16 @@ One job, in this order:
 
 The attempt rules are ``e5.process_action`` (17 d, 17 i, Note 2 C9). A process that the deadline (17 f: no new C3DGS
 run after ``--deadline`` less ``--reserve_s``) keeps from starting is left unsettled and writes no row, so a later
-session runs it (Note 2 C6). Every row records its session and the Kaggle image its process ran on (``e5.image_key``).
+session runs it (Note 2 C6). Amendment 17 Note 4: a process whose high estimate (``e5_estimate.process_high_s``)
+exceeds the time left is deferred too, with the scene's later processes (a); a process the deadline's timeout ends is
+deadline-cut (b): deferred whole to a later session, not a failure, its measured values kept report only in its
+attempt record and out of the CSV, its large files deleted. Every row records its session and the Kaggle image its process ran on (``e5.image_key``).
 A resumed job reruns only what is not settled. No verdict here (Note 2 C5): ``summarize`` writes per-scene parts only.
 """
 
 import argparse
 import csv
+import glob
 import json
 import os
 import shlex
@@ -49,6 +53,7 @@ import e4p  # noqa: E402
 import e4p_ogc as og  # noqa: E402
 import e5  # noqa: E402
 import e5_data as ed  # noqa: E402
+import e5_estimate as est  # noqa: E402  (Note 4 a's guard)
 import e5_scenes as es  # noqa: E402
 import gn_e3p_scene as e3p  # noqa: E402
 import gn_e3r_scene as e3rjob  # noqa: E402
@@ -310,11 +315,13 @@ def fork_job(ctx) -> int:
     def c3dgs(name: str, wrapper_args: str, device: str, thr: float) -> Optional[Dict]:
         out = os.path.join(args.work_dir, name)
         extra = f"--color_codebook_size {K_DEFAULT} --color_importance_include {thr!r}"
+        timeout = max(60.0, min(args.run_timeout, args.deadline - args.reserve_s - time.time()))
         run = steps.run(f"c3dgs_{name}", lambda: c3.run_compress(
-            args.python, args.c3dgs_dir, model_dir, args.data_dir, out, 0, WRAPPER,
-            timeout=max(60.0, min(args.run_timeout, args.deadline - args.reserve_s - time.time())),
+            args.python, args.c3dgs_dir, model_dir, args.data_dir, out, 0, WRAPPER, timeout=timeout,
             data_device=device, extra_args=extra, wrapper_args=wrapper_args), device=device)
         if run is not None:
+            # Note 4 b: whether the deadline, not the run timeout, set this run's timeout
+            run.update(timeout_s=timeout, deadline_bound=timeout < args.run_timeout)
             meta["runs"][name] = {**{k: v for k, v in run.items() if k != "tail"}, "tail": run["tail"][-30:],
                                   "data_device": device, "session": args.session, "image": args.image}
             save()
@@ -360,9 +367,10 @@ def fork_job(ctx) -> int:
     if not meta.get("dropped") and ctx.have_model and ctx.have_data:
         e4pjob.note_ii(ctx, full_cache, os.path.join(args.work_dir, "no_probe.pt"))
     e4pjob.drop_runner(ctx)
+    ctx.deferred_earlier = None  # Note 4 a: once a process is deferred, the scene's later ones are too (17 d's order)
     for i, proc in enumerate(e5.E5_PROCESSES):
         process(ctx, proc, first=(i == 0), csv_path=csv_path, c3dgs=c3dgs, run_oom=run_oom,
-                start_blocker=start_blocker, full_cache=full_cache)
+                start_blocker=start_blocker, full_cache=full_cache, index=i)
     e4pjob.drop_runner(ctx)
     got = {r["config"]: r["status"] for r in read_rows(csv_path, scene)}
     wanted = [UNCOMPRESSED] + e5.wanted_configs(e5.E5_PROCESSES, impl=args.ogc_impl)
@@ -376,8 +384,106 @@ def fork_job(ctx) -> int:
     return 0
 
 
-def process(ctx, proc: Dict, first: bool, csv_path: str, c3dgs, run_oom, start_blocker, full_cache: str) -> None:
-    """One fork process with E5's attempt rules (``e5.process_action``); its rows written once it is settled."""
+def estimate_high(ctx, index: int, device: str) -> float:
+    """Note 4 a: the process's high estimate (``e5_estimate.process_high_s``; x the CPU ratio on CPU images)."""
+    if getattr(ctx, "est_units", None) is None:
+        ctx.est_units = est.units()
+    return est.process_high_s(ctx.scene, index, device, ctx.est_units)
+
+
+def take_rows(csv_path: str, pred) -> List[Dict]:
+    """Remove the results rows ``pred`` selects from the CSV (any scene's), rewriting it with E5's header; return them."""
+    if not os.path.exists(csv_path):
+        return []
+    with open(csv_path, newline="") as f:
+        rows = list(csv.DictReader(f))
+    taken = [r for r in rows if pred(r)]
+    if taken:
+        tmp = csv_path + ".tmp"
+        with open(tmp, "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=COLUMNS)
+            w.writeheader()
+            for r in rows:
+                if not pred(r):
+                    w.writerow({k: r.get(k, "") for k in COLUMNS})
+        os.replace(tmp, csv_path)
+    return taken
+
+
+def kill_leftovers(marker: str) -> List[Dict]:
+    """Note 4 b: kill any process still running whose command line names ``marker`` (the attempt's fork config)."""
+    try:
+        import psutil
+    except ImportError:
+        return [{"error": "psutil is not installed: leftovers not checked"}]
+    killed = []
+    for p in psutil.process_iter(["pid", "cmdline"]):
+        try:
+            cmd = " ".join(p.info.get("cmdline") or [])
+            if marker in cmd and p.pid != os.getpid():
+                p.kill()
+                killed.append({"pid": p.pid, "cmdline": cmd[-300:]})
+        except psutil.Error as e:
+            killed.append({"pid": p.pid, "error": str(e)})
+    return killed
+
+
+LARGE_FILES = (".npz", ".ply")
+
+
+def deadline_cut(ctx, pr: Dict, key: str, k: int, name: str, device: str, run: Dict, out: str, cfg_path: str,
+                 report_path: str, csv_path: str, j: int, seed: int, rows: List[str]) -> Dict:
+    """Note 4 b: the attempt ``k`` that the deadline's timeout ended. Nothing more is measured from it. What it had
+    already measured stays in its record, report only: each row's C3DGS evaluation from the fork's report, and any
+    results rows of this attempt, moved out of the CSV (so ``e5.scene_data`` and the verdict never see them). Its files
+    are listed (paths, bytes) and the large ones (.npz, .ply) deleted; any leftover process is killed. The process is
+    deferred (Note 2 C6): its next attempt keeps the kind, device and 17 i state it had (no rerun is used up)."""
+    meta, args = ctx.meta, ctx.args
+    rep = {}
+    if os.path.exists(report_path):
+        try:
+            rep = json.load(open(report_path))
+        except (OSError, ValueError):
+            rep = {}
+    fr = ((run.get("wrapper") or {}).get("e4p") or rep).get("fork") or {}
+    c3dgs_eval = {row: r["c3dgs_eval"] for row, r in (fr.get("rows") or {}).items() if r.get("c3dgs_eval")}
+    configs = {e5.config_name(j, seed, row) for row in rows}
+    moved = take_rows(csv_path, lambda r: r.get("config") in configs and str(r.get("attempt")) == str(k)
+                      and r.get("session") == args.session)
+    files, deleted = [], []
+    roots = [out] + sorted(glob.glob(os.path.join(args.work_dir, f"{name}_*")))
+    for root in roots:
+        paths = [root] if os.path.isfile(root) else [os.path.join(d, f) for d, _, fs in os.walk(root) for f in sorted(fs)]
+        for p in paths:
+            files.append({"path": os.path.relpath(p, args.work_dir), "bytes": os.path.getsize(p)})
+            if p.endswith(LARGE_FILES):
+                os.remove(p)
+                deleted.append(os.path.relpath(p, args.work_dir))
+    att = {"attempt": k, "name": name, "device": device, "kind": pr.get("next_kind", "first"),
+           "after_results": bool(pr.get("next_after_results", False)), "session": args.session, "image": args.image,
+           e5.DEADLINE_CUT: True, "oom": False, "results_exist": False, "primary_missing": True,
+           "timeout_s": run.get("timeout_s"), "time_s": run.get("time_s"), "phase": fr.get("phase"),
+           "kept": {"c3dgs_eval": c3dgs_eval, "rows": [{**r, e5.DEADLINE_CUT: True} for r in moved]},
+           "n_measured": len(c3dgs_eval) + len(moved), "files": files, "deleted": deleted,
+           "killed": kill_leftovers(cfg_path)}
+    pr["attempts"].append(att)
+    pr["deferred"] = {"reason": f"deadline-cut (Note 4 b): the deadline's timeout ({run.get('timeout_s'):.0f} s) ended "
+                                f"attempt {k}; it reruns whole in a later session", "session": args.session}
+    meta.setdefault("deadline_cuts", []).append({"process": key, "attempt": k, "session": args.session,
+                                                 "n_measured": att["n_measured"]})
+    ctx.deferred_earlier = getattr(ctx, "deferred_earlier", None) or key
+    ctx.save()
+    log(ctx.scene, f"process {key} attempt {k} on {device} ({args.session}): DEADLINE-CUT after "
+                   f"{run.get('time_s') or 0:.0f} s; {att['n_measured']} measured values kept report only; "
+                   f"{len(deleted)} large files deleted; deferred (Note 4 b)")
+    return att
+
+
+def process(ctx, proc: Dict, first: bool, csv_path: str, c3dgs, run_oom, start_blocker, full_cache: str,
+            index: int = 0) -> None:
+    """One fork process with E5's attempt rules (``e5.process_action``); its rows written once it is settled. Note 4:
+    the guard (a) defers a process whose high estimate exceeds the time left, and any later process of the scene; a
+    deadline-cut attempt (b) defers it whole to a later session."""
     meta, args, steps, scene, save = ctx.meta, ctx.args, ctx.steps, ctx.scene, ctx.save
     j, seed = proc["j"], proc["seed"]
     rows = e5.process_rows(proc, args.ogc_impl)
@@ -390,10 +496,19 @@ def process(ctx, proc: Dict, first: bool, csv_path: str, c3dgs, run_oom, start_b
         why, settle = start_blocker()
         if why is None and not os.path.exists(full_cache):
             why, settle = "no full-train-view 16 x 16 metric", False
+        device = pr.get("next_device") or meta["scene_device"]
+        guard = {}
+        if why is None and getattr(ctx, "deferred_earlier", None):
+            why = f"an earlier process of the scene ({ctx.deferred_earlier}) is deferred (Note 4 a; 17 d's order)"
+        if why is None:
+            high, left = estimate_high(ctx, index, device), args.deadline - args.reserve_s - time.time()
+            why = e5.deadline_guard(high, left)
+            guard = {"high_s": high, "left_s": left, "device": device} if why else {}
         if why:
             steps.skip(f"process_{key}", why)
             if not settle:  # Note 2 C6: left for a later session
-                pr["deferred"] = {"reason": why, "session": args.session}
+                pr["deferred"] = {"reason": why, "session": args.session, **guard}
+                ctx.deferred_earlier = getattr(ctx, "deferred_earlier", None) or key
                 save()
                 return
             for row in rows:
@@ -419,6 +534,9 @@ def process(ctx, proc: Dict, first: bool, csv_path: str, c3dgs, run_oom, start_b
         e4pjob.drop_runner(ctx)
         wa = f"--seed {seed} --observe --fork {shlex.quote(cfg_path)} {EVAL_FIX_ARG}"
         run = c3dgs(name, wa, device, e5.threshold(j)) or {}
+        if e5.is_deadline_cut(run):  # Note 4 b: deferred, not a failure; nothing more measured
+            deadline_cut(ctx, pr, key, k, name, device, run, out, cfg_path, report_path, csv_path, j, seed, rows)
+            return
         w = run.get("wrapper") or {}
         rep = w.get("e4p") or (json.load(open(report_path)) if os.path.exists(report_path) else {})
         fr = rep.get("fork") or {}
@@ -514,8 +632,10 @@ def summarize(out_dir: str, scenes=SCENES) -> Dict:
             "sessions": [{k: s.get(k) for k in ("session", "image", "started")} for s in meta.get("sessions", [])],
             "processes": {k: {"settled": v.get("settled"), "outcome": v.get("outcome"), "deferred": v.get("deferred"),
                               "attempts": [{x: a.get(x) for x in ("attempt", "device", "session", "image", "kind", "oom",
-                                                                   "results_exist", "primary_missing", "after_results")}
+                                                                   "results_exist", "primary_missing", "after_results",
+                                                                   e5.DEADLINE_CUT, "n_measured")}
                                            for a in v.get("attempts", [])]} for k, v in procs.items()},
+            "deadline_cuts": meta.get("deadline_cuts", []),
             "rows_ok": meta.get("rows_ok"), "missing_or_failed": meta.get("missing_or_failed"),
             "unsettled_processes": meta.get("unsettled_processes"), "deviations": meta.get("deviations"),
             "per_scene_parts": parts, "failed_steps": meta.get("failed_steps")}

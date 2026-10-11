@@ -241,7 +241,7 @@ def scene_data(rows: Sequence[Dict]) -> Dict:
     psnr, nbytes, image = {}, {}, {}
     for row in rows:
         key = names.get(row.get("config"))
-        if key is None or row.get("status") != "ok":
+        if key is None or row.get("status") != "ok" or row.get(DEADLINE_CUT):  # Note 4 b: never a cut attempt's row
             continue
         psnr[key] = float(row["PSNR_ii"])
         nbytes[key] = int(float(row["npz_bytes"])) if row.get("npz_bytes") not in (None, "") else None
@@ -405,6 +405,30 @@ def verdict(scenes: Dict[str, Dict], dropped: Optional[Dict[str, str]] = None) -
     }
 
 
+# ------------------------------------------------------------------------------ the deadline (Amendment 17 Note 4)
+DEADLINE_CUT = "deadline_cut"
+
+
+def deadline_guard(high_s: float, left_s: float) -> Optional[str]:
+    """Note 4 (a): the reason a process does not start (it is deferred, Note 2 C6), or None. ``high_s``: its high
+    estimate (``e5_estimate.process_high_s``); ``left_s``: the deadline less the reserve less now."""
+    if high_s > left_s:
+        return f"deadline guard (Note 4 a): high estimate {high_s:,.0f} s > {left_s:,.0f} s left"
+    return None
+
+
+def is_deadline_cut(run: Optional[Dict]) -> bool:
+    """Note 4 (b): a C3DGS run ended by the timeout the deadline set (``deadline_bound``: that timeout was shorter than
+    the job's run timeout). A run ended by the run timeout itself is not deadline-cut (17 i)."""
+    run = run or {}
+    return run.get("returncode") == "timeout" and bool(run.get("deadline_bound"))
+
+
+def counted_attempts(attempts: List[Dict]) -> List[Dict]:
+    """Note 4 (b): the attempts the attempt rules see; a deadline-cut attempt is not one (C6 against 17 i)."""
+    return [a for a in attempts if not a.get(DEADLINE_CUT)]
+
+
 # ------------------------------------------------------------------------------ E5's attempt rules (17 d, 17 i; Note 2 C9)
 def process_action(attempts: List[Dict], first_process: bool, scene_results_before: bool) -> Dict:
     """What a process does after its latest attempt. Each attempt: ``device`` ("cuda" / "cpu"), ``oom``,
@@ -418,7 +442,13 @@ def process_action(attempts: List[Dict], first_process: bool, scene_results_befo
       with results, one rerun on the CPU with the same seed (C9: a scene already on the CPU has no other fallback);
     - any other failure that loses a primary row: with results, one whole rerun with the same seed (17 i, 15 d); before
       any result, the scene stops and may be rerun only after a dated bug-fix note (17 i), never dropped;
-    - otherwise done (a row still missing after the rerun makes E5 incomplete, 17 d)."""
+    - otherwise done (a row still missing after the rerun makes E5 incomplete, 17 d).
+
+    Deadline-cut attempts (Note 4 b) are left out first (``counted_attempts``): they use up no rerun, count no CPU
+    history and no results; with only cut attempts the process stays deferred."""
+    attempts = counted_attempts(attempts)
+    if not attempts:
+        return {"action": "deferred", "reason": "only deadline-cut attempts (Note 4 b)"}
     last = attempts[-1]
     results = scene_results_before or any(a.get("results_exist") for a in attempts)
     reruns = sum(1 for a in attempts[1:] if a.get("after_results"))
