@@ -1,4 +1,4 @@
-"""CPU dry run of E5 (kaggle/PREREG_GN.md Amendment 17 d-j; Amendment 18; Amendment 17 Notes 1 and 2): the session
+"""CPU dry run of E5 (kaggle/PREREG_GN.md Amendment 17 d-j; Amendment 18; Amendment 17 Notes 1, 2 and 4): the session
 notebooks' cells, kaggle/gn_e5_scene.py on all seven gate scenes as stand-ins, and bench/gn/e5_verdict.py over the
 sessions' bundles. No gate-scene data is read and no ``db/`` member is fetched: every scene is the E5p dry run's toy
 model under the gate scene's name, from a local archive whose pins replace note i's; Deep Blending's two scenes come
@@ -13,16 +13,20 @@ small deterministic offset is added to every row's protocol ii PSNR in the seed-
 is nonzero (the dry run's, not the method's).
 
 Stages:
-(0) the two session notebooks (S1, S2): titles, attachments, cells in order; ``run_lanes`` with two lanes (one GPU
-    each) and sequentially (Note 2 C11), on trivial commands;
-(1) session S1, lanes [bonsai, counter, playroom] and [kitchen, room]: the preflight, the restore (nothing), the
-    build, the lanes; room's j = -1 process runs out of GPU memory after the scene's results exist, so its CPU retry is
-    17 i's one rerun (Note 2 C9); playroom's j = +1 process is kept from starting by the deadline (left unsettled, no
-    row: Note 2 C6); the summary (per-scene parts, no verdict) and E5_bundle_S1.zip;
-(2) session S2 on another Kaggle image, lanes [truck, drjohnson] and [playroom]: the restore takes S1's output scene by
-    scene; drjohnson on the CPU (Note 1); Deep Blending through E5's download path and the stand-in parser; playroom
-    resumes with only its deferred process; E5_bundle_S2.zip;
-(3) the combined verdict over the two bundles (bench/gn/e5_verdict.py);
+(0) the three session notebooks (S1, S2, S3; Note 4): titles, attachments, cells in order; ``run_lanes`` with two
+    lanes (one GPU each) and sequentially (Note 2 C11), on trivial commands;
+(1) session S1, Note 4's lanes [kitchen, room] and [counter] (read from kaggle/e5_sessions.json): the preflight, the
+    restore (nothing), the build, the lanes; room's j = -1 process runs out of GPU memory after the scene's results
+    exist, so its CPU retry is 17 i's one rerun (Note 2 C9); room's j = +1 process is deferred by the guard (Note 4 a:
+    its high estimate set above the time left); kitchen's j = +1 process is deadline-cut (Note 4 b: its C3DGS run ended
+    by the deadline's timeout): its measured values kept report only, its large files deleted, deferred; the summary
+    and E5_bundle_S1.zip;
+(2) session S2 on another Kaggle image, lane [drjohnson, truck], then kitchen and room carried over from S1 (Note 4):
+    the restore takes S1's output scene by scene; drjohnson on the CPU (Note 1); Deep Blending through E5's download
+    path and the stand-in parser; kitchen reruns its cut process whole (no 17 i rerun used) and room runs its deferred
+    one on the CPU; E5_bundle_S2.zip;
+(3) session S3 on a third image, lane [bonsai, playroom], restoring S1's and S2's outputs; nothing carried;
+    E5_bundle_S3.zip; then the combined verdict over the three bundles (bench/gn/e5_verdict.py);
 (4) failure stages on single scenes: sh_degree 2 and a loaded size not covered (dropped before starting);
     drjohnson out of memory on the CPU in its first process before any result (dropped) and after results (one rerun
     on the CPU, then its rows missing); a non-OOM failure before any result (the scene stops, 17 i) and after results
@@ -251,7 +255,7 @@ for s in SCENES:
     place_data(s)
 
 # git, pip and C3DGS as E5p's dry run answers them; OGC's clone is real; failures by FAIL
-FAIL = {"oom": [], "marker": []}  # oom: (scene, process attempt, device); marker: (scene, process attempt)
+FAIL = {"oom": [], "marker": [], "timeout": []}  # oom: (scene, attempt, device); marker, timeout: (scene, attempt)
 CALLS = []
 
 
@@ -296,6 +300,10 @@ def fake_run_command(cmd, cwd=None, env=None, timeout=None):
                 e["E3R_FAKE_OOM"] = dev
         p = subprocess.run(real, cwd=cwd, capture_output=True, text=True, env=e)
         text, code = p.stdout + p.stderr, p.returncode
+        for scene, key in FAIL["timeout"]:  # Note 4 b: the run went on until the deadline's timeout ended it
+            if "e3q_c3dgs_run.py" in cmd and key in cmd and in_scene(scene, cmd):
+                assert timeout is not None and timeout < 4 * 3600, timeout
+                code, text = "timeout", text + "TimeoutExpired (dry run)\n"
     return {"cmd": cmd, "cwd": cwd, "returncode": code, "time_s": 0.01, "tail": text.splitlines()[-60:],
             "output_lines": len(text.splitlines()), "_text": text}
 
@@ -321,7 +329,9 @@ e4pjob.measure_npz = noisy_measure
 ENV = {"S1": dict(python="3.13.15", torch="2.11.0+cu128", torch_cuda="12.8", cudnn=91900,
                   nvidia_smi="Tesla T4, 580.178.04, 15360 MiB"),
        "S2": dict(python="3.13.16", torch="2.11.1+cu128", torch_cuda="12.8", cudnn=91900,
-                  nvidia_smi="Tesla T4, 580.178.04, 15360 MiB")}
+                  nvidia_smi="Tesla T4, 580.178.04, 15360 MiB"),
+       "S3": dict(python="3.13.16", torch="2.11.1+cu128", torch_cuda="12.8", cudnn=91900,
+                  nvidia_smi="Tesla T4, 580.182.01, 15360 MiB")}
 
 
 def argv(work, scene, session, **over):
@@ -357,7 +367,7 @@ def n_wrapper_calls():
 t_start = time.time()
 
 # (0) the notebooks
-nbs = {s: json.load(open(os.path.join(REPO, "kaggle", f"gn_e5_bench_{s}.ipynb"))) for s in ("S1", "S2")}
+nbs = {s: json.load(open(os.path.join(REPO, "kaggle", f"gn_e5_bench_{s}.ipynb"))) for s in ("S1", "S2", "S3")}
 srcs = {}
 for s, nb in nbs.items():
     md0 = nb["cells"][0]["source"]
@@ -393,30 +403,30 @@ os.remove(probe)
 lns["run_lanes"]([[pjob("a1")], [pjob("b1")]], poll_s=0.05, sequential=True)
 assert sorted(open(probe).read().split("\n")[:-1]) == ["a1 0", "b1 0"]
 assert lns["JOB_EXITS"] == {"a1": 0, "a2": 0, "b1": 0}
-print("(0) E5's two session notebooks: titles, attachments, 8 code cells in order, no verdict; run_lanes: two lanes on "
+print("(0) E5's three session notebooks: titles, attachments, 8 code cells in order, no verdict; run_lanes: two lanes on "
       "GPUs 0 and 1 in order, and one scene at a time on GPU 0 (Note 2 C11): ok")
 
-# (1)-(2) the sessions
-ASSIGN = {"sessions": {"S1": {"lanes": [["bonsai", "counter", "playroom"], ["kitchen", "room"]]},
-                       "S2": {"lanes": [["truck", "drjohnson"], ["playroom"]]}}}
-ASSIGN_PATH = os.path.join(ROOT, "e5_sessions.json")
-json.dump(ASSIGN, open(ASSIGN_PATH, "w"))
+# (1)-(3) the sessions: Note 4's assignment, as committed
+ASSIGN_PATH = os.path.join(REPO, "kaggle", "e5_sessions.json")
+ASSIGN = json.load(open(ASSIGN_PATH))
+assert ASSIGN["sessions"] == {"S1": {"lanes": [["kitchen", "room"], ["counter"]]}, "S2": {"lanes": [["drjohnson", "truck"]]},
+                              "S3": {"lanes": [["bonsai", "playroom"]]}}, ASSIGN
 GN_E5 = os.path.join(ROOT, "gn_e5")
-_process = job.process
-DEFER = set()  # (session, scene, process key): kept from starting as the deadline would
+GUARD = set()  # (session, scene, process index): its high estimate set above any time left (Note 4 a)
+DEADLINE = {}  # (session, scene): --deadline, so that the deadline (not the 4 h run timeout) sets the C3DGS timeout
+_estimate_high = job.estimate_high
 
 
-def deferring_process(ctx, proc, first, csv_path, c3dgs, run_oom, start_blocker, full_cache):
-    key = e5.process_key(proc["j"], proc["seed"])
-    if (ctx.args.session, ctx.scene, key) in DEFER:
-        start_blocker = lambda: ("deadline: no new C3DGS run starts this late (17 f, Amendment 14 d)", False)  # noqa: E731
-    return _process(ctx, proc, first, csv_path, c3dgs, run_oom, start_blocker, full_cache)
+def guarded_estimate(ctx, index, device):
+    if (ctx.args.session, ctx.scene, index) in GUARD:
+        return 1e12
+    return _estimate_high(ctx, index, device)
 
 
-job.process = deferring_process
+job.estimate_high = guarded_estimate
 
 
-def session(name, input_root):
+def session(name, input_root, lanes_expected):
     base = os.path.join(ROOT, name)
     work = os.path.join(base, "working")
     e3pjob.environment = lambda: dict(ENV[name])
@@ -440,11 +450,12 @@ def session(name, input_root):
               write_bundle=lambda *a, **k: [], write_log_tails=lambda jobs, out: [])
     exec(srcs[name][idx["lanes"]], ns)
     lanes = captured["lanes"]
-    assert [[j[0] for j in lane] for lane in lanes] == [[f"gn_e5_{s}" for s in lane] for lane in ASSIGN["sessions"][name]["lanes"]]
+    assert [[j[0] for j in lane] for lane in lanes] == [[f"gn_e5_{s}" for s in lane] for lane in lanes_expected], lanes
     assert all(f"--session {name}" in j[1] for lane in lanes for j in lane)
-    for lane in ASSIGN["sessions"][name]["lanes"]:
+    for lane in lanes_expected:
         for scene in lane:
-            assert job.main(argv(work, scene, name)) == 0
+            over = {"--deadline": f"{DEADLINE[(name, scene)]:.0f}"} if (name, scene) in DEADLINE else {}
+            assert job.main(argv(work, scene, name, **over)) == 0
     ns.update(JOB_FAILED=[], JOB_SKIPPED=[], JOB_EXITS={})
     exec(srcs[name][idx["summary"]], ns)
     ns.update(write_bundle=real_wb, write_log_tails=real_wl)
@@ -458,78 +469,123 @@ def session(name, input_root):
     assert os.path.basename(bundle) == f"E5_bundle_{name}.zip"
     names = zipfile.ZipFile(bundle).namelist()
     assert all(n.startswith("gn5/") for n in names) and not any(n.endswith((".npz", ".ply", ".pt", ".py")) for n in names)
-    ogc_files = set(os.listdir(os.path.join(base, "tmp", "ogc_bonsai"))) if os.path.isdir(
-        os.path.join(base, "tmp", "ogc_bonsai")) else set()
-    assert not any(os.path.basename(n) in ogc_files for n in names)
+    for sc in sum(lanes_expected, []):
+        d = os.path.join(base, "tmp", f"ogc_{sc}")
+        ogc_files = set(os.listdir(d)) if os.path.isdir(d) else set()
+        assert not any(os.path.basename(n) in ogc_files for n in names)
     with zipfile.ZipFile(bundle) as z:
         z.extractall(os.path.join(GN_E5, name))
     return work, ns, names
 
 
-# (1) session S1
+def attempts_of(m, key):
+    return [(a["device"], a["session"], a["kind"], bool(a.get("deadline_cut"))) for a in m["processes"][key]["attempts"]]
+
+
+# (1) session S1: room's OOM after results; room's j = +1 deferred by the guard; kitchen's j = +1 deadline-cut
 FAIL["oom"] = [("room", "j-1_p0_a0", "cuda")]
-DEFER.add(("S1", "playroom", "j+1_p0"))
-W1, NS1, B1 = session("S1", os.path.join(ROOT, "S1_input_empty"))
-FAIL["oom"] = []
-for s in ("bonsai", "counter", "kitchen", "room"):
-    m = meta_of(W1, s)
-    assert m["done"] and not m["unsettled_processes"] and m["scene_device"] in ("cuda", "cpu"), (s, m["missing_or_failed"])
-for c, r in rows_of(W1, "bonsai").items():  # report only: every decoded row carries its npz2ply call's record
+FAIL["timeout"] = [("kitchen", "j+1_p0_a0")]
+GUARD.add(("S1", "room", 3))
+DEADLINE[("S1", "kitchen")] = time.time() + 3 * 3600  # the deadline sets the timeout (3 h < 4 h); the guard passes
+W1, NS1, B1 = session("S1", os.path.join(ROOT, "S1_input_empty"), ASSIGN["sessions"]["S1"]["lanes"])
+FAIL["oom"], FAIL["timeout"] = [], []
+cm = meta_of(W1, "counter")
+assert cm["done"] and not cm["unsettled_processes"], cm["missing_or_failed"]
+for c, r in rows_of(W1, "counter").items():  # report only: every decoded row carries its npz2ply call's record
     if c != "uncompressed":
         lg = json.loads(r["npz2ply_log"])
         assert lg["returncode"] == 0 and lg["ply_written"] and lg["rss_peak_bytes"] and lg["step_time_s"] is not None, (c, lg)
 room = meta_of(W1, "room")
+assert attempts_of(room, "j-1_p0") == [("cuda", "S1", "first", False), ("cpu", "S1", "rerun", False)]
 ra = room["processes"]["j-1_p0"]["attempts"]
-assert [(a["device"], a["kind"], a["after_results"]) for a in ra] == [("cuda", "first", False), ("cpu", "rerun", True)], ra
-assert ra[0]["oom"] and ra[0]["next"]["action"] == "retry_cpu" and room["scene_device"] == "cpu"
-assert room["processes"]["j+1_p0"]["attempts"][0]["device"] == "cpu"  # the scene's later runs start on the CPU
-pm = meta_of(W1, "playroom")
-assert pm["unsettled_processes"] == ["j+1_p0"] and "deadline" in pm["processes"]["j+1_p0"]["deferred"]["reason"]
-assert all(len(p["attempts"]) == 1 for k, p in pm["processes"].items() if k != "j+1_p0") and pm["scene_device"] == "cuda"
-assert not any(c.startswith("j+1_p0") for c in rows_of(W1, "playroom"))
-print(f"(1) session S1 ({ENV['S1']['torch']}): bonsai, counter, kitchen, room done; room's j = -1 process out of GPU "
-      f"memory after the scene's results -> its CPU retry is 17 i's one rerun (C9), its later process on the CPU; "
-      f"playroom's j = +1 process deferred by the deadline, no row; E5_bundle_S1.zip ({len(B1)} files): ok")
+assert ra[0]["oom"] and ra[0]["next"]["action"] == "retry_cpu" and ra[1]["after_results"] and room["scene_device"] == "cpu"
+rg = room["processes"]["j+1_p0"]
+assert room["unsettled_processes"] == ["j+1_p0"] and rg["attempts"] == [], room["unsettled_processes"]
+assert "deadline guard (Note 4 a)" in rg["deferred"]["reason"]
+assert rg["deferred"]["device"] == "cpu" and rg["deferred"]["high_s"] == 1e12
+assert not any(c.startswith("j+1_p0") for c in rows_of(W1, "room"))
+km = meta_of(W1, "kitchen")
+kc = km["processes"]["j+1_p0"]
+assert km["unsettled_processes"] == ["j+1_p0"] and attempts_of(km, "j+1_p0") == [("cuda", "S1", "first", True)]
+cut = kc["attempts"][0]
+assert "deadline-cut (Note 4 b)" in kc["deferred"]["reason"] and not km.get("stopped_17i") and not km.get("dropped")
+assert cut["deleted"] and all(p.endswith((".npz", ".ply")) for p in cut["deleted"]) and cut["files"]
+assert not any(os.path.exists(os.path.join(W1, "gn5_work", "kitchen", p)) for p in cut["deleted"])
+assert cut["n_measured"] == len(cut["kept"]["c3dgs_eval"]) + len(cut["kept"]["rows"]) and cut["kept"]["rows"] == []
+assert not any(c.startswith("j+1_p0") for c in rows_of(W1, "kitchen"))
+assert km["deadline_cuts"] == [{"process": "j+1_p0", "attempt": 0, "session": "S1", "n_measured": cut["n_measured"]}]
+S1sum = json.load(open(os.path.join(W1, "gn5", "gn5_summary_S1.json")))["scenes"]
+assert S1sum["kitchen"]["processes"]["j+1_p0"]["attempts"][0]["deadline_cut"] is True
+assert S1sum["kitchen"]["processes"]["j+1_p0"]["attempts"][0]["n_measured"] == cut["n_measured"]
+print(f"(1) session S1 ({ENV['S1']['torch']}), lanes [kitchen, room] | [counter]: counter done; room's j = -1 process out "
+      f"of GPU memory after the scene's results -> its CPU retry is 17 i's one rerun (C9); room's j = +1 process "
+      f"deferred by the guard (Note 4 a), not started; kitchen's j = +1 process deadline-cut (Note 4 b): "
+      f"{cut['n_measured']} C3DGS evaluations kept report only, {len(cut['deleted'])} large files deleted, deferred, the "
+      f"scene neither stopped nor dropped; E5_bundle_S1.zip ({len(B1)} files): ok")
 
-# (2) session S2, another image, restoring S1's output
+# (2) session S2, another image, restoring S1's output: kitchen and room carried over after its own lane
 S2_IN = os.path.join(ROOT, "S2_input")
 shutil.copytree(W1, os.path.join(S2_IN, "e5-ogc-replication-gate-s1"),
                 ignore=shutil.ignore_patterns("c3dgs", "cache", "wheels"))
-W2, NS2, B2 = session("S2", S2_IN)
-assert NS2["RESTORED"] == ["bonsai", "counter", "kitchen", "playroom", "room"], NS2["RESTORED"]
-for s in ("truck", "drjohnson", "playroom"):
+W2, NS2, B2 = session("S2", S2_IN, [["drjohnson", "truck", "kitchen", "room"]])
+assert NS2["RESTORED"] == ["counter", "kitchen", "room"] and NS2["CARRIED"] == ["kitchen", "room"], NS2["RESTORED"]
+for s in ("drjohnson", "truck", "kitchen", "room"):
     m = meta_of(W2, s)
     assert m["done"] and not m["unsettled_processes"], (s, m["missing_or_failed"], m["unsettled_processes"])
 dj = meta_of(W2, "drjohnson")
 assert dj["start_device"] == "cpu" and all(a["device"] == "cpu" for p in dj["processes"].values() for a in p["attempts"])
-assert DB_PARSED.count("drjohnson") >= 1 and DB_PARSED.count("playroom") >= 1 and DB_OPENED.count(ed.TANDT_ZIP) == 2
-pm2 = meta_of(W2, "playroom")
-imgs = {k: (p["attempts"][-1]["session"], p["attempts"][-1]["image"]) for k, p in pm2["processes"].items()}
-assert imgs["j+1_p0"][0] == "S2" and all(v[0] == "S1" for k, v in imgs.items() if k != "j+1_p0"), imgs
-assert imgs["j+1_p0"][1] != imgs["j0_p0"][1]
-assert [h["replaced_in_session"] for h in pm2["gn_history"]] == ["S2"] and pm2["gn"]["full"]["source"] == "computed"
-print(f"(2) session S2 ({ENV['S2']['torch']}): S1's output restored scene by scene; truck; drjohnson on the CPU and "
-      f"playroom from the stand-in db/ zip through E5's download path and the stand-in parser; playroom resumes with only "
-      f"its deferred j = +1 process, on another image; E5_bundle_S2.zip ({len(B2)} files): ok")
+assert DB_PARSED.count("drjohnson") >= 1 and DB_OPENED.count(ed.TANDT_ZIP) == 1
+km2, rm2 = meta_of(W2, "kitchen"), meta_of(W2, "room")
+assert attempts_of(km2, "j+1_p0") == [("cuda", "S1", "first", True), ("cuda", "S2", "first", False)]
+assert km2["processes"]["j+1_p0"]["final_attempt"] == 1 and km2["processes"]["j+1_p0"]["outcome"] == "done"
+assert km2["processes"]["j+1_p0"]["attempts"][0]["kept"] == cut["kept"]  # still in the record, report only
+assert attempts_of(rm2, "j+1_p0") == [("cpu", "S2", "first", False)]
+assert all(rows_of(W2, s)[e5.config_name(1, 0, r)]["session"] == "S2" for s in ("kitchen", "room") for r in e5.PRIMARY_ROWS)
+assert all(rows_of(W2, "kitchen")[e5.config_name(1, 0, r)]["attempt"] == "1" for r in e5.PRIMARY_ROWS)
+for s in ("kitchen", "room"):
+    assert [h["replaced_in_session"] for h in meta_of(W2, s)["gn_history"]] == ["S2"]
+print(f"(2) session S2 ({ENV['S2']['torch']}), lane [drjohnson, truck] + carried [kitchen, room]: S1's output restored "
+      f"scene by scene; drjohnson on the CPU and from the stand-in db/ zip; kitchen's cut process rerun whole (attempt 1, "
+      f"kind first: no 17 i rerun used), room's deferred process on the CPU; E5_bundle_S2.zip ({len(B2)} files): ok")
 
-# (3) the combined verdict
+# (3) session S3, a third image, restoring S1's and S2's outputs; nothing carried
+S3_IN = os.path.join(ROOT, "S3_input")
+for nm, w in (("s1", W1), ("s2", W2)):
+    shutil.copytree(w, os.path.join(S3_IN, f"e5-ogc-replication-gate-{nm}"),
+                    ignore=shutil.ignore_patterns("c3dgs", "cache", "wheels"))
+W3, NS3, B3 = session("S3", S3_IN, ASSIGN["sessions"]["S3"]["lanes"])
+assert NS3["CARRIED"] == [] and NS3["RESTORED"] == ["counter", "drjohnson", "kitchen", "room", "truck"], NS3["RESTORED"]
+for s in ("bonsai", "playroom"):
+    m = meta_of(W3, s)
+    assert m["done"] and not m["unsettled_processes"], (s, m["missing_or_failed"])
+assert DB_PARSED.count("playroom") >= 1 and DB_OPENED.count(ed.TANDT_ZIP) == 2
+print(f"(3) session S3 (driver {ENV['S3']['nvidia_smi'].split(', ')[1]}), lane [bonsai, playroom]: S1's and S2's "
+      f"outputs restored, nothing carried; E5_bundle_S3.zip ({len(B3)} files): ok")
+
+# (3b) the combined verdict over the three bundles
 V = ev.verdict(GN_E5)
 assert V["n"] == 7 and not V["dropped"] and not V["missing_primary_rows"] and V["outcome"] in ("pass", "fail"), (
     V["outcome"], V["incomplete_reasons"])
-assert V["primaries"]["P1"]["per_scene"]["playroom"]["spans_images"]["curves"] is True
+for s in ("kitchen", "room"):
+    assert V["primaries"]["P1"]["per_scene"][s]["spans_images"]["curves"] is True, s
+    assert V["where"][s]["sessions"] == ["S1", "S2"], V["where"][s]
+assert V["primaries"]["P1"]["per_scene"]["counter"]["spans_images"]["curves"] is False
 for name in ("ogc_scalar_vs_ogc_plain", "ogc_plain_vs_c3dgs"):
     assert V["secondaries"][name]["noise"]["SE_noise"] > 0, name
-assert V["where"]["room"]["sessions"] == ["S1"] and V["where"]["playroom"]["sessions"] == ["S1", "S2"]
+assert V["where"]["bonsai"]["sessions"] == ["S3"] and V["where"]["drjohnson"]["sessions"] == ["S2"]
 json.dump(V, open(os.path.join(ROOT, "gn5_verdict.json"), "w"), indent=1, default=str)
-SUMMARY = {"sessions": {}, "verdict": None}
-for name, work in (("S1", W1), ("S2", W2)):
-    for scene in sum(ASSIGN["sessions"][name]["lanes"], []):
+SUMMARY = {"scenes": {}, "verdict": None}
+for name, work, ran in (("S1", W1, ASSIGN["sessions"]["S1"]["lanes"]), ("S2", W2, [["drjohnson", "truck", "kitchen", "room"]]),
+                        ("S3", W3, ASSIGN["sessions"]["S3"]["lanes"])):
+    for scene in sum(ran, []):
         m = meta_of(work, scene)
         rr = rows_of(work, scene)
-        SUMMARY["sessions"].setdefault(scene, []).append({
+        SUMMARY["scenes"].setdefault(scene, []).append({
             "session": name, "start_device": m["start_device"], "scene_device": m["scene_device"],
-            "processes": {k: [(a["device"], a["session"], e5.image_key(ENV[a["session"]])[:22], a["kind"])
+            "processes": {k: [[a["device"], a["session"], a["kind"]] + (["deadline_cut", a["n_measured"]]
+                                                                        if a.get("deadline_cut") else [])
                               for a in p["attempts"]] for k, p in m["processes"].items()},
+            "deferred": {k: p["deferred"]["reason"] for k, p in m["processes"].items() if p.get("deferred")},
             "rows_ok": sum(1 for r in rr.values() if r["status"] == "ok"), "rows": len(rr),
             "dropped": m.get("dropped"), "deviations": m.get("deviations")})
 SUMMARY["verdict"] = {"outcome": V["outcome"], "n": V["n"],
@@ -537,8 +593,8 @@ SUMMARY["verdict"] = {"outcome": V["outcome"], "n": V["n"],
                                                                           "SE_noise", "pass", "P_missing_reason")}
                          for k in ("P1", "P2")}}
 json.dump(SUMMARY, open(os.path.join(ROOT, "dryrun_summary.json"), "w"), indent=1, default=str)
-print(f"(3) the combined verdict over E5_bundle_S1 and E5_bundle_S2: {V['outcome'].upper()}, n = {V['n']}; every primary "
-      "row present; playroom's curves span two images; the secondaries' SE_noise nonzero: ok")
+print(f"(3b) the combined verdict over E5_bundle_S1, _S2 and _S3: {V['outcome'].upper()}, n = {V['n']}; every primary "
+      "row present; kitchen's and room's curves span two images; the secondaries' SE_noise nonzero: ok")
 
 
 # (4) failure stages, one scene each, in fresh outputs

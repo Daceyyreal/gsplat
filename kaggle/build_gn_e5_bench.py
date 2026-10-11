@@ -3,16 +3,17 @@ are build output; edit this file.
 
     python kaggle/build_gn_e5_bench.py
 
-writes ``kaggle/gn_e5_bench_S1.ipynb`` and ``kaggle/gn_e5_bench_S2.ipynb`` (Amendment 17 g plans two sessions; Note 3,
-the session assignment, may change how many: then add the session to ``SESSIONS`` and rebuild). Each notebook names its
+writes ``kaggle/gn_e5_bench_S1.ipynb``, ``kaggle/gn_e5_bench_S2.ipynb`` and ``kaggle/gn_e5_bench_S3.ipynb`` (Amendment
+17 Note 4, the session assignment: three sessions; an S4 for carried-over scenes only if S3 leaves one: then add it to
+``SESSIONS`` and rebuild). Each notebook names its
 session; its lanes (which scenes run on which GPU, in order) are read at run time from ``kaggle/e5_sessions.json``,
-which Note 3 commits. E0's-E5p's notebooks are left exactly as they ran.
+which Note 4 commits. E0's-E5p's notebooks are left exactly as they ran.
 """
 
 import json
 import os
 
-SESSIONS = ("S1", "S2")
+SESSIONS = ("S1", "S2", "S3")
 
 
 def cells_for(session: str):
@@ -33,8 +34,10 @@ Kaggle notebook title: **E5 OGC replication gate {session}** (`bench/gn-vq`, `ka
 Amendment 17 Note 2 C8: one notebook per session).
 
 `kaggle/PREREG_GN.md` **Amendment 17** d-j fixes this gate, with **Amendment 18** (OGC's source chain, `ogc_gram_ours`)
-and Amendment 17's **Note 1** (the seven scenes' feasibility), **Note 2** (clarifications for E5's build) and **Note 3**
-(the session assignment, `kaggle/e5_sessions.json`). This session runs the scenes Note 3 assigns to **{session}**, each
+and Amendment 17's **Note 1** (the seven scenes' feasibility), **Note 2** (clarifications for E5's build), **Note 3**
+(Note 1's host memory, corrected) and **Note 4** (the session assignment, `kaggle/e5_sessions.json`, and the deadline's
+guard and deadline-cut). This session runs the scenes Note 4 assigns to **{session}**, then any scene an earlier session
+carried over (one-lane sessions only), each
 with `kaggle/gn_e5_scene.py`: INRIA's 30k checkpoint through note i's pins; `cfg_args` checked (dropped only if
 `sh_degree` is not 3) and the loaded size against Note 1 (dropped if not covered); the four processes (j = 0 seeds 0
 and 1, j = -1 and +1 seed 0) on the scene's start device (drjohnson on the CPU), with `c3dgs`, `ogc_plain`,
@@ -53,7 +56,7 @@ its paths or hashes, or holding a commit's author or committer line.
 |---|---|
 | **"E5p OGC dissection pilot"**, attempt 2's version (pinned) | `wheels/` only: the gsplat wheel for torch 2.11.0+cu128, built if the image's key changed |
 | **"E5p OGC source 49ccae72"** (private dataset) | OGC's code if the URL fails |
-| any earlier E5 session's output (same attempt) | its `gn5/`, `gn5_work/` and `e5_inria/` per scene, to continue a scene's deferred processes (Note 2 C6) |
+| every earlier E5 session's output (same attempt): S2 attaches S1's; S3 attaches S1's and S2's | its `gn5/`, `gn5_work/` and `e5_inria/` per scene, to continue a scene's deferred or deadline-cut processes (Note 2 C6; Note 4) |
 
 | Step | What |
 |---|---|
@@ -62,7 +65,7 @@ its paths or hashes, or holding a commit's author or committer line.
 | 2 | restore: every `wheels/`; earlier E5 outputs of this attempt, scene by scene |
 | 3 | install gsplat and the example dependencies; `gn5_env.json` |
 | 4 | build C3DGS once |
-| 5 | the lanes: Note 3's scenes for this session, one GPU per lane (one scene at a time if the session has less RAM than Note 1's 33.66 GB, Note 2 C11) |
+| 5 | the lanes: Note 4's scenes for this session, one GPU per lane, then the carried-over scenes after a one-lane session's own (one scene at a time if the session has less RAM than Note 1's 33.66 GB, Note 2 C11) |
 | 6 | `gn5_summary.json`: per-scene parts, no verdict |
 | 7 | `E5_bundle_{session}.zip` (`_a<k>` for a 17 i rerun), arcname `gn5/`; raises last if a job crashed |
 """
@@ -97,7 +100,7 @@ GN_CACHE = "/tmp/gn5_cache"  # the 16 x 16 GN metric and the orbit reference ren
 INRIA_DIR = f"{WORK}/e5_inria"  # the fetched INRIA members, per scene (not bundled)
 C3DGS_DIR = "/tmp/c3dgs"
 OGC_ROOT = "/tmp"  # OGC's copies and their file lists: never bundled
-ASSIGNMENT = f"{SRC_DIR}/kaggle/e5_sessions.json"  # Amendment 17 Note 3
+ASSIGNMENT = f"{SRC_DIR}/kaggle/e5_sessions.json"  # Amendment 17 Note 4
 ATTEMPT_FILE = f"{GN5_OUT}/gn5_attempt.json"
 PREFLIGHT_FILE = f"{GN5_OUT}/gn5_ogc_preflight.json"
 BUNDLE = f"{WORK}/E5_bundle_{SESSION}" + (f"_a{ATTEMPT}" if ATTEMPT > 1 else "") + ".zip"
@@ -438,17 +441,43 @@ record_timing("c3dgs_build_s", time.time() - t0)
 
     code(
         r"""
-# Step 5: the lanes (Amendment 17 Note 3's assignment for this session; Note 2 C11 for the RAM)
+# Step 5: the lanes (Amendment 17 Note 4's assignment for this session, then its carry-over; Note 2 C11 for the RAM)
 DEADLINE = NOTEBOOK_T0 + DEADLINE_S
 sys.path.insert(0, f"{SRC_DIR}/kaggle")
+sys.path.insert(0, f"{SRC_DIR}/bench/gn")
 import e5_scenes as es
 
 if not os.path.exists(ASSIGNMENT):
-    raise RuntimeError(f"no {ASSIGNMENT}: Amendment 17 Note 3 (the session assignment) is committed before any E5 run")
+    raise RuntimeError(f"no {ASSIGNMENT}: Amendment 17 Note 4 (the session assignment) is committed before any E5 run")
 LANES = json.load(open(ASSIGNMENT))["sessions"][SESSION]["lanes"]
 bad = [s for lane in LANES for s in lane if s not in es.SCENES]
 if bad:
     raise RuntimeError(f"{bad} are not E5 gate scenes")
+
+
+def carried_scenes(out_dir, lanes):
+    # Note 4: restored scenes, not in this session's lanes, neither dropped nor stopped, with a process not settled
+    import e5
+
+    keys = [e5.process_key(p["j"], p["seed"]) for p in e5.E5_PROCESSES]
+    out = []
+    for scene in es.SCENES:
+        mp = f"{out_dir}/gn5_meta_{scene}.json"
+        if any(scene in lane for lane in lanes) or not os.path.exists(mp):
+            continue
+        m = json.load(open(mp))
+        procs = m.get("processes") or {}
+        if not m.get("dropped") and not m.get("stopped_17i") and not all((procs.get(k) or {}).get("settled") for k in keys):
+            out.append(scene)
+    return out
+
+
+CARRIED = carried_scenes(GN5_OUT, LANES)
+if CARRIED and len(LANES) == 1:
+    LANES = [LANES[0] + CARRIED]
+    print(f"carried over from an earlier session, after this session's lane (Note 4): {CARRIED}", flush=True)
+elif CARRIED:
+    print(f"NOT RUN HERE: {CARRIED} carried over, but a two-lane session runs no carried scene (Note 4)", flush=True)
 try:
     import psutil
 
