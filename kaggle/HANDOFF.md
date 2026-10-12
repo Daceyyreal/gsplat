@@ -3886,6 +3886,17 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 
 - **S1 done:** `E5_bundle_S1.zip` (SHA-1 `e27f1101b87ef4a2114f6a69085f247d77c5cc90`) committed unchanged, data only, in
   `kaggle/gn_e5/S1/gn5/` (`9a90dabb`). **No verdict yet** (Note 2 C5: only over all sessions' bundles).
+- **S1 ran one scene at a time on GPU 0, not two lanes.** The session's RAM (33,658,310,656 bytes) was 8,192 bytes below
+  Note 1's 33,658,318,848, so Note 2 C11 applied as written. Scenes ran in sequence: kitchen 7,965 s, room 7,470 s,
+  counter 6,735 s; 22,170 s in all, within 39,180 s. Each scene came in under the low end of Note 4's estimate. No
+  result is affected. S2 and S3 have one lane each and are unaffected.
+- **Host memory:** the C3DGS step's peak host RSS (job plus C3DGS) was 9.17 / 12.30 / 10.31 GB (counter / kitchen /
+  room), against Note 3's 9.20 / 12.10 / 10.87. kitchen exceeded its prediction by 0.20 GB (1.7%); nothing ran
+  alongside it. For FINDINGS; no rule changes.
+- **`gn5_attempt.json`'s "amendment" string** reads "Notes 1-3", a stale label (Note 4 governs the sessions). Left
+  unchanged so that S1-S3 run the same code (`d5a86840`). No code changes between E5 sessions unless a bug forces one.
+- **Dace's correction:** reading h assumed two lanes; reading g compared the C3DGS process alone with Note 3's
+  job+C3DGS model.
 - **Attach the private dataset "E5p OGC source 49ccae72" to S2 and S3** (S1 ran without it: its preflight line for the
   dataset is FAIL, "no ... under /kaggle/input"; the URL verified).
 - **E5 S2 on Kaggle:**
