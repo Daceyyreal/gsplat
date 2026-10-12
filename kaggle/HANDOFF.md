@@ -52,7 +52,7 @@ chunking for memory. **Amendment 17 Note 2** (`4b92cba6`) settles E5's build (C1
 Note 3** (`4f920bc0`, code `a04628e7`) corrects Note 1's host memory (npz2ply and four other job steps had been left out).
 **Amendment 17 Note 4** (`992a2a29`; code `48d01a60`, `3dcf7ae0`, `2e03d98d`) assigns three sessions (plan A: S1
 kitchen, room | counter; S2 drjohnson, truck; S3 bonsai, playroom) and adds the deadline's guard and deadline-cut.
-**Next: E5 S1** (see "Amendment 17 Note 4 and its code (2026-10-11)", "E5 S1 on Kaggle"). No E5 data exists.
+**Next: E5 S1** (see "Amendment 17 Note 4 and its code (2026-10-11)"). **E5 S1 ran** (bundle `9a90dabb`, no verdict yet); **next: E5 S2** (see "E5 S1 (2026-10-12)").
 
 ## Context and rules
 
@@ -95,7 +95,7 @@ feasibility. **Amendment 17 Note 2** (`4b92cba6`) and **E5's build** (`46a4c099`
 `32c01c58`, `73b4fd1a`, `3b8bd80e`, `30d2aaec`, `7de7f690`; notebooks "E5 OGC replication gate S1" / "S2").
 **Amendment 17 Note 3** (`4f920bc0`, `bench/gn/e5_feasibility.py` `a04628e7`): Note 1's host memory corrected.
 **Amendment 17 Note 4** (`992a2a29`; `48d01a60`, `3dcf7ae0`, `2e03d98d`): three sessions (plan A), the deadline's guard
-and deadline-cut, notebook S3 "E5 OGC replication gate S3". No E5 data.
+and deadline-cut, notebook S3 "E5 OGC replication gate S3". **E5 S1 ran** (`kaggle/gn_e5/S1/gn5/`, `9a90dabb`); no verdict yet.
 `gsplat/` and `setup.py` are identical to the run-5 commit, so the run-5 wheel's key matches. Do not modify `feat/png-weighted-kmeans` (PR #1063) from here. |
 
 Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): `PR_DRAFT_weighted_kmeans.md`,
@@ -3882,7 +3882,23 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - **After S1:** commit the bundle unchanged (data only, `kaggle/gn_e5/S1/`); check the meta's `deadline_cuts`, every
   process's `deferred` and the summary; then S2 (attach S1's output too), then S3 (attach S1's and S2's).
 
-### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; next: E5 S1)
+### E5 S1 (2026-10-12)
+
+- **S1 done:** `E5_bundle_S1.zip` (SHA-1 `e27f1101b87ef4a2114f6a69085f247d77c5cc90`) committed unchanged, data only, in
+  `kaggle/gn_e5/S1/gn5/` (`9a90dabb`). **No verdict yet** (Note 2 C5: only over all sessions' bundles).
+- **Attach the private dataset "E5p OGC source 49ccae72" to S2 and S3** (S1 ran without it: its preflight line for the
+  dataset is FAIL, "no ... under /kaggle/input"; the URL verified).
+- **E5 S2 on Kaggle:**
+  1. Import `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e5_bench_S2.ipynb`; title
+     **"E5 OGC replication gate S2"**.
+  2. Attach **S1's output ("E5 OGC replication gate S1"), pinned to its version**; **"E5p OGC dissection pilot",
+     attempt 2's version, pinned** (the wheel); and the private dataset **"E5p OGC source 49ccae72"**.
+  3. Accelerator **GPU T4 x2**, Internet **on**. Save & Run All.
+  4. **The first output must be the `OGC PREFLIGHT` lines.**
+  5. Bring back `/kaggle/working/E5_bundle_S2.zip` (arcname `gn5/`), and keep the session's output version (S3 attaches
+     it with S1's).
+
+### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1: done; next: E5 S2)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -3967,7 +3983,7 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - ~~**Amendment 17 Note 4, the session assignment** (17 e.4).~~ **Done (2026-10-11):** plan A, `992a2a29`; code
   `48d01a60`, `3dcf7ae0`, `2e03d98d` (see "Amendment 17 Note 4 and its code (2026-10-11)").
 - **Next, in order:**
-  1. **E5 S1** on Kaggle ("E5 OGC replication gate S1", `E5_bundle_S1.zip`; the steps under "E5 S1 on Kaggle");
+  1. ~~**E5 S1**~~ **done (2026-10-12):** bundle `9a90dabb` (see "E5 S1 (2026-10-12)"); next **E5 S2** (its steps there);
   2. **E5 S2** (attach S1's output), then **E5 S3** (attach S1's and S2's); an S4 only if S3 leaves a deferred
      process (its notebook built then, Note 4);
   3. the combined verdict, locally (`bench/gn/e5_verdict.py` over the committed bundles, Note 2 C5).
@@ -4252,7 +4268,7 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - `lint/format-code.sh` and the tests on a CUDA machine (locally only CPU).
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
 - **Related work:** `kaggle/RELATED_WORK_OGC.md` (2026-10-01, literature notes, not findings) on arXiv 2609.28997 (OGC: per-Gaussian S2 observation Gram, matrix-weighted Lloyd, a C3DGS drop-in) and 2609.15735 (global factorised Gram, sqrt + KLT, no VQ), with the metric-equivalence check (our M_i equals their S2 Gram in expectation) and open questions; read it before the C3DGS arm's pre-registration. PDFs and the `ogc-3dgs` clone (`49ccae72`, PolyForm Noncommercial; the author states the method is patented for commercial use) are not in the repo.
-- **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3r / E3:** see "Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; next: E5 S1)". E0 is done
+- **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3r / E3:** see "Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1: done; next: E5 S2)". E0 is done
   and G0 passed (`kaggle/gn_e0/gn/`, FINDINGS section 8); E1 is done and G1 failed (`kaggle/gn_e1/gn1/`,
   FINDINGS section 9); E2 is done and G2a passed (`kaggle/gn_e2/gn2/`, FINDINGS section 10); E2b
   (Amendments 9 and 10, exploratory) is done, and works in fidelity terms but not by the PSNR criterion
