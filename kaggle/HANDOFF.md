@@ -56,7 +56,9 @@ kitchen, room | counter; S2 drjohnson, truck; S3 bonsai, playroom) and adds the 
 section 19 (`de8690ca`, checked by `bench/gn/check_s19.py`, `63fe6de0`); section 20 reports its secondaries
 (`847e39ee`, `check_s20.py` `8258a0b1`); the claims ledger is `paper/CLAIMS.md`. **Amendment 19** (`f7716485`) registers E6 in two parts: (a) descriptive
 fine-tuning curves on flowers, treehill and train; (b) pre-registered P_FT on E5's seven scenes. Its **note 1**
-(`0f77b0de`) gives covered sizes, memory, start devices and the five-session plan. **Next: E6's code.**
+(`0f77b0de`, erratum `8ea6e0c9`) gives covered sizes, memory, start devices and the five-session plan. **E6's code
+and dry run are done** (`9f79e414`-`3fb985b4`). **Next: E6 S1, "E6 OGC FT-curves S1"** (see "E6's code and dry run
+(2026-10-13)").
 
 ## Context and rules
 
@@ -4066,7 +4068,76 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   - the notebook builder;
   - the dry run, alone.
 
-### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19 and note 1: done; next: E6's code)
+### E6's code and dry run (2026-10-13)
+
+- **flowers' header read, before any code** (Dace's step 0):
+  - **The rule:** Amendment 15 d's header-read rule ("reading a scene's camera count, image sizes and splat count (from
+    `cameras.json` and the `.ply` header), with no pixel, splat value, render or metric, does not count as touching
+    the scene"). Amendments 16 a and 17 a protect only the seven gate scenes, and flowers is not one.
+  - **`cfg_args`:** not named by the rule. It holds INRIA's training options, with no pixel, splat value, render or
+    metric. Dace's step 0 asked for it.
+  - **What was read** (`kaggle/gn_e6_flowers/header_read.py` and `.json`, 13 requests to INRIA's archive and 4 to the
+    dataset zip's directory):
+    - the archive's directory, matching E3p's, note i's and Amendment 16 note i's pins;
+    - flowers' pins;
+    - `cfg_args`: `images_4`, `resolution` 1, `sh_degree` 3, `eval` True, `white_background` False;
+    - `cameras.json`: 173 cameras, all 5025 x 3312;
+    - the `.ply` header: 3,636,448 splats, 62 properties.
+  - **It matches note 1** (covered size up to 1257 x 828, not a drop), so there is no note 2. The compressed `.ply`
+    member is 810,228,197 bytes (note 1 bounded the fetch by the uncompressed 901,840,636).
+  - **Not in Amendment 19 g's words:** g said the pins come from the directory "with no member fetched". This read
+    fetched `cameras.json` and `cfg_args` whole.
+- **Amendment 19 note 1, erratum** (`8ea6e0c9`, alone, before code). Note 1's part (a) pair sums for flowers used its
+  peak at the uncovered `-r -1` size. The correct sums: flowers-treehill 41.81 GB (45.74 x 1.094), flowers-train 29.11
+  (31.85). Every pair is still above 26.93 GB.
+- **Commits, in order** (pytest before each through `.venv`'s Python with pipefail, a kept log in `F:\pytest_logs\` and
+  `GN_OGC_SRC`; each commit's working tree held only its own files and tests; the ancestor check; fast-forward
+  pushes):
+
+  | Commit | What | Gate log | pytest |
+  |---|---|---|---|
+  | `8ea6e0c9` | Amendment 19 note 1, erratum | `gate_20261013_225537_a19_note1_erratum.log` | 195 |
+  | `9f79e414` | `kaggle/e6_scenes.py`; `kaggle/gn_e6_flowers/` | `gate_20261013_230244_e6_scenes.log` | 197 |
+  | `33e578fe` | `bench/gn/e6.py`, `e6_estimate.py`, `e6_feasibility.py`; `kaggle/e6_sessions.json` | `gate_20261013_230409_e6_verdict_estimate.log` | 201 |
+  | `72e2efa7` | `kaggle/gn_e6_scene.py` | `gate_20261013_230532_e6_job.log` | 202 |
+  | `0381f089` | `kaggle/build_gn_e6_bench.py`; `kaggle/gn_e6_bench_S1.ipynb` to `S5` | `gate_20261013_230706_e6_notebooks.log` | 203 |
+  | `3fb985b4` | `bench/gn/dryrun/dryrun_gn_e6.py` | `gate_20261013_231558_e6_dryrun.log` | 203 |
+
+- **The code:**
+  - **E5's files are byte-identical to `f7716485`**, by test, with sha256: `e5_scenes`, `e5`, `e5_verdict`,
+    `gn_e5_scene`, `e5_estimate`, `e5_feasibility`, `build_gn_e5_bench`, the three E5 notebooks, `e5_hooks` and
+    `e5_data`. `check_s19` and `check_s20` pass.
+  - **`gn_e6_scene.py` differs from `gn_e5_scene.py` only in pinned lines** (`test_gn_e6_scene_diff_is_pinned`):
+    - the docstring's first sentence;
+    - the two imports (`e6_estimate`, `e6_scenes`);
+    - the meta's `scene_set` label, `processes_planned`, `rows` and `secondary_rows`;
+    - the process loop, `wanted`, the process's rows, the fork config's rows, the primary rows of the attempt rule;
+    - the summary's `scene_data` and pairs.
+  - **E6's files keep E5's names** (`gn5_meta_*`, `gn5_results_*`, `gn5_attempt.json` with `"e6": true` and the
+    part) inside `gn6/`.
+  - **`bench/gn/e6.py`** reuses `e5.py`'s `pair_parts`, `criteria`, `curve`, `bd`, `j0_diffs`, `noise` and
+    `per_scene_j0_mean` by import. Like E5's combiner, it enters every part (b) scene that is not dropped.
+  - **The notebooks** are E5's cells by import, through counted exact substitutions.
+- **The dry run** (`F:\pytest_logs\dryrun_20261013_231307_e6.log`, alone; exit 0, 154 s):
+  - (0) the five notebooks are right;
+  - (1) part (b) on a stand-in counter: 16 rows plus `uncompressed`, all ok, with no `ogc_plain`, `ogc_scalar` or
+    `ogc_gram_ours`. The j = +-1 fine-tuned rows have `qa_at_save`, `codebook_int8` and `table_range`. `e6.py b`
+    reads INCOMPLETE (n = 7, six scenes without stand-in rows) and computes counter's P_FT and SE_noise;
+  - (2) part (a) on a stand-in flowers at `images_4`: 28 rows plus `uncompressed`. `e6.py a` gives P1, P2, P_FT and
+    the predictions. The guard's estimates are `e6_estimate`'s.
+  - The stand-in values (K 16, a toy model) mean nothing.
+- **E6 S1 on Kaggle:**
+  1. Import `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e6_bench_S1.ipynb`; title
+     **"E6 OGC FT-curves S1"**.
+  2. Attach **"E5p OGC dissection pilot", attempt 2's version, pinned** (the wheel), and the private dataset **"E5p
+     OGC source 49ccae72"**. There is no earlier E6 output, and S1 needs no E3p output (no train).
+  3. Accelerator **GPU T4 x2**, Internet **on**. Save & Run All.
+  4. **The first output must be the `OGC PREFLIGHT` lines, both ok** (url and dataset).
+  5. S1 runs playroom, counter, truck, one at a time (note 1: 22,812-37,620 s, 1,560 s spare at the high end).
+  6. Bring back `/kaggle/working/E6_bundle_S1.zip` (arcname `gn6/`), and keep the session's output version: S2 ("E6
+     OGC FT-curves S2") attaches it.
+
+### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; next: E6 S1)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -4164,7 +4235,10 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
      `67470710` (see "Paper prep: CLAIMS.md, E6's scope and draft, FINDINGS section 20 (2026-10-13)");
   6. ~~rework the Amendment 19 draft to E6's two parts; then its feasibility note (note 1), alone~~ **done
      (2026-10-13):** `f7716485`, `0f77b0de` (see "Amendment 19 and its note 1 (2026-10-13)");
-  7. **next:** E6's code (Amendment 19 g), then its dry run, then S1 "E6 OGC FT-curves S1".
+  7. ~~E6's code (Amendment 19 g), then its dry run~~ **done (2026-10-13):** `9f79e414`-`3fb985b4` (see "E6's code
+     and dry run (2026-10-13)");
+  8. **next:** E6 S1, "E6 OGC FT-curves S1"; then S2-S3 (part (b)), the part (b) verdict (`bench/gn/e6.py b`), S4-S5
+     (part (a)).
 - ~~**Note 4's S2 session-hours** are printed as 4.32-7.71 h; the code gives 7.70 h.~~ **Corrected (2026-10-12):** the
   erratum `1b532e40`. Dace approved rule (b)'s rewording the same day.
 - **The unexplained npz2ply failure** (one dry run, 2026-10-10, room's rerun `ogc_gram`): not reproduced alone or under
