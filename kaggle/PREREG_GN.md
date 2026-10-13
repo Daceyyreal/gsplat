@@ -3693,3 +3693,159 @@ with the fine-tuned rows in place of the unfine-tuned ones:
 - **Amendment 17 a:** GN-VQ stays retired; E6 has no GN-VQ row.
 - **Unchanged:** E5's scenes, rows, primaries, bars, verdict and bundles; Amendments 17 and 18 with all their notes;
   FINDINGS sections 19 and 20; Amendment 11 b's frozen method. E6 adds no scene, row or criterion to E5.
+
+### Amendment 19 note 1 (2026-10-13, after Amendment 19 (`f7716485`) and before any E6 code): covered sizes, memory, start devices and the session plan (19 f)
+
+Amendment 19 f asks for this dated note before any E6 code. It is an estimate, not a measurement. It reads no scene
+data beyond what earlier work recorded (no member of INRIA's flowers checkpoint, no pixel, splat value, render or
+metric of any E6 scene), and it changes no row, point, primary, bar or verdict of Amendment 19. Its arithmetic is E5's own
+model, run by import with E6's inputs and with no edit to E5's files:
+- `bench/gn/e5_feasibility.py` (Note 1's GPU model, Note 3's host model and margin) through `feasibility()`, with
+  `scene_inputs` given E6's scenes;
+- `bench/gn/e5_estimate.py` (17 g, 18 d, Note 4) through `scene_parts`, with E6's rows.
+
+E6's estimate and feasibility module reproduces the tables below by test (19 g). GB are 10^9 bytes.
+
+**Covered loaded sizes** (19 d, 17 d; Note 2 C3: a loaded size not covered makes the scene a drop):
+
+| Scene | Splats (source) | Data factor | Loaded size, views (source) | Covered |
+|---|---|---|---|---|
+| flowers | 3,636,448 (the `.ply` member's 901,840,636 bytes at 248 per splat, `kaggle/E3_SCOUTING.md`) | 4 | 1256 x 828, 173 (E2's data-factor-4 size: `kaggle/gn_e2/gn2/gn2_meta_flowers.json`, `render_parity.view_size`, 151 train + 22 test views) | at most 1257 x 828 pixels (ceil(5025 / 4) x ceil(3312 / 4); the full size 5025 x 3312 and 173 images are `tilequant_run4_analysis.SCENE_META`), 173 views |
+| treehill | 3,783,761 (`kaggle/E3_SCOUTING.md`; Amendment 16 note i) | 4 | 1267 x 832, 141 (E4q's loaded size from `cfg_args` `images_4` at `-r 1` and the first image: `kaggle/gn_e4q/gn4q/gn4q_meta_treehill.json`; E2's the same) | 1267 x 832, 141 views |
+| train | 1,026,508 (E3p's pins) | 1 | 980 x 545, 301 (E5p's: `bench/gn/e5_feasibility.E5P`, from `gn5p_meta_train.json`) | 980 x 545, 301 views |
+
+- **flowers' `cfg_args` has not been read;** treehill's names `images_4` at `-r 1`. The covered size allows one pixel of
+  rounding on the width above E2's size, which is gsplat's own resize of the full image, not the dataset's `images_4`
+  file that INRIA's loader reads.
+- **Not covered: flowers at `images` with `-r -1`** (INRIA's cap of the full image, 1600 x 1054). With the images on the
+  GPU its figure is 16.48 GB, above the T4, so it would start on the CPU (12.49 GB). If flowers' `cfg_args` names that
+  set, flowers is reported dropped under C3, with the reason.
+- **E5's seven** keep Amendment 17 Note 1's covered sizes and start devices (`kaggle/e5_scenes.py`).
+
+**GPU and host per scene** (GB):
+- **GPU:** Note 1's sensitivity pass (lower to upper end), then the upper end with OGC's colour step, x 1.14, against the
+  T4's 15.64 GB. "Gap" is Note 1's check: the 0.37 GB by which E5p's train process exceeded the sensitivity pass's
+  upper end, scaled per splat and added to the upper end, x 1.14.
+- **Host:** Note 3's peak with its +11.92% margin; "x 1.094" multiplies it by E5's largest observed miss (bonsai: the
+  C3DGS step's measured 10,144,792,576 bytes against Note 3's 9,272,390,285, FINDINGS section 19).
+
+| Scene, covered size | Sensitivity: GPU images / CPU images | + colour x 1.14: GPU / CPU images | Start | Gap, GPU images | Host at start / x 1.094 | Host, CPU images (retry) / x 1.094 | Largest job step x 1.14 |
+|---|---|---|---|---|---|---|---|
+| flowers, 1257 x 828 | 9.35-11.42 / 7.19-9.26 | 14.93 / 12.47 | GPU | 16.43 | 20.56 / 22.49 | 20.56 / 22.49 | 7.24 (coverage) |
+| treehill, 1267 x 832 | 9.25-11.42 / 7.47-9.64 | 14.93 / 12.90 | GPU | 16.49 | 21.25 / 23.25 | 21.25 / 23.25 | 7.28 (coverage) |
+| train, 980 x 545 | 4.07-4.55 / 2.14-2.62 | 7.10 / 4.90 | GPU | 7.52 | 8.55 / 9.36 | 10.71 / 11.72 | 6.54 (coverage) |
+
+- **Every job step is below the T4.** No step of the job (the runner's build, the GN pass, protocol ii, the orbit and
+  fidelity renders, note ii's coverage) is flagged on any of the three. flowers' and treehill's host peaks come from
+  `npz2ply` (Note 3's step), so they do not depend on where the images are.
+- **Start devices:** flowers, treehill and train start with their images on the GPU, by Note 1's rule (the "+ colour"
+  figure). flowers and treehill fit with 0.71 GB to spare.
+- **The gap check would flip flowers and treehill to the CPU** (16.43 and 16.49 GB). Note 1's rule does not use it
+  (for E5's seven it changed no start device). So they start on the GPU, and 17 d's memory rule decides at run time:
+  - out of GPU memory before any results: one retry with `--data_device cpu`, and the scene's later runs on the CPU;
+  - after results: that retry is 17 i's one rerun (Note 2 C9).
+- **Measured context, not the model:**
+  - treehill in E4q, images on the CPU, with GN-VQ's rows as well: the process peaked at 7.76 GB allocated (8.51
+    reserved), and the job's step at 18.43 GB host (`npz2ply` 16.39). With the images on the GPU, the images term
+    adds 141 x 1267 x 832 x 12 bytes = 1.78 GB.
+  - train in E5p: 4.92 GB allocated (5.38 reserved) with the images on the GPU; host 10.20 GB in the CPU-image process.
+- **Fine-tuning at j = -1 and j = +1 is new and not measured.** In E5 a j = 0 process, which fine-tunes two rows,
+  peaked at -0.004 to +0.246 GB against the same scene's j = -1 and j = +1 processes, which do not (`max_memory_allocated`
+  in the seven `gn5_meta_<scene>.json`). Every E5 process peak is below Note 1's figure. The host peak was set by the
+  j = +1 process on every scene, not by fine-tuning.
+- **Part (b)'s scenes:** Note 1's start devices and Note 3's host figures stand. Times 1.094 they read (start device /
+  CPU retry): bonsai 10.14 / 17.46, counter 10.07 / 16.08, kitchen 13.23 / 19.33, room 11.89 / 19.19, truck 16.81 /
+  16.81, drjohnson 22.43 / 22.43, playroom 16.83 / 18.31. Part (b) runs fewer rows (no second `[n, 16, 16]` copy, three
+  saved states instead of six), so these are upper bounds.
+- **Excluded (19 b),** at E2's data-factor-4 sizes (`gn2_meta_<scene>.json`):
+
+  | Scene | Splats | Loaded size, views | + colour x 1.14: GPU / CPU images | Host / x 1.094 |
+  |---|---|---|---|---|
+  | bicycle | 6,131,954 | 1236 x 822, 194 | 22.39 / 19.69 | 32.39 / 35.44 |
+  | garden | 5,834,784 | 1297 x 840, 185 | 21.59 / 18.83 | 30.98 / 33.89 |
+  | stump | 4,961,797 | 1244 x 825, 125 | 18.06 / 16.31 | 26.84 / 29.37 |
+
+  - All three are above the T4 with the images on the CPU, so they are infeasible under Note 1's rule.
+  - bicycle's host figure times 1.094 is also above the session's 33.66 GB.
+
+**Pairing** (17 h; Note 1's rule as Note 3 restates it, with the x 1.094 miss; the limit is 0.8 x 33,658,318,848 bytes =
+26.93 GB):
+- **Part (a): no pair fits even at the start devices.** flowers with treehill 42.31 GB, flowers with train 29.61,
+  treehill with train 29.81 (46.30, 32.40 and 32.61 times 1.094).
+- **Part (b):** Note 3's four retry-safe pairs, times 1.094, are above the limit: bonsai-counter 27.53, bonsai-room
+  29.35, counter-kitchen 29.40, counter-room 29.26 GB.
+- **So every E6 session runs one lane, one scene at a time** (19 f).
+
+**Time per scene** (s; an estimate). The model is `e5_estimate.scene_parts`, with each part's rows:
+- **part (a):** `extra_rows` 1, E5's five rows;
+- **part (b):** `extra_rows` -2, so the model counts one OGC row, `ogc_gram`;
+- **the j = 0 processes' fine-tuned rows** come from the model (17 g: E4p's fine-tuning scaled by pixels, and at the
+  upper end also by splats);
+- **the four fine-tuned rows E5 did not run** (two in each of the j = -1 and j = +1 processes) each take FINDINGS
+  section 20's per-row fine-tuning time: 365.2 s (truck) at the low end and 698.4 s (kitchen) at the high end. To that
+  are added its C3DGS evaluation and its decoded-row steps (`npz2ply`, the `.ply` load, protocol ii, the fidelity
+  renders) at the model's rates;
+- **drjohnson** runs on the CPU, so its figures are x 1.01255 (Note 4's `cpu_ratio`);
+- **fetch times:** flowers' compressed `.ply` size is not in the repository, so its uncompressed 901.84 MB bounds the
+  fetch. treehill's is Amendment 16 note i's pin (829.12 MB). train's members come from E3p's attached copies, with no
+  fetch, as in E5p.
+
+| Part | Scene | Low - high | Before the processes (high) | Processes at the high end: j = 0 seed 0, j = 0 seed 1, j = -1, j = +1 |
+|---|---|---|---|---|
+| (a) | flowers | 9,905 - 19,458 | 836 | 6,216, 6,216, 3,095, 3,095 |
+| (a) | treehill | 9,649 - 19,587 | 831 | 6,373, 6,373, 3,004, 3,004 |
+| (a) | train | 6,613 - 8,928 | 611 | 1,708, 1,708, 2,450, 2,450 |
+| (b) | bonsai | 10,248 - 14,783 | 700 | 4,027, 4,027, 3,015, 3,015 |
+| (b) | counter | 9,600 - 13,645 | 685 | 3,723, 3,723, 2,757, 2,757 |
+| (b) | kitchen | 10,231 - 17,092 | 742 | 5,181, 5,181, 2,995, 2,995 |
+| (b) | room | 10,507 - 16,571 | 729 | 4,801, 4,801, 3,120, 3,120 |
+| (b) | truck | 5,613 - 9,852 | 741 | 2,391, 2,391, 2,164, 2,164 |
+| (b) | drjohnson | 8,669 - 18,578 | 838 | 6,131, 6,131, 2,739, 2,739 |
+| (b) | playroom | 7,599 - 14,124 | 752 | 4,244, 4,244, 2,442, 2,442 |
+
+- **Totals:** part (a) 26,168-47,972 s, part (b) 62,467-104,645 s.
+- **The per-process high figures are what Note 4 (a)'s guard compares** for E6. A process whose images are on the CPU
+  after a retry is taken x 1.01255; drjohnson's figures already are.
+- **E5's observed jobs, context only:** against E5's own model (`extra_rows` 1) six of the seven came in at 0.656
+  (room) to 0.887 (playroom) of the low end; truck's came in at 1.104 of the low end, inside its range (FINDINGS
+  section 19).
+
+**The session plan** (times from setup's end; Note 4's limits: every C3DGS run ends by 39,180 s and every scene starts by
+33,780 s, with setup taken at 420 s as in Note 4; E5's setups took 383.0-599.8 s):
+- **Part (b) runs first,** as S1-S3: it is the pre-registered part. Part (a) follows as S4-S5. Each session holds one
+  part (19 f).
+- **The lanes:** part (b)'s high total (104,645 s) needs at least three lanes of 39,180 s, and part (a)'s (47,972 s) two.
+- **Within each part,** the assignment is the one that leaves the most spare time in its tightest lane, of every
+  assignment of the part's scenes to that many lanes that meets both limits at the high end.
+- **Within a lane** the longer scene runs first (Note 4). Part (b)'s tightest session runs first, so that a deferred
+  process carries into a later part (b) session.
+
+| Session, part | Title | Scenes, in order | Later scenes start (low - high) | Lane ends (low - high) | Spare at the high end | Session hours, setup included |
+|---|---|---|---|---|---|---|
+| S1, (b) | E6 OGC FT-curves S1 | playroom, counter, truck | counter 7,599 - 14,124; truck 17,199 - 27,769 | 22,812 - 37,620 | 1,560 | 6.45 - 10.57 |
+| S2, (b) | E6 OGC FT-curves S2 | drjohnson, room | room 8,669 - 18,578 | 19,176 - 35,149 | 4,031 | 5.44 - 9.88 |
+| S3, (b) | E6 OGC FT-curves S3 | kitchen, bonsai | bonsai 10,231 - 17,092 | 20,479 - 31,876 | 7,304 | 5.81 - 8.97 |
+| S4, (a) | E6 OGC descriptive S4 | flowers, train | train 9,905 - 19,458 | 16,518 - 28,386 | 10,794 | 4.71 - 8.00 |
+| S5, (a) | E6 OGC descriptive S5 | treehill | - | 9,649 - 19,587 | 19,593 | 2.80 - 5.56 |
+
+- **Every scene starts before 33,780 s, and every lane ends before 39,180 s,** at the high end with no retry. With
+  setup at E5's longest (599.8 s) both limits move 180 s earlier, and every lane still fits (S1's spare 1,380 s).
+- **25.20-42.98 session-hours in all,** against Kaggle's 30 GPU-hours a week. At the high end the plan spans at least
+  two weeks of quota, and a session that does not fit the week's remaining quota waits for the next week (Note 4).
+- **Bundles** `E6_bundle_S1.zip` to `E6_bundle_S5.zip`, arcname `gn6/` (19 h). Each part (b) session attaches the earlier
+  part (b) sessions' outputs, and S5 attaches S4's.
+
+**Known risks.**
+- **S1:** a retry of a playroom or counter j = 0 process (4,244 or 3,723 s at the high end) exceeds S1's 1,560 s
+  spare. Under Note 4 (a) truck's last processes are then deferred and carried into S2, after S2's own lane (truck's
+  j = -1 and j = +1 processes take 2,164 s each, against S2's 4,031 s). S2 and S3 carry into the next part (b)
+  session, and any process S3 leaves runs in an added part (b) session, whose notebook is built then (Note 4).
+- **The wheel:** E5p attempt 2's output is attached for `wheels/`. A rebuild (3,922.0 s in E5p) exceeds S1's spare.
+  The guard then defers S1's last processes, as above.
+- **flowers and treehill on the GPU** have 0.71 GB of margin, and the gap check reads above the T4. An out-of-memory
+  failure takes 17 d's CPU retry, with the time x 1.01255.
+- **flowers' loaded size and `cfg_args`** are read at run time. A size above 1257 x 828 or `sh_degree` other than 3
+  drops it (C3). S4 then runs train alone.
+
+**Not changed:** Amendment 19's parts, rows, points, primary, criteria, verdict and measures; E5's scenes, start devices
+and covered sizes (Note 1); Note 1's GPU model; Note 3's host model; Note 4's limits and rules.
