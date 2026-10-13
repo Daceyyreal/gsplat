@@ -6421,3 +6421,34 @@ def test_e6_reader_a_predictions():
     gone = [x for x in rows if not x["config"].endswith("ogc_gram_ft")]
     r2 = e6.reader_scene(e6.scene_data(gone, "flowers"), "flowers", gone)
     assert r2["values"]["P_FT"] is None and r2["predictions"]["ft_below_P1"] == e6.NOT_CHECKABLE
+
+
+def test_e6_notebooks_rebuild_and_name_their_session():
+    """kaggle/build_gn_e6_bench.py: the five committed notebooks equal the builder's output; titles "E6 OGC FT-curves
+    S1-S3" and "E6 OGC descriptive S4-S5", PART per e6_sessions.json, E6_bundle_S#.zip under gn6/, E6's job and scene
+    module; "E3p INRIA pilot" attached only where train runs; every code cell compiles."""
+    import build_gn_e6_bench as b6
+
+    kg = os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle")
+    plan = json.load(open(os.path.join(kg, "e6_sessions.json")))["sessions"]
+    assert b6.SESSIONS == ("S1", "S2", "S3", "S4", "S5")
+    for s in b6.SESSIONS:
+        nb = {"cells": b6.cells_for(s),
+              "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
+                           "language_info": {"name": "python"}},
+              "nbformat": 4, "nbformat_minor": 5}
+        assert open(os.path.join(kg, f"gn_e6_bench_{s}.ipynb"), encoding="utf-8").read() == json.dumps(
+            nb, indent=1, ensure_ascii=False) + "\n", s
+        part = plan[s]["part"]
+        t = f"E6 OGC {'FT-curves' if part == 'b' else 'descriptive'} {s}"
+        md = nb["cells"][0]["source"]
+        assert md.startswith(f"# {t}") and f"Kaggle notebook title: **{t}**" in md
+        assert ('"E3p INRIA pilot"' in md) == ("train" in plan[s]["lanes"][0])
+        code = "\n".join(c["source"] for c in nb["cells"] if c["cell_type"] == "code")
+        for c in nb["cells"]:
+            if c["cell_type"] == "code":
+                compile(c["source"], s, "exec")
+        assert f'SESSION = "{s}"' in code and f'PART = "{part}"' in code
+        assert 'BUNDLE = f"{WORK}/E6_bundle_{SESSION}"' in code and 'arc="gn6"' in code
+        assert "kaggle/gn_e6_scene.py" in code and "import e6_scenes as es" in code and "gn_e5_scene" not in code
+        assert '"e6": True, "part": PART' in code and "e5_sessions" not in code
