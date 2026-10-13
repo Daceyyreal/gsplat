@@ -6171,6 +6171,54 @@ def test_e6_leaves_e5_files_byte_identical():
         assert hashlib.sha256(data).hexdigest() == want, rel
 
 
+# the only lines in which kaggle/gn_e6_scene.py differs from kaggle/gn_e5_scene.py (Amendment 19 g): the docstring's
+# first sentence, the scene module and the estimate (the imports), and the process, row and fine-tuning selection
+E6_JOB_DIFF = [
+    (1, ('"""E5 (kaggle/PREREG_GN.md Amendment 17 d-j, Amendment 18, Amendment 17 Notes 1 and 2): the gate\'s job, one scene per',
+         "process, E5p's job (``gn_e5p_scene.py``) on the seven gate scenes with E5's rules."),
+     ('"""E6 (kaggle/PREREG_GN.md Amendment 19 g): E5\'s job copied; only its scene module, its estimate and its process, row',
+      "and fine-tuning selection differ (pinned by a test). Below, E5's docstring as it was (files keep E5's gn5_ names).")),
+    (56, ("import e5_estimate as est  # noqa: E402  (Note 4 a's guard)", "import e5_scenes as es  # noqa: E402"),
+     ("import e6_estimate as est  # noqa: E402  (Note 4 a's guard)", "import e6_scenes as es  # noqa: E402")),
+    (212, ('    meta.update(dataset=args.dataset, scene_set="gate", data_factor=args.data_factor, k=K_DEFAULT,',
+           "                threshold=e5.THRESHOLD_DEFAULT, processes_planned=[dict(p) for p in e5.E5_PROCESSES],",
+           "                rows=list(e5.ROWS), secondary_rows=[e5.OURS_ROW], ogc_metric=dict(e5.ROW_METRIC), lam=e5.LAM,"),
+     ('    meta.update(dataset=args.dataset, scene_set=f"E6 part ({es.part_of(scene)})", data_factor=args.data_factor,',
+      "                k=K_DEFAULT, threshold=e5.THRESHOLD_DEFAULT, processes_planned=[dict(p) for p in es.processes(scene)],",
+      "                rows=es.process_rows(scene, es.processes(scene)[0]), secondary_rows=[], ogc_metric=dict(e5.ROW_METRIC),",
+      "                lam=e5.LAM,")),
+    (371, ("    for i, proc in enumerate(e5.E5_PROCESSES):",), ("    for i, proc in enumerate(es.processes(scene)):",)),
+    (376, ("    wanted = [UNCOMPRESSED] + e5.wanted_configs(e5.E5_PROCESSES, impl=args.ogc_impl)",),
+     ("    wanted = [UNCOMPRESSED] + es.wanted_configs(scene, impl=args.ogc_impl)",)),
+    (489, ("    rows = e5.process_rows(proc, args.ogc_impl)",), ("    rows = es.process_rows(scene, proc, args.ogc_impl)",)),
+    (527, ('        e0.write_json(cfg_path, {"e5": True, "rows": ["c3dgs"] + list(e5.fork_rows(args.ogc_impl)), "j": j,',),
+     ('        e0.write_json(cfg_path, {"e5": True, "rows": ["c3dgs"] + list(es.fork_rows(scene, args.ogc_impl)), "j": j,',)),
+    (554, ('        primary_missing = any(not (measured.get(r) or {}).get("eval_ii") for r in e5.PRIMARY_ROWS)',),
+     ('        primary_missing = any(not (measured.get(r) or {}).get("eval_ii") for r in es.primary_rows(scene))',)),
+    (621, ("        sd = e5.scene_data(rows)",), ("        sd = es.scene_data(rows, scene)",)),
+    (623, ("        for name, (a, b) in {**e5.PRIMARY_PAIRS, **e5.SECONDARY_BD_PAIRS}.items():",),
+     ("        for name, (a, b) in es.summary_pairs(scene).items():",)),
+]
+
+
+def test_gn_e6_scene_diff_is_pinned():
+    """Amendment 19 g: kaggle/gn_e6_scene.py is kaggle/gn_e5_scene.py with exactly the lines of ``E6_JOB_DIFF`` changed
+    (no line added or removed elsewhere), and the job uses E6's scene module and estimate."""
+    import difflib
+
+    kg = os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle")
+    a = open(os.path.join(kg, "gn_e5_scene.py"), encoding="utf-8").read().splitlines()
+    b = open(os.path.join(kg, "gn_e6_scene.py"), encoding="utf-8").read().splitlines()
+    got = [(i1 + 1, tuple(a[i1:i2]), tuple(b[j1:j2]))
+           for t, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes() if t != "equal"]
+    assert got == E6_JOB_DIFF
+    import e6_estimate
+    import e6_scenes
+    import gn_e6_scene as job6
+
+    assert job6.es is e6_scenes and job6.est is e6_estimate and job6.SCENES == e6_scenes.SCENES
+
+
 def test_e6_scenes_constants_and_selection():
     """kaggle/e6_scenes.py against its sources: flowers' pins and counts from kaggle/gn_e6_flowers/header_read.json
     (its cfg_args: images_4, -r 1, sh_degree 3; 173 cameras of 5025 x 3312, so images_4 at most 1257 x 828, note 1's
