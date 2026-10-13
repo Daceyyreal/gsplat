@@ -122,6 +122,16 @@ kitchen, room, truck, drjohnson and playroom (Amendment 17 d; Notes 1-4). E5 pas
 - **Exploratory:** the Gram metric gives about half of P1; after C3DGS's fine-tuning the lead is +0.0604 dB, whose
   interval holds the paper's +0.09 dB. Our derived VQ equals OGC's in every process.
 
+**E5's secondaries (section 20, branch `bench/gn-vq`): measures E5 recorded and section 19 does not report, from the
+same bundles; no new run and no verdict.**
+- **Codewords and bytes:** OGC's rows use all 4,096 codewords and C3DGS's VQ 22.8% to 82.0% of them; 85.9% to 95.0% of
+  OGC's extra bytes are its indices.
+- **After fine-tuning** OGC's row is still larger on five scenes and smaller on counter and kitchen (ratio 0.9850 to
+  1.0700), with no rate-matched value; the quantizer records show OGC's AC grid re-fitted to its codebook (scale x 1.58
+  to 2.84) and its `features_rest` -25.9% to -10.0%.
+- **The lead holds** under C3DGS's own evaluation, in SSIM and in LPIPS on every scene; the protocol gap is
+  scene-dependent, not train's 0.410-0.523 dB.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -213,6 +223,11 @@ kitchen, room, truck, drjohnson and playroom (Amendment 17 d; Notes 1-4). E5 pas
   (`bench/gn/e5_estimate.py`), the paper's Table 1, and the readings of code (`bench/gn/e5.py`, `bench/gn/g2.py`).
   `bench/gn/check_s19.py` recomputes every number in the section from those files, with an independent BD fit beside
   the combiner's, and checks each against the text.
+- Section 20: every number comes from the three E5 session bundles (as section 19) through `bench/gn/e5_verdict.py`'s
+  merge and measures, and E5p's train rows (`kaggle/gn_e5p/attempt2/gn5p/`) for one reference value. The exceptions are
+  the OGC paper's Table 12 values as `kaggle/RELATED_WORK_OGC.md` quotes them, and section 14's protocol gap. The BD on
+  SSIM and LPIPS uses `bench/gn/g2.py`'s fit. `bench/gn/check_s20.py` recomputes every number in the section from those
+  files and checks each against the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -4008,3 +4023,234 @@ GB) against Note 3's figure at the start device:
   - one GPU type (T4) and one Kaggle image;
   - fine-tuning's comparison is at each row's own bytes, which this section does not compare, and its noise is two
     processes per scene.
+
+## 20. E5's secondaries and report-only measures (from E5's committed bundles; no new run) — OGC's rows use every codeword and pay for it in index bytes, fine-tuning narrows the byte gap on every scene and reverses it on two, and the lead holds under C3DGS's own evaluation, SSIM and LPIPS
+
+**What this section is:** measures E5 recorded that section 19 does not report, read from the same three bundles,
+`kaggle/gn_e5/S1/gn5/` (`9a90dabb`), `kaggle/gn_e5/S2/gn5/` (`1710cc8a`) and `kaggle/gn_e5/S3/gn5/` (`88b5ebed`), through
+`bench/gn/e5_verdict.py`'s merge. No run, no rule and no verdict changes; E5's verdict (section 19, `de8690ca`) stands
+as reported. Each item is labelled **pre-registered secondary** (Amendment 17 d lists it, without a bar),
+**report-only** (Amendment 17 b or 18 note 2 records it, with no analysis planned) or **exploratory, not
+pre-registered**. "j = 0" values are the mean of the two j = 0 processes unless a process is named.
+
+### Codewords used and index entropy (pre-registered secondary, Amendment 17 d)
+
+Codewords used: the distinct codebook entries among the colour-quantized splats' stored indices, of K = 4,096. Index
+entropy: of the whole stored index array, in bits, the mean over the scene's four processes.
+
+| Scene | `c3dgs` codewords used, over the 4 processes | Index entropy: `c3dgs` / `ogc_plain` / `ogc_scalar` / `ogc_gram` |
+|---|---|---|
+| bonsai | 2,717-2,850 | 10.66 / 12.74 / 12.34 / 12.78 |
+| counter | 1,564-1,718 | 10.17 / 12.83 / 12.43 / 12.92 |
+| kitchen | 2,929-3,360 | 10.99 / 12.78 / 12.46 / 12.77 |
+| room | 1,452-1,546 | 9.31 / 12.50 / 12.14 / 12.62 |
+| truck | 2,052-2,343 | 9.67 / 12.34 / 11.92 / 12.37 |
+| drjohnson | 1,702-1,873 | 8.82 / 12.25 / 12.02 / 12.31 |
+| playroom | 935-1,017 | 8.03 / 12.27 / 12.05 / 12.30 |
+| mean | 2,032 | 9.66 / 12.53 / 12.19 / 12.58 |
+
+- **OGC's three rows (and `ogc_gram_ours`) use all 4,096 codewords in every process of every scene.** C3DGS's own VQ uses
+  935 to 3,360, that is 22.8% to 82.0% of its codebook.
+
+### Per-array bytes (pre-registered secondary, Amendment 17 d)
+
+Within a process every row shares the geometry, and only three of the `.npz`'s arrays differ between the rows:
+`features_dc`, `features_rest` and `feature_indices`; every other array has the same compressed bytes in all five rows
+of every process. `ogc_gram` minus `c3dgs` at j = 0, in bytes:
+
+| Scene | `features_dc` | `features_rest` | `feature_indices` | `.npz` total | `feature_indices`' share |
+|---|---|---|---|---|---|
+| bonsai | +1,898.5 | +54,670 | +508,526 | +565,094.5 | 90.0% |
+| counter | +4,146.5 | +91,339 | +582,403 | +677,888.5 | 85.9% |
+| kitchen | +1,784 | +44,488.5 | +664,603 | +710,875.5 | 93.5% |
+| room | +4,379 | +92,332 | +815,923 | +912,634 | 89.4% |
+| truck | +3,291 | +76,106 | +1,187,360 | +1,266,757 | 93.7% |
+| drjohnson | +4,128 | +88,782.5 | +1,756,599.5 | +1,849,510 | 95.0% |
+| playroom | +6,573.5 | +111,966.5 | +1,710,763.5 | +1,829,303.5 | 93.5% |
+
+- **OGC's extra bytes are mostly its indices** (85.9% to 95.0% of the difference): its indices use the whole codebook
+  nearly uniformly (above), so they compress less.
+
+### Fidelity to the uncompressed model per angle (pre-registered secondary, Amendment 17 d; note ii a)
+
+Each row's renders against the uncompressed model's at the test cameras orbited about the scene's up axis, j = 0; per
+pair the mean over the scenes of `D_s`, in dB, as the mean PSNR / as the PSNR of the pooled MSE:
+
+| Angle (degrees) | `ogc_gram` - `c3dgs` | `ogc_gram` - `ogc_scalar` | `ogc_scalar` - `ogc_plain` | `ogc_plain` - `c3dgs` |
+|---|---|---|---|---|
+| -40 | +1.694 / +0.670 | +0.596 / -0.312 | +0.176 / -0.013 | +0.922 / +0.995 |
+| -20 | +2.562 / +2.304 | +1.279 / +1.078 | +0.229 / +0.176 | +1.053 / +1.050 |
+| -10 | +3.024 / +2.800 | +1.639 / +1.434 | +0.246 / +0.231 | +1.138 / +1.135 |
+| 0 | +3.214 / +3.116 | +1.818 / +1.730 | +0.245 / +0.217 | +1.151 / +1.169 |
+| +10 | +2.998 / +2.617 | +1.657 / +1.420 | +0.215 / +0.167 | +1.126 / +1.030 |
+| +20 | +2.593 / +2.021 | +1.284 / +0.764 | +0.178 / +0.148 | +1.130 / +1.108 |
+| +40 | +2.265 / +1.677 | +1.090 / +0.542 | +0.242 / +0.201 | +0.933 / +0.934 |
+
+- **The means are over 7 scenes, except at +40 degrees, over 6:** on drjohnson every row's mean PSNR at +40 degrees is
+  infinite and its pooled-MSE PSNR missing, so every difference there is undefined. An infinite PSNR is a view whose
+  render equals the uncompressed model's; which view, the bundle does not record.
+- **Every pair is positive at 0 degrees on all seven scenes.** Each pair's gap peaks at 0 degrees or next to it and falls
+  away toward the larger angles; the pooled-MSE measure turns two pairs negative at -40 degrees.
+
+### Bytes after fine-tuning (exploratory, not pre-registered)
+
+Per scene and j = 0 process (seed): the fine-tuned rows' `.npz` bytes, `ogc_gram_ft` minus `c3dgs_ft` and their ratio,
+the same ratio before fine-tuning, and protocol ii's PSNR difference after fine-tuning (dB):
+
+| Scene | Seed | `c3dgs_ft` | `ogc_gram_ft` | Difference | Ratio | Ratio before | PSNR difference |
+|---|---|---|---|---|---|---|---|
+| bonsai | 0 | 13,457,182 | 13,574,221 | +117,039 | 1.0087 | 1.0418 | +0.0835 |
+| bonsai | 1 | 13,443,757 | 13,574,666 | +130,909 | 1.0097 | 1.0422 | +0.1211 |
+| counter | 0 | 14,475,792 | 14,261,078 | -214,714 | 0.9852 | 1.0464 | +0.0895 |
+| counter | 1 | 14,471,706 | 14,254,486 | -217,220 | 0.9850 | 1.0470 | +0.0908 |
+| kitchen | 0 | 19,835,017 | 19,769,782 | -65,235 | 0.9967 | 1.0341 | +0.0505 |
+| kitchen | 1 | 19,761,605 | 19,761,366 | -239 | 1.0000 | 1.0377 | +0.0984 |
+| room | 0 | 15,813,552 | 15,824,499 | +10,947 | 1.0007 | 1.0580 | +0.0333 |
+| room | 1 | 15,789,345 | 15,804,434 | +15,089 | 1.0010 | 1.0586 | +0.0616 |
+| truck | 0 | 22,373,879 | 22,722,588 | +348,709 | 1.0156 | 1.0556 | +0.0157 |
+| truck | 1 | 22,320,212 | 22,714,598 | +394,386 | 1.0177 | 1.0583 | +0.0588 |
+| drjohnson | 0 | 30,456,282 | 31,485,677 | +1,029,395 | 1.0338 | 1.0599 | -0.0338 |
+| drjohnson | 1 | 30,385,050 | 31,466,294 | +1,081,244 | 1.0356 | 1.0618 | +0.0201 |
+| playroom | 0 | 22,722,592 | 24,256,979 | +1,534,387 | 1.0675 | 1.0796 | +0.1050 |
+| playroom | 1 | 22,659,532 | 24,246,040 | +1,586,508 | 1.0700 | 1.0815 | +0.0505 |
+
+- **Before fine-tuning OGC's row is larger on every scene and process** (ratio 1.0341 to 1.0815).
+- **After fine-tuning it is still larger on five scenes in both processes** (bonsai, room, truck, drjohnson, playroom),
+  **smaller on counter in both, and smaller on kitchen in both** (by 65,235 bytes in one process and by 239 bytes,
+  ratio 1.0000, in the other). The ratio after fine-tuning is 0.9850 to 1.0700.
+- **There is no rate-matched value after fine-tuning:** only the j = 0 processes fine-tune, so there is one point per
+  row and no curve. The after-fine-tuning difference (section 19) is at these bytes, not at equal rate.
+- drjohnson's seed-0 process is the only one where `ogc_gram_ft` is below `c3dgs_ft` in PSNR, at 3.4% more bytes.
+
+### What the quantizer records show (report-only, Amendment 18 note 2)
+
+Every fine-tuned row records the colour quantizers' scale and zero point at its save (`qa_at_save`), its codebook's
+range against the int8 grid (`table_range`) and its int8 codebook's use (`codebook_int8`); every unfine-tuned row
+records the first two. Per scene, AC part (`features_rest`), the two j = 0 processes:
+
+| Scene | `ogc_gram`: `features_rest` bytes after / before fine-tuning | Values outside the AC grid, before / after | AC grid scale, after / before | `c3dgs`: `features_rest` after / before | `c3dgs`: AC grid scale, after / before |
+|---|---|---|---|---|---|
+| bonsai | -15.0% | 47 / 1 | 1.82-1.83 | +0.2% | 1.11 |
+| counter | -25.9% | 94 / 1 | 2.83-2.84 | -0.4% | 1.12-1.13 |
+| kitchen | -22.1% | 110 / 1 | 2.44 | +0.2% | 1.10 |
+| room | -24.7% | 57 / 0-1 | 2.39-2.40 | +5.8% | 0.93-0.95 |
+| truck | -25.1% | 96 / 1 | 2.46-2.47 | +3.7% | 0.99 |
+| drjohnson | -23.5% | 85 / 1 | 2.57-2.58 | +2.7% | 1.02-1.03 |
+| playroom | -10.0% | 41 / 1 | 1.58-1.59 | +3.6% | 0.97-0.99 |
+
+**What the records show directly:**
+- **Before fine-tuning, OGC's AC codebook extends past C3DGS's AC int8 grid** on every scene (41 to 110 of its values
+  outside, clamped at the save). C3DGS's own codebook lies inside its grid before and after fine-tuning.
+- **Fine-tuning re-fits OGC's AC grid to its codebook:** the grid's scale grows by 1.58 to 2.84 times and afterwards 0 to
+  1 value lies outside it. C3DGS's scale moves by 0.93 to 1.13 times.
+- **OGC's `features_rest` compresses smaller after fine-tuning** (-25.9% to -10.0%); C3DGS's changes by -0.4% to +5.8%.
+- **The labels survive** in every fine-tuned row, so the codewords used do not change (4,096 for OGC). OGC's int8
+  codebook keeps 4,096 distinct codewords (4,095 in one process), with at most 2 of its 184,320 AC values and at
+  most 3 of its 12,288 DC values at the int8 limits.
+  OGC's codebook before fine-tuning is the same in both j = 0 processes (its seed is fixed).
+
+**Inferred, not recorded:** that the coarser AC step (the larger scale) is what makes OGC's `features_rest` cheaper,
+and that it costs precision. The records show the step and the bytes; they do not separate the step's effect on PSNR
+from the rest of fine-tuning, so they do not show why OGC's lead shrinks.
+
+### The paper's Table 12 (partial; exploratory, not pre-registered)
+
+`kaggle/RELATED_WORK_OGC.md` holds the OGC paper's Table 12 (arXiv 2609.28997, C3DGS after fine-tuning) only where it
+noted a case against the matrix; it does not hold each scene's pair of the reproduction and the matrix. For the four
+scenes E5 shares with the paper, the values it holds, next to E5's under C3DGS's own evaluation (dB, mean of the two
+j = 0 processes):
+
+| Scene | The paper's Table 12, as `RELATED_WORK_OGC.md` quotes it | E5, C3DGS's evaluation |
+|---|---|---|
+| bonsai | their reproduction of C3DGS's VQ: 31.38 | `c3dgs_ft`: 31.44 |
+| counter | their reproduction of C3DGS's VQ: 28.66 | `c3dgs_ft`: 28.63 |
+| kitchen | the matrix A_i, 4,096 entries: 30.44 | `ogc_gram_ft`: 30.46 |
+| room | the matrix A_i, 4,096 entries: 31.13 | `ogc_gram_ft`: 31.19 |
+
+- **Not a side-by-side of the gain:** each scene has one of the two values, so no per-scene difference can be set
+  against the paper's. Both sides use C3DGS's evaluation on INRIA's checkpoints, but the paper's runs are one each with
+  no seed set, its C3DGS commit is not pinned, and its VQ ridge is not stated (`RELATED_WORK_OGC.md`, open questions);
+  ours are C3DGS at `2a234af5` with this project's deviations.
+
+### C3DGS's own evaluation against protocol ii (report-only; the comparison exploratory)
+
+C3DGS's evaluation (`c3dgs_PSNR`) minus protocol ii (`PSNR_ii`) over each scene's 24 compressed rows, mean (range); and
+`ogc_gram` minus `c3dgs` at j = 0 before and after fine-tuning, under C3DGS's evaluation / under protocol ii (dB):
+
+| Scene | Gap, mean (range) | Before fine-tuning: C3DGS's / protocol ii | After: C3DGS's / protocol ii |
+|---|---|---|---|
+| bonsai | 0.167 (+0.143 to +0.241) | +0.6610 / +0.6621 | +0.1322 / +0.1023 |
+| counter | 0.016 (+0.005 to +0.046) | +0.4495 / +0.4491 | +0.1001 / +0.0902 |
+| kitchen | 0.429 (+0.297 to +0.471) | +0.6333 / +0.6312 | +0.1087 / +0.0744 |
+| room | 0.021 (-0.006 to +0.062) | +0.5336 / +0.5404 | +0.0508 / +0.0474 |
+| truck | 0.014 (-0.012 to +0.023) | +0.2491 / +0.2484 | +0.0264 / +0.0373 |
+| drjohnson | 0.035 (+0.019 to +0.060) | +0.4395 / +0.4469 | +0.0091 / -0.0069 |
+| playroom | 0.007 (-0.009 to +0.040) | +0.6773 / +0.6895 | +0.0753 / +0.0777 |
+
+- **The protocol gap is scene-dependent, not a constant offset:** kitchen and bonsai read higher under C3DGS's
+  evaluation; on the other five the two agree within 0.007 to 0.035 dB on average. On train (E5p, `8eadc81e`) the gap is
+  0.475 dB (0.367 to 0.512), and E3q's 0.410-0.523 dB (section 14) was also train. **So train's gap does not carry over
+  to E5's scenes.** The files do not say why.
+- **The comparison of rows does not depend on the protocol:** before fine-tuning `ogc_gram` - `c3dgs` averages +0.5205
+  dB under C3DGS's evaluation against +0.5239 under protocol ii (section 19), positive on every scene under both; after
+  fine-tuning +0.0718 dB under C3DGS's evaluation.
+
+### SSIM and LPIPS (report-only; BD on them exploratory, not pre-registered)
+
+At j = 0, protocol ii's SSIM and LPIPS of the three primary rows, `c3dgs` / `ogc_scalar` / `ogc_gram`:
+
+| Scene | SSIM | LPIPS |
+|---|---|---|
+| bonsai | 0.9172 / 0.9213 / 0.9268 | 0.2290 / 0.2247 / 0.2177 |
+| counter | 0.8806 / 0.8871 / 0.8927 | 0.2279 / 0.2219 / 0.2151 |
+| kitchen | 0.8924 / 0.8974 / 0.9041 | 0.1571 / 0.1523 / 0.1449 |
+| room | 0.8980 / 0.9042 / 0.9085 | 0.2447 / 0.2377 / 0.2313 |
+| truck | 0.8539 / 0.8572 / 0.8639 | 0.1727 / 0.1693 / 0.1605 |
+| drjohnson | 0.8829 / 0.8878 / 0.8900 | 0.2704 / 0.2645 / 0.2589 |
+| playroom | 0.8902 / 0.8978 / 0.9000 | 0.2655 / 0.2559 / 0.2511 |
+
+**Exploratory:** E5's BD fit (`g2.bd_psnr_scaled`, the same three seed-0 points) with SSIM or LPIPS in place of PSNR; for
+LPIPS lower is better, so a negative value favours `ogc_gram`:
+
+| Scene | `ogc_gram` against `c3dgs`: BD-SSIM | BD-LPIPS | `ogc_gram` against `ogc_scalar`: BD-SSIM | BD-LPIPS |
+|---|---|---|---|---|
+| bonsai | +0.0070 | -0.0082 | +0.0043 | -0.0054 |
+| counter | +0.0088 | -0.0096 | +0.0045 | -0.0055 |
+| kitchen | +0.0081 | -0.0084 | +0.0050 | -0.0055 |
+| room | +0.0074 | -0.0097 | +0.0035 | -0.0051 |
+| truck | +0.0062 | -0.0078 | +0.0046 | -0.0062 |
+| drjohnson | +0.0050 | -0.0083 | +0.0017 | -0.0045 |
+| playroom | +0.0068 | -0.0103 | +0.0017 | -0.0039 |
+| mean | +0.0071 | -0.0089 | +0.0036 | -0.0052 |
+
+- **SSIM and LPIPS agree with PSNR in sign on every scene,** at j = 0 and in BD, for both pairs.
+
+### Time per row (report-only, Amendment 17 b)
+
+Seconds, mean over the scene's four processes: C3DGS's own colour VQ (the `c3dgs` row's time); OGC's VQ call
+(`ogc_time_s`) for `ogc_plain` / `ogc_scalar` / `ogc_gram` / `ogc_gram_ours`; one fine-tuned row (5,000 iterations,
+mean of the four); and the whole C3DGS process:
+
+| Scene | C3DGS's VQ | OGC's VQ: plain / scalar / gram / ours | Fine-tuning, one row | Process |
+|---|---|---|---|---|
+| bonsai | 130.3 | 28.1 / 28.6 / 29.1 / 28.3 | 554.6 | 1,421.5 |
+| counter | 126.7 | 26.2 / 27.1 / 27.3 / 26.4 | 600.9 | 1,359.2 |
+| kitchen | 130.3 | 43.3 / 44.1 / 44.1 / 43.9 | 698.4 | 1,579.0 |
+| room | 128.4 | 33.6 / 34.4 / 34.2 / 34.1 | 594.1 | 1,478.3 |
+| truck | 134.6 | 57.6 / 58.4 / 58.3 / 58.2 | 365.2 | 1,222.3 |
+| drjohnson | 138.1 | 85.8 / 86.4 / 85.9 / 85.9 | 590.0 | 1,637.2 |
+| playroom | 136.3 | 66.3 / 67.0 / 67.3 / 66.8 | 500.1 | 1,409.0 |
+
+- **OGC's VQ took 0.22 to 0.62 times C3DGS's own** on a T4 (OGC's chunk 25,000, 15 iterations; C3DGS's minibatch VQ).
+  Neither includes the 16 x 16 metric, which the job computes once per scene before the processes (the GN pass); its
+  time is not per row.
+
+### What section 20 settles, and what it does not
+
+- **Settled (descriptive):** OGC's rows use all 4,096 codewords and C3DGS's VQ a fraction of them, and OGC's extra bytes
+  are mostly its indices; fine-tuning narrows the byte gap on every scene and reverses it on counter and kitchen, so
+  the after-fine-tuning comparison is at unequal bytes on five scenes; fine-tuning re-fits OGC's AC grid to its
+  codebook; the lead holds under C3DGS's own evaluation and in SSIM and LPIPS.
+- **Not settled:** a rate-matched comparison after fine-tuning (no curve); why OGC's lead shrinks with fine-tuning (the
+  quantizer records show the grid and the bytes, not the cause); a per-scene comparison with the paper's gain; why the
+  protocol gap is large on kitchen and bonsai only.
