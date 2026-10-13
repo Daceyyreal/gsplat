@@ -3,7 +3,8 @@
 **What this is:** every claim the paper could make, each tied to its evidence in `kaggle/FINDINGS.md`, the script that
 re-checks it, the committed data and the limits that must travel with it. No paper prose. Nothing here is new: every
 claim restates FINDINGS no more strongly than FINDINGS does, and every number is FINDINGS'. Written 2026-10-13, after
-FINDINGS section 19 (`de8690ca`, `check_s19.py` `63fe6de0`).
+FINDINGS section 19 (`de8690ca`, `check_s19.py` `63fe6de0`); updated the same day after FINDINGS section 20
+(`847e39ee`, `check_s20.py` `8258a0b1`): rows A8-A11, B8, E13-E15 and the Gaps' statuses.
 
 **Status labels:**
 - **confirmatory:** a pre-registered criterion and its verdict;
@@ -22,7 +23,7 @@ Mip-NeRF 360, truck from Tanks & Temples, drjohnson and playroom from Deep Blend
 checkpoints; C3DGS at `2a234af5` with the recorded deviations (`<cstdint>` retry, chunked `eigh` / `det`, the CPU
 evaluation fix); OGC's code at `49ccae72`; K = 4,096; three colour thresholds (j = -1, 0, +1), one process (seed 0) per
 point; `SE_noise` from the two seeds at j = 0 only; protocol ii (this project's evaluation, not C3DGS's or the
-paper's); 2x T4 and one Kaggle image. **Disclosure** (Amendment 15 d, kept by 17 d): E2 and E2c used bonsai, counter,
+paper's; section 20 finds the j = 0 lead the same under C3DGS's own evaluation, A9); 2x T4 and one Kaggle image. **Disclosure** (Amendment 15 d, kept by 17 d): E2 and E2c used bonsai, counter,
 kitchen, room and truck with this project's own checkpoints, and OGC's paper reports bonsai, counter, kitchen and
 room in its C3DGS host.
 
@@ -34,9 +35,13 @@ room in its C3DGS host.
 | A2 | Inside C3DGS, at equal rate over three colour thresholds, OGC's Gram-metric VQ beats C3DGS's own colour VQ on all seven gate scenes: BD-PSNR `P_bar` 0.3558 dB, against 2 x `SE_noise` 0.0065 dB. | confirmatory: Amendment 17 d P1; **pass** | s19 per-scene table (0.148587944 on truck to 0.484060073 on bonsai) | `check_s19.py`; the independent `numpy.polyfit` recompute inside it | as A1 | the common E5 limits; before fine-tuning; BD over three points is an exact parabola, so each P rests on six measurements; `SE_noise` is seed noise, not scene spread | no |
 | A3 | Across scenes P1 is large against its spread: mean 0.3558 dB, SD 0.1175 dB, t = 8.01 over the seven scenes (P2: 0.1874, 0.0805, 6.16). | exploratory: labelled "not pre-registered" in s19 | s19 "Exploratory" | `check_s19.py` | as A1 | not a pre-registered test; seven scenes | no |
 | A4 | Before C3DGS's fine-tuning, `ogc_gram` - `c3dgs` at j = 0 has mean +0.5239 dB (95% interval +0.3798 to +0.6681), reported next to the paper's +0.49 dB. | descriptive: Amendment 17 d secondary, no bar | s19 "Secondaries", fine-tuning bullet | `check_s19.py` | as A1 | **not like for like with the paper:** theirs is 9 Mip-NeRF 360 scenes, their evaluation, one run each; ours is 7 scenes (4 shared), protocol ii; j = 0 point only, so unequal bytes (E5p on train: +3.48%, s18) | no |
-| A5 | After C3DGS's 5,000-iteration fine-tuning, the lead shrinks to a mean of +0.0604 dB (95% interval +0.0258 to +0.0949), whose interval holds the paper's +0.09 dB; drjohnson is the only scene below 0. | descriptive: Amendment 17 d secondary, no bar | s19 "Secondaries", fine-tuning bullet; settles bullet | `check_s19.py` | as A1 | as A4 (cross-protocol, cross-scene); **bytes after fine-tuning not compared in s19** (E5p on train: fine-tuning shrinks OGC's `features_rest` by 32.5%, s18); two processes per scene | no |
+| A5 | After C3DGS's 5,000-iteration fine-tuning, the lead shrinks to a mean of +0.0604 dB (95% interval +0.0258 to +0.0949), whose interval holds the paper's +0.09 dB; drjohnson is the only scene below 0. | descriptive: Amendment 17 d secondary, no bar | s19 "Secondaries", fine-tuning bullet; settles bullet | `check_s19.py` | as A1 | as A4 (cross-protocol, cross-scene); **at unequal bytes:** OGC's fine-tuned row is larger on five scenes and smaller on counter and kitchen, with no rate-matched value (s20, A8); two processes per scene | no |
 | A6 | Our derived implementation of OGC's VQ (`ogc_gram_ours`) reproduces OGC's labels, float codebook and `.npz` bytes exactly in every process: 28 in E5 and 4 in E5p. | descriptive: Amendment 18 d, report only | s19 "Secondaries" (`ogc_gram_ours` bullet); s18 table | `check_s19.py`, `check_s18.py` | as A1; `kaggle/gn_e5p/attempt2/gn5p/` | identity stops at labels, codebook and bytes; array contents not hashed (s18); GPU; `"plain"` and `"scalar"` paths rest on a small-case test (s18) | no |
 | A7 | On train, a development scene, the pilot already showed the direction: OGC's VQ leads C3DGS's by +0.1292 dB BD-PSNR (P1; P2 +0.0641 dB). | exploratory: E5p, Amendment 17 c, no verdict | s18 "Rate and distortion" | `check_s18.py` | `kaggle/gn_e5p/attempt2/gn5p/` | one development scene; no verdict; process 1's images forced onto the CPU | no |
+| A8 | Fine-tuning narrows OGC's byte premium on every scene (`ogc_gram` / `c3dgs` 1.0341 to 1.0815 before, 0.9850 to 1.0700 after): after it OGC's row is still larger on five scenes (bonsai, room, truck, drjohnson, playroom) and smaller on counter and kitchen. There is no rate-matched value after fine-tuning. | exploratory, not pre-registered | s20 "Bytes after fine-tuning" | `check_s20.py` | as A1 | one point per row after fine-tuning (only j = 0 fine-tunes), so no curve; two processes per scene | no |
+| A9 | The lead does not depend on the evaluation protocol: under C3DGS's own evaluation `ogc_gram` - `c3dgs` at j = 0 averages +0.5205 dB (protocol ii: +0.5239), positive on every scene, and +0.0718 dB after fine-tuning. | exploratory, not pre-registered | s20 "C3DGS's own evaluation against protocol ii" | `check_s20.py` | as A1 | j = 0 only (no BD under C3DGS's evaluation); C3DGS at `2a234af5` with this project's deviations | no |
+| A10 | SSIM and LPIPS agree with PSNR in sign on every scene, at j = 0 and in BD, for both primary pairs (mean BD-SSIM +0.0071 and +0.0036; BD-LPIPS -0.0089 and -0.0052). | report-only at j = 0; the BD exploratory, not pre-registered | s20 "SSIM and LPIPS" | `check_s20.py` | as A1 | the BD reuses E5's PSNR fit on SSIM and LPIPS | no |
+| A11 | Every pair of rows is more faithful to the uncompressed model at 0 degrees on all seven scenes (`ogc_gram` - `c3dgs` +3.214 dB mean PSNR), and the gaps fall away toward the larger orbit angles. | pre-registered secondary (Amendment 17 d, note ii's fidelity per angle) | s20 "Fidelity to the uncompressed model per angle" | `check_s20.py` | as A1 | at +40 degrees drjohnson is undefined (an infinite PSNR in every row), so the mean there is over 6 scenes; the pooled-MSE measure turns two pairs negative at -40 degrees | no |
 
 ## (B) The dissection: plain, scalar and Gram metrics in OGC's Lloyd
 
@@ -49,6 +54,7 @@ room in its C3DGS host.
 | B5 | OGC's lead over GN-VQ is codebook use, not regularization: with OGC's choices in GN-VQ's code (`lad_all`), GN-VQ comes within 0.0013 dB (train) and 0.0009 dB (treehill) of OGC's VQ; the large single steps fill empty entries (reseeding +0.0394 dB on train, OGC's start +0.0179 dB on treehill), and each regularization choice is 0.0097 dB or less. | exploratory: E4q, Amendment 16 b, no verdict | s17 "The ladder"; s17 settles | `check_s17.py` | `kaggle/gn_e4q/gn4q/` | two development scenes; default point; GN-VQ's code with OGC's arithmetic reproduces OGC bit for bit (`bench/gn/test_gn.py`) | no |
 | B6 | Post hoc on train, the 16 x 16 metric against its trace is 65.4% of the chain from C3DGS's VQ to OGC's, and codebook choices 22.4%. | exploratory, post hoc | s17 settles ("mostly the metric") | `check_s17.py` | `kaggle/gn_e4q/gn4q/` (with E4p's rows, `kaggle/gn_e4p/gn4p/`) | post hoc; one scene; a chain through GN-VQ's code, not OGC's Lloyd (see Gaps) | no |
 | B7 | OGC's VQ ridge `lam` chosen by cross-validation is OGC's code default, 1e-3, on both development scenes, on shallow minima; the paper's 1e-6 scores far worse. | exploratory: E4q | s17 "`rho_cv` and `lam_cv`"; s17 settles | `check_s17.py` | `kaggle/gn_e4q/gn4q/` | train and treehill only; supports E5's fixed `lam` 1e-3 (Amendment 17 b) | no |
+| B8 | OGC's three metrics use all 4,096 codewords in every process, C3DGS's own VQ 22.8% to 82.0%; only `features_dc`, `features_rest` and `feature_indices` differ between rows, and 85.9% to 95.0% of OGC's extra bytes at j = 0 are its indices. | pre-registered secondary (Amendment 17 d: codewords used, index entropy, per-array bytes) | s20 "Codewords used and index entropy", "Per-array bytes" | `check_s20.py` | as A1 | per-array bytes at j = 0 | no |
 
 ## (C) Earlier findings: the gsplat PNG codec, the GN metric, GN-VQ and the cross-validated floor
 
@@ -94,34 +100,36 @@ OGC.** Inside C3DGS, OGC is ahead of GN-VQ on development scenes (D5, D6).
 | E10 | The full pipeline runs at INRIA scale on one T4 (bicycle, 6,131,954 splats, K = 65,536) with no step out of memory, at 11.51 GB allocated and 15.18 of 15.64 GB reserved; the colour threshold, not K, is C3DGS's rate knob (2.49x against 1.02x in bytes on train). | descriptive: E3p, E3r | s13 settles; s15 settles | `check_s13.py`, `check_s15.py` | `kaggle/gn_e3p/gn3p/`, `kaggle/gn_e3r/gn3r/` | small headroom; train for the rate knob | no |
 | E11 | E5's three sessions took 14.59 h of setup and jobs against an estimate of 16.0-24.9 h; every scene's job but truck's came in below the estimate's low end. | descriptive | s19 "How the sessions ran" | `check_s19.py` | `kaggle/gn_e5/S*/gn5/` | S1 ran its scenes in sequence (RAM 8,192 bytes below Note 1's figure) | no |
 | E12 | OGC's code was used for noncommercial research under its PolyForm Noncommercial 1.0.0 licence. The author confirmed by email that it is available for research purposes, and states that the method is patented for commercial use (paraphrased; never quoted). No OGC file is in the repository or any bundle. | provenance, not a finding | PREREG Amendment 18 c; `kaggle/RELATED_WORK_OGC.md` §1 | **none** (the bundle guard refuses OGC's files; `check_s19.py` does not test this) | - | the private dataset copy stays private | **yes** |
+| E13 | Fine-tuning re-fits OGC's AC int8 grid to its codebook: before it 41 to 110 of OGC's AC codebook values lie outside C3DGS's grid (C3DGS's own lie inside); after it the grid's scale is 1.58 to 2.84 times larger and 0 to 1 value lies outside, and OGC's `features_rest` compresses 25.9% to 10.0% smaller (C3DGS's -0.4% to +5.8%). | report-only (Amendment 18 note 2's records) | s20 "What the quantizer records show" | `check_s20.py` | as A1 | the records show the grid and the bytes, not why OGC's lead shrinks; any mechanism is inferred | no |
+| E14 | The gap between C3DGS's own evaluation and protocol ii is scene-dependent: 0.429 dB on kitchen, 0.167 dB on bonsai, 0.007 to 0.035 dB on the other five; train's gap (0.475 dB in E5p; E3q's 0.410-0.523 dB) does not carry over. | report-only; the comparison exploratory | s20 "C3DGS's own evaluation against protocol ii" | `check_s20.py` | as A1; `kaggle/gn_e5p/attempt2/gn5p/` | the files do not say why | no |
+| E15 | OGC's VQ call took 0.22 to 0.62 times C3DGS's own colour VQ's time per row on a T4. | report-only (Amendment 17 b's per-row record) | s20 "Time per row" | `check_s20.py` | as A1 | T4; OGC's chunk 25,000 and 15 iterations; excludes the 16 x 16 metric, computed once per scene | no |
 
 ## Gaps
 
-**Wanted for a paper, with no backing in FINDINGS:**
-1. **Pre-registered E5 secondaries missing from section 19.** Amendment 17 d lists codewords used, index entropy and
-   per-array bytes per row, and note ii's fidelity per angle (mean PSNR and pooled-MSE PSNR). The combiner computes
-   them (`per_row_measures`, `fidelity_per_angle_j0`), but FINDINGS does not report them.
-2. **Bytes after fine-tuning in E5.** Section 19 compares PSNR after fine-tuning but not bytes. E5p on train showed
-   them moving apart (E5), so A5 is not known to be at equal rate.
-3. **Amendment 18 note 2's quantizer records** (`qa_at_save`, `codebook_int8`) are in all 28 of E5's fine-tuned rows
-   and are not analysed, so the mechanism in E5 stays inferred.
-4. **A like-for-like comparison with the paper.** Its +0.49 / +0.09 dB are 9 Mip-NeRF 360 scenes, its evaluation, one
-   run each. E5 shares four scenes, uses protocol ii, and runs two processes at j = 0. No per-scene comparison with
-   the paper's Table 12 on the four shared scenes is in FINDINGS (only a tabulation of their numbers in
-   `RELATED_WORK_OGC.md`).
-5. **The protocol gap.** E3q found protocol ii 0.410-0.523 dB below C3DGS's own evaluation, unexplained. E5's rows
-   record C3DGS's evaluation (`c3dgs_PSNR`), but section 19 reports protocol ii only.
-6. **SSIM and LPIPS for E5's rows** are recorded, not reported.
-7. **A rate-matched comparison** (the paper's 512-entry codebook row) is not in FINDINGS.
-8. **BD-level noise.** The j = -1 and +1 points have one seed each; section 19 states this as a limit.
-9. **Cost of OGC's VQ against C3DGS's on the gate scenes:** section 19 gives job times only; per-row VQ times exist for
-   train only (s18).
+**Wanted for a paper, with no backing in FINDINGS** (statuses after FINDINGS section 20):
+1. ~~**Pre-registered E5 secondaries missing from section 19.**~~ **Closed by section 20:** codewords used, index entropy,
+   per-array bytes and note ii's fidelity per angle (B8, A11).
+2. **Bytes after fine-tuning in E5.** **Closed by section 20 as far as the data go:** per scene and process (A8). **Still
+   open:** a rate-matched value after fine-tuning, since only the j = 0 processes fine-tune (one point per row, no curve).
+3. **Amendment 18 note 2's quantizer records.** **Closed by section 20 for the records** (E13). **Still open:** why OGC's
+   lead shrinks with fine-tuning; the records show the grid and the bytes, not the cause.
+4. **A like-for-like comparison with the paper.** **Still open.** `RELATED_WORK_OGC.md` holds the paper's Table 12 only
+   where it noted a case against the matrix: one value per shared scene (the reproduction's on bonsai and counter, the
+   matrix's on kitchen and room), never the pair, so no per-scene gain can be set against the paper's. Section 20 places
+   those four values next to E5's under C3DGS's own evaluation, without a comparison of gains.
+5. ~~**The protocol gap.**~~ **Closed by section 20** (E14): the gap is scene-dependent and the row comparison does not
+   depend on the protocol (A9). **Still open:** why the gap is large on kitchen and bonsai.
+6. ~~**SSIM and LPIPS for E5's rows.**~~ **Closed by section 20** (A10).
+7. **A rate-matched comparison** (the paper's 512-entry codebook row) is not in FINDINGS. Still open.
+8. **BD-level noise.** The j = -1 and +1 points have one seed each; section 19 states this as a limit. Still open.
+9. ~~**Cost of OGC's VQ against C3DGS's on the gate scenes.**~~ **Closed by section 20** (E15).
 10. **GN-VQ against OGC on any gate scene:** none (E4 withdrawn). GN-VQ's held-out wins (C5, C8) are against gsplat
-    k-means only.
-11. **Committed checkers for FINDINGS sections 1-10** (C1-C6, D1, D2, E7's E0 part): none.
+    k-means only. Still open.
+11. **Committed checkers for FINDINGS sections 1-10** (C1-C6, D1, D2, E7's E0 part): none. Still open.
 12. **The paper's open questions** (`RELATED_WORK_OGC.md`, "Open questions"): which VQ ridge produced their tables
-    (10^-6 in the text, 1e-3 in the code), which C3DGS commit, and their run-to-run spread. None is answered, and a
-    discussion of any discrepancy with the paper would need them.
+    (10^-6 in the text, 1e-3 in the code), which C3DGS commit, and their run-to-run spread. None is answered. Still open.
+13. **New with section 20:** note ii's fidelity at +40 degrees is undefined on drjohnson (an infinite PSNR in every row;
+    which view, the bundle does not record).
 
 **Claims in FINDINGS that conflict with each other or with E5, or must not be quoted together without their measure:**
 1. **The Gram metric's share differs with the measure:**
@@ -152,10 +160,11 @@ No pick.
 
 1. **"A pre-registered, independent replication of OGC inside C3DGS: on seven gate scenes OGC's Gram-metric VQ beats
    C3DGS's own colour VQ at equal rate, and the Gram metric itself beats its trace."**
-   Rows: A1, A2, B1, A3, A6, A7, B3; limits from the common E5 block, E1, E2 and E3.
+   Rows: A1, A2, B1, A3, A6, A7, B3, A9, A10, A11; limits from the common E5 block, E1, E2 and E3.
 2. **"OGC's gain is real before fine-tuning and mostly gone after it":** +0.5239 dB before against +0.0604 dB after,
-   bracketing the paper's +0.49 / +0.09 dB.
-   Rows: A4, A5, E5; it needs Gaps 2-4 closed or stated as limits.
+   bracketing the paper's +0.49 / +0.09 dB; the same under C3DGS's own evaluation.
+   Rows: A4, A5, A8, A9, E5, E13; the after-fine-tuning comparison is at unequal bytes (A8), and Gaps 2 (rate-matched)
+   and 4 stay open, to be stated as limits.
 3. **"What makes a matrix-weighted VQ work: codebook use and the metric."** A dissection across C3DGS's VQ, OGC's
    Lloyd under three metrics and GN-VQ.
-   Rows: B1, B2, B3, B4, B5, B6, B7, D5, D6, A6; with Gaps conflicts 1-2 stated.
+   Rows: B1, B2, B3, B4, B5, B6, B7, B8, D5, D6, A6; with Gaps conflicts 1-2 stated.
