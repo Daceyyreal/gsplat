@@ -3399,3 +3399,297 @@ devices and covered sizes; Note 1's pairing rule as Note 3 restates it; Note 2 (
 
 S2's session-hours read 4.32-7.71 h; the correct high figure is 7.70 h (7.7048 h, `e5_estimate`). The 16.0-24.9 h
 total, every lane figure and the assignment are unchanged.
+
+## Amendment 19 (2026-10-13, after E5's verdict and FINDINGS sections 19-20, and before any E6 code or data): E6, fine-tuning curves, in two parts: (a) descriptive, on flowers, treehill and train; (b) pre-registered, on E5's seven scenes
+
+E5 ran on Kaggle in three sessions; its bundles are committed unchanged in `kaggle/gn_e5/S1/gn5/` (`9a90dabb`),
+`kaggle/gn_e5/S2/gn5/` (`1710cc8a`) and `kaggle/gn_e5/S3/gn5/` (`88b5ebed`). FINDINGS section 19 reports its verdict,
+pass (`de8690ca`, checked by `bench/gn/check_s19.py`, `63fe6de0`), and section 20 its secondaries (`847e39ee`,
+`check_s20.py`, `8258a0b1`). This amendment registers **E6**: why it exists (a), its descriptive part (b), its
+pre-registered part (c), the protocol both parts share (d), the measures (e), feasibility and sessions (f), the code
+(g), notebooks and bundles (h), and how it stands with the earlier amendments (i). G0, G1, G2a, H2b, G2c, E2b's
+criteria, E4p, E4q, E5p, E5 and Amendments 1-18 with their notes are unchanged except as stated here. This amendment's
+own dated notes are titled "Amendment 19 note 1", "Amendment 19 note 2" and so on.
+
+### a. Why E6
+
+- **After fine-tuning, E5 has no rate-matched value.** Before fine-tuning E5 compares OGC's VQ with C3DGS's at equal
+  rate, over three colour thresholds (P1). After C3DGS's 5,000-iteration fine-tuning it reports only the j = 0 pair:
+  `ogc_gram_ft` - `c3dgs_ft` has mean +0.0604 dB (FINDINGS section 19). That pair is at unequal bytes: OGC's fine-tuned
+  `.npz` is larger on five of the seven scenes and smaller on counter and kitchen (section 20, "Bytes after
+  fine-tuning"). Only the two j = 0 processes fine-tune (Amendment 17 d), so there is one point per fine-tuned row and
+  no curve.
+- **E6 adds fine-tuning curves:** the same fine-tuning at j = -1 and j = +1 as at j = 0.
+- **Two parts:**
+  - **(a), descriptive** (b below): E5's protocol unchanged, plus fine-tuning at j = -1 and j = +1, on three scenes
+    outside E5's seven: flowers, treehill and train. It has no verdict.
+  - **(b), pre-registered** (c below): a new question on E5's seven scenes. Is OGC's gain after fine-tuning positive at
+    equal rate? It has a primary, criteria and a verdict in E5's form.
+- **Neither part re-judges E5.** E5's verdict, its bundles and FINDINGS sections 19 and 20 stand as written.
+  `check_s19.py` and `check_s20.py` keep passing unchanged.
+
+### b. Part (a): descriptive, on flowers, treehill and train
+
+**Status.**
+- **No pass or fail.** Part (a) applies no criterion, bar or verdict order, and nothing in it is a gate. Its numbers
+  are reported per scene.
+- **Pooled numbers** (part (a)'s scenes with E5's or with part (b)'s) are exploratory, labelled so, and reported apart
+  from E5's verdict, from part (b)'s and from part (a)'s per-scene results.
+
+**Scenes,** each INRIA's official 30k checkpoint, each descriptive, with its history:
+- **flowers** (Mip-NeRF 360):
+  - This project used it with its own gsplat checkpoints: an E2 held-out scene (Amendment 7), then an E2b scene and a
+    development scene from Amendment 9 b on (kept by Amendment 10 b). That status comes from GN-VQ's work.
+  - **No OGC-side or C3DGS-side choice was made on it.** No member of INRIA's flowers checkpoint has been fetched,
+    loaded or rendered. Only the archive's zip directory, which lists its members, was read (E3's scouting, which
+    derived its splat count from the `.ply` member's size, `kaggle/E3_SCOUTING.md`; Amendment 15 note i).
+  - OGC's paper reports flowers in its C3DGS host (its Table 12).
+- **treehill** (Mip-NeRF 360):
+  - An E2 held-out scene with this project's checkpoints, then a development scene from Amendment 9 b on.
+  - E4q ran INRIA's checkpoint inside C3DGS (Amendment 16 b and note i). OGC's `lam` = 1e-3 was chosen there by
+    cross-validation on treehill and train (FINDINGS section 17), and E5's settings come from those two scenes
+    (Amendment 17 d).
+  - It can never be a gate scene (Amendment 16 b). E4q's rows are not reused.
+- **train** (Tanks & Temples):
+  - A development scene since Amendment 9.
+  - E3p fetched and rendered INRIA's checkpoint, E3q to E5p ran it inside C3DGS, and E5's design was fixed on it
+    (Amendment 17 d).
+  - **It is rerun in E6.** E5p's rows are not cited: Amendment 17 c says no claim rests on E5p, and E5p's seed-1 process
+    forced its images onto the CPU, which E5 does not (Note 2 C1).
+
+**Excluded,** by E5's memory model (`bench/gn/e5_feasibility.py`; the figures are note 1's):
+- **bicycle:** infeasible. Its C3DGS process exceeds the T4's 15.64 GB even with the images on the CPU, and its host
+  peak is close to the session's 33.66 GB of RAM. Its INRIA checkpoint has also been read and rendered (E3p, E3r).
+- **garden and stump:** infeasible under Note 1's rule as written: with the images on the CPU their C3DGS processes
+  exceed the T4's 15.64 GB.
+- No memory probe is planned for any of the three.
+
+**Protocol:** E5's, unchanged (d), with one addition. The two j = 0 processes fine-tune `c3dgs` and `ogc_gram` as E5's
+do, and **the j = -1 and j = +1 processes fine-tune them too**, the same way (5,000 iterations, from the copy with the
+row's table and the copy's random states; Amendment 17 b). Every one of the four processes then has seven rows:
+`c3dgs`, `ogc_plain`, `ogc_scalar`, `ogc_gram`, `ogc_gram_ours`, `c3dgs_ft` and `ogc_gram_ft`.
+
+**Predictions** (written before any E6 data and checked after it, per scene; not criteria):
+1. **P1 > 0:** BD-PSNR of `ogc_gram` against `c3dgs`, as Amendment 17 d computes it.
+2. **P2 > 0:** BD-PSNR of `ogc_gram` against `ogc_scalar`.
+3. **The BD-PSNR after fine-tuning is below P1:** BD-PSNR of `ogc_gram_ft` against `c3dgs_ft`, computed as P1 with the
+   fine-tuned rows' protocol ii PSNR and `.npz` bytes at j = -1, 0 and +1 (seed 0), is below the scene's P1.
+
+Each prediction is reported per scene as holding or not, with its values. A BD-PSNR that is missing (no shared byte
+range, Note 2 C2) makes its prediction "not checkable", reported so. None has a bar against noise, and none decides
+anything.
+
+### c. Part (b): pre-registered, on E5's seven scenes
+
+**The question:** inside C3DGS, after its fine-tuning, does OGC's VQ beat C3DGS's own at equal rate?
+
+**Disclosure** (written before any part (b) data):
+- **This hypothesis was formed after seeing E5's results on these seven scenes.** It was formed from the after-fine-tuning
+  lead (+0.0604 dB, FINDINGS section 19) and from section 20's finding that the lead is at unequal bytes. Nothing else in
+  part (b) was chosen on those results. The rows, points, K, `lam`, the fine-tuning's iterations, the fit, the rounding,
+  the criteria and the verdict order are E5's (Amendment 17 b and d, Note 2 C2 and C7).
+- **Part (b) is not a held-out test, and it makes no held-out claim.**
+  - E5's scenes have informed E5's verdict and sections 19-20.
+  - Before E5, bonsai, counter, kitchen, room and truck were also used by E2 and E2c with this project's own
+    checkpoints (Amendment 15 d's disclosure, kept by Amendment 17 d).
+  - OGC's paper reports bonsai, counter, kitchen and room in its C3DGS host.
+  - Section 12's remark that a later held-out claim needs new scenes or checkpoints applies to part (b) as to any claim.
+  - Part (b) tests a stated hypothesis with fresh runs on known scenes, and is reported that way.
+- **E5's rows are not reused.** Part (b) runs fresh processes, j = 0 included. Seeded C3DGS runs are not reproduced on
+  the GPU (FINDINGS section 15; `paper/CLAIMS.md` E2), so E5's j = 0 rows cannot form one curve with new j = -1 and
+  j = +1 rows. No E5 row enters any part (b) number.
+- **E5's verdict is untouched.** Part (b)'s replication of P1 (below) is report-only and changes nothing in E5, whatever
+  it reads.
+
+**Scenes:** E5's seven (bonsai, counter, kitchen, room, truck, drjohnson, playroom). INRIA's 30k checkpoints are fetched
+through Amendment 15 note i's pins, with E5's start devices, covered sizes, datasets and data factors
+(`kaggle/e5_scenes.py`, Amendment 17 Notes 1 and 2).
+
+**Processes,** in E5's order (`e5.E5_PROCESSES`), each on the scene's start device (Note 2 C1: no forced device):
+j = 0 with seed 0, j = 0 with seed 1, j = -1 with seed 0 and j = +1 with seed 0.
+
+**Rows:** in every process `c3dgs` (C3DGS's own `vq_features`, row 1) and `ogc_gram` (OGC's `gram_kmeans` with
+`metric="gram"`, Amendment 17 b's call), then both fine-tuned: `c3dgs_ft` and `ogc_gram_ft` (Amendment 17 b's
+fine-tuning, 5,000 iterations).
+- **Not computed:** `ogc_plain`, `ogc_scalar` and `ogc_gram_ours`. They serve E5's P2 and Amendment 18 d's check, which
+  E5 settled: P2 passed, and `ogc_gram_ours` equalled `ogc_gram` in all 28 processes (section 19). Part (b) uses
+  neither. Dropping them shortens each process and lowers its host peak (no second `[n, 16, 16]` copy, `vq.py:29`).
+- **OGC's code** comes through Amendment 18 c's chain with note 3's sources. In a process whose chain ends at `derived`,
+  `ogc_gram` is `ogc_derived`'s, recorded in the `impl` column (Amendment 18 e, note 3).
+- Every row is saved before any row is evaluated, and evaluated by protocol ii and by C3DGS (17 b, 17 e.2).
+
+**The primary,** per scene `s`: **P_FT = BD-PSNR(`ogc_gram_ft` against `c3dgs_ft`)**. It is computed exactly as E5's P1,
+with the fine-tuned rows in place of the unfine-tuned ones:
+- each curve is a fine-tuned row's protocol ii test PSNR against its `.npz` bytes at j = -1, 0 and +1, seed 0, one
+  process per point;
+- the fit is Amendment 9 a's domain-scaled fit (`g2.bd_psnr_scaled`), of degree 2 through the three points, over the
+  overlap of the two curves' byte ranges only;
+- a scene whose two curves share no byte range has no P_FT. It enters `P_bar` as 0 and counts as not positive, with its
+  value reported as missing (Note 2 C2).
+
+**P_FT passes if all three hold,** with r(x) = round(x, 9) and every comparison strict (Note 2 C7):
+1. r(`P_bar`) > 0, where `P_bar` is the mean of P_FT over the n scenes;
+2. #{s : r(P_FT,s) > 0} >= (7 n + 9) // 10 (5 of 7, 5 of 6, 4 of 5);
+3. r(`P_bar`) > 2 x r(`SE_noise`), where `SE_noise` comes from the fine-tuned rows' j = 0 seed pair, computed as in
+   Amendment 17 d:
+   - `D_sp` is the protocol ii PSNR of `ogc_gram_ft` minus that of `c3dgs_ft` in the j = 0 process with seed p;
+   - `D_s` is the mean of `D_sp` over the two processes;
+   - `v_s` is the sum over the two processes of (`D_sp` - `D_s`)^2;
+   - `SD_pool` = sqrt(mean of `v_s` over the n scenes) and `SE_noise` = `SD_pool` / sqrt(2 n).
+
+**The verdict:** part (b) passes if P_FT passes.
+- **`incomplete`** if n < 5 after drops.
+- **`incomplete`** also if a primary row is missing in any of a non-dropped scene's four processes after one rerun of
+  that process, whole, with the same seed (17 d, 17 i, Note 2 C9). The primary rows are `c3dgs_ft` and `ogc_gram_ft`,
+  protocol ii's PSNR and the `.npz` bytes. A fine-tuned row cannot exist without its unfine-tuned row, so losing
+  `c3dgs` or `ogc_gram` loses the primary too.
+- Verdict order: `incomplete` > `fail` > `pass`.
+- The verdict is computed locally over every part (b) session's committed bundle, by part (b)'s verdict module (g). A
+  session's own summary holds per-scene parts only, never a verdict (Note 2 C5).
+- Every part is reported whatever the outcome: each scene's P_FT and its two curves, `D_sp`, `D_s`, `v_s`, `P_bar`,
+  `SD_pool`, `SE_noise` and the count of positive scenes.
+
+**Secondaries (descriptive, no bars):**
+1. **P1 replicated in a new run (report only):** BD-PSNR(`ogc_gram` against `c3dgs`) over the same processes'
+   unfine-tuned rows, with its j = 0 `D_s` and `SE_noise` and E5's three criteria evaluated as a description. It is set
+   beside E5's P1 and does not re-judge E5.
+2. **The bytes after fine-tuning, per point:** `c3dgs_ft` and `ogc_gram_ft`'s `.npz` bytes in each of the four
+   processes, their difference and ratio, and the same before fine-tuning. Also BD-rate(`ogc_gram_ft` against
+   `c3dgs_ft`), with the same fit, undefined when the two curves share no PSNR range.
+3. **The quantizer records** of every fine-tuned row in all four processes, by Amendment 18 note 2: `qa_at_save`,
+   `table_range` and `codebook_int8`. Every unfine-tuned row also has its `qa_at_save` and `table_range`.
+
+### d. The protocol both parts share: E5's
+
+- **C3DGS** at `2a234af5` with Amendment 13 b's build and the `<cstdint>` retry where the image needs it (18 b);
+  Amendment 13 g's chunked `eigh` and `det`; Amendment 14 f's seeding; C3DGS's geometry VQ once per process, shared by
+  its rows; the fork, the copy and E4p's three checks (17 b).
+- **The rows' settings:** K = 4,096; the colour threshold 6e-7 x 3^j at j = -1, 0, +1 (2e-7, 6e-7, 1.8e-6); OGC's call
+  with `lam` = 1e-3, 15 iterations, seed 0 and chunk 25,000 (17 b, e.1); fine-tuning 5,000 iterations, with the labels
+  checked to survive (17 b).
+- **Evaluation:** protocol ii (Amendment 12 a) on each decoded row, and C3DGS's evaluation with 17 e.2's CPU fix on for
+  every process (Note 2 C13). Before the processes, E5's harness phase per scene: the runner, protocol ii of the
+  uncompressed model, the full-train-view 16 x 16 GN pass, and note ii's geometry, reference renders and coverage
+  (17 c, d).
+- **Data:** the data factor from INRIA's `cfg_args` and the dataset. flowers and treehill use `images_4` (data factor
+  4). INRIA's treehill `cfg_args`, read in E4q, names `images_4` at `-r 1`, and the scene loaded at 1267 x 832
+  (`kaggle/gn_e4q/gn4q/gn4q_meta_treehill.json`). flowers' `cfg_args` has not been read. train is at data factor 1,
+  through E3p's pinned members, as E5p. E5's seven use E5's (Note 2 C4 for Deep Blending).
+- **Start devices:** by Note 1's rule (17 d, e.3): the GPU if the model's upper end with the colour step, x 1.14, fits
+  the T4 with the images on the GPU, else the CPU. For E5's seven they are Note 1's; for flowers, treehill and train,
+  note 1 of this amendment gives them. treehill ran with its images on the CPU in E4q (Amendment 16 note i, under a
+  model with GN-VQ's rows); under Note 1's model it starts on the GPU (note 1). E4q's measured peaks are note 1's
+  context.
+- **Drop rules** as Note 2 C3 and C4. A scene is not started, and is reported `dropped` with the reason, if its
+  `cfg_args` give `sh_degree` other than 3, or if its loaded size (from `cfg_args` and the first image, by INRIA's
+  size rule) is not one note 1 (part (a)) or Note 1 (part (b)) covers. `eval` and `white_background` are recorded, and
+  `eval` = False is flagged. In part (b) a drop shrinks n.
+- **Memory, failures and the deadline, unchanged:**
+  - 17 d's memory rule (one retry with `--data_device cpu` on running out of GPU memory, then the scene's later runs
+    on the CPU; a scene whose first process also runs out on the CPU before any results is dropped);
+  - 17 i (a failure before a scene's results allows a rerun after a dated bug-fix note; after results, one whole rerun
+    with the same seed);
+  - Note 2 C9, C11, C12 and C13;
+  - Note 4's guard (a) and deadline-cut (b), with each process's high estimate from note 1's model, and Note 4's
+    carry-over of deferred processes into the next session of the same part;
+  - Note 2 C6: each process records its Kaggle image, and any curve or j = 0 pair spanning images is reported so
+    (18 b).
+- **OGC's code and data:** Amendment 18 c's chain and bundle guard, with note 3's sources; OGC's files are never
+  committed or bundled, and the private dataset stays private (18 c).
+
+### e. Measures
+
+**Part (a), per scene and per process:** every measure E5 reports for a scene, and the fine-tuning curves.
+- **Amendment 17 d's primaries:** P1 and P2 with their curves, `D_sp`, `D_s` and `v_s` (per scene; no `P_bar` and no
+  criteria).
+- **Amendment 17 d's secondaries:**
+  - `ogc_scalar` - `ogc_plain` and `ogc_plain` - `c3dgs`, each as BD-PSNR and as the paired j = 0 difference;
+  - BD-rate for every pair of the four rows;
+  - `ogc_gram` - `c3dgs` before and after fine-tuning at j = 0;
+  - codewords used, index entropy and per-array bytes per row;
+  - note ii's fidelity per angle, as the mean PSNR and as the PSNR of the pooled MSE.
+- **Amendment 18 d's comparison** of `ogc_gram_ours` with `ogc_gram`: label agreement, the codebooks' largest absolute
+  difference, colour-array bytes, and protocol ii's difference with its `SE_noise`.
+- **What FINDINGS section 19 reports per scene:** the rows at j = 0, the checks (`cfg_args`, the camera frame, the
+  split, the loaded size), and per session the image, setup, job times against note 1's estimate, and host peaks
+  against note 1's model.
+- **What FINDINGS section 20 reports per scene:**
+  - the bytes after fine-tuning and their ratio;
+  - the quantizer records (Amendment 18 note 2);
+  - C3DGS's evaluation against protocol ii;
+  - SSIM and LPIPS, with E5's BD fit on them;
+  - time per row.
+- **New:** the fine-tuning curves. BD-PSNR and BD-rate of `ogc_gram_ft` against `c3dgs_ft` over the three seed-0
+  points (prediction 3), and both fine-tuned rows' bytes at every point.
+
+**Part (b):** the primary with every part (c), the three secondaries (c), and as report-only measures:
+- `ogc_gram_ft` - `c3dgs_ft` at each point;
+- C3DGS's evaluation of every row;
+- SSIM and LPIPS;
+- per-array bytes, codewords used and index entropy;
+- note ii's fidelity per angle;
+- time and memory per row and process.
+
+### f. Feasibility and sessions
+
+- **Amendment 19 note 1, dated and committed alone before any E6 code** (17 e.3's method). It gives:
+  - **the covered loaded sizes:** flowers and treehill at data factor 4, train at data factor 1, each with its source;
+  - **per scene, the GPU and host figures** by Note 1's GPU model with Note 3's host model and margin, also times E5's
+    largest observed host miss (bonsai, x 1.094 of Note 3's figure, FINDINGS section 19);
+  - **the start devices;**
+  - **the session plan for both parts:** E5's estimate model (`bench/gn/e5_estimate.py`) with each part's rows. The
+    fine-tuned rows E5 did not run are taken at FINDINGS section 20's per-row fine-tuning times (365.2-698.4 s), with
+    their C3DGS evaluation and decoded-row steps at the model's rates. E5's observed times are given as context only
+    (every job but truck's came in below the estimate's low end, section 19).
+- **One lane per session** unless the session RAM and 17 h's pairing rule (below 0.8 x the session's RAM even if
+  either scene falls back to its CPU images, Note 1's rule as Note 3 restates it, with the x 1.094 miss) allow two
+  (Note 2 C11).
+- **Each session holds scenes of one part.** A part's deferred processes run in that part's next session, or in an
+  added session of that part, whose notebook is built then (Note 4).
+
+### g. Code (after this amendment and note 1; none yet)
+
+- **E5's files stay byte-identical:** `kaggle/e5_scenes.py`, `kaggle/gn_e5_scene.py`, `bench/gn/e5.py`,
+  `bench/gn/e5_verdict.py`, `bench/gn/e5_estimate.py`, `bench/gn/e5_feasibility.py`, `kaggle/build_gn_e5_bench.py` and
+  E5's notebooks. `check_s19.py`, `check_s20.py` and E5's tests keep passing unchanged.
+- **`kaggle/gn_e6_scene.py`,** copied from `kaggle/gn_e5_scene.py`. A test pins its diff against `gn_e5_scene.py` to the
+  scene-module import and the lines that select the processes, the rows and the fine-tuned rows, and nothing else.
+- **`kaggle/e6_scenes.py`,** the scene module for both parts: pins, splat counts, start devices, covered sizes,
+  datasets, data factors, and each part's processes and rows.
+  - **flowers' pins are new.** Its three members (`point_cloud.ply`, `cameras.json`, `cfg_args`) are pinned from the
+    archive's zip directory (offset, sizes, CRC32) under Amendment 15 d's header-read rule, with no member fetched.
+  - treehill's pins are Amendment 16 note i's (`kaggle/gn_e4q_scene.py`), and train's are E3p's.
+  - E5's seven come from `kaggle/e5_scenes.py` by import.
+- **Part (b)'s verdict** is a new module that imports `bench/gn/e5.py`'s functions (BD, curves, `j0_diffs`, `noise`,
+  `r9`, `positives_needed`), with no copy and no edit.
+- **Part (a)'s reader** takes part (a)'s bundles per scene, with no verdict.
+- **E6's estimate and feasibility** go in a new module that imports E5's and reproduces note 1's tables by test.
+- **The notebook builder** (h).
+- **A dry run** on stand-ins, alone, never alongside the pytest gate, before any E6 run.
+
+### h. Notebooks, titles and bundles
+
+- **One Kaggle notebook per session**, titled "E6 OGC <part> S#": "E6 OGC descriptive S#" for part (a) and
+  "E6 OGC FT-curves S#" for part (b).
+- **Bundles `E6_bundle_S#.zip`, arcname `gn6/`.** Sessions are numbered across both parts in the order they run, which
+  note 1 sets. A 17 i rerun after a dated bug-fix note adds `_a2` (Note 2 C8).
+- Each session attaches every earlier E6 session's output of its part, E5p attempt 2's output for the wheel (pinned to
+  that version), "E3p INRIA pilot" where train runs, and the private dataset "E5p OGC source 49ccae72".
+
+### i. How E6 stands with the earlier amendments
+
+- **E5's scenes in part (b).**
+  - No rule in Amendment 17 d or 18 treats E5's scenes as used up or bars a later gate on them.
+  - Amendment 16 a kept them untouched "until a later amendment registers a gate on them". Amendment 17 did, and this
+    amendment registers another.
+  - Part (b) departs from Amendment 17 d's statement for E5 that nothing was chosen on these scenes: its hypothesis was
+    chosen on E5's results. That is disclosed (c), and part (b) claims nothing held out.
+- **Amendments 9 b and 10 b:** flowers, treehill and train are development scenes, and no later held-out claim may use
+  them. Part (a) makes no claim.
+- **Amendment 16 b:** train and treehill can never be gate scenes. Part (a) has no gate.
+- **Amendment 17 c:** no claim rests on E5p. E6 does not cite E5p; train is rerun.
+- **Amendment 18 d:** `ogc_gram_ours` runs in every E5p and E5 process. Part (a) keeps it. Part (b) omits it, as an E6
+  design that 18 d does not govern.
+- **Amendment 17 a:** GN-VQ stays retired; E6 has no GN-VQ row.
+- **Unchanged:** E5's scenes, rows, primaries, bars, verdict and bundles; Amendments 17 and 18 with all their notes;
+  FINDINGS sections 19 and 20; Amendment 11 b's frozen method. E6 adds no scene, row or criterion to E5.
