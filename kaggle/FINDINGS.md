@@ -113,6 +113,15 @@ compiling (no `ensurepip` for a venv).
   confounded) at unequal bytes: it shrinks OGC's `features_rest` by 32.5% and grows C3DGS's by 2.4% / 2.3%. The quantizer
   mechanism is inferred; Amendment 18 note 2 records it from E5 on.
 
+**E5 (section 19, branch `bench/gn-vq`): the pre-registered gate of the OGC replication inside C3DGS on bonsai, counter,
+kitchen, room, truck, drjohnson and playroom (Amendment 17 d; Notes 1-4). E5 passes.**
+- **P1, OGC's VQ against C3DGS's own:** BD-PSNR `P_bar` 0.3558 dB, positive on all 7 scenes, against 2 x `SE_noise`
+  0.0065 dB.
+- **P2, OGC's 16 x 16 Gram metric against its trace in the same Lloyd:** `P_bar` 0.1874 dB, positive on all 7 scenes,
+  against 2 x `SE_noise` 0.0003 dB.
+- **Exploratory:** the Gram metric gives about half of P1; after C3DGS's fine-tuning the lead is +0.0604 dB, whose
+  interval holds the paper's +0.09 dB. Our derived VQ equals OGC's in every process.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -197,6 +206,13 @@ compiling (no `ensurepip` for a venv).
   fine-tuned rows and section 16's note ii (`kaggle/gn_e4p/gn4p/`), the runtime estimate
   (`bench/gn/e5_estimate.py`, `estimate(1)`, Amendment 18 d), the paper's Table 1, and the readings of code: this
   repository's job and hooks, and C3DGS's source at `2a234af5`. `bench/gn/check_s18.py` recomputes every number in the section from those files and checks each against the text.
+- Section 19: every number comes from the three E5 session bundles, `kaggle/gn_e5/S1/gn5/` (`9a90dabb`),
+  `kaggle/gn_e5/S2/gn5/` (`1710cc8a`) and `kaggle/gn_e5/S3/gn5/` (`88b5ebed`), each unpacked unchanged (three Kaggle
+  sessions on 2x T4, gsplat commits `d5a86840`, `30b096fc` and `cfedaeaa`, a restored wheel), through
+  `bench/gn/e5_verdict.py`. The exceptions are Note 3's host figures (`bench/gn/e5_feasibility.py`), Note 4's estimates
+  (`bench/gn/e5_estimate.py`), the paper's Table 1, and the readings of code (`bench/gn/e5.py`, `bench/gn/g2.py`).
+  `bench/gn/check_s19.py` recomputes every number in the section from those files, with an independent BD fit beside
+  the combiner's, and checks each against the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -3810,3 +3826,185 @@ the colour-quantized set); C3DGS's evaluation of a row 58.0-60.3; fine-tuning 32
   - why fine-tuning shrinks `ogc_gram`'s bytes: the quantizer mechanism is inferred, not recorded.
 - **No process-count change is proposed.** Amendment 17 c allows one, upward only, by a dated note before any E5 code;
   that is Dace's decision.
+
+## 19. E5: the OGC replication gate inside C3DGS on the seven gate scenes (pre-registered) — E5 passes: OGC's VQ leads C3DGS's own by +0.3558 dB BD-PSNR (P1) and the same Lloyd with the trace-weighted metric by +0.1874 dB (P2), on all seven scenes
+
+**E5 is the gate Amendment 17 d pre-registered** (`b3923bfb`), with Amendment 18 (`f13193cb`) and its notes 1-3, and
+Amendment 17 Notes 1-4 (Note 4 `992a2a29`, its erratum `1b532e40`), all written before any E5 run. On INRIA's 30k
+checkpoints of bonsai, counter, kitchen, room, truck, drjohnson and playroom it forks C3DGS's process at the colour VQ,
+four processes per scene (j = 0 with seeds 0 and 1, j = -1 and j = +1 with seed 0), and compares C3DGS's own VQ
+(`c3dgs`) with OGC's `gram_kmeans` under its three metrics (`ogc_plain`, `ogc_scalar`, `ogc_gram`); `ogc_gram_ours`
+runs beside them, report only. Every number comes from the three session bundles, `kaggle/gn_e5/S1/gn5/` (`9a90dabb`),
+`kaggle/gn_e5/S2/gn5/` (`1710cc8a`) and `kaggle/gn_e5/S3/gn5/` (`88b5ebed`), read by `bench/gn/e5_verdict.py` (Note 2
+C5), except where another committed file is named. Items marked **exploratory** were not pre-registered; they are read
+from the same files and change nothing.
+
+### The verdict (Amendment 17 d; Note 2 C2, C5, C7)
+
+The combiner over the three bundles printed (its last line, the output path, left out; its JSON is not committed):
+
+```
+E5: PASS (n = 7; dropped -; no incomplete reason)
+  P1: P_bar 0.3558343737055368, positive 7 of 7 (need 5), SE_noise 0.0032397998798367857, pass True; missing P -
+  P2: P_bar 0.18740829767251396, positive 7 of 7 (need 5), SE_noise 0.00016771458759244753, pass True; missing P -
+```
+
+Per scene (dB, rounded to 9 decimals as C7 compares them):
+
+| Scene | P1: BD-PSNR, `ogc_gram` against `c3dgs` | P1's pair at j = 0, `D_s` | P2: BD-PSNR, `ogc_gram` against `ogc_scalar` | P2's pair at j = 0, `D_s` |
+|---|---|---|---|---|
+| bonsai | 0.484060073 | 0.662099426 | 0.320522033 | 0.418902629 |
+| counter | 0.319226727 | 0.449111462 | 0.165453427 | 0.205868244 |
+| kitchen | 0.411145219 | 0.631160777 | 0.275679656 | 0.378012426 |
+| room | 0.386923539 | 0.540365366 | 0.175005021 | 0.218052008 |
+| truck | 0.148587944 | 0.248380899 | 0.100030562 | 0.149408519 |
+| drjohnson | 0.276526313 | 0.446854649 | 0.128071281 | 0.170944156 |
+| playroom | 0.464370802 | 0.689506991 | 0.147096105 | 0.180252437 |
+
+| | P1 | P2 |
+|---|---|---|
+| `P_bar` (n = 7) | 0.355834374 | 0.187408298 |
+| `SD_pool` | 0.012122221 | 0.000627531 |
+| `SE_noise` = `SD_pool` / sqrt(14) | 0.003239800 | 0.000167715 |
+| 2 x `SE_noise` | 0.006479600 | 0.000335429 |
+| scenes with P > 0, against (7n + 9) // 10 | 7 (5 needed) | 7 (5 needed) |
+| criteria 1-3 (`P_bar` > 0; the count; `P_bar` > 2 x `SE_noise`) | all hold | all hold |
+
+- **E5 passes.** Both primaries pass all three criteria. In the verdict's order (`incomplete` > `fail` > `pass`) it is not
+  `incomplete`: n = 7 (no scene dropped: `sh_degree` 3 on all seven and every loaded size covered), no primary row
+  missing, no P missing, and no process deferred, deadline-cut, rerun or stopped. It is not `fail`, since both pass.
+- **Every scene is positive in both primaries**, and every one of the 14 values is more than 2 x its `SE_noise` above 0.
+
+### How the numbers are computed
+
+- **BD over three points is an exact interpolation.** Each curve is a row's protocol ii PSNR against log10 of its
+  `.npz` bytes at j = -1, 0 and +1 (seed 0, one process per point), and every curve has 3 points. The fit's degree is
+  the smaller of 3 and the points less one (`e5.bd_degree`; `g2.bd_psnr_scaled`), so each curve is the parabola through
+  its three points. BD-PSNR averages the PSNR difference over the shared range of log10 bytes; BD-rate fits log10 bytes
+  against PSNR and averages over the shared PSNR range, and is undefined when the two curves share none.
+- **`SE_noise` is seed noise only.** It is the spread, between the two seeds, of the paired difference at j = 0
+  (`D_sp`), pooled over the scenes (`SD_pool`, one degree of freedom per scene) and divided by sqrt(2n) = sqrt(14). It
+  does not include how P varies from scene to scene (Amendment 17 d: the j = 0 paired difference's spread stands for
+  the BD-PSNR's, which one process per point cannot measure).
+- **An independent recompute matched.** A separate script that imports none of `e5.py`, `e5_verdict.py` or `g2.py`
+  fits each curve with `numpy.polyfit` of degree 2 and averages over the shared range of log10 bytes. It reproduces all
+  14 per-scene values of P1 and P2, both `P_bar`, both `SD_pool` and both `SE_noise` to 9 decimals.
+  `bench/gn/check_s19.py` repeats it.
+
+### Exploratory (not pre-registered)
+
+- **Spread across scenes:** over the seven scenes P1 has mean 0.3558 dB, SD 0.1175 dB (n - 1) and t = 8.01; P2 0.1874
+  dB, 0.0805 dB and t = 6.16. These are scene-level statistics; the gate's `SE_noise` is not one.
+- **A decomposition of P1:** the mean BD-PSNR over the seven scenes is 0.1185 dB for `ogc_plain` against `c3dgs`
+  (OGC's Lloyd with the identity metric), 0.0520 dB for `ogc_scalar` against `ogc_plain` (the trace weight) and 0.1874
+  dB for `ogc_gram` against `ogc_scalar` (the 16 x 16 metric against its trace: P2). They sum to 0.3579 dB against P1's
+  0.3558 dB; BD differences do not add exactly, since each pair has its own shared byte range. The Gram metric gives
+  about half of P1 (52.7%).
+
+### Secondaries (Amendment 17 d; descriptive, no bars)
+
+Per scene (dB; BD-PSNR over the three points, `D_s` the mean of the two j = 0 processes):
+
+| Scene | `ogc_scalar` - `ogc_plain`: BD-PSNR / `D_s` | `ogc_plain` - `c3dgs`: BD-PSNR / `D_s` | Before fine-tuning: `ogc_gram` - `c3dgs` | After: `ogc_gram_ft` - `c3dgs_ft` |
+|---|---|---|---|---|
+| bonsai | +0.0873 / +0.0936 | +0.0802 / +0.1496 | +0.6621 | +0.1023 |
+| counter | +0.0458 / +0.0572 | +0.1112 / +0.1860 | +0.4491 | +0.0902 |
+| kitchen | +0.0634 / +0.0788 | +0.0752 / +0.1744 | +0.6312 | +0.0744 |
+| room | +0.0614 / +0.0703 | +0.1563 / +0.2520 | +0.5404 | +0.0474 |
+| truck | +0.0373 / +0.0425 | +0.0101 / +0.0565 | +0.2484 | +0.0373 |
+| drjohnson | +0.0328 / +0.0423 | +0.1138 / +0.2336 | +0.4469 | -0.0069 |
+| playroom | +0.0358 / +0.0447 | +0.2825 / +0.4646 | +0.6895 | +0.0777 |
+
+- **The paired j = 0 differences:** `ogc_scalar` - `ogc_plain` +0.0613 dB (`SE_noise` 0.000125), `ogc_plain` - `c3dgs`
+  +0.2167 dB (`SE_noise` 0.003220), both positive on every scene, as their BD-PSNR is.
+- **Fine-tuning (5,000 iterations, both j = 0 processes):** before it, `ogc_gram` - `c3dgs` has mean +0.5239 dB (95%
+  interval +0.3798 to +0.6681) against the paper's +0.49 dB; after it, `ogc_gram_ft` - `c3dgs_ft` has mean +0.0604 dB
+  (95% interval +0.0258 to +0.0949), and the paper's +0.09 dB (arXiv 2609.28997, its Table 1, the mean of 9 Mip-NeRF 360
+  scenes, one run each) lies inside. drjohnson is the only scene below 0 after fine-tuning. The fine-tuned rows carry
+  Amendment 18 note 2's records (`qa_at_save`, `codebook_int8`) on all 28; the bytes after fine-tuning are not compared
+  here.
+- **`ogc_gram_ours` against `ogc_gram`** (Amendment 18 d): in all 28 processes the labels agree (fraction 1.0), the
+  codebooks' largest absolute difference is 0.0 and the `.npz` bytes are equal; protocol ii's difference is 0.0 in every
+  j = 0 process (`D_s` 0.0 on every scene, `SE_noise` 0.0). OGC's code came from its URL in every process, so the row
+  ran everywhere.
+- **BD-PSNR / BD-rate for every pair of the four rows** (seed 0, three points each):
+
+| Scene | `ogc_plain` against `c3dgs` | `ogc_scalar` against `c3dgs` | `ogc_gram` against `c3dgs` | `ogc_scalar` against `ogc_plain` | `ogc_gram` against `ogc_plain` | `ogc_gram` against `ogc_scalar` |
+|---|---|---|---|---|---|---|
+| bonsai | +0.0802 / -4.22% | +0.1694 / -8.88% | +0.4841 / -31.33% | +0.0873 / -5.05% | +0.4050 / -28.96% | +0.3205 / -24.54% |
+| counter | +0.1112 / -7.05% | +0.1595 / -10.51% | +0.3192 / -24.77% | +0.0458 / -3.42% | +0.2098 / -19.06% | +0.1655 / -17.21% |
+| kitchen | +0.0752 / -4.31% | +0.1408 / -8.26% | +0.4111 / -28.30% | +0.0634 / -3.82% | +0.3353 / -24.97% | +0.2757 / -22.19% |
+| room | +0.1563 / -10.53% | +0.2227 / -16.09% | +0.3869 / undefined | +0.0614 / -5.32% | +0.2318 / -30.68% | +0.1750 / -29.75% |
+| truck | +0.0101 / -1.17% | +0.0494 / -5.87% | +0.1486 / -24.92% | +0.0373 / -4.33% | +0.1327 / -24.07% | +0.1000 / -20.71% |
+| drjohnson | +0.1138 / -9.92% | +0.1501 / -14.23% | +0.2765 / undefined | +0.0328 / -3.63% | +0.1572 / undefined | +0.1281 / -22.80% |
+| playroom | +0.2825 / -19.93% | +0.3225 / undefined | +0.4644 / undefined | +0.0358 / -6.93% | +0.1787 / undefined | +0.1471 / undefined |
+
+- **Seven BD-rates are undefined, all because the two curves share no PSNR range;** in each, the first row's lowest
+  PSNR lies above the second row's highest, by (dB): drjohnson `ogc_gram` against `c3dgs` 0.1089 and against
+  `ogc_plain` 0.0028; playroom `ogc_scalar` against `c3dgs` 0.0750, `ogc_gram` against `c3dgs` 0.3187, against
+  `ogc_plain` 0.1199 and against `ogc_scalar` 0.0896; room `ogc_gram` against `c3dgs` 0.0862. For comparison bonsai's
+  `ogc_gram` and `c3dgs` curves share 0.1250 dB of PSNR, and its BD-rate is defined. Every BD-PSNR is defined: every
+  pair's byte ranges overlap.
+
+### How the sessions ran
+
+| Session | gsplat commit | Scenes, in the order run | First scene started | Jobs (s) | Setup (s) | Setup plus jobs (h) |
+|---|---|---|---|---|---|---|
+| S1 | `d5a86840` | kitchen, room, counter | 2026-10-11T20:01 | 7,965 / 7,470 / 6,735 | 383.0 | 6.26 |
+| S2 | `30b096fc` | drjohnson, truck | 2026-10-12T13:10 | 8,355 / 6,150 | 509.4 | 4.17 |
+| S3 | `cfedaeaa` | bonsai, playroom | 2026-10-12T22:02 | 7,320 / 7,035 | 599.8 | 4.15 |
+
+- **Three Kaggle sessions on 2x T4** (Note 4's plan A), one notebook each ("E5 OGC replication gate S1" to "S3"),
+  14.59 h of setup plus jobs in all against Note 4's 16.0-24.9 h. Between the sessions only `kaggle/HANDOFF.md` and the
+  earlier sessions' data changed: no code, notebook or PREREG change.
+- **One image throughout:** Python 3.13.15, torch 2.11.0+cu128 (CUDA 12.8), cuDNN 91900, driver 580.178.04; the gsplat
+  wheel restored from E5p attempt 2's output in every session; no curve or j = 0 pair spans images.
+- **S1 ran one scene at a time:** its RAM was 33,658,310,656 bytes, 8,192 below Note 1's 33,658,318,848, so Note 2 C11
+  applied as written and kitchen, room and counter ran in sequence on one GPU, not in two lanes. S2 and S3 had
+  33,658,318,848 bytes and one lane each.
+- **OGC's source:** the URL verified (HEAD `49ccae72`, tree `9feebced`) and was used in every session. The private
+  dataset verified in S2 and S3; it was not attached in S1, whose preflight line for it reads FAIL.
+- **C3DGS built** in every session with 7 deviations: Amendment 13 b's six and the `<cstdint>` retry that
+  `diff-gaussian-rasterization` needs on this image (Amendment 18 b; its source not edited).
+- **Every scene and process ran cleanly:** each process once, on the scene's start device (drjohnson's images on the CPU,
+  the six others' on the GPU), with no out-of-memory, deferral, deadline cut, 17 i rerun or stop; no deviation, failed or
+  skipped step (145 steps per scene, all ok); 25 of 25 rows `ok` per scene. `cfg_args` read `sh_degree` 3, `eval` True
+  and `white_background` False on all seven; every loaded size lies inside Note 1's covered sizes (Deep Blending at data
+  factor 1, Note 2 C4), and the camera-frame and test-split checks passed on all seven. Every `npz2ply.py` call returned
+  0.
+
+**Each scene's job against Note 4's estimate** (s), and **the C3DGS step's peak host RSS** (the job and C3DGS together,
+GB) against Note 3's figure at the start device:
+
+| Scene | Job | Note 4's estimate | Host peak | Note 3 |
+|---|---|---|---|---|
+| bonsai | 7,320 | 10,909-14,377 | 10.14 | 9.27 |
+| counter | 6,735 | 9,937-12,885 | 9.17 | 9.20 |
+| kitchen | 7,965 | 11,028-16,874 | 12.30 | 12.10 |
+| room | 7,470 | 11,384-16,422 | 10.31 | 10.87 |
+| truck | 6,150 | 5,572-8,770 | 11.67 | 15.36 |
+| drjohnson | 8,355 | 9,552-18,546 | 19.57 | 20.50 |
+| playroom | 7,035 | 7,930-13,447 | 13.12 | 15.39 |
+
+- **Every job but truck's came in below the estimate's low end;** truck's lies inside.
+- **Two host peaks exceed Note 3:** bonsai by 0.87 GB and kitchen by 0.20 GB; the other five are under. No consequence:
+  no two scenes ran at the same time in any session.
+- **A stale label:** each bundle's `gn5_attempt.json` names "Notes 1-3"; Note 4 governs the sessions. It was left
+  unchanged so that the three sessions ran the same code.
+
+### What E5 settles, and what it does not
+
+- **Settled, as pre-registered:** on the seven gate scenes (Amendment 15 d's disclosure, kept by 17 d: E2 and E2c used
+  five of them with this project's own checkpoints, and OGC's paper reports four in its C3DGS host), inside C3DGS and at equal rate over
+  three colour thresholds, OGC's VQ beats C3DGS's own (P1, `P_bar` 0.3558 dB) and its 16 x 16 Gram metric beats the same
+  Lloyd with the metric's trace (P2, `P_bar` 0.1874 dB), on every scene.
+- **Our derived VQ equals OGC's** in every process of the seven scenes.
+- **After C3DGS's fine-tuning the lead shrinks** to +0.0604 dB, whose interval holds the paper's +0.09 dB.
+- **Limits:**
+  - seven scenes, INRIA's published checkpoints, K = 4,096 and the colour-threshold grid of three points only;
+  - the j = -1 and j = +1 points have one seed each, so the BD curves have one process per point and BD's own noise is
+    not measured; `SE_noise` comes from the two seeds at j = 0 alone;
+  - BD over three points is a parabola through them, so each P rests on six measurements;
+  - one GPU type (T4) and one Kaggle image;
+  - fine-tuning's comparison is at each row's own bytes, which this section does not compare, and its noise is two
+    processes per scene.
