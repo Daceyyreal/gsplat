@@ -1,0 +1,121 @@
+{
+ "date": "2026-10-13",
+ "url": "https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/pretrained/models.zip",
+ "archive_bytes": 14660630999,
+ "n_entries": 117,
+ "cd_offset": 14660617193,
+ "cd_size": 13708,
+ "directory_matches_e3p_pins": true,
+ "directory_mismatches": [],
+ "directory_matches_note_i_and_16i_pins": true,
+ "note_i_mismatches": [],
+ "pins": {
+  "ply": {
+   "name": "flowers/point_cloud/iteration_30000/point_cloud.ply",
+   "header_offset": 4263145091,
+   "compress_size": 810228197,
+   "file_size": 901840636,
+   "crc32": "5aaeb803",
+   "method": 8
+  },
+  "cameras": {
+   "name": "flowers/cameras.json",
+   "header_offset": 4262105030,
+   "compress_size": 22533,
+   "file_size": 69212,
+   "crc32": "a1754f07",
+   "method": 8
+  },
+  "cfg_args": {
+   "name": "flowers/cfg_args",
+   "header_offset": 4262127613,
+   "compress_size": 137,
+   "file_size": 169,
+   "crc32": "f05f10c7",
+   "method": 8
+  }
+ },
+ "ply_check": {
+  "file_size_equals_scouting": true,
+  "derived_splats": 3636448.0,
+  "scouting_splats": 3636448
+ },
+ "header": {
+  "cameras_json": {
+   "bytes": 69212,
+   "crc32": "a1754f07",
+   "sha1": "ff7cf8b0e86f6e10b3a13000f3df7c5428cbbc39"
+  },
+  "n_cameras": 173,
+  "distinct_sizes": [
+   "5025x3312"
+  ],
+  "max_w": 5025,
+  "max_h": 3312,
+  "max_pixels": 16642800,
+  "total_pixels": 2879204400,
+  "n_test_every8": 22,
+  "cfg_args": {
+   "bytes": 169,
+   "crc32": "f05f10c7",
+   "sha1": "bdf6b3f7b984715435bda5c55e058842b76cccb8",
+   "keys": {
+    "eval": true,
+    "images": "images_4",
+    "model_path": "./eval/flowers",
+    "resolution": 1,
+    "sh_degree": 3,
+    "source_path": "f:/bkerbl/Downloads/360_v2/flowers",
+    "white_background": false
+   }
+  },
+  "ply_header": {
+   "n_vertex": 3636448,
+   "n_properties": 62,
+   "properties_equal_inria": true,
+   "header_bytes": 1532,
+   "file_size_check": true
+  }
+ },
+ "inria_http_requests": 13,
+ "download_path": {
+  "route": "gn_e2_scene.ensure_data -> tilequant_run4.download_scene (dataset 'mipnerf360')",
+  "scene_meta_present": true,
+  "zip": "360_extra_scenes",
+  "url": "https://storage.googleapis.com/gresearch/refraw360/360_extra_scenes.zip",
+  "mcmc_sh_data_factor": 4,
+  "archive_bytes": 4488140217,
+  "n_entries": 1278,
+  "n_selected": 350,
+  "selected": {
+   "images": [
+    173,
+    1753109582
+   ],
+   "images_4": [
+    173,
+    174109375
+   ],
+   "poses_bounds.npy": [
+    1,
+    23656
+   ],
+   "sparse": [
+    3,
+    48495826
+   ]
+  },
+  "http_requests": 4,
+  "bytes_equal_scene_meta": {
+   "images": true,
+   "images_4": true,
+   "sparse": true,
+   "poses_bounds.npy": true
+  },
+  "n_images": 173,
+  "n_images_equal_scene_meta": true,
+  "ok": true,
+  "why": "every member the downloader selects is in the zip, with SCENE_META's bytes and image count"
+ },
+ "time_s": 11.934892892837524
+}

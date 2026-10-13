@@ -6141,3 +6141,76 @@ def test_e5_deadline_cut_keeps_measured_values_and_its_rerun(tmp_path, monkeypat
     a = S["processes"]["j0_p0"]["attempts"]
     assert [(x["deadline_cut"], x["n_measured"]) for x in a] == [(True, 2), (None, None), (None, None)]
     assert [(c["process"], c["n_measured"]) for c in S["deadline_cuts"]] == [("j0_p0", 2), ("j-1_p0", 1)]
+
+
+# ------------------------------------------------------------------------------ E6 (PREREG_GN.md Amendment 19)
+E6_E5_FILES_SHA256 = {  # sha256 of each file's content at f7716485 (Amendment 19), LF line endings
+    "kaggle/e5_scenes.py": "91358c31ca4aec1e1c2b14434f9cb0a58a3b3d2147cc60e9d908a26e723190db",
+    "bench/gn/e5.py": "4e444ae6205e283c6257f99d0159d883762daa9294d250951f7db48e3e1e4b5e",
+    "bench/gn/e5_verdict.py": "7a939fa713a6b5f4b09f26f6809f73d838e0c97115d16165b6bad70e81ffe6ae",
+    "kaggle/gn_e5_scene.py": "2c83bf106645791e242b048b7948de2ab758ee563b0b4aeb98caf529297283bb",
+    "bench/gn/e5_estimate.py": "9735a29e0ff6832ce91b1d6a941c730f2b06b23da2243aa19f0a7b8c8689426e",
+    "bench/gn/e5_feasibility.py": "e63b9090bf30e933584d03925e9648df5974f44cbfd61b42bd27b14d6d9e6234",
+    "kaggle/build_gn_e5_bench.py": "0da014d4ad17b7051c19dc20bf73aa5b29e186efbf6fc6811598266a18950757",
+    "kaggle/gn_e5_bench_S1.ipynb": "32f7adbc88868cf4eca3801f6672c6aa124aa8b978c2252bbd5f884420d3eacf",
+    "kaggle/gn_e5_bench_S2.ipynb": "ed9927ac8de23d03a247dcfd69137638023b874a36ad5f9ee816629f6de25c03",
+    "kaggle/gn_e5_bench_S3.ipynb": "3d72bceebb7c492cf294bfa7030c73f974ec4ed1fa66c82943a7ec0b93aaccf1",
+    "kaggle/e5_hooks.py": "3d85ceebc0c4cb8cf7d06e9820105d8497754d9568ea77e684ed09df25066548",
+    "kaggle/e5_data.py": "2bb5c397fdfe9d9bbd99d6c421623eff100368a2ec2f2f7299dfdccd88b84dd8",
+}
+
+
+def test_e6_leaves_e5_files_byte_identical():
+    """Amendment 19 g: E5's files stay byte-identical to f7716485 (CRLF normalised to LF, as the repository stores
+    them)."""
+    import hashlib
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    for rel, want in E6_E5_FILES_SHA256.items():
+        data = open(os.path.join(repo, *rel.split("/")), "rb").read().replace(b"\r\n", b"\n")
+        assert hashlib.sha256(data).hexdigest() == want, rel
+
+
+def test_e6_scenes_constants_and_selection():
+    """kaggle/e6_scenes.py against its sources: flowers' pins and counts from kaggle/gn_e6_flowers/header_read.json
+    (its cfg_args: images_4, -r 1, sh_degree 3; 173 cameras of 5025 x 3312, so images_4 at most 1257 x 828, note 1's
+    covered size), treehill's from E4q's job, train's from E3p's, part (b)'s from E5's; the start devices and covered
+    sizes of note 1 and Note 1; every process fine-tunes; the rows and primary rows per part (Amendment 19 b, c)."""
+    import e3p_inria as ei
+    import e5
+    import e5_scenes as e5s
+    import e6_scenes as es
+    import gn_e4q_scene as e4qjob
+
+    kg = os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle")
+    hr = json.load(open(os.path.join(kg, "gn_e6_flowers", "header_read.json")))
+    assert hr["directory_matches_e3p_pins"] and hr["directory_matches_note_i_and_16i_pins"]
+    for kind, p in hr["pins"].items():
+        assert es.INRIA_PINS["flowers"][kind] == {**p, "crc32": int(p["crc32"], 16)}, kind
+    h = hr["header"]
+    assert h["ply_header"]["n_vertex"] == es.N_SPLATS["flowers"] == 3_636_448 and h["ply_header"]["file_size_check"]
+    assert {k: h["cfg_args"]["keys"][k] for k in ("images", "resolution", "sh_degree", "eval", "white_background")} == {
+        "images": "images_4", "resolution": 1, "sh_degree": 3, "eval": True, "white_background": False}
+    assert h["n_cameras"] == 173 and h["distinct_sizes"] == ["5025x3312"]
+    assert es.COVERED["flowers"] == (math.ceil(5025 / 4) * math.ceil(3312 / 4), 173) == (1257 * 828, 173)
+    assert es.cfg_check(h["cfg_args"]["keys"])["drop_reason"] is None
+    assert es.INRIA_PINS["treehill"] == e4qjob.INRIA_PINS["treehill"] and es.INRIA_PINS["train"] == ei.MEMBERS["train"]
+    assert all(es.INRIA_PINS[s] == e5s.INRIA_PINS[s] for s in e5s.SCENES)
+    assert es.PART_B == tuple(e5s.SCENES) and es.PART_A == ("flowers", "treehill", "train")
+    assert {s: es.START_DEVICE[s] for s in es.PART_A} == {"flowers": "cuda", "treehill": "cuda", "train": "cuda"}
+    assert all(es.START_DEVICE[s] == e5s.START_DEVICE[s] and es.COVERED[s] == e5s.COVERED[s] for s in e5s.SCENES)
+    assert es.COVERED["treehill"] == (1267 * 832, 141) and es.COVERED["train"] == (980 * 545, 301)
+    assert {s: (es.DATASET[s], es.DATA_FACTOR[s]) for s in es.PART_A} == {
+        "flowers": ("mipnerf360", 4), "treehill": ("mipnerf360", 4), "train": ("tandt", 1)}
+    assert [(p["j"], p["seed"], p["device"], p["finetune"]) for p in es.PROCESSES] == [
+        (0, 0, None, True), (0, 1, None, True), (-1, 0, None, True), (1, 0, None, True)]
+    for s in es.PART_A:
+        assert es.fork_rows(s) == e5.fork_rows("ogc") and es.fork_rows(s, "derived") == e5.fork_rows("derived")
+        assert es.primary_rows(s) == e5.PRIMARY_ROWS
+        assert len(es.wanted_configs(s)) == 4 * 7 and len(es.wanted_configs(s, "derived")) == 4 * 6
+    for s in es.PART_B:
+        assert es.fork_rows(s) == es.fork_rows(s, "derived") == ("ogc_gram",)
+        assert es.process_rows(s, es.PROCESSES[2]) == ["c3dgs", "ogc_gram", "c3dgs_ft", "ogc_gram_ft"]
+        assert es.primary_rows(s) == ("c3dgs_ft", "ogc_gram_ft") and len(es.wanted_configs(s)) == 16
+    with pytest.raises(ValueError):
+        es.part_of("bicycle")
