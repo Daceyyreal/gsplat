@@ -54,8 +54,9 @@ Note 3** (`4f920bc0`, code `a04628e7`) corrects Note 1's host memory (npz2ply an
 kitchen, room | counter; S2 drjohnson, truck; S3 bonsai, playroom) and adds the deadline's guard and deadline-cut.
 **Next: E5 S1** (see "Amendment 17 Note 4 and its code (2026-10-11)"). **E5 S1, S2 and S3 ran** (bundles `9a90dabb`, `1710cc8a`, `88b5ebed`); **E5 passed**: FINDINGS
 section 19 (`de8690ca`, checked by `bench/gn/check_s19.py`, `63fe6de0`); section 20 reports its secondaries
-(`847e39ee`, `check_s20.py` `8258a0b1`); the claims ledger is `paper/CLAIMS.md`. **Next: rework the Amendment 19 (E6) draft
-to its two parts (descriptive; pre-registered fine-tuning curves), then its feasibility note, then E6's code.**
+(`847e39ee`, `check_s20.py` `8258a0b1`); the claims ledger is `paper/CLAIMS.md`. **Amendment 19** (`f7716485`) registers E6 in two parts: (a) descriptive
+fine-tuning curves on flowers, treehill and train; (b) pre-registered P_FT on E5's seven scenes. Its **note 1**
+(`0f77b0de`) gives covered sizes, memory, start devices and the five-session plan. **Next: E6's code.**
 
 ## Context and rules
 
@@ -4020,7 +4021,52 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   - Kaggle titles "<ID> <name>", bundles "<ID>_bundle_S#.zip";
   - every number from result files or actual runs, never estimated or filled in.
 
-### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; next: Amendment 19 (E6, two parts) rework)
+### Amendment 19 and its note 1 (2026-10-13)
+
+- **Commits, in order** (pytest before each with pipefail, a kept log and `GN_OGC_SRC=F:/ogc_restore/ogc-3dgs`, via
+  `.venv/Scripts/python.exe -m pytest bench/gn/test_gn.py -q`; the ancestor check; fast-forward pushes):
+  - `f7716485`: Amendment 19, alone. Gate log `F:\pytest_logs\gate_20261013_223518_amendment19.log`, 195 passed.
+  - `0f77b0de`: Amendment 19 note 1, alone. Gate log `F:\pytest_logs\gate_20261013_224033_amendment19_note1.log`,
+    195 passed.
+  - then this flush.
+- **Two gate runs failed before those, and nothing was committed on them:**
+  - `gate_20261013_223444_amendment19.log`: the system Python lacks the `pytest_check` plugin that the repository's
+    `pytest.ini` loads (`addopts = -p pytest_check`). Use `.venv`'s Python.
+  - `gate_20261013_223852_amendment19_note1.log`: 1 failed. `test_e5_sessions_reproduce_amendment_17_note_4` reads
+    every `| S<digit> |` table row from "### Amendment 17 Note 4" to the end of the file, so note 1's session table
+    was read as Note 4's. The fix was in note 1's text, not the test: its first column reads "S1, (b)" and so on. Any
+    later PREREG table must not start a row with `| S<digit> |`.
+- **Amendment 19 (E6):**
+  - **(a) descriptive,** on flowers, treehill and train (train rerun, E5p not cited): E5's protocol unchanged, plus
+    fine-tuning of `c3dgs` and `ogc_gram` at j = -1 and j = +1. Three predictions, checked after the run: P1 > 0,
+    P2 > 0, and BD-PSNR after fine-tuning below P1.
+  - **(b) pre-registered,** on E5's seven scenes, in fresh processes (E5's j = 0 rows are not reused). Each process
+    runs `c3dgs`, `ogc_gram` and both fine-tuned rows (no `ogc_plain`, `ogc_scalar` or `ogc_gram_ours`).
+  - **(b)'s primary:** P_FT = BD-PSNR(`ogc_gram_ft` against `c3dgs_ft`), computed as E5's P1, with E5's three criteria
+    and its verdict order.
+  - **(b)'s disclosure:** the hypothesis was formed after seeing E5's results, and (b) makes no held-out claim.
+  - **Section i:** no rule in 17 d or 18 treats E5's scenes as used up.
+- **Note 1:**
+  - **Covered sizes:** flowers 1257 x 828, 173 views (E2's 1256 x 828 plus one pixel of rounding; `images` at `-r -1`
+    not covered, so it would be a drop); treehill 1267 x 832, 141 (E4q); train 980 x 545, 301 (E5p).
+  - **Start devices:** all three start on the GPU. flowers and treehill read 14.93 GB of 15.64; Note 1's gap check
+    would read 16.43 and 16.49, which is a stated risk.
+  - **Host:** times the 1.094 miss, every pair is above 26.93 GB, so every session has one lane.
+  - **Plan:** S1-S3 "E6 OGC FT-curves" (S1 playroom, counter, truck, 1,560 s spare at the high end; S2 drjohnson,
+    room; S3 kitchen, bonsai), then S4-S5 "E6 OGC descriptive" (S4 flowers, train; S5 treehill). 25.20-42.98
+    session-hours: at the high end, at least two weeks of Kaggle quota.
+- **The draft file** `F:\amendment19_draft.md` now holds Amendment 19 as committed (without note 1). It is
+  uncommitted, as before.
+- **Next: E6's code** (Amendment 19 g):
+  - `kaggle/gn_e6_scene.py`, with its pinned diff against `gn_e5_scene.py`;
+  - `kaggle/e6_scenes.py`, with flowers' pins read from the archive's directory;
+  - part (b)'s verdict module, importing `e5.py`;
+  - part (a)'s reader;
+  - E6's estimate and feasibility module, reproducing note 1's tables by test;
+  - the notebook builder;
+  - the dry run, alone.
+
+### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19 and note 1: done; next: E6's code)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -4116,8 +4162,9 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
      (2026-10-13):** `de8690ca`, `63fe6de0` (see "FINDINGS section 19 and check_s19 (2026-10-13)");
   5. ~~the paper's claims ledger and FINDINGS section 20~~ **done (2026-10-13):** `ab2e808e`, `847e39ee`, `8258a0b1`,
      `67470710` (see "Paper prep: CLAIMS.md, E6's scope and draft, FINDINGS section 20 (2026-10-13)");
-  6. **next:** rework the Amendment 19 draft (`F:\amendment19_draft.md`, not committed) to E6's two parts (see "Session
-     2026-10-13 (E5 verdict, s19, s20, CLAIMS, E6 plan)"); then its feasibility note (note 1), alone; then E6's code.
+  6. ~~rework the Amendment 19 draft to E6's two parts; then its feasibility note (note 1), alone~~ **done
+     (2026-10-13):** `f7716485`, `0f77b0de` (see "Amendment 19 and its note 1 (2026-10-13)");
+  7. **next:** E6's code (Amendment 19 g), then its dry run, then S1 "E6 OGC FT-curves S1".
 - ~~**Note 4's S2 session-hours** are printed as 4.32-7.71 h; the code gives 7.70 h.~~ **Corrected (2026-10-12):** the
   erratum `1b532e40`. Dace approved rule (b)'s rewording the same day.
 - **The unexplained npz2ply failure** (one dry run, 2026-10-10, room's rerun `ogc_gram`): not reproduced alone or under
