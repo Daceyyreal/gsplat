@@ -1,0 +1,10 @@
+{
+  "note": "kaggle/PREREG_GN.md Amendment 19 note 1: one lane per session (no pair fits with the x 1.094 miss); part (b) first (S1-S3, 'E6 OGC FT-curves'), then part (a) (S4-S5, 'E6 OGC descriptive'); each session holds one part; within a lane the longer scene first; a scene with an unsettled process is carried into the next session of its part, after that session's own lane",
+  "sessions": {
+    "S1": {"part": "b", "lanes": [["playroom", "counter", "truck"]]},
+    "S2": {"part": "b", "lanes": [["drjohnson", "room"]]},
+    "S3": {"part": "b", "lanes": [["kitchen", "bonsai"]]},
+    "S4": {"part": "a", "lanes": [["flowers", "train"]]},
+    "S5": {"part": "a", "lanes": [["treehill"]]}
+  }
+}

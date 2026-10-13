@@ -6214,3 +6214,162 @@ def test_e6_scenes_constants_and_selection():
         assert es.primary_rows(s) == ("c3dgs_ft", "ogc_gram_ft") and len(es.wanted_configs(s)) == 16
     with pytest.raises(ValueError):
         es.part_of("bicycle")
+
+
+def _note(name):
+    text = open(os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle", "PREREG_GN.md"), encoding="utf-8").read()
+    start = text.index(f"### {name}")
+    end = text.find("\n### ", start + 4)
+    return text[start:end if end > 0 else len(text)]
+
+
+def test_e6_estimate_reproduces_amendment_19_note_1():
+    """Note 1's time table and session plan to the digit printed (bench/gn/e6_estimate.py; kaggle/e6_sessions.json),
+    every lane inside both limits; E5's estimate table unchanged afterwards."""
+    import e5_estimate as est
+    import e6_estimate as e6e
+
+    note = _note("Amendment 19 note 1 (")
+    U = e6e.units()
+    f0 = lambda x: f"{x:,.0f}"  # noqa: E731
+    want = []
+    for part, scenes in (("a", ("flowers", "treehill", "train")),
+                         ("b", ("bonsai", "counter", "kitchen", "room", "truck", "drjohnson", "playroom"))):
+        for s in scenes:
+            x = est.cpu_ratio() if s == "drjohnson" else 1.0
+            pre, procs = e6e.scene_parts(s, 1, U)
+            want.append(f"| ({part}) | {s} | {f0(e6e.scene_s(s, 0, U))} - {f0(e6e.scene_s(s, 1, U))} | {f0(pre * x)} | "
+                        + ", ".join(f0(p * x) for p in procs) + " |")
+            assert f0(e6e.process_high_s(s, 0, "cpu" if x > 1 else "cuda", U)) == f0(procs[0] * x)
+    for line in want:
+        assert line in note, line
+    flat = " ".join(note.split())
+    tot = {p: [sum(e6e.scene_s(s, e, U) for s in sc) for e in (0, 1)] for p, sc in e6e.es.PARTS.items()}
+    assert f"part (a) {f0(tot['a'][0])}-{f0(tot['a'][1])} s, part (b) {f0(tot['b'][0])}-{f0(tot['b'][1])} s" in flat
+    P = e6e.plan(U)
+    assert [(k, v["part"], v["scenes"]) for k, v in P.items()] == [
+        ("S1", "b", ["playroom", "counter", "truck"]), ("S2", "b", ["drjohnson", "room"]), ("S3", "b", ["kitchen", "bonsai"]),
+        ("S4", "a", ["flowers", "train"]), ("S5", "a", ["treehill"])]
+    titles = {"a": "descriptive", "b": "FT-curves"}
+    for k, v in P.items():
+        assert v["fits"], k
+        later = "; ".join(f"{s} {f0(lo)} - {f0(hi)}" for s, (lo, hi) in list(v["starts"].items())[1:]) or "-"
+        row = (f"| {k}, ({v['part']}) | E6 OGC {titles[v['part']]} {k} | {', '.join(v['scenes'])} | {later} | "
+               f"{f0(v['end'][0])} - {f0(v['end'][1])} | {f0(v['spare'])} | {v['hours'][0]:.2f} - {v['hours'][1]:.2f} |")
+        assert row in note, row
+    total = [sum(v["hours"][i] for v in P.values()) for i in (0, 1)]
+    assert f"{total[0]:.2f}-{total[1]:.2f} session-hours" in flat
+    assert "flowers" not in est.SCENES and "treehill" not in est.SCENES  # E5's table is restored
+
+
+def test_e6_feasibility_reproduces_amendment_19_note_1_and_erratum():
+    """Note 1's memory table and its erratum's pair sums (bench/gn/e6_feasibility.py), the miss read from E5's bundle,
+    and E5's feasibility inputs restored afterwards."""
+    import e5_feasibility as ef
+    import e6_feasibility as e6f
+
+    note, err = _note("Amendment 19 note 1 ("), _note("Amendment 19 note 1, erratum")
+    flat, eflat = " ".join(note.split()), " ".join(err.split())
+    b = e6f.MISSES["bonsai"]
+    assert max(e6f.MISSES, key=lambda s: e6f.MISSES[s]["ratio"]) == "bonsai" and round(e6f.MISS, 3) == 1.094
+    assert f"{b['measured']:,} bytes against Note 3's {b['note3']:,.0f}" in flat
+    g = lambda x: f"{x / 1e9:.2f}"  # noqa: E731
+    rows = e6f.feasibility_e6()
+    for s in ("flowers", "treehill", "train"):
+        r = rows[s]
+        k, G = r["cases"][0], r["cases"][0]["gpu"]
+        line = (f"| {s}, {k['W']} x {k['H']} | {g(G['cuda_lo'])}-{g(G['cuda_hi'])} / {g(G['cpu_lo'])}-{g(G['cpu_hi'])} | "
+                f"{g(G['cuda_colour_reserved'])} / {g(G['cpu_colour_reserved'])} | GPU | "
+                f"{g(G['with_e5p_gap']['cuda_colour_reserved'])} | {g(r['host_at_start'])} / "
+                f"{g(r['host_at_start'] * e6f.MISS)} | {g(r['host_cpu'])} / {g(r['host_cpu'] * e6f.MISS)} | ")
+        assert line in note, line
+        assert G["start_device"] == "cuda" and not any(v["flag"] for v in k["job_gpu"].values())
+    for s in ("bicycle", "garden", "stump"):
+        r = rows[s]
+        k, G = r["cases"][0], r["cases"][0]["gpu"]
+        line = (f"| {s} | {r['n']:,} | {k['W']} x {k['H']}, {k['views']} | {g(G['cuda_colour_reserved'])} / "
+                f"{g(G['cpu_colour_reserved'])} | {g(r['host_at_start'])} / {g(r['host_at_start'] * e6f.MISS)} |")
+        assert line in note, line
+        assert not G["cpu_fits"]
+    P = e6f.pairs_e6()
+    for pair, v in P.items():
+        assert not v["fits"], pair
+    ft, fr, tr_ = P[("flowers", "treehill")], P[("flowers", "train")], P[("treehill", "train")]
+    assert f"flowers with treehill {g(ft['start'])} GB ({g(ft['start_miss'])} times 1.094" in eflat
+    assert f"flowers with train {g(fr['start'])} GB ({g(fr['start_miss'])};" in eflat
+    assert f"treehill with train, {g(tr_['start'])} GB ({g(tr_['start_miss'])})" in eflat
+    rs = "bonsai-counter {}, bonsai-room {}, counter-kitchen {}, counter-room {} GB".format(
+        *(g(P[p]["retry_safe_miss"]) for p in e6f.RETRY_SAFE))
+    assert rs in flat, rs
+    assert ef.scene_inputs.__name__ == "scene_inputs"  # E5's inputs restored
+
+
+def _e6_rows(scene, delta, ft_delta, noise=0.0, drop=(), bytes_scale=1.02):
+    """Synthetic results rows for one E6 scene: per point the bytes and PSNR of a curve, the OGC rows ``delta`` above
+    (``ft_delta`` above after fine-tuning) at ``bytes_scale`` x the bytes; the seed-1 process shifted by ``noise``."""
+    import e5
+    import e6_scenes as es
+
+    base = {-1: (2.0e7, 20.40), 0: (1.4e7, 20.20), 1: (1.0e7, 20.00)}
+    out = []
+    for p in es.processes(scene):
+        for r in es.process_rows(scene, p):
+            b, q = base[p["j"]]
+            ogc = r.startswith("ogc_")
+            if r.endswith("_ft"):
+                q, b = q + 0.1 + (ft_delta if ogc else 0.0), b * (bytes_scale if ogc else 1.0)
+            elif ogc:
+                q, b = q + delta, b * bytes_scale
+            q += noise * (1 + len(r) % 3) if p["seed"] == 1 else 0.0
+            cfg = e5.config_name(p["j"], p["seed"], r)
+            if cfg in drop:
+                continue
+            out.append({"scene": scene, "config": cfg, "status": "ok", "PSNR_ii": str(q), "npz_bytes": str(int(b))})
+    return out
+
+
+def test_e6_verdict_b_paths():
+    """Part (b)'s verdict (bench/gn/e6.py, 19 c): P_FT per scene exactly e5.pair_parts' BD-PSNR of ogc_gram_ft against
+    c3dgs_ft, E5's criteria (e5.criteria), pass / fail / incomplete (n < 5; a fine-tuned row missing) and a missing P_FT
+    entering P_bar as 0; P1 replicated reported, not judged."""
+    import e5
+    import e6
+    import e6_scenes as es
+
+    sc = {s: e6.scene_data(_e6_rows(s, 0.3, 0.06, noise=0.002), s) for s in es.PART_B}
+    v = e6.verdict_b(sc)
+    ref = e5.pair_parts(sc, "ogc_gram_ft", "c3dgs_ft")
+    assert v["primary"]["P"] == ref["P"] and v["primary"]["criteria"] == {
+        **e5.criteria(ref["P"], ref["noise"]["SE_noise"]), "P_missing_reason": {}}
+    assert v["outcome"] == "pass" and all(x > 0 for x in v["primary"]["P"].values())
+    assert v["secondaries"]["P1_replicated"]["criteria_as_description"]["pass"]
+    bp = v["secondaries"]["bytes_per_point"]["bonsai"]["j+1_p0"]
+    assert bp["after"]["ratio"] == pytest.approx(1.02, abs=1e-6) and bp["after"]["psnr_difference"] == pytest.approx(0.06)
+    neg = {s: e6.scene_data(_e6_rows(s, 0.3, -0.06, noise=0.002), s) for s in es.PART_B}
+    assert e6.verdict_b(neg)["outcome"] == "fail"
+    four = {s: sc[s] for s in es.PART_B[:4]}
+    v4 = e6.verdict_b(four)
+    assert v4["outcome"] == "incomplete" and "n = 4" in v4["incomplete_reasons"][0]
+    miss = dict(sc)
+    miss["room"] = e6.scene_data(_e6_rows("room", 0.3, 0.06, noise=0.002, drop=("j+1_p0_ogc_gram_ft",)), "room")
+    vm = e6.verdict_b(miss)
+    assert vm["outcome"] == "incomplete" and vm["missing_primary_rows"] == {"room": ["j+1_p0_ogc_gram_ft"]}
+    far = dict(sc)  # no shared byte range: P_FT missing, entering P_bar as 0
+    far["truck"] = e6.scene_data(_e6_rows("truck", 0.3, 0.06, noise=0.002, bytes_scale=3.0), "truck")
+    c = e6.verdict_b(far)["primary"]["criteria"]
+    assert c["P"]["truck"] is None and c["P_missing"] == ["truck"] and c["n_positive"] == 6
+    assert c["P_bar"] == pytest.approx(sum(x for x in c["P"].values() if x is not None) / 7)
+
+
+def test_e6_reader_a_predictions():
+    """Part (a)'s reader (19 b): per scene P1, P2 and the fine-tuned pair's BD-PSNR, the three predictions checked
+    (not judged), "not checkable" where a value is missing; no verdict key."""
+    import e6
+
+    rows = _e6_rows("flowers", 0.3, 0.06, noise=0.002)
+    r = e6.reader_scene(e6.scene_data(rows, "flowers"), "flowers", rows)
+    assert r["predictions"] == {"P1_positive": True, "P2_positive": False, "ft_below_P1": True}  # ogc_scalar = ogc_gram
+    assert r["values"]["P_FT"] < r["values"]["P1"] and not r["missing_rows"] and "outcome" not in r
+    gone = [x for x in rows if not x["config"].endswith("ogc_gram_ft")]
+    r2 = e6.reader_scene(e6.scene_data(gone, "flowers"), "flowers", gone)
+    assert r2["values"]["P_FT"] is None and r2["predictions"]["ft_below_P1"] == e6.NOT_CHECKABLE
