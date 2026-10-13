@@ -54,8 +54,8 @@ Note 3** (`4f920bc0`, code `a04628e7`) corrects Note 1's host memory (npz2ply an
 kitchen, room | counter; S2 drjohnson, truck; S3 bonsai, playroom) and adds the deadline's guard and deadline-cut.
 **Next: E5 S1** (see "Amendment 17 Note 4 and its code (2026-10-11)"). **E5 S1, S2 and S3 ran** (bundles `9a90dabb`, `1710cc8a`, `88b5ebed`); **E5 passed**: FINDINGS
 section 19 (`de8690ca`, checked by `bench/gn/check_s19.py`, `63fe6de0`); section 20 reports its secondaries
-(`847e39ee`, `check_s20.py` `8258a0b1`); the claims ledger is `paper/CLAIMS.md`. **Next: Dace's review of the Amendment 19
-(E6) draft, then the paper.**
+(`847e39ee`, `check_s20.py` `8258a0b1`); the claims ledger is `paper/CLAIMS.md`. **Next: rework the Amendment 19 (E6) draft
+to its two parts (descriptive; pre-registered fine-tuning curves), then its feasibility note, then E6's code.**
 
 ## Context and rules
 
@@ -3985,9 +3985,42 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   E5p"; train's forced-CPU j = 0 pair against Note 2 C1; treehill's start device against Amendment 16 note i; covered
   sizes at data factor 4; the "section 20's set" wording; the Kaggle title rule; the E6 job versus E5's unedited
   files). No E6 code, pins or run.
-- **Next:** Dace's review of the Amendment 19 draft; the paper.
+- **Next:** superseded by "Session 2026-10-13 (E5 verdict, s19, s20, CLAIMS, E6 plan)".
 
-### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; next: Amendment 19 (E6) review, the paper)
+### Session 2026-10-13 (E5 verdict, s19, s20, CLAIMS, E6 plan)
+
+- **E5:** S3's bundle `88b5ebed`; the verdict, by the combiner over S1-S3, **PASS**. FINDINGS section 19 `de8690ca`,
+  `check_s19.py` `63fe6de0`; section 20 `847e39ee`, `check_s20.py` `8258a0b1`. `paper/CLAIMS.md` `ab2e808e`, then
+  `67470710`: 48 rows; gaps 1, 5, 6 and 9 closed, 2 and 3 closed as far as the data go, 4 open, 13 new.
+- **Scope check for more scenes (read-only, done):** only flowers is both untouched by E5's design and feasible under E5's
+  memory model. treehill and train are design scenes (E5's settings come from them, Amendment 17 d). bicycle, garden and
+  stump are excluded as infeasible under the model; bicycle's INRIA checkpoint was also rendered (E3p, E3r).
+- **Decision (Dace): E6 has two parts,** pending a rework of the amendment:
+  - **(a) descriptive:** flowers, treehill and train (**train rerun; E5p not cited**), E5's protocol plus fine-tuning at
+    j = -1 and j = +1;
+  - **(b) pre-registered:** fine-tuning curves on E5's seven scenes, with a primary P_FT = BD-PSNR(`ogc_gram_ft` against
+    `c3dgs_ft`) in the form of E5's criteria. It is motivated by section 20 (bytes after fine-tuning): the
+    after-fine-tuning lead is at unequal bytes.
+- **The Amendment 19 draft:** `F:\amendment19_draft.md`, uncommitted. The next prompt reworks it to the two-part design;
+  then a feasibility note (note 1), committed alone; then E6's code.
+- **Settled from the draft review:**
+  - flowers is a development scene (no "clean" label);
+  - a separate `kaggle/gn_e6_scene.py`, with a test that pins its diff against E5's job;
+  - E5's files stay byte-identical;
+  - Kaggle titles "E6 OGC <part> S#", bundles `E6_bundle_S#.zip`, arcname `gn6/`.
+- **Standing rules (unchanged):**
+  - Dace's readings are confirmed against the files before anything enters the docs;
+  - every amendment or note is committed alone, before its code;
+  - the pytest gate before every commit: pytest's exit code with pipefail, a kept log, `GN_OGC_SRC` set, never alongside
+    a dry run;
+  - the ancestor check, then fast-forward pushes only; never rewrite pushed history;
+  - no code changes between the sessions of one experiment unless a bug forces one;
+  - never commit, push or bundle OGC's files; OGC's dataset stays private; paraphrase the author's email, never quote it;
+  - no Gram-weighted VQ is proposed upstream (the method is patented for commercial use);
+  - Kaggle titles "<ID> <name>", bundles "<ID>_bundle_S#.zip";
+  - every number from result files or actual runs, never estimated or filled in.
+
+### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; next: Amendment 19 (E6, two parts) rework)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -4083,7 +4116,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
      (2026-10-13):** `de8690ca`, `63fe6de0` (see "FINDINGS section 19 and check_s19 (2026-10-13)");
   5. ~~the paper's claims ledger and FINDINGS section 20~~ **done (2026-10-13):** `ab2e808e`, `847e39ee`, `8258a0b1`,
      `67470710` (see "Paper prep: CLAIMS.md, E6's scope and draft, FINDINGS section 20 (2026-10-13)");
-  6. **next:** Dace's review of the Amendment 19 (E6) draft (`F:\amendment19_draft.md`, not committed); the paper.
+  6. **next:** rework the Amendment 19 draft (`F:\amendment19_draft.md`, not committed) to E6's two parts (see "Session
+     2026-10-13 (E5 verdict, s19, s20, CLAIMS, E6 plan)"); then its feasibility note (note 1), alone; then E6's code.
 - ~~**Note 4's S2 session-hours** are printed as 4.32-7.71 h; the code gives 7.70 h.~~ **Corrected (2026-10-12):** the
   erratum `1b532e40`. Dace approved rule (b)'s rewording the same day.
 - **The unexplained npz2ply failure** (one dry run, 2026-10-10, room's rerun `ogc_gram`): not reproduced alone or under
@@ -4365,7 +4399,7 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - `lint/format-code.sh` and the tests on a CUDA machine (locally only CPU).
 - PR #1061 (`fix/png-empty-tensor`): no action unless asked.
 - **Related work:** `kaggle/RELATED_WORK_OGC.md` (2026-10-01, literature notes, not findings) on arXiv 2609.28997 (OGC: per-Gaussian S2 observation Gram, matrix-weighted Lloyd, a C3DGS drop-in) and 2609.15735 (global factorised Gram, sqrt + KLT, no VQ), with the metric-equivalence check (our M_i equals their S2 Gram in expectation) and open questions; read it before the C3DGS arm's pre-registration. PDFs and the `ogc-3dgs` clone (`49ccae72`, PolyForm Noncommercial; the author states the method is patented for commercial use) are not in the repo.
-- **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3r / E3:** see "Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; next: Amendment 19 (E6) review, the paper)". E0 is done
+- **E0 / E1 / E2 / E2b / E2c / E3p / E3q / E3r / E3:** see "Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; next: Amendment 19 (E6, two parts) rework)". E0 is done
   and G0 passed (`kaggle/gn_e0/gn/`, FINDINGS section 8); E1 is done and G1 failed (`kaggle/gn_e1/gn1/`,
   FINDINGS section 9); E2 is done and G2a passed (`kaggle/gn_e2/gn2/`, FINDINGS section 10); E2b
   (Amendments 9 and 10, exploratory) is done, and works in fidelity terms but not by the PSNR criterion
