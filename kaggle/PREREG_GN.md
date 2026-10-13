@@ -3849,3 +3849,12 @@ E6's estimate and feasibility module reproduces the tables below by test (19 g).
 
 **Not changed:** Amendment 19's parts, rows, points, primary, criteria, verdict and measures; E5's scenes, start devices
 and covered sizes (Note 1); Note 1's GPU model; Note 3's host model; Note 4's limits and rules.
+
+### Amendment 19 note 1, erratum (2026-10-13, before any E6 code)
+
+Note 1's pairing bullet for part (a) summed flowers' host peak at `images` with `-r -1` (21.06 GB), a size note 1 does
+not cover, instead of its covered size, 1257 x 828 (20.56 GB, note 1's table). The correct sums are flowers with
+treehill 41.81 GB (45.74 times 1.094; note 1 read 42.31 and 46.30) and flowers with train 29.11 GB (31.85; note 1 read
+29.61 and 32.40). treehill with train, 29.81 GB (32.61), was right. Every pair is still above 26.93 GB, so every E6
+session still runs one lane. No other figure, the start devices, the covered sizes and the session plan are unchanged.
+The figures are `bench/gn/e6_feasibility.py`'s, committed with E6's code.
