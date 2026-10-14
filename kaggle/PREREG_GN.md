@@ -3858,3 +3858,45 @@ treehill 41.81 GB (45.74 times 1.094; note 1 read 42.31 and 46.30) and flowers w
 29.61 and 32.40). treehill with train, 29.81 GB (32.61), was right. Every pair is still above 26.93 GB, so every E6
 session still runs one lane. No other figure, the start devices, the covered sizes and the session plan are unchanged.
 The figures are `bench/gn/e6_feasibility.py`'s, committed with E6's code.
+
+### Amendment 19 note 2 (2026-10-13, after E6's code and before any E6 run): flowers' metadata read
+
+This note records how flowers' pins were taken. It changes no row, point, primary, criterion, verdict, covered size or
+start device of Amendment 19 and note 1.
+
+- **What 19 g said:** flowers' three members are pinned from the archive's zip directory "with no member fetched".
+- **What was done instead,** before E6's code (`kaggle/gn_e6_flowers/header_read.py`, its output
+  `header_read.json`; committed in `9f79e414`):
+  - the archive's zip directory was read;
+  - `cameras.json` and `cfg_args` were fetched whole (size and CRC32 checked), parsed and deleted;
+  - the `.ply` member was inflated one output byte at a time up to and including `end_header`.
+  - Only counts, sizes and options were kept, and no splat byte was decompressed. There were 13 HTTP requests to
+    INRIA's archive and 4 to the dataset zip's directory (for the download path's check: names and sizes only).
+- **Why it is allowed:**
+  - **The rule:** Amendment 15 d's header-read rule: "Reading a scene's camera count, image sizes and splat count (from
+    `cameras.json` and the `.ply` header), with no pixel, splat value, render or metric, does not count as touching
+    the scene." That covers `cameras.json` and the `.ply` header.
+  - **`cfg_args`:** the rule does not name it. It holds INRIA's training options only, with no pixel, splat value,
+    render or metric.
+  - **Gate scenes:** Amendments 16 a and 17 a protect only the seven gate scenes, and flowers is not one.
+- **The values read:**
+  - `cfg_args`: `images` = `images_4`, `resolution` = 1, `sh_degree` = 3, `eval` = True, `white_background` =
+    False;
+  - `cameras.json`: 173 cameras, every one 5025 x 3312;
+  - the `.ply` header: `element vertex` 3,636,448, INRIA's 62 properties, a 1,532-byte header (header plus 248 bytes
+    per splat equals the member's size);
+  - the archive's directory matches E3p's pins, Amendment 15 note i's and Amendment 16 note i's.
+- **The pins** (method 8, deflate; offsets are the local headers'):
+
+| Member | Local header offset | Compressed bytes | Bytes | CRC32 |
+|---|---|---|---|---|
+| `flowers/cameras.json` | 4,262,105,030 | 22,533 | 69,212 | `a1754f07` |
+| `flowers/cfg_args` | 4,262,127,613 | 137 | 169 | `f05f10c7` |
+| `flowers/point_cloud/iteration_30000/point_cloud.ply` | 4,263,145,091 | 810,228,197 | 901,840,636 | `5aaeb803` |
+
+- **Consequence: none for the plan.**
+  - Note 1's covered size for flowers (at most 1257 x 828 pixels, 173 views) and its start device (the GPU) stand.
+  - `images_4` at `-r 1` is the set note 1 covers, and `sh_degree` is 3, so flowers is not a drop under Note 2 C3.
+  - The loaded size is still read from the first image at run time (17 d).
+  - The `.ply` member's compressed size (810,228,197 bytes) is below the uncompressed 901,840,636 that note 1's
+    estimate took as its fetch bound, so note 1's times stay upper bounds.
