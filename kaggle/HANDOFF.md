@@ -4083,10 +4083,12 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     - `cfg_args`: `images_4`, `resolution` 1, `sh_degree` 3, `eval` True, `white_background` False;
     - `cameras.json`: 173 cameras, all 5025 x 3312;
     - the `.ply` header: 3,636,448 splats, 62 properties.
-  - **It matches note 1** (covered size up to 1257 x 828, not a drop), so there is no note 2. The compressed `.ply`
+  - **It matches note 1** (covered size up to 1257 x 828, not a drop). The compressed `.ply`
     member is 810,228,197 bytes (note 1 bounded the fetch by the uncompressed 901,840,636).
   - **Not in Amendment 19 g's words:** g said the pins come from the directory "with no member fetched". This read
-    fetched `cameras.json` and `cfg_args` whole.
+    fetched `cameras.json` and `cfg_args` whole. **Recorded by Amendment 19 note 2** (`b7ad2329`, 2026-10-13, alone,
+    before any E6 run; gate `gate_20261014_150744_a19_note2.log`, 203 passed): allowed by Amendment 15 d's rule, the
+    values and pins, and note 1's covered size and start device stand.
 - **Amendment 19 note 1, erratum** (`8ea6e0c9`, alone, before code). Note 1's part (a) pair sums for flowers used its
   peak at the uncovered `-r -1` size. The correct sums: flowers-treehill 41.81 GB (45.74 x 1.094), flowers-train 29.11
   (31.85). Every pair is still above 26.93 GB.
@@ -4127,6 +4129,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     the predictions. The guard's estimates are `e6_estimate`'s.
   - The stand-in values (K 16, a toy model) mean nothing.
 - **E6 S1 on Kaggle:**
+  0. **Before the run:** Amendment 19, note 1, its erratum and note 2 are committed (`f7716485`, `0f77b0de`,
+     `8ea6e0c9`, `b7ad2329`). The branch head must include `b7ad2329`.
   1. Import `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e6_bench_S1.ipynb`; title
      **"E6 OGC FT-curves S1"**.
   2. Attach **"E5p OGC dissection pilot", attempt 2's version, pinned** (the wheel), and the private dataset **"E5p
