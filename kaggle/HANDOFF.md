@@ -57,8 +57,8 @@ section 19 (`de8690ca`, checked by `bench/gn/check_s19.py`, `63fe6de0`); section
 (`847e39ee`, `check_s20.py` `8258a0b1`); the claims ledger is `paper/CLAIMS.md`. **Amendment 19** (`f7716485`) registers E6 in two parts: (a) descriptive
 fine-tuning curves on flowers, treehill and train; (b) pre-registered P_FT on E5's seven scenes. Its **note 1**
 (`0f77b0de`, erratum `8ea6e0c9`) gives covered sizes, memory, start devices and the five-session plan. **E6's code
-and dry run are done** (`9f79e414`-`3fb985b4`). **Next: E6 S1, "E6 OGC FT-curves S1"** (see "E6's code and dry run
-(2026-10-13)").
+and dry run are done** (`9f79e414`-`3fb985b4`); note 2 (`b7ad2329`) records flowers' metadata read. **E6 S1 ran and
+is ingested** (`87cc6a59`). **Next: E6 S2, "E6 OGC FT-curves S2"** (see "E6 S1 (2026-10-14)").
 
 ## Context and rules
 
@@ -80,7 +80,8 @@ Standing rules from Dace:
 
 ## Repository and branches
 
-Clone: `F:\gsplat`. Remotes: `origin` = nerfstudio-project/gsplat, `fork` = github.com/Daceyyreal/gsplat.
+Clone: `F:\gsplat`. Remotes: `origin` = nerfstudio-project/gsplat, `fork` = github.com/Daceyyreal/gsplat. **Push
+target: `fork` only** (the ancestor check is against `fork/bench/gn-vq`).
 Upstream main at the time of this work: `28e794c`.
 
 | Branch | Purpose | Status |
@@ -4141,7 +4142,51 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   6. Bring back `/kaggle/working/E6_bundle_S1.zip` (arcname `gn6/`), and keep the session's output version: S2 ("E6
      OGC FT-curves S2") attaches it.
 
-### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; next: E6 S1)
+### E6 S1 (2026-10-14)
+
+- **S1 done and ingested:** `E6_bundle_S1.zip` (sha256 `0433033223e77fa7effee69ed577283ca461f463adebf2fb0c992a66efbd97e9`,
+  264,672 bytes): its 15 `gn6/` files committed unchanged, data only, in `kaggle/gn_e6/S1/gn6/` (`87cc6a59`). It ran
+  gsplat `8f8295d5` (C3DGS `2a234af5`, OGC `49ccae72` from the URL); playroom, counter, truck, one at a time.
+- **Bundle storage:**
+  - the bundle's CSVs are stored with LF through `core.autocrlf`, as E5's are;
+  - the 12 JSONs are byte-identical to the zip's entries, the 3 CSVs equal once CRLF is read as LF;
+  - **the integrity reference is the zip's sha256,** not git's blob hashes.
+- **Mechanics clean:**
+  - 3 scenes x 17 rows (16 and `uncompressed`), all `ok`;
+  - every process settled on its first attempt (attempt 0);
+  - no OOM, deadline guard or cut, retry, NaN, deviation, failed or skipped step;
+  - all on the GPU.
+- **No P_FT yet.** S2 and S3 are pending. P_FT, BD and the verdict are read only after S1-S3, over all three bundles
+  (Amendment 17 Note 2 C5, through Amendment 19 c). `per_scene_parts` in `gn5_summary_S1.json` was not opened.
+- **Parked for E6's write-up (not findings yet;** checked against the bundle 2026-10-14, nothing in FINDINGS, CLAIMS or
+  PREREG):
+  a. **j = 0 rows against E5's:** `geometry_sha1` differs on all 24 rows (seeded C3DGS runs do not reproduce on the
+     GPU, FINDINGS section 15). PSNR and bytes are within E5's own seed spread, except b.
+  b. **truck's `ogc_gram_ft` bytes:** +145,273 (seed 0) and +147,929 (seed 1) against E5 (about 0.64%), almost all
+     in `features_rest`. After fine-tuning `rest_scale` is 0.01856 against E5's 0.02180 (zero point -8 against -22);
+     the quantizer state before fine-tuning is identical. This exceeds E5's seed spread for that row (7,990 bytes).
+  c. **Fine-tuning re-fits the int8 AC quantizer:** `ogc_gram_ft`'s `rest_scale` grows much more than `c3dgs_ft`'s
+     (counter j = -1: 0.00603 to 0.01694, against 0.00603 to 0.00673). `ogc_gram_ft`'s `.npz` changes by -1.2% to
+     -10.7%, `c3dgs_ft`'s by -0.3% to +0.8%. This is a direct record of the mechanism sections 18 and 20 inferred.
+  d. **playroom's `ogc_gram` PSNR is not monotone in j:** before fine-tuning j = 0 (29.8254) is below j = +1
+     (29.8269); after it j = +1 (30.0429) is above j = 0 (30.0174) and j = -1 (30.0252).
+  e. **Stale labels, kept unchanged** (Amendment 19 g): the summary's note cites `e5_verdict.py` (E6's tool is
+     `bench/gn/e6.py b`), and the attempt file's amendment label omits note 2.
+- **Next action: run E6 S2 on Kaggle.**
+  1. Import `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e6_bench_S2.ipynb`; title
+     **"E6 OGC FT-curves S2"**.
+  2. Attach:
+     - **S1's output ("E6 OGC FT-curves S1"), pinned to its version;**
+     - **"E5p OGC dissection pilot", attempt 2's version, pinned** (the wheel);
+     - the private dataset **"E5p OGC source 49ccae72"**.
+  3. Accelerator **GPU T4 x2**, Internet **on**. Save & Run All.
+  4. **The first output must be the `OGC PREFLIGHT` lines, both ok** (url and dataset).
+  5. S2 runs drjohnson (images on the CPU, Note 1), then room: note 1's 19,176-35,149 s, 4,031 s spare at the high
+     end.
+  6. Bring back `/kaggle/working/E6_bundle_S2.zip` (arcname `gn6/`), and keep the session's output version: S3
+     attaches S1's and S2's.
+
+### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1: done; next: E6 S2)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -4241,8 +4286,9 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
      (2026-10-13):** `f7716485`, `0f77b0de` (see "Amendment 19 and its note 1 (2026-10-13)");
   7. ~~E6's code (Amendment 19 g), then its dry run~~ **done (2026-10-13):** `9f79e414`-`3fb985b4` (see "E6's code
      and dry run (2026-10-13)");
-  8. **next:** E6 S1, "E6 OGC FT-curves S1"; then S2-S3 (part (b)), the part (b) verdict (`bench/gn/e6.py b`), S4-S5
-     (part (a)).
+  8. ~~E6 S1~~ **done (2026-10-14):** bundle `87cc6a59` (see "E6 S1 (2026-10-14)");
+  9. **next:** E6 S2, "E6 OGC FT-curves S2", then S3; then the part (b) verdict (`bench/gn/e6.py b`, over S1-S3);
+     then S4-S5 (part (a)).
 - ~~**Note 4's S2 session-hours** are printed as 4.32-7.71 h; the code gives 7.70 h.~~ **Corrected (2026-10-12):** the
   erratum `1b532e40`. Dace approved rule (b)'s rewording the same day.
 - **The unexplained npz2ply failure** (one dry run, 2026-10-10, room's rerun `ogc_gram`): not reproduced alone or under
