@@ -58,7 +58,8 @@ section 19 (`de8690ca`, checked by `bench/gn/check_s19.py`, `63fe6de0`); section
 fine-tuning curves on flowers, treehill and train; (b) pre-registered P_FT on E5's seven scenes. Its **note 1**
 (`0f77b0de`, erratum `8ea6e0c9`) gives covered sizes, memory, start devices and the five-session plan. **E6's code
 and dry run are done** (`9f79e414`-`3fb985b4`); note 2 (`b7ad2329`) records flowers' metadata read. **E6 S1 ran and
-is ingested** (`87cc6a59`). **Next: E6 S2, "E6 OGC FT-curves S2"** (see "E6 S1 (2026-10-14)").
+is ingested** (`87cc6a59`), **and so is S2** (`94551278`). **Next: E6 S3, "E6 OGC FT-curves S3"** (see "E6 S2
+(2026-10-15)").
 
 ## Context and rules
 
@@ -4186,7 +4187,96 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   6. Bring back `/kaggle/working/E6_bundle_S2.zip` (arcname `gn6/`), and keep the session's output version: S3
      attaches S1's and S2's.
 
-### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1: done; next: E6 S2)
+### E6 S2 (2026-10-15)
+
+- **S2 done and ingested:** `E6_bundle_S2.zip` (sha256 `cc6403e7ffa34f3f6cfe5c7029d58e7f49628eae25b7a0d975bb4452cf43814f`,
+  448,598 bytes): its 18 `gn6/` files committed unchanged, data only, in `kaggle/gn_e6/S2/gn6/` (`94551278`). It ran
+  gsplat `9371e81f`. `8f8295d5..9371e81f` touches no code, notebook or `e6_sessions.json`, only HANDOFF and S1's data.
+- **The bundle is cumulative, as E5's later sessions' were:**
+  - S1's three scenes are carried: their results and metas are byte-identical to S1's zip;
+  - `gn5_ogc_preflight.json` equals S1's apart from times;
+  - `gn5_c3dgs_build.json` differs from S1's only in times and in build-log tail lines (pip's temporary directory
+    names, one download-speed line). The build is ok with the same 7 deviations.
+- **OGC text:** only the clone URL (in logged git commands and the source records' `url` / `path` fields, as in S1),
+  with no source file and no author or committer line.
+- **Mechanics clean:**
+  - drjohnson and room have 17 rows each, all `ok`;
+  - every process settled on its first attempt (attempt 0);
+  - no OOM, deadline guard or cut, NaN, deviation, failed or skipped step;
+  - drjohnson ran with its images on the CPU (Note 1), room on the GPU;
+  - protocol ii used 33 and 39 test views;
+  - the bytes fall with j for every row kind;
+  - jobs: drjohnson 8,805 s, room 8,850 s.
+- **No P_FT yet.** S3 is pending; P_FT, BD and the verdict are read only after S1-S3 (Amendment 17 Note 2 C5, through
+  Amendment 19 c). `per_scene_parts` in `gn5_summary_S2.json` was not opened.
+- **Parked for E6's write-up (not findings yet;** numbers only, checked against the bundles 2026-10-15):
+  f. **`ogc_gram_ft` PSNR not monotone in j:**
+     - drjohnson, protocol ii: j = -1 28.876079, j = 0 28.907097, j = +1 28.922992 (C3DGS's evaluation: 28.926117,
+       28.929922, 28.951080);
+     - room, protocol ii: j = 0 31.223841, j = +1 31.222271 (C3DGS's evaluation: 31.229155, 31.236128).
+  g. **j = 0 seed spread (seed 0 minus seed 1), PSNR dB / bytes:**
+
+     | Scene | `c3dgs` | `ogc_gram` | `c3dgs_ft` | `ogc_gram_ft` |
+     |---|---|---|---|---|
+     | E6 playroom | +0.01014 / +43,649 | +0.00244 / +4,104 | +0.01269 / +64,044 | +0.01881 / -1,656 |
+     | E6 counter | +0.01440 / +9,719 | -0.00263 / +2,202 | +0.01743 / +2,152 | +0.09339 / +2,643 |
+     | E6 truck | +0.01579 / +65,247 | +0.00056 / +8,915 | -0.00081 / +56,433 | -0.00011 / +5,334 |
+     | E6 drjohnson | +0.01549 / +60,074 | -0.00433 / +4,194 | -0.03665 / +57,576 | -0.00167 / +15,914 |
+     | E6 room | +0.00685 / +12,607 | -0.00302 / +3,363 | +0.02925 / +23,795 | +0.09010 / +5,411 |
+     | E5 drjohnson | +0.02503 / +67,791 | +0.00277 / +11,867 | +0.01106 / +71,232 | -0.04282 / +19,383 |
+     | E5 room | +0.00873 / +15,512 | -0.00031 / +6,142 | +0.05936 / +24,207 | +0.03104 / +20,065 |
+
+  h. **PSNR_ii against C3DGS's evaluation, max |diff|:** E6 drjohnson 0.0500 (j = -1 `ogc_gram_ft`), room 0.0563 (j = -1
+     `c3dgs`); E5 drjohnson 0.0601 (j = 0 seed 0 `ogc_gram_ft`), room 0.0623 (j = -1 `ogc_plain`).
+  i. **"[scene] GN: N views, t s"** is `bench/gn/gn_metric.py:361` (`compute_gn`, every 20 views), run by E5's harness
+     step `gn_pass16_full` (`kaggle/gn_e3r_scene.py`, `harness_phase` with `gn_kinds=("full",)` from `gn_e6_scene.py`).
+     It accumulates the per-splat 16 x 16 metric that becomes OGC's `G` (Amendment 17 b) and note ii's coverage input;
+     no GN-VQ code runs. E5's room and drjohnson logs print the same lines.
+  j. **j = 0 against E5 (E6 minus E5):** `geometry_sha1` differs on all 16 rows. Outside E5's seed spread:
+     - **bytes:** drjohnson `ogc_gram_ft` +29,308 (seed 0) and +32,777 (seed 1) against a spread of 19,383, mostly
+       `features_rest` (+40,070 / +40,105). After fine-tuning `rest_scale` is 0.009288 / 0.009267 (zero point 17 / 18)
+       against E5's 0.009701 / 0.009690 (23 / 23); before fine-tuning the quantizer state is identical;
+     - **PSNR:**
+       - drjohnson `ogc_gram` seed 0: -0.00739 against 0.00277;
+       - drjohnson `c3dgs_ft`: -0.02932 and +0.01839 against 0.01106;
+       - room `ogc_gram`: +0.00583 and +0.00854 against 0.00031.
+
+       On these rows the quantizer state before fine-tuning is identical, and the arrays differ only by small amounts
+       (`gaussian_indices` by up to 4,261 bytes).
+     - All other rows are inside E5's spread.
+  k. **Fine-tuning's per-array changes (seed 0), `.npz` and `rest_scale` before to after:**
+     - **`ogc_gram`:**
+       - drjohnson: -5.87% / -2.28% / -0.63% at j = -1 / 0 / +1; `features_rest` -2,299,547 / -704,249 / -161,913;
+         `rest_scale` 0.00376 to 0.01027 / 0.00929 / 0.00754;
+       - room: -7.51% / -4.55% / -1.26%; `features_rest` -1,567,646 / -743,951 / -165,912; `rest_scale` 0.00715 to
+         0.01618 / 0.01712 / 0.01262;
+     - **`c3dgs`:**
+       - drjohnson: +0.66% / +0.07% / -0.10%; `features_rest` +255,417 / +89,934 / +44,240; `rest_scale` 0.00376 to
+         0.00381 / 0.00382 / 0.00366;
+       - room: +0.50% / +1.01% / +0.16%; `features_rest` +137,144 / +177,180 / +56,713; `rest_scale` 0.00715 to
+         0.00760 / 0.00669 / 0.00688;
+     - **both:** `scaling` shrinks by 94k-181k bytes, `rotation` grows by 110k-236k, `opacity` shrinks;
+       `feature_indices`, `gaussian_indices` and `xyz` are unchanged.
+- **Next action: run E6 S3 on Kaggle.**
+  1. Import `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e6_bench_S3.ipynb`; title
+     **"E6 OGC FT-curves S3"**.
+  2. Attach:
+     - **S1's and S2's outputs ("E6 OGC FT-curves S1", "E6 OGC FT-curves S2"), each pinned to its version;**
+     - **"E5p OGC dissection pilot", attempt 2's version, pinned** (the wheel);
+     - the private dataset **"E5p OGC source 49ccae72"**.
+  3. Accelerator **GPU T4 x2**, Internet **on**. Save & Run All.
+  4. **The first output must be the `OGC PREFLIGHT` lines, both ok** (url and dataset).
+  5. S3 runs kitchen, then bonsai, both with images on the GPU: note 1's 20,479-31,876 s, 7,304 s spare at the high
+     end.
+  6. Bring back `/kaggle/working/E6_bundle_S3.zip` (arcname `gn6/`).
+- **S3 readiness (checked 2026-10-15):**
+  - the notebook `kaggle/gn_e6_bench_S3.ipynb` (sha256 `a8bdaa6f85d7f8d4ebf5ef911a9480727dc7c65b8feb726a62e69b3f7297e43e`)
+    is unchanged since the dry run (last changed in `0381f089`; equal at `3fb985b4`), and the builder rebuilds it
+    byte-identical;
+  - `git diff --stat 8f8295d5..HEAD -- bench/ kaggle/*.ipynb kaggle/*.py kaggle/e6_sessions.json` is empty;
+  - the notebook checks out the branch head at run time, so S3 runs this commit or a later one.
+
+### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S2: done; next: E6 S3)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -4287,8 +4377,9 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   7. ~~E6's code (Amendment 19 g), then its dry run~~ **done (2026-10-13):** `9f79e414`-`3fb985b4` (see "E6's code
      and dry run (2026-10-13)");
   8. ~~E6 S1~~ **done (2026-10-14):** bundle `87cc6a59` (see "E6 S1 (2026-10-14)");
-  9. **next:** E6 S2, "E6 OGC FT-curves S2", then S3; then the part (b) verdict (`bench/gn/e6.py b`, over S1-S3);
-     then S4-S5 (part (a)).
+  9. ~~E6 S2~~ **done (2026-10-15):** bundle `94551278` (see "E6 S2 (2026-10-15)");
+  10. **next:** E6 S3, "E6 OGC FT-curves S3"; then the part (b) verdict (`bench/gn/e6.py b`, over S1-S3); then S4-S5
+      (part (a)).
 - ~~**Note 4's S2 session-hours** are printed as 4.32-7.71 h; the code gives 7.70 h.~~ **Corrected (2026-10-12):** the
   erratum `1b532e40`. Dace approved rule (b)'s rewording the same day.
 - **The unexplained npz2ply failure** (one dry run, 2026-10-10, room's rerun `ogc_gram`): not reproduced alone or under
