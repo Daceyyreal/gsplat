@@ -58,8 +58,8 @@ section 19 (`de8690ca`, checked by `bench/gn/check_s19.py`, `63fe6de0`); section
 fine-tuning curves on flowers, treehill and train; (b) pre-registered P_FT on E5's seven scenes. Its **note 1**
 (`0f77b0de`, erratum `8ea6e0c9`) gives covered sizes, memory, start devices and the five-session plan. **E6's code
 and dry run are done** (`9f79e414`-`3fb985b4`); note 2 (`b7ad2329`) records flowers' metadata read. **E6 S1 ran and
-is ingested** (`87cc6a59`), **and so is S2** (`94551278`). **Next: E6 S3, "E6 OGC FT-curves S3"** (see "E6 S2
-(2026-10-15)").
+is ingested** (`87cc6a59`), **and so are S2** (`94551278`) **and S3** (`13a95aa1`). **Part (b)'s verdict is computed
+and awaits Dace's reading; it is not yet in FINDINGS** (see "E6 S3 (2026-10-18)").
 
 ## Context and rules
 
@@ -4276,7 +4276,82 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   - `git diff --stat 8f8295d5..HEAD -- bench/ kaggle/*.ipynb kaggle/*.py kaggle/e6_sessions.json` is empty;
   - the notebook checks out the branch head at run time, so S3 runs this commit or a later one.
 
-### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S2: done; next: E6 S3)
+### E6 S3 (2026-10-18)
+
+- **S3 done and ingested:** `E6_bundle_S3.zip` (sha256 `07ef79a8513a2ca11504706ea6dc4558e12bc78b1d95d0ec7a11a3ac0577eee3`,
+  633,140 bytes): its 22 `gn6/` files committed unchanged, data only, in `kaggle/gn_e6/S3/gn6/` (`13a95aa1`). It ran
+  gsplat `aaf7560b`; `8f8295d5..aaf7560b` touches no code, notebook or `e6_sessions.json`.
+- **Cumulative, as S2:**
+  - the five carried scenes' results and metas are byte-identical to S2's zip;
+  - the preflight equals S2's apart from times;
+  - the build record differs only in times, pip's temporary directory names and a download-speed line.
+- **OGC text:** only the clone URL (logged git commands, the source records' `url` / `path`), with no source file and
+  no author or committer line.
+- **Mechanics clean:**
+  - kitchen and bonsai have 17 rows each, all `ok`;
+  - every process settled on attempt 0;
+  - no OOM, deadline guard or cut, NaN, deviation, failed or skipped step;
+  - both on the GPU;
+  - protocol ii used 35 and 37 test views;
+  - bytes and PSNR_ii fall with j for all four row kinds on both scenes;
+  - jobs: kitchen 10,095 s, bonsai 8,115 s.
+- **Parked for E6's write-up (not findings yet;** numbers only, checked against the bundles 2026-10-18):
+  l. **PSNR_ii against C3DGS's evaluation** (`c3dgs_PSNR` minus `PSNR_ii`, median / min / max):
+
+     | Scene | E6 S3 | E5 |
+     |---|---|---|
+     | kitchen | 0.4614 / 0.3213 / 0.4723 (max at j = +1 `ogc_gram`) | 0.4434 / 0.2965 / 0.4709 |
+     | bonsai | 0.1907 / 0.1423 / 0.2589 (max at j = -1 `c3dgs_ft`) | 0.1578 / 0.1428 / 0.2406 |
+
+     Bonsai's gap is not new: E5 had it, and section 20 reports it.
+  m. **j = 0 seed spread (seed 0 minus seed 1), PSNR dB / bytes:**
+
+     | Scene | `c3dgs` | `ogc_gram` | `c3dgs_ft` | `ogc_gram_ft` |
+     |---|---|---|---|---|
+     | E6 kitchen | +0.02535 / +64,278 | -0.00046 / +3,259 | -0.07142 / +70,761 | -0.00857 / +2,034 |
+     | E6 bonsai | +0.01445 / +10,085 | +0.00750 / +4,509 | -0.00150 / +25,156 | -0.01395 / +7,252 |
+     | E5 kitchen | +0.06756 / +73,174 | +0.03813 / +5,965 | +0.08568 / +73,412 | +0.03783 / +8,416 |
+     | E5 bonsai | +0.01049 / +10,180 | +0.00430 / +5,209 | -0.02738 / +13,425 | -0.06501 / -445 |
+
+  n. **j = 0 against E5 (E6 minus E5):** `geometry_sha1` differs on all 16 rows. Outside E5's seed spread:
+     - **kitchen:**
+       - `ogc_gram` seed 0: PSNR -0.04692 against 0.03813;
+       - `c3dgs_ft` seed 0: -0.12635 against 0.08568;
+       - `ogc_gram_ft`: PSNR -0.09288 / -0.04648 against 0.03783, bytes -19,239 / -12,857 against 8,416 (largest arrays
+         `scaling_factor` -14,908 / -9,493);
+       - `rest_scale` after fine-tuning 0.014752 / 0.014703 (zero point -15) against E5's 0.014702 / 0.014682 (-14);
+     - **bonsai:**
+       - `ogc_gram_ft` bytes +20,749 / +13,052 against 445, from `features_rest` (+20,908 / +15,531);
+       - `rest_scale` after fine-tuning 0.012045 / 0.012059 (zero point -13) against E5's 0.012344 / 0.012286 (-10);
+     - before fine-tuning the quantizer state is identical on every row; all other rows are inside E5's spread.
+  o. **Fine-tuning's per-array changes (seed 0), `.npz` and `rest_scale` before to after (j = -1 / 0 / +1):**
+     - **`ogc_gram`:**
+       - kitchen: -6.41% / -3.70% / -1.01%; `features_rest` -1,932,543 / -757,070 / -172,092; `rest_scale` 0.00602 to
+         0.01182 / 0.01475 / 0.01587;
+       - bonsai: -7.83% / -3.11% / -1.68%; `features_rest` -1,570,963 / -429,803 / -184,516; `rest_scale` 0.00674 to
+         0.01443 / 0.01205 / 0.01362;
+     - **`c3dgs`:**
+       - kitchen: -0.07% / -0.05% / -0.11%; `features_rest` -10,049 / +11,518 / +7,319; `rest_scale` 0.00602 to
+         0.00657 / 0.00659 / 0.00665;
+       - bonsai: +0.13% / -0.04% / +0.13%; `features_rest` +11,104 / +11,954 / +43,297; `rest_scale` 0.00674 to
+         0.00740 / 0.00743 / 0.00656;
+     - **both:** `scaling` shrinks by 51k-81k bytes, `rotation` grows by 51k-88k, `opacity` shrinks.
+- **Part (b)'s verdict: computed, awaiting Dace's reading; not yet in FINDINGS, CLAIMS or PREREG.**
+  - **How:** `bench/gn/e6.py b kaggle/gn_e6` over the three bundles S1-S3 (rows merged as E5's combiner does: an
+    identical carried row kept once). The JSON went to the session's scratchpad, not the repository.
+  - **The tool's line:** "E6 part (b): PASS (n = 7; dropped -; no incomplete reason)":
+    - `P_bar` 0.04249073118821539;
+    - positive 6 of 7 (need 5);
+    - `SE_noise` 0.008700929983529681 (`SD_pool` 0.0325558989446767);
+    - criteria 1-3 all True.
+  - **Per-scene P_FT:** bonsai 0.062187712, counter 0.105805442, drjohnson -0.004616264, kitchen 0.012493186,
+    playroom 0.048257314, room 0.056026648, truck 0.017281080.
+  - **Independent check:** the sessions' `per_scene_parts` and a separate `numpy.polyfit` recompute from the CSVs
+    agree with the tool to at most 2.7e-12 per scene, and `D_sp`, `P_bar` and `SE_noise` exactly.
+  - **P1 replicated (report only):** `P_bar` 0.35560294352698846, positive 7 of 7.
+- **Next:** Dace's reading of part (b)'s verdict; then FINDINGS (E6 part (b)) and its checker; then S4-S5 (part (a)).
+
+### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; part (b) verdict computed, awaiting reading)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -4378,8 +4453,9 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
      and dry run (2026-10-13)");
   8. ~~E6 S1~~ **done (2026-10-14):** bundle `87cc6a59` (see "E6 S1 (2026-10-14)");
   9. ~~E6 S2~~ **done (2026-10-15):** bundle `94551278` (see "E6 S2 (2026-10-15)");
-  10. **next:** E6 S3, "E6 OGC FT-curves S3"; then the part (b) verdict (`bench/gn/e6.py b`, over S1-S3); then S4-S5
-      (part (a)).
+  10. ~~E6 S3; the part (b) verdict~~ **done (2026-10-18):** bundle `13a95aa1`; the verdict computed, not recorded (see
+      "E6 S3 (2026-10-18)");
+  11. **next:** Dace's reading of part (b)'s verdict; FINDINGS (E6 part (b)) and its checker; then S4-S5 (part (a)).
 - ~~**Note 4's S2 session-hours** are printed as 4.32-7.71 h; the code gives 7.70 h.~~ **Corrected (2026-10-12):** the
   erratum `1b532e40`. Dace approved rule (b)'s rewording the same day.
 - **The unexplained npz2ply failure** (one dry run, 2026-10-10, room's rerun `ogc_gram`): not reproduced alone or under
