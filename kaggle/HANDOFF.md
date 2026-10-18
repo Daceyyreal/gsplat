@@ -58,8 +58,10 @@ section 19 (`de8690ca`, checked by `bench/gn/check_s19.py`, `63fe6de0`); section
 fine-tuning curves on flowers, treehill and train; (b) pre-registered P_FT on E5's seven scenes. Its **note 1**
 (`0f77b0de`, erratum `8ea6e0c9`) gives covered sizes, memory, start devices and the five-session plan. **E6's code
 and dry run are done** (`9f79e414`-`3fb985b4`); note 2 (`b7ad2329`) records flowers' metadata read. **E6 S1 ran and
-is ingested** (`87cc6a59`), **and so are S2** (`94551278`) **and S3** (`13a95aa1`). **Part (b)'s verdict is computed
-and awaits Dace's reading; it is not yet in FINDINGS** (see "E6 S3 (2026-10-18)").
+is ingested** (`87cc6a59`), **and so are S2** (`94551278`) **and S3** (`13a95aa1`). **E6 part (b) is closed:** it
+passes (FINDINGS section 21, `6bd340a0`, `check_s21.py` `251c305c`; descriptive section 22, `4686acc0`, `check_s22.py`
+`faedf2dd`; CLAIMS group F, `faa99c55`, 59 rows). **Next: E6 S4, "E6 OGC descriptive S4"** (see "E6 part (b) closed
+(2026-10-18)").
 
 ## Context and rules
 
@@ -4351,7 +4353,80 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   - **P1 replicated (report only):** `P_bar` 0.35560294352698846, positive 7 of 7.
 - **Next:** Dace's reading of part (b)'s verdict; then FINDINGS (E6 part (b)) and its checker; then S4-S5 (part (a)).
 
-### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; part (b) verdict computed, awaiting reading)
+### E6 part (b) closed (2026-10-18)
+
+- **Dace's reading of part (b)'s verdict** was checked against the bundles before anything was written (the R0-R6
+  report, read-only).
+- **Commits, in order** (pytest before each through `.venv`'s Python with pipefail, a kept log in `F:\pytest_logs\` and
+  `GN_OGC_SRC`; the ancestor check; fast-forward pushes to `fork`):
+
+  | Commit | What | Gate log | pytest |
+  |---|---|---|---|
+  | `6bd340a0` | FINDINGS section 21, alone, with its summary paragraph and Sources entry | `gate_20261018_190434_findings_s21.log` | 203 |
+  | `251c305c` | `bench/gn/check_s21.py` and its pytest test | `gate_20261018_190623_check_s21.log` | 204 |
+  | `4686acc0` | FINDINGS section 22, alone, with its summary paragraph and Sources entry | `gate_20261018_190936_findings_s22.log` | 204 |
+  | `faedf2dd` | `bench/gn/check_s22.py` and its pytest test | `gate_20261018_191111_check_s22.log` | 205 |
+  | `faa99c55` | `paper/CLAIMS.md`: group F (F1-F11), Gap 2 closed, conflict 3 extended; 59 rows | `gate_20261018_191353_claims_s21_s22.log` | 205 |
+
+- **The checkers' results:**
+  - **`check_s21.py`:** "52 recomputed numbers, 176 numeric tokens checked, 0 failures". It recomputes P_FT, P1 and every
+    BD with its own `numpy.polyfit` fit (not `e6.py`'s or `g2`'s), checks the tool's output and the sessions'
+    `per_scene_parts` against that, and reads each scene from the session that ran it (later copies byte-identical).
+    It failed a deliberate one-digit edit of the text.
+  - **`check_s22.py`:** "88 recomputed numbers, 221 numeric tokens checked, 0 failures".
+- **Section 21 (pre-registered):** part (b) passes:
+  - P_FT `P_bar` 0.0425 dB, positive on 6 of 7 (drjohnson -0.0046), `P_bar` = 4.9 x `SE_noise` (seed noise only);
+  - not a held-out claim (19 c's disclosure);
+  - secondaries: P1 replicated 0.3556 dB (7 of 7; E5 0.3558); bytes after fine-tuning and BD-rate, which is not
+    interpretable on room, truck, drjohnson and playroom (shared PSNR range below 0.1 dB); quantizer records on all 56
+    fine-tuned rows.
+- **Section 22 (descriptive, not pre-registered):**
+  - leave-one-out: all pass, 6 of 7 at exactly 5;
+  - SD across scenes 0.0373, t = 3.0;
+  - P_FT / P1 replicated 0.1195 as a ratio of means, over different byte ranges;
+  - the same-bytes counterfactual: +0.0458 against +0.0425;
+  - the per-j PSNR difference rises with j on all seven scenes;
+  - the AC grid re-fit: `ogc_gram_ft` x 1.59 to 3.16, `c3dgs_ft` x 0.80 to 1.13;
+  - cross-run SD 0.0085 against `SD_pool` 0.0326;
+  - mechanics notes.
+- **Corrections to the parked items above** (found while writing section 22; the documents carry the corrected values):
+  - **S1's item a** said S1's j = 0 rows were within E5's seed spread except truck's `ogc_gram_ft` bytes. Against each
+    row kind's own E5 spread, playroom's `ogc_gram_ft` bytes (seed 0, -14,300 against 10,939) and four S1 PSNR rows
+    (counter `ogc_gram` seed 1; playroom `ogc_gram` seeds 0 and 1) are also outside it. Section 22 f lists every row.
+  - **S3's item l** gave the evaluator gap's "median" as the upper middle of 16 values. The medians are kitchen 0.4597 (E5
+    0.4414) and bonsai 0.1777 (E5 0.1575). The ranges were right.
+  - **Item e (S1)** gave `ogc_gram_ft`'s `.npz` change as -1.2% to -10.7% on S1's scenes. Over all seven scenes and four
+    processes it is -10.68% to -0.63%, and its AC scale x 1.59 to 3.16 (not "x 2-3").
+- **Next action: run E6 S4 on Kaggle** (part (a), descriptive).
+  1. Import `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e6_bench_S4.ipynb`; title
+     **"E6 OGC descriptive S4"**.
+  2. Attach:
+     - **"E5p OGC dissection pilot", attempt 2's version, pinned** (the wheel);
+     - the private dataset **"E5p OGC source 49ccae72"**;
+     - **"E3p INRIA pilot"** (the E3p notebook output; `e3p_inria/train/`, train's three members, each re-checked by
+       size and CRC32).
+
+     No part (b) output is attached: S4 restores only part (a) outputs.
+  3. Accelerator **GPU T4 x2**, Internet **on**. Save & Run All.
+  4. **The first output must be the `OGC PREFLIGHT` lines, both ok** (url and dataset).
+  5. S4 runs flowers (`images_4`, at most 1257 x 828 and 173 views covered; note 1 and note 2), then train, both with
+     images on the GPU: note 1's 16,518-28,386 s, 10,794 s spare at the high end.
+  6. Bring back `/kaggle/working/E6_bundle_S4.zip` (arcname `gn6/`), and keep the session's output version: S5 attaches
+     it.
+- **S4 and S5 readiness (checked 2026-10-18):**
+  - **S4:** "E6 OGC descriptive S4", `kaggle/gn_e6_bench_S4.ipynb` (sha256
+    `7e8667adb1986621c7a8bf20a2fea05ba8a8e2543a7a36157b2ab411e6bf6f57`); flowers, then train.
+  - **S5:** "E6 OGC descriptive S5", `kaggle/gn_e6_bench_S5.ipynb` (sha256
+    `cbf16e3a457ea1389895afb44ed46607475e08644f3db3ae24a8addbb457434f`); treehill, on the GPU (note 1's 9,649-19,587 s,
+    19,593 s spare). It attaches S4's output (pinned), the E5p attempt 2 output and the private dataset.
+  - **Both notebooks** are unchanged since the dry run (last changed in `0381f089`; equal at `3fb985b4`).
+  - **Code diff:** `git diff --stat 8f8295d5..HEAD -- bench/gn/e6*.py bench/gn/e5*.py kaggle/*.ipynb kaggle/*.py
+    kaggle/e6_sessions.json` is empty. Since `8f8295d5`, `bench/` gained only `check_s21.py`, `check_s22.py` and their
+    tests, which the job does not import.
+  - **Part (a)'s predictions** are committed before any part (a) data: PREREG_GN.md Amendment 19 b (the
+    "**Predictions**" list: P1 > 0, P2 > 0, the BD-PSNR after fine-tuning below P1), in `f7716485`.
+
+### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; next: E6 S4)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -4455,7 +4530,10 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   9. ~~E6 S2~~ **done (2026-10-15):** bundle `94551278` (see "E6 S2 (2026-10-15)");
   10. ~~E6 S3; the part (b) verdict~~ **done (2026-10-18):** bundle `13a95aa1`; the verdict computed, not recorded (see
       "E6 S3 (2026-10-18)");
-  11. **next:** Dace's reading of part (b)'s verdict; FINDINGS (E6 part (b)) and its checker; then S4-S5 (part (a)).
+  11. ~~Dace's reading of part (b)'s verdict; FINDINGS (E6 part (b)) and its checker~~ **done (2026-10-18):**
+      `6bd340a0`, `251c305c`, `4686acc0`, `faedf2dd`, `faa99c55` (see "E6 part (b) closed (2026-10-18)");
+  12. **next:** E6 S4, "E6 OGC descriptive S4" (flowers, train); then S5 (treehill); then part (a)'s reader
+      (`bench/gn/e6.py a`) and FINDINGS.
 - ~~**Note 4's S2 session-hours** are printed as 4.32-7.71 h; the code gives 7.70 h.~~ **Corrected (2026-10-12):** the
   erratum `1b532e40`. Dace approved rule (b)'s rewording the same day.
 - **The unexplained npz2ply failure** (one dry run, 2026-10-10, room's rerun `ogc_gram`): not reproduced alone or under
