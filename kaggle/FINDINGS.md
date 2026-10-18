@@ -142,6 +142,16 @@ same bundles; no new run and no verdict.**
 - **P1 replicated (report only):** `P_bar` 0.3556 dB, positive on 7 of 7 (E5: 0.3558). The BD-rate secondary is not
   interpretable on four scenes (shared PSNR range below 0.1 dB).
 
+**E6 part (b), descriptive (section 22, branch `bench/gn-vq`): measures from part (b)'s bundles that Amendment 19 did
+not pre-register; no new run and no verdict.**
+- **P_FT is robust to leaving out any one scene** (every case passes all three criteria) but rests on the count: 6 of
+  the 7 cases meet it with exactly 5. The across-scene SD of P_FT is 0.0373 dB, so t = 3.0.
+- **Not byte placement:** with `ogc_gram_ft`'s bytes set to `c3dgs_ft`'s per j (a counterfactual, not equal rate) the
+  mean is +0.0458 dB against `P_bar` +0.0425 dB. The ratio of the means of P_FT and P1 replicated is 0.1195, over
+  different byte ranges.
+- **Fine-tuning re-fits OGC's AC grid** (`ogc_gram_ft` x 1.59 to 3.16 against `c3dgs_ft` x 0.80 to 1.13), as sections 18
+  and 20 inferred; across runs the fine-tuned pair's mean at j = 0 moves less (0.0085) than `SD_pool` (0.0326).
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -244,6 +254,10 @@ same bundles; no new run and no verdict.**
   that ran it, through `bench/gn/e6.py b`. The exceptions are E5's P1 from E5's bundles (`9a90dabb`, `1710cc8a`,
   `88b5ebed`) and the readings of code. `bench/gn/check_s21.py` recomputes every number in the section from those files,
   with its own BD fit beside the tool's and the sessions' summaries, and checks each against the text.
+- Section 22: every number comes from the three E6 part (b) session bundles (as section 21) and, for the cross-run
+  comparison, E5's three bundles (`9a90dabb`, `1710cc8a`, `88b5ebed`). `bench/gn/check_s22.py` recomputes every number
+  in the section from those files, with `bench/gn/check_s21.py`'s loaders and its own BD fit, and checks each against
+  the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -4438,3 +4452,173 @@ shared PSNR range), and that shared PSNR range (dB):
   - BD over three points is a parabola through them, so each P_FT rests on six measurements;
   - the BD-rate secondary is not interpretable on four scenes;
   - seven scenes, INRIA's checkpoints, K = 4,096, one GPU type and one Kaggle image.
+
+## 22. E6 part (b), descriptive (not pre-registered; from part (b)'s committed bundles, no new run) — P_FT holds when any one scene is left out, it is not made by where the bytes fall, and fine-tuning's re-fit of OGC's AC quantizer is now recorded directly
+
+**What this section is:**
+- **Its sources:** measures read from the three part (b) bundles (`kaggle/gn_e6/S1/gn6/` to `S3/gn6/`; section 21) and,
+  for the cross-run comparison, E5's bundles.
+- **Its status:** nothing here was pre-registered, and nothing changes section 21's verdict. Each item is labelled
+  **descriptive, not pre-registered**.
+- **Rows:** "seed 0" means the j = -1, 0 and +1 processes' rows; j = 0 values with both seeds are named so.
+
+### a. Spread across scenes and leave-one-out (descriptive, not pre-registered)
+
+The across-scene SD of P_FT is 0.0373 dB (n - 1), so t = 3.0 over the seven scenes; criterion 3's `SE_noise` is seed
+noise and does not measure this.
+
+Leaving each scene out in turn, with `SE_noise` recomputed over the six left:
+
+| Left out | `P_bar` | `SE_noise` | 2 x `SE_noise` | `P_bar` / `SE_noise` | Positive | Criteria 1 / 2 / 3 |
+|---|---|---|---|---|---|---|
+| bonsai | 0.039208 | 0.010098 | 0.020196 | 3.88 | 5 of 6 (5 needed) | yes / yes / yes |
+| counter | 0.031938 | 0.007936 | 0.015871 | 4.02 | 5 of 6 (5 needed) | yes / yes / yes |
+| kitchen | 0.047490 | 0.008696 | 0.017392 | 5.46 | 5 of 6 (5 needed) | yes / yes / yes |
+| room | 0.040235 | 0.008794 | 0.017588 | 4.58 | 5 of 6 (5 needed) | yes / yes / yes |
+| truck | 0.046692 | 0.010151 | 0.020302 | 4.60 | 5 of 6 (5 needed) | yes / yes / yes |
+| drjohnson | 0.050342 | 0.009723 | 0.019447 | 5.18 | 6 of 6 (5 needed) | yes / yes / yes |
+| playroom | 0.041530 | 0.010138 | 0.020277 | 4.10 | 5 of 6 (5 needed) | yes / yes / yes |
+
+- **Every case passes all three criteria.** 6 of the 7 cases meet the count with exactly 5: one more negative scene would
+  fail criterion 2 there.
+
+### b. P_FT against P1 replicated (descriptive, not pre-registered)
+
+**The ratio of the means** is 0.0425 / 0.3556 = 0.1195. Per scene:
+
+| Scene | P_FT | P1 replicated | P_FT / P1 |
+|---|---|---|---|
+| bonsai | +0.0622 | 0.4817 | +0.129 |
+| counter | +0.1058 | 0.3197 | +0.331 |
+| kitchen | +0.0125 | 0.4073 | +0.031 |
+| room | +0.0560 | 0.3914 | +0.143 |
+| truck | +0.0173 | 0.1484 | +0.116 |
+| drjohnson | -0.0046 | 0.2757 | -0.017 |
+| playroom | +0.0483 | 0.4651 | +0.104 |
+
+- **Per scene the ratio runs from -0.017 to +0.331,** so the ratio of the means is not a property of each scene.
+- **The two values integrate over different byte ranges:** fine-tuning moves OGC's bytes. For example,
+  kitchen's P1 averages over 17,458,383-29,581,448 bytes and its P_FT over 17,281,932-28,218,449.
+- **The ratio compares two equal-rate measures, each over its own range.** It is not "the share of the unfine-tuned
+  lead that survives" at any one rate.
+
+### c. A same-bytes-per-j counterfactual (descriptive, not pre-registered; a counterfactual, not equal rate)
+
+`ogc_gram_ft`'s bytes are replaced by `c3dgs_ft`'s at the same j, and its PSNR is kept.
+- **Well posed:** the two curves then share their three x points, so the BD value is the mean, over `c3dgs_ft`'s
+  log10-byte span, of the parabola through the three per-j PSNR differences.
+- **Not equal rate:** it pairs OGC's PSNR with bytes OGC did not produce.
+
+| Scene | P_FT | Same bytes per j | P_FT minus same bytes |
+|---|---|---|---|
+| bonsai | +0.062188 | +0.066208 | -0.004020 |
+| counter | +0.105805 | +0.093180 | +0.012625 |
+| kitchen | +0.012493 | +0.014282 | -0.001789 |
+| room | +0.056027 | +0.065015 | -0.008989 |
+| truck | +0.017281 | +0.023202 | -0.005921 |
+| drjohnson | -0.004616 | +0.002711 | -0.007328 |
+| playroom | +0.048257 | +0.056112 | -0.007855 |
+
+- **Byte placement does not produce P_FT:** with the bytes made equal per j the mean is +0.0458 dB against
+  `P_bar` +0.0425 dB.
+
+### d. The PSNR difference at the same j rises with j (descriptive, not pre-registered)
+
+`ogc_gram_ft` minus `c3dgs_ft` in protocol ii's PSNR (dB), seed 0, at j = -1 / 0 / +1:
+
+| Scene | j = -1 / 0 / +1 |
+|---|---|
+| bonsai | +0.0228 / +0.0791 / +0.1977 |
+| counter | +0.0082 / +0.1121 / +0.1874 |
+| kitchen | -0.1189 / +0.0840 / +0.3788 |
+| room | -0.0058 / +0.0695 / +0.2244 |
+| truck | -0.0012 / +0.0322 / +0.0606 |
+| drjohnson | -0.0419 / +0.0239 / +0.0768 |
+| playroom | +0.0037 / +0.0806 / +0.1203 |
+
+- **It rises from j = -1 to j = +1 on all seven scenes:** j = -1 -0.119 to +0.023, j = 0 +0.024 to +0.112, j = +1
+  +0.061 to +0.379.
+- **Caveat: the two rows do not have the same bytes at a point.** At j = +1 `ogc_gram_ft` has 3.5% to 7.9% more bytes,
+  and at j = -1 0.3% to 7.9% fewer (section 21, secondary 2). So this is not a rate-matched trend.
+
+### e. Fine-tuning re-fits the int8 AC quantizer (descriptive, not pre-registered)
+
+Over all four processes of the seven scenes, the AC grid's scale (`rest_scale` of `qa_at_save`, after over before
+fine-tuning) and the `.npz` change:
+- **The scale:** `ogc_gram_ft` x 1.59 to 3.16; `c3dgs_ft` x 0.80 to 1.13.
+- **The `.npz`:** `ogc_gram` -10.68% to -0.63%; `c3dgs` -0.31% to +1.01%.
+- **Where the bytes go:** OGC's codebook extends past the int8 grid set before fine-tuning (section 20). Fine-tuning
+  widens OGC's grid, and its `features_rest` compresses smaller; C3DGS's grid barely moves.
+- **This is the mechanism sections 18 and 20 inferred,** now read directly from the records Amendment 18 note 2 added.
+  The records show the grid and the bytes; they do not separate the grid's effect on PSNR from the rest of fine-tuning.
+
+### f. Cross-run noise against E5 (descriptive, not pre-registered)
+
+`D_s` of the fine-tuned pair at j = 0, in E6 and in E5 (separate runs on the same scenes and checkpoints):
+
+| Scene | E6 `D_s` | E5 `D_s` | E6 minus E5 |
+|---|---|---|---|
+| bonsai | +0.08531 | +0.10227 | -0.01696 |
+| counter | +0.07409 | +0.09017 | -0.01609 |
+| kitchen | +0.05255 | +0.07443 | -0.02188 |
+| room | +0.03908 | +0.04745 | -0.00836 |
+| truck | +0.03185 | +0.03727 | -0.00542 |
+| drjohnson | +0.00642 | -0.00686 | +0.01329 |
+| playroom | +0.07750 | +0.07775 | -0.00025 |
+
+- **The mean difference is -0.0080 and its SD 0.0120,** so the SD divided by sqrt(2) is 0.0085, against `SD_pool`
+  0.0326. Across runs the pair's mean moves less than the seed pair's spread within a run.
+- **Rows outside E5's seed spread.** Each j = 0 row (56 rows) compared with E5's same row, against E5's own seed-0 minus
+  seed-1 spread for that row kind. `geometry_sha1` differs on every row; the quantizer state before fine-tuning is
+  identical on every unfine-tuned row.
+  - **Bytes, `ogc_gram_ft` only** (seed 0 / seed 1, against E5's spread), through a different AC grid after fine-tuning:
+    - bonsai +20,749 / +13,052 against 445;
+    - kitchen -19,239 / -12,857 against 8,416;
+    - truck +145,273 / +147,929 against 7,990;
+    - drjohnson +29,308 / +32,777 against 19,383;
+    - playroom -14,300 against 10,939.
+  - **PSNR, 12 rows:**
+    - counter `ogc_gram` seed 1 +0.00126 against 0.00075;
+    - kitchen `ogc_gram` seed 0 -0.04692 against 0.03813;
+    - kitchen `c3dgs_ft` seed 0 -0.12635 against 0.08568;
+    - kitchen `ogc_gram_ft` seed 0 -0.09288 against 0.03783;
+    - kitchen `ogc_gram_ft` seed 1 -0.04648 against 0.03783;
+    - room `ogc_gram` seed 0 +0.00583 against 0.00031;
+    - room `ogc_gram` seed 1 +0.00854 against 0.00031;
+    - drjohnson `ogc_gram` seed 0 -0.00739 against 0.00277;
+    - drjohnson `c3dgs_ft` seed 0 -0.02932 against 0.01106;
+    - drjohnson `c3dgs_ft` seed 1 +0.01839 against 0.01106;
+    - playroom `ogc_gram` seed 0 +0.00351 against 0.00132;
+    - playroom `ogc_gram` seed 1 +0.00239 against 0.00132.
+  - **Why `ogc_gram`'s rows go outside so often:** E5's `ogc_gram` rows in the two seeds share OGC's fixed seed, so E5's
+    spread for that row understates the variation between runs, whose geometry differs.
+
+### g. Mechanics notes (descriptive, not pre-registered)
+
+- **PSNR not monotone in j** (seed 0, protocol ii unless named):
+  - playroom's `ogc_gram`: before fine-tuning j = 0 (29.8254) is below j = +1 (29.8269); after it j = +1 (30.0429) is
+    above j = 0 (30.0174) and j = -1 (30.0252);
+  - drjohnson's `ogc_gram_ft` rises with j: 28.8761 / 28.9071 / 28.9230, and so under C3DGS's evaluation (28.9261 /
+    28.9299 / 28.9511);
+  - room's `ogc_gram_ft`: j = 0 (31.2238) above j = +1 (31.2223) under protocol ii, but below it under C3DGS's evaluation
+    (31.2292 against 31.2361).
+- **The gap between C3DGS's evaluation and protocol ii matches E5's and section 20's**, median (range) over each scene's
+  compressed rows:
+  - kitchen: 0.4597 (0.3213 to 0.4723), E5 0.4414 (0.2965 to 0.4709);
+  - bonsai: 0.1777 (0.1423 to 0.2589), E5 0.1575 (0.1428 to 0.2406).
+- **A stale label, kept:** the attempt file of S1 to S3 names "PREREG_GN.md Amendment 19; note 1 and its erratum" and
+  omits note 2. The notebooks were built before note 2, and were not rebuilt so that the three sessions ran the same
+  code.
+
+### What section 22 settles, and what it does not
+
+- **Descriptive only:**
+  - P_FT survives leaving out any one scene;
+  - it is about one eighth of P1 replicated as a ratio of means, but not per scene;
+  - equalising the bytes per j does not remove it;
+  - fine-tuning's re-fit of OGC's AC grid is recorded directly;
+  - across runs the pair's mean at j = 0 moves less than `SD_pool`.
+- **Not settled:**
+  - why OGC's lead shrinks with fine-tuning (the records show the grid and the bytes, not the cause);
+  - BD's own noise (one process per point);
+  - the cause of the protocol gap on kitchen and bonsai.
