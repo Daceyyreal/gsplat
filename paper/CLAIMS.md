@@ -4,7 +4,9 @@
 re-checks it, the committed data and the limits that must travel with it. No paper prose. Nothing here is new: every
 claim restates FINDINGS no more strongly than FINDINGS does, and every number is FINDINGS'. Written 2026-10-13, after
 FINDINGS section 19 (`de8690ca`, `check_s19.py` `63fe6de0`); updated the same day after FINDINGS section 20
-(`847e39ee`, `check_s20.py` `8258a0b1`): rows A8-A11, B8, E13-E15 and the Gaps' statuses.
+(`847e39ee`, `check_s20.py` `8258a0b1`): rows A8-A11, B8, E13-E15 and the Gaps' statuses; updated 2026-10-18 after
+FINDINGS sections 21 and 22 (E6 part (b): `6bd340a0`, `check_s21.py` `251c305c`; `4686acc0`, `check_s22.py`
+`faedf2dd`): group F and the Gaps' statuses.
 
 **Status labels:**
 - **confirmatory:** a pre-registered criterion and its verdict;
@@ -104,13 +106,39 @@ OGC.** Inside C3DGS, OGC is ahead of GN-VQ on development scenes (D5, D6).
 | E14 | The gap between C3DGS's own evaluation and protocol ii is scene-dependent: 0.429 dB on kitchen, 0.167 dB on bonsai, 0.007 to 0.035 dB on the other five; train's gap (0.475 dB in E5p; E3q's 0.410-0.523 dB) does not carry over. | report-only; the comparison exploratory | s20 "C3DGS's own evaluation against protocol ii" | `check_s20.py` | as A1; `kaggle/gn_e5p/attempt2/gn5p/` | the files do not say why | no |
 | E15 | OGC's VQ call took 0.22 to 0.62 times C3DGS's own colour VQ's time per row on a T4. | report-only (Amendment 17 b's per-row record) | s20 "Time per row" | `check_s20.py` | as A1 | T4; OGC's chunk 25,000 and 15 iterations; excludes the 16 x 16 metric, computed once per scene | no |
 
+## (F) E6 part (b): fine-tuning curves on E5's seven scenes
+
+**Limits common to every F row:**
+- **Scenes and checkpoints:** E5's seven gate scenes, INRIA's published 30k checkpoints, C3DGS at `2a234af5` with the
+  recorded deviations, OGC's code at `49ccae72`, K = 4,096.
+- **Points:** three colour thresholds (j = -1, 0, +1), one process (seed 0) per point; every process fine-tunes both rows
+  (5,000 iterations); `SE_noise` from the two seeds at j = 0 only.
+- **Evaluation and hardware:** protocol ii; 2x T4; one Kaggle image.
+- **Disclosure** (Amendment 19 c): the hypothesis was formed after seeing E5's results on these scenes; part (b) is a
+  pre-registered test on E5's scenes, not a held-out claim. E5's rows are not reused (seeded C3DGS runs do not reproduce
+  on the GPU, E2).
+
+| ID | Claim | Status | Evidence | Check | Data | Scope limits that travel with it | Corr. |
+|---|---|---|---|---|---|---|---|
+| F1 | After C3DGS's fine-tuning, OGC's Gram-metric VQ beats C3DGS's own colour VQ at equal rate over three colour thresholds on E5's seven scenes: P_FT `P_bar` 0.0425 dB, positive on 6 of 7 (drjohnson -0.0046), `P_bar` = 4.9 x `SE_noise` (2 x `SE_noise` 0.0174 dB). | confirmatory: Amendment 19 c (P_FT, criteria 1-3, n >= 5, `incomplete` > `fail` > `pass`); verdict **pass** | s21 "The verdict" (tool output, per-scene table); three sources agree to within 1.4e-11 | `check_s21.py` (its own polyfit BD) | `kaggle/gn_e6/S1/gn6/`, `S2/gn6/`, `S3/gn6/` | the common F limits and the disclosure; `SE_noise` is seed noise only, not scene spread (F5); each P_FT is a parabola through three points per curve, six measurements | no |
+| F2 | P1 replicated in a fresh run: OGC's VQ against C3DGS's own before fine-tuning reads `P_bar` 0.3556 dB, positive on 7 of 7 (E5: 0.3558), per scene within 0.0045 dB of E5's. | descriptive: Amendment 19 c secondary 1, report only | s21 "Secondaries" 1 | `check_s21.py` | as F1; E5's bundles | does not re-judge E5; E6's and E5's processes differ in geometry (F10) | no |
+| F3 | After fine-tuning OGC's `.npz` is smaller than C3DGS's at j = -1 on every scene (ratio 0.9209-0.9966) and larger at j = +1 on every scene (1.0349-1.0785); before fine-tuning it is larger at every point. BD-rate(`ogc_gram_ft` against `c3dgs_ft`) is -14.67% to -3.73% on the three scenes whose shared PSNR range is at least 0.1 dB. | descriptive: Amendment 19 c secondary 2 | s21 "Secondaries" 2 | `check_s21.py` | as F1 | BD-rate is **not interpretable** on room, truck, drjohnson and playroom (shared PSNR range below 0.1 dB, down to 0.0042 dB) | no |
+| F4 | Every fine-tuned row (56) carries Amendment 18 note 2's quantizer records; the labels survive fine-tuning in all of them. | descriptive: Amendment 19 c secondary 3 | s21 "Secondaries" 3 | `check_s21.py` | as F1 | records only; see F9 | no |
+| F5 | P_FT survives leaving out any one scene: every leave-one-out case passes all three criteria (`P_bar` / `SE_noise` 3.88 to 5.46), but 6 of the 7 cases meet the count with exactly 5. Across scenes P_FT has SD 0.0373 dB, t = 3.0. | exploratory, not pre-registered | s22 a | `check_s22.py` | as F1 | descriptive; the count is the tight criterion | no |
+| F6 | As a ratio of means P_FT is 0.1195 of P1 replicated; per scene the ratio runs from -0.017 to +0.331. | exploratory, not pre-registered | s22 b | `check_s22.py` | as F1 | **not** "the share of the unfine-tuned lead that survives": P1 and P_FT integrate over different byte ranges | no |
+| F7 | P_FT is not produced by where the bytes fall: with `ogc_gram_ft`'s bytes set to `c3dgs_ft`'s at the same j, the mean is +0.0458 dB against `P_bar` +0.0425 dB. | exploratory, not pre-registered; a counterfactual | s22 c | `check_s22.py` | as F1 | a counterfactual, **not equal rate**: it pairs OGC's PSNR with bytes OGC did not produce | no |
+| F8 | The PSNR difference `ogc_gram_ft` - `c3dgs_ft` at the same j rises with j on all seven scenes (j = -1 -0.119 to +0.023, j = 0 +0.024 to +0.112, j = +1 +0.061 to +0.379). | exploratory, not pre-registered | s22 d | `check_s22.py` | as F1 | not rate-matched: at j = +1 OGC's row has 3.5% to 7.9% more bytes, at j = -1 0.3% to 7.9% fewer | no |
+| F9 | Fine-tuning re-fits the int8 AC quantizer: `ogc_gram_ft`'s AC scale grows x 1.59 to 3.16 and its `.npz` shrinks (-10.68% to -0.63%), `c3dgs_ft`'s scale x 0.80 to 1.13 and its `.npz` -0.31% to +1.01%. This records directly the mechanism E5 and E13 inferred. | exploratory, not pre-registered (from Amendment 18 note 2's records) | s22 e | `check_s22.py` | as F1 | the records show the grid and the bytes, not the grid's effect on PSNR | no |
+| F10 | Across runs the fine-tuned pair's j = 0 mean moves less than the seed pair's spread within a run: SD of E6 minus E5 over sqrt(2) 0.0085 against `SD_pool` 0.0326 (mean difference -0.0080). Against E5's own seed spread, `ogc_gram_ft`'s bytes differ on five scenes (through the AC grid after fine-tuning) and 12 PSNR rows on five scenes. | exploratory, not pre-registered | s22 f | `check_s22.py` | as F1; E5's bundles | E5's `ogc_gram` seed pair shares OGC's fixed seed, so E5's spread understates variation between runs; `geometry_sha1` differs on every row (E2) | no |
+| F11 | Mechanics: PSNR is not monotone in j on playroom's `ogc_gram` and drjohnson's and room's `ogc_gram_ft` (room's order flips between the two evaluations); the evaluation gap on kitchen and bonsai matches E5's (E14); the session attempt files carry a stale label. | descriptive | s22 g | `check_s22.py` | as F1 | records, no effect on any criterion | no |
+
 ## Gaps
 
 **Wanted for a paper, with no backing in FINDINGS** (statuses after FINDINGS section 20):
 1. ~~**Pre-registered E5 secondaries missing from section 19.**~~ **Closed by section 20:** codewords used, index entropy,
    per-array bytes and note ii's fidelity per angle (B8, A11).
-2. **Bytes after fine-tuning in E5.** **Closed by section 20 as far as the data go:** per scene and process (A8). **Still
-   open:** a rate-matched value after fine-tuning, since only the j = 0 processes fine-tune (one point per row, no curve).
+2. **Bytes after fine-tuning in E5.** **Closed by section 20 as far as the data go:** per scene and process (A8). **The
+   rate-matched value after fine-tuning: closed by section 21** (F1, E6 part (b)), on E5's scenes and not held out.
 3. **Amendment 18 note 2's quantizer records.** **Closed by section 20 for the records** (E13). **Still open:** why OGC's
    lead shrinks with fine-tuning; the records show the grid and the bytes, not the cause.
 4. **A like-for-like comparison with the paper.** **Still open.** `RELATED_WORK_OGC.md` holds the paper's Table 12 only
@@ -143,6 +171,8 @@ OGC.** Inside C3DGS, OGC is ahead of GN-VQ on development scenes (D5, D6).
 3. **The lead after fine-tuning:** E5p's two train processes read +0.0211 and +0.2592 dB (seed and image device
    confounded, `SE_noise` 0.1190), against E5's mean +0.0604 dB over seven scenes. Different scenes and designs; E5p's
    value must not be quoted as a replication of the paper's +0.09.
+   E6 part (b) adds a third value: the equal-rate P_FT `P_bar` 0.0425 dB (F1). E5's +0.0604 dB (A5, j = 0, unequal bytes)
+   and F1 measure different things on separate runs; neither replaces the other.
 4. **Gate-scene reuse:** E2c's closing remark (s12) says any later held-out claim needs "new scenes or checkpoints".
    E5 reuses five of E2c's scenes with INRIA's checkpoints. That is consistent with "or checkpoints" but must travel
    as a disclosure (Amendment 17 d).
@@ -163,8 +193,9 @@ No pick.
    Rows: A1, A2, B1, A3, A6, A7, B3, A9, A10, A11; limits from the common E5 block, E1, E2 and E3.
 2. **"OGC's gain is real before fine-tuning and mostly gone after it":** +0.5239 dB before against +0.0604 dB after,
    bracketing the paper's +0.49 / +0.09 dB; the same under C3DGS's own evaluation.
-   Rows: A4, A5, A8, A9, E5, E13; the after-fine-tuning comparison is at unequal bytes (A8), and Gaps 2 (rate-matched)
-   and 4 stay open, to be stated as limits.
+   Rows: A4, A5, A8, A9, E5, E13; with E6 part (b) the rate-matched value after fine-tuning exists (F1, F5-F9): OGC's
+   lead after fine-tuning is 0.0425 dB at equal rate, positive on 6 of 7 scenes; Gap 4 stays open, to be stated as a
+   limit.
 3. **"What makes a matrix-weighted VQ work: codebook use and the metric."** A dissection across C3DGS's VQ, OGC's
    Lloyd under three metrics and GN-VQ.
    Rows: B1, B2, B3, B4, B5, B6, B7, B8, D5, D6, A6; with Gaps conflicts 1-2 stated.
