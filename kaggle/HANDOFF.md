@@ -4426,6 +4426,34 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   - **Part (a)'s predictions** are committed before any part (a) data: PREREG_GN.md Amendment 19 b (the
     "**Predictions**" list: P1 > 0, P2 > 0, the BD-PSNR after fine-tuning below P1), in `f7716485`.
 
+### Before E6 S4: rules for part (a)'s ingest (2026-10-18)
+
+- **The code-identity rule for S4 and S5, narrowed.** At ingest,
+  `git diff --stat 8f8295d5..<the session's gsplat commit> -- bench/ kaggle/*.ipynb kaggle/*.py kaggle/e6_sessions.json`
+  may list only `bench/gn/check_s21.py`, `bench/gn/check_s22.py` and their two tests in `bench/gn/test_gn.py`. **Anything
+  else: STOP.** The run path does not import them (checked 2026-10-18, below).
+  - **grep:** the only references to `check_s21` / `check_s22` in the repository's `.py` and `.ipynb` files are the two
+    scripts themselves (`check_s22` imports `check_s21`) and their two tests in `test_gn.py`. The one other module that
+    imports `test_gn` is `bench/gn/dryrun/dryrun_gn_e4q.py`, E4q's dry run, which no E6 path runs.
+  - **Import trace** (`.venv`'s Python, the repository root, `kaggle/` and `bench/gn/` on the path):
+    - what was imported: `gn_e6_scene`, `e6`, `e6_scenes`, `e6_estimate`, `build_gn_e6_bench`, the job's own imports, the
+      C3DGS wrapper (`e3q_c3dgs_run`) and hooks (`e3r_hooks`, `e4p_hooks`, `e4q_hooks`, `e5_hooks`), `ogc_derived`, and
+      every module the S4 and S5 notebooks' code cells import (`e4p_ogc`, `e5`, `e6_scenes`, `gn_e6_scene` and the
+      standard library);
+    - the result: 1,631 modules loaded and none of `check_s21`, `check_s22` or `test_gn`;
+    - `python -X importtime` of `gn_e6_scene`, `e6` and `build_gn_e6_bench` lists neither either
+      (`F:\pytest_logs\importtime_e6_runpath.log`).
+- **Part (a), per bundle: mechanics only.** Each of S4's and S5's bundles gets an ingest and a mechanics check, like
+  S1-S3's. **Part (a)'s three predictions** (PREREG_GN.md Amendment 19 b, the "**Predictions**" list at L3472-3480, in
+  `f7716485`: P1 > 0, P2 > 0, the BD-PSNR after fine-tuning below P1) **are checked only after both S4 and S5 are
+  in**, by `bench/gn/e6.py a`. They are not criteria, and part (a) has no verdict.
+- **Housekeeping (Dace):** delete `F:\tmp_findings_bak.md`, a scratch copy of FINDINGS made during section 21's checker
+  test; a safety check kept the session from deleting it.
+- **Expected wall time** (setup included):
+  - **S4 (flowers, train):** note 1 gives 4.71-8.00 h. Scaled by E6's observed jobs (each S1-S3 job at 0.792-1.072 of
+    the model's low end) and S1-S3's setups (442-500 s), 3.76-5.06 h.
+  - **S5 (treehill):** note 1 gives 2.80-5.56 h; scaled the same way, 2.25-3.01 h.
+
 ### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; next: E6 S4)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
