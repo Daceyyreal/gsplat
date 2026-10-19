@@ -60,8 +60,8 @@ fine-tuning curves on flowers, treehill and train; (b) pre-registered P_FT on E5
 and dry run are done** (`9f79e414`-`3fb985b4`); note 2 (`b7ad2329`) records flowers' metadata read. **E6 S1 ran and
 is ingested** (`87cc6a59`), **and so are S2** (`94551278`) **and S3** (`13a95aa1`). **E6 part (b) is closed:** it
 passes (FINDINGS section 21, `6bd340a0`, `check_s21.py` `251c305c`; descriptive section 22, `4686acc0`, `check_s22.py`
-`faedf2dd`; CLAIMS group F, `faa99c55`, 59 rows). **Next: E6 S4, "E6 OGC descriptive S4"** (see "E6 part (b) closed
-(2026-10-18)").
+`faedf2dd`; CLAIMS group F, `faa99c55`, 59 rows). **E6 S4 ran and is ingested** (`9ce9b36e`). **Next: E6 S5, "E6 OGC
+descriptive S5"** (see "E6 S4 (2026-10-19)").
 
 ## Context and rules
 
@@ -4454,6 +4454,86 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     the model's low end) and S1-S3's setups (442-500 s), 3.76-5.06 h.
   - **S5 (treehill):** note 1 gives 2.80-5.56 h; scaled the same way, 2.25-3.01 h.
 
+### E6 S4 (2026-10-19)
+
+- **S4 done and ingested:** `E6_bundle_S4.zip` (sha256 `043bfaf3d2a0102fcacd880fcbf13ebc5c8610497a143d008581531767c54fee`,
+  271,477 bytes): its 12 `gn6/` files committed unchanged, data only, in `kaggle/gn_e6/S4/gn6/` (`9ce9b36e`; gate
+  `gate_20261019_141951_e6_s4_bundle.log`, 205 passed). Part (a), not cumulative (no part (b) scene carried).
+- **Code identity (the narrowed rule):** S4 ran gsplat `bef7ef60`; `git diff --stat 8f8295d5..bef7ef60 -- bench/
+  kaggle/*.ipynb kaggle/*.py kaggle/e6_sessions.json` lists only `check_s21.py`, `check_s22.py` and their two tests.
+- **OGC text:** only the clone URL (logged git commands, the source records' `url` / `path`), no source file, no author
+  or committer line. OGC's code came from the URL (`49ccae72`).
+- **Mechanics clean:**
+  - flowers and train have 29 rows each (7 row kinds x 4 processes, and `uncompressed`), all `ok`;
+  - every process settled on attempt 0, on the GPU (both scenes start and stay on `cuda`);
+  - no OOM, deadline guard or cut, retry, NaN, deviation, C3DGS evaluation error, failed or skipped step (165 steps per
+    scene, all ok); labels survived in every fine-tuned row;
+  - `cfg_args`: `sh_degree` 3, `eval` True, `white_background` False on both; loaded sizes flowers 1256 x 828 (173
+    views, inside note 1's 1257 x 828), train 980 x 545 (301); camera-frame and split checks passed; protocol ii used
+    22 and 38 test views;
+  - one Kaggle image (Python 3.13.15, torch 2.11.0+cu128, cuDNN 91900, driver 580.178.04), the wheel restored;
+  - jobs: flowers 9,600 s, train 6,810 s; setup (preflight, restore, install, C3DGS build) 400.7 s.
+- **Not read:** `per_scene_parts` in `gn5_summary_S4.json`; no P1, P2, P_FT or BD value. Part (a)'s predictions are
+  checked only after S5, by `bench/gn/e6.py a`.
+- **Parked for E6 part (a)'s write-up (not findings yet;** numbers only, checked against the bundle 2026-10-19):
+  p. **Monotone in j (seed 0):** `.npz` bytes fall with j for all 7 row kinds on both scenes. flowers: protocol ii
+     and C3DGS's PSNR fall with j for all 7. train: C3DGS's PSNR falls for all 7; protocol ii falls for the 5
+     unfine-tuned kinds but not for `c3dgs_ft` (21.1845 / 21.3464 / 21.2993) or `ogc_gram_ft` (21.3044 / 21.3218 /
+     21.1508).
+  q. **`ogc_gram_ours` equals `ogc_gram`** in all 4 processes of both scenes: `.npz` bytes, every array's bytes,
+     protocol ii and C3DGS's PSNR identical (as in E5p and E5, Amendment 18 d).
+  r. **Evaluator gap** (`c3dgs_PSNR` minus `PSNR_ii`, 28 compressed rows): flowers median 0.0110 (-0.0094 to
+     +0.0190); train median 0.4834 (0.3098 to 0.5292). train's unfine-tuned rows 0.4642-0.5119; fine-tuned rows
+     j = -1 / 0 seed 0 / 0 seed 1 / +1: `c3dgs_ft` 0.5292 / 0.3513 / 0.3865 / 0.3098, `ogc_gram_ft` 0.4719 / 0.3635 /
+     0.4783 / 0.5156. E5p train (`8eadc81e`): median 0.4829 (0.3670 to 0.5116).
+  s. **Fine-tuning gain** (ft minus pre-FT, same j and seed), protocol ii / C3DGS's, j = -1 / 0 seed 0 / 0 seed 1 / +1:
+     - flowers `c3dgs`: +0.1427 / +0.2424 / +0.2494 / +0.2883 and +0.1359 / +0.2259 / +0.2379 / +0.2724;
+     - flowers `ogc_gram`: +0.0890 / +0.0945 / +0.0884 / +0.1149 and +0.0838 / +0.0859 / +0.0959 / +0.0943;
+     - train `c3dgs`: +0.0374 / +0.3434 / +0.3600 / +0.4552 and +0.0623 / +0.1828 / +0.2417 / +0.2741;
+     - train `ogc_gram`: +0.1017 / +0.1544 / +0.1060 / +0.0192 and +0.0916 / +0.0306 / +0.1088 / +0.0514.
+     Per test view, train's fine-tuning moves protocol ii by up to -2.135 / +3.389 dB (views 31 and 33 in most
+     rows); flowers' by -0.219 / +0.510. E5p's train fine-tuned rows show the same per-view swings (-2.310 / +3.470).
+  t. **j = 0 seed spread** (seed 0 minus seed 1), PSNR_ii dB / bytes:
+     - flowers: `c3dgs` +0.00502 / +67,853; `ogc_plain` -0.00012 / +18,751; `ogc_scalar` +0.00020 / +18,751; `ogc_gram`
+       and `ogc_gram_ours` -0.00017 / +18,751; `c3dgs_ft` -0.00207 / +65,979; `ogc_gram_ft` +0.00590 / +16,563;
+     - train: `c3dgs` +0.00806 / +21,498; `ogc_plain` -0.00264 / +1,675; `ogc_scalar` -0.00294 / +1,675; `ogc_gram` and
+       `ogc_gram_ours` -0.00257 / +1,675; `c3dgs_ft` -0.00847 / +42,265; `ogc_gram_ft` +0.04579 / +1,591;
+     - E5p train (seed 1 on the CPU, so seed and device differ): `c3dgs_ft` -0.12808 / +26,597, `ogc_gram_ft` +0.10997 /
+       +4,363; the unfine-tuned kinds -0.00213 to +0.00845.
+  u. **train against E5p attempt 2** (`8eadc81e`; E6 minus E5p, same config): `uncompressed` protocol ii identical
+     (21.293174643265573); the 20 unfine-tuned rows within 0.00146 dB and 659 bytes; fine-tuned rows `p0_c3dgs_ft`
+     +0.18995 dB / +6,972, `p0_ogc_gram_ft` -0.09386 / -7,126, `p1_c3dgs_ft` +0.07033 / -8,696, `p1_ogc_gram_ft`
+     -0.02968 / -4,354 (E5p's p1 on the CPU). flowers has no earlier C3DGS run.
+  v. **Fine-tuning's per-array changes (seed 0), `.npz` and `rest_scale` before to after (j = -1 / 0 / +1):**
+     - flowers `ogc_gram`: -1.32% / -0.63% / -0.10%; `features_rest` -661,019 / -257,848 / -71,975; `rest_scale`
+       0.00767 to 0.01060 / 0.01231 / 0.01231; `c3dgs`: +0.52% / +0.49% / +0.24%; `features_rest` +146,150 / +128,708 /
+       +51,346; `rest_scale` 0.00767 to 0.00803 / 0.00703 / 0.00664;
+     - train `ogc_gram`: -11.57% / -7.57% / -2.53%; `features_rest` -2,296,807 / -1,066,839 / -272,238; `rest_scale`
+       0.00688 to 0.02058 / 0.02443 / 0.01913 (x2.99 / 3.55 / 2.78); `c3dgs`: +0.38% / +0.48% / +0.16%; `features_rest`
+       +78,690 / +79,471 / +43,160; `rest_scale` 0.00688 to 0.00751 / 0.00713 / 0.00668;
+     - both: `scaling` -188k to -195k bytes, `rotation` +162k to +231k; `xyz`, `feature_indices`, `gaussian_indices`
+       unchanged.
+  w. **`ogc_gram_ft` / `c3dgs_ft` bytes**, j = -1 / 0 seed 0 / 0 seed 1 / +1: flowers 1.0206 / 1.0422 / 1.0438 /
+     1.0538 (before 1.0396 / 1.0539 / 1.0555 / 1.0574); train 0.8992 / 0.9512 / 0.9540 / 1.0177 (before 1.0206 /
+     1.0341 / 1.0355 / 1.0458). train's j = -1 and j = 0 are below the gate scenes' j = -1 minimum (0.9209, section 21).
+     train's AC scale x 3.54-3.55 at j = 0 is above the gate scenes' maximum (x 3.16, section 22 e).
+  x. **A stale label, kept:** `gn5_attempt.json` names "Amendment 19; note 1 and its erratum" (no note 2), as S1-S3.
+- **Next action: run E6 S5 on Kaggle** (part (a), descriptive).
+  1. Import `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e6_bench_S5.ipynb`; title
+     **"E6 OGC descriptive S5"**.
+  2. Attach:
+     - **S4's output ("E6 OGC descriptive S4"), pinned to its version;**
+     - **"E5p OGC dissection pilot", attempt 2's version, pinned** (the wheel);
+     - the private dataset **"E5p OGC source 49ccae72"**.
+  3. Accelerator **GPU T4 x2**, Internet **on**. Save & Run All.
+  4. **The first output must be the `OGC PREFLIGHT` lines, both ok** (url and dataset).
+  5. S5 runs treehill (`images_4`, 1267 x 832, 141 views), images on the GPU: note 1's 9,649-19,587 s.
+  6. Bring back `/kaggle/working/E6_bundle_S5.zip` (arcname `gn6/`).
+- **S5 readiness (checked 2026-10-19):** `kaggle/gn_e6_bench_S5.ipynb` sha256
+  `cbf16e3a457ea1389895afb44ed46607475e08644f3db3ae24a8addbb457434f`, unchanged since `0381f089`; the narrowed
+  code-identity rule holds at this commit (only the S4 data and this file changed since `bef7ef60`). At S5's ingest, the
+  rule applies to S5's gsplat commit, and part (a)'s predictions are checked after it with `bench/gn/e6.py a`.
+
 ### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; next: E6 S4)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
@@ -4560,8 +4640,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
       "E6 S3 (2026-10-18)");
   11. ~~Dace's reading of part (b)'s verdict; FINDINGS (E6 part (b)) and its checker~~ **done (2026-10-18):**
       `6bd340a0`, `251c305c`, `4686acc0`, `faedf2dd`, `faa99c55` (see "E6 part (b) closed (2026-10-18)");
-  12. **next:** E6 S4, "E6 OGC descriptive S4" (flowers, train); then S5 (treehill); then part (a)'s reader
-      (`bench/gn/e6.py a`) and FINDINGS.
+  12. ~~E6 S4 (flowers, train)~~ **done (2026-10-19):** bundle `9ce9b36e` (see "E6 S4 (2026-10-19)");
+  13. **next:** E6 S5, "E6 OGC descriptive S5" (treehill); then part (a)'s reader (`bench/gn/e6.py a`) and FINDINGS.
 - ~~**Note 4's S2 session-hours** are printed as 4.32-7.71 h; the code gives 7.70 h.~~ **Corrected (2026-10-12):** the
   erratum `1b532e40`. Dace approved rule (b)'s rewording the same day.
 - **The unexplained npz2ply failure** (one dry run, 2026-10-10, room's rerun `ogc_gram`): not reproduced alone or under
