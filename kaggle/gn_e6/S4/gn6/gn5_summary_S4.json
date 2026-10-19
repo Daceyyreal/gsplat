@@ -1,0 +1,418 @@
+{
+  "note": "per-scene parts only; E5's verdict is computed locally over every session's bundle (bench/gn/e5_verdict.py; Amendment 17 Note 2 C5)",
+  "scenes": {
+    "flowers": {
+      "start_device": "cuda",
+      "scene_device": "cuda",
+      "dropped": null,
+      "stopped_17i": null,
+      "cfg_check": {
+        "sh_degree": 3,
+        "eval": true,
+        "white_background": false,
+        "drop_reason": null,
+        "flags": []
+      },
+      "loaded_size_check": {
+        "scene": "flowers",
+        "image_set": "images_4",
+        "resolution": 1,
+        "covered_pixels": 1040796,
+        "covered_views": 173,
+        "first_image": "_DSC9040.JPG",
+        "first_image_size": [
+          1256,
+          828
+        ],
+        "loaded_size": [
+          1256,
+          828
+        ],
+        "pixels": 1039968,
+        "views": 173,
+        "ok": true,
+        "reason": null
+      },
+      "ogc_sources": [
+        {
+          "session": "S4",
+          "ogc_source": "url"
+        }
+      ],
+      "sessions": [
+        {
+          "session": "S4",
+          "image": "py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04",
+          "started": "2026-10-18T17:51:55"
+        }
+      ],
+      "processes": {
+        "j0_p0": {
+          "settled": true,
+          "outcome": "done",
+          "deferred": null,
+          "attempts": [
+            {
+              "attempt": 0,
+              "device": "cuda",
+              "session": "S4",
+              "image": "py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04",
+              "kind": "first",
+              "oom": false,
+              "results_exist": true,
+              "primary_missing": false,
+              "after_results": false,
+              "deadline_cut": null,
+              "n_measured": null
+            }
+          ]
+        },
+        "j0_p1": {
+          "settled": true,
+          "outcome": "done",
+          "deferred": null,
+          "attempts": [
+            {
+              "attempt": 0,
+              "device": "cuda",
+              "session": "S4",
+              "image": "py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04",
+              "kind": "first",
+              "oom": false,
+              "results_exist": true,
+              "primary_missing": false,
+              "after_results": false,
+              "deadline_cut": null,
+              "n_measured": null
+            }
+          ]
+        },
+        "j-1_p0": {
+          "settled": true,
+          "outcome": "done",
+          "deferred": null,
+          "attempts": [
+            {
+              "attempt": 0,
+              "device": "cuda",
+              "session": "S4",
+              "image": "py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04",
+              "kind": "first",
+              "oom": false,
+              "results_exist": true,
+              "primary_missing": false,
+              "after_results": false,
+              "deadline_cut": null,
+              "n_measured": null
+            }
+          ]
+        },
+        "j+1_p0": {
+          "settled": true,
+          "outcome": "done",
+          "deferred": null,
+          "attempts": [
+            {
+              "attempt": 0,
+              "device": "cuda",
+              "session": "S4",
+              "image": "py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04",
+              "kind": "first",
+              "oom": false,
+              "results_exist": true,
+              "primary_missing": false,
+              "after_results": false,
+              "deadline_cut": null,
+              "n_measured": null
+            }
+          ]
+        }
+      },
+      "deadline_cuts": [],
+      "rows_ok": [
+        "j+1_p0_c3dgs",
+        "j+1_p0_c3dgs_ft",
+        "j+1_p0_ogc_gram",
+        "j+1_p0_ogc_gram_ft",
+        "j+1_p0_ogc_gram_ours",
+        "j+1_p0_ogc_plain",
+        "j+1_p0_ogc_scalar",
+        "j-1_p0_c3dgs",
+        "j-1_p0_c3dgs_ft",
+        "j-1_p0_ogc_gram",
+        "j-1_p0_ogc_gram_ft",
+        "j-1_p0_ogc_gram_ours",
+        "j-1_p0_ogc_plain",
+        "j-1_p0_ogc_scalar",
+        "p0_c3dgs",
+        "p0_c3dgs_ft",
+        "p0_ogc_gram",
+        "p0_ogc_gram_ft",
+        "p0_ogc_gram_ours",
+        "p0_ogc_plain",
+        "p0_ogc_scalar",
+        "p1_c3dgs",
+        "p1_c3dgs_ft",
+        "p1_ogc_gram",
+        "p1_ogc_gram_ft",
+        "p1_ogc_gram_ours",
+        "p1_ogc_plain",
+        "p1_ogc_scalar",
+        "uncompressed"
+      ],
+      "missing_or_failed": [],
+      "unsettled_processes": [],
+      "deviations": [],
+      "per_scene_parts": {
+        "P1": {
+          "P": 0.1239132064489453,
+          "P_missing_reason": null,
+          "D_sp": [
+            0.22738578102805107,
+            0.232569954612039
+          ]
+        },
+        "P2": {
+          "P": 0.06924976954330153,
+          "P_missing_reason": null,
+          "D_sp": [
+            0.12518934770063694,
+            0.12555815956809369
+          ]
+        },
+        "ogc_scalar_vs_ogc_plain": {
+          "P": 0.06876099344959384,
+          "P_missing_reason": null,
+          "D_sp": [
+            0.08100648359819118,
+            0.08068214763294534
+          ]
+        },
+        "ogc_plain_vs_c3dgs": {
+          "P": -0.013663537505426775,
+          "P_missing_reason": null,
+          "D_sp": [
+            0.021189949729222946,
+            0.026329647410999968
+          ]
+        },
+        "P_FT": {
+          "P": 0.034106008276625806,
+          "P_missing_reason": null,
+          "D_sp": [
+            0.07950826124711341,
+            0.0715439536354765
+          ]
+        }
+      },
+      "failed_steps": []
+    },
+    "train": {
+      "start_device": "cuda",
+      "scene_device": "cuda",
+      "dropped": null,
+      "stopped_17i": null,
+      "cfg_check": {
+        "sh_degree": 3,
+        "eval": true,
+        "white_background": false,
+        "drop_reason": null,
+        "flags": []
+      },
+      "loaded_size_check": {
+        "scene": "train",
+        "image_set": "images",
+        "resolution": 1,
+        "covered_pixels": 534100,
+        "covered_views": 301,
+        "first_image": "00001.jpg",
+        "first_image_size": [
+          980,
+          545
+        ],
+        "loaded_size": [
+          980,
+          545
+        ],
+        "pixels": 534100,
+        "views": 301,
+        "ok": true,
+        "reason": null
+      },
+      "ogc_sources": [
+        {
+          "session": "S4",
+          "ogc_source": "url"
+        }
+      ],
+      "sessions": [
+        {
+          "session": "S4",
+          "image": "py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04",
+          "started": "2026-10-18T20:31:56"
+        }
+      ],
+      "processes": {
+        "j0_p0": {
+          "settled": true,
+          "outcome": "done",
+          "deferred": null,
+          "attempts": [
+            {
+              "attempt": 0,
+              "device": "cuda",
+              "session": "S4",
+              "image": "py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04",
+              "kind": "first",
+              "oom": false,
+              "results_exist": true,
+              "primary_missing": false,
+              "after_results": false,
+              "deadline_cut": null,
+              "n_measured": null
+            }
+          ]
+        },
+        "j0_p1": {
+          "settled": true,
+          "outcome": "done",
+          "deferred": null,
+          "attempts": [
+            {
+              "attempt": 0,
+              "device": "cuda",
+              "session": "S4",
+              "image": "py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04",
+              "kind": "first",
+              "oom": false,
+              "results_exist": true,
+              "primary_missing": false,
+              "after_results": false,
+              "deadline_cut": null,
+              "n_measured": null
+            }
+          ]
+        },
+        "j-1_p0": {
+          "settled": true,
+          "outcome": "done",
+          "deferred": null,
+          "attempts": [
+            {
+              "attempt": 0,
+              "device": "cuda",
+              "session": "S4",
+              "image": "py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04",
+              "kind": "first",
+              "oom": false,
+              "results_exist": true,
+              "primary_missing": false,
+              "after_results": false,
+              "deadline_cut": null,
+              "n_measured": null
+            }
+          ]
+        },
+        "j+1_p0": {
+          "settled": true,
+          "outcome": "done",
+          "deferred": null,
+          "attempts": [
+            {
+              "attempt": 0,
+              "device": "cuda",
+              "session": "S4",
+              "image": "py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04",
+              "kind": "first",
+              "oom": false,
+              "results_exist": true,
+              "primary_missing": false,
+              "after_results": false,
+              "deadline_cut": null,
+              "n_measured": null
+            }
+          ]
+        }
+      },
+      "deadline_cuts": [],
+      "rows_ok": [
+        "j+1_p0_c3dgs",
+        "j+1_p0_c3dgs_ft",
+        "j+1_p0_ogc_gram",
+        "j+1_p0_ogc_gram_ft",
+        "j+1_p0_ogc_gram_ours",
+        "j+1_p0_ogc_plain",
+        "j+1_p0_ogc_scalar",
+        "j-1_p0_c3dgs",
+        "j-1_p0_c3dgs_ft",
+        "j-1_p0_ogc_gram",
+        "j-1_p0_ogc_gram_ft",
+        "j-1_p0_ogc_gram_ours",
+        "j-1_p0_ogc_plain",
+        "j-1_p0_ogc_scalar",
+        "p0_c3dgs",
+        "p0_c3dgs_ft",
+        "p0_ogc_gram",
+        "p0_ogc_gram_ft",
+        "p0_ogc_gram_ours",
+        "p0_ogc_plain",
+        "p0_ogc_scalar",
+        "p1_c3dgs",
+        "p1_c3dgs_ft",
+        "p1_ogc_gram",
+        "p1_ogc_gram_ft",
+        "p1_ogc_gram_ours",
+        "p1_ogc_plain",
+        "p1_ogc_scalar",
+        "uncompressed"
+      ],
+      "missing_or_failed": [],
+      "unsettled_processes": [],
+      "deviations": [],
+      "per_scene_parts": {
+        "P1": {
+          "P": 0.12972340508748573,
+          "P_missing_reason": null,
+          "D_sp": [
+            0.16447109925119463,
+            0.17510153117932958
+          ]
+        },
+        "P2": {
+          "P": 0.06493792256323108,
+          "P_missing_reason": null,
+          "D_sp": [
+            0.0786472119783106,
+            0.07827625776592129
+          ]
+        },
+        "ogc_scalar_vs_ogc_plain": {
+          "P": 0.008808456978547253,
+          "P_missing_reason": null,
+          "D_sp": [
+            0.010207477368805229,
+            0.010507156974391307
+          ]
+        },
+        "ogc_plain_vs_c3dgs": {
+          "P": 0.057307949161616696,
+          "P_missing_reason": null,
+          "D_sp": [
+            0.07561640990407881,
+            0.08631811643901699
+          ]
+        },
+        "P_FT": {
+          "P": -0.006561561332006164,
+          "P_missing_reason": null,
+          "D_sp": [
+            -0.024623670076067583,
+            -0.07888500314010116
+          ]
+        }
+      },
+      "failed_steps": []
+    }
+  },
+  "session": "S4"
+}
