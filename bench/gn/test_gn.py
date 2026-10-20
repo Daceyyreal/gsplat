@@ -3156,6 +3156,13 @@ def test_findings_section_22_numbers_recheck_from_the_repo():
     assert res["fails"] == [] and res["n_numbers"] > 85
 
 
+def test_findings_section_23_numbers_recheck_from_the_repo():
+    import check_s23
+
+    res = check_s23.run()
+    assert res["fails"] == [] and res["n_numbers"] > 85
+
+
 # --------------------------------------------------------------------------------- E3r (Amendment 14)
 
 
