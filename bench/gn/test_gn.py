@@ -6990,3 +6990,222 @@ def test_e7_estimate_reproduces_amendment_20_note_1():
     assert f"{', '.join(tight[:-1])} and {tight[-1]} have {f0(min(sp))}-{f0(max(sp))} s spare" in flat
     assert "flowers" not in est.SCENES and "treehill" not in est.SCENES
     assert "should read \"after FINDINGS sections 21-25\"" in flat
+
+
+# the only lines in which kaggle/gn_e7_scene.py differs from kaggle/gn_e6_scene.py (Amendment 20 k): the docstring's
+# first sentence, the scene module and the estimate (the imports), the two CSV columns, --halves and the halves run, the
+# sessions' halves, the meta's scene set, the fork config's E7 flags and fine-tuned rows, the primary rows per process,
+# the row record, the summary's note
+E7_JOB_DIFF = [
+    (1, ('"""E6 (kaggle/PREREG_GN.md Amendment 19 g): E5\'s job copied; only its scene module, its estimate and its process, row',
+         "and fine-tuning selection differ (pinned by a test). Below, E5's docstring as it was (files keep E5's gn5_ names)."),
+     ('"""E7 (kaggle/PREREG_GN.md Amendment 20 k, note 1): E6\'s job copied; only its scene module, its estimate, the halves it',
+      "runs (``--halves``: 20 j's seed-0 and seed-1 halves), its process, row, arm and fine-tuning selection, its row record",
+      "and two CSV columns (``arm``, ``e7_record``) differ (pinned by a test). Below, E5's docstring as it was (files keep E5's",
+      'gn5_ names).')),
+    (56, ("import e6_estimate as est  # noqa: E402  (Note 4 a's guard)",
+          'import e6_scenes as es  # noqa: E402'),
+     ("import e7_estimate as est  # noqa: E402  (Note 4 a's guard)",
+      'import e7_scenes as es  # noqa: E402')),
+    (76, (),
+     ('COLUMNS = COLUMNS[:-1] + ["arm", "e7_record"] + COLUMNS[-1:]  # Amendment 20 e: the arm and E7\'s record per row',)),
+    (151, (),
+     ('    p.add_argument("--halves", default="0,1", help="Amendment 20 j: the halves this session runs (0, 1 or 0,1)")',)),
+    (182, (),
+     ('    args.halves = es.parse_halves(args.halves)',)),
+    (212, ('    meta.update(dataset=args.dataset, scene_set=f"E6 part ({es.part_of(scene)})", data_factor=args.data_factor,',),
+     ('    meta["sessions"][-1]["halves"] = list(args.halves)  # Amendment 20 j: the halves this session runs',
+      '    meta.update(dataset=args.dataset, scene_set=es.part_of(scene), data_factor=args.data_factor,')),
+    (372, ('    for i, proc in enumerate(es.processes(scene)):',),
+     ('    for i, proc in es.half_processes(scene, args.halves):',)),
+    (528, ('        e0.write_json(cfg_path, {"e5": True, "rows": ["c3dgs"] + list(es.fork_rows(scene, args.ogc_impl)), "j": j,',),
+     ('        e0.write_json(cfg_path, {"e5": True, **es.fork_flags(proc),',
+      '                                 "rows": ["c3dgs"] + list(es.fork_rows(scene, args.ogc_impl)), "j": j,')),
+    (533, ('                                 "finetune": {"rows": list(e5.FT_ROWS) if proc.get("finetune") else [],',),
+     ('                                 "finetune": {"rows": es.ft_rows(proc),',)),
+    (555, ('        primary_missing = any(not (measured.get(r) or {}).get("eval_ii") for r in es.primary_rows(scene))',),
+     ('        primary_missing = any(not (measured.get(r) or {}).get("eval_ii") for r in es.primary_rows(scene, proc))',)),
+    (591, ('            rec = e5pjob._row_record(ctx, j, seed, row, k, rep, {**run, "data_device": device}, measured.get(row))',),
+     ('            rec = es.row_record(e5pjob._row_record, ctx, j, seed, row, k, rep, {**run, "data_device": device},',
+      '                                measured.get(row))')),
+    (614, ('    out = {"note": "per-scene parts only; E5\'s verdict is computed locally over every session\'s bundle "',
+           '                   "(bench/gn/e5_verdict.py; Amendment 17 Note 2 C5)", "scenes": {}}'),
+     ('    out = {"note": "per-scene parts only; E7\'s verdict is computed locally over every session\'s bundle "',
+      '                   "(bench/gn/e7.py; Amendment 17 Note 2 C5)", "scenes": {}}')),
+]
+
+
+def test_gn_e7_scene_diff_is_pinned():
+    """Amendment 20 k: kaggle/gn_e7_scene.py is kaggle/gn_e6_scene.py with exactly the lines of ``E7_JOB_DIFF``
+    changed (no line added or removed elsewhere), and the job uses E7's scene module and estimate."""
+    import difflib
+
+    kg = os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle")
+    a = open(os.path.join(kg, "gn_e6_scene.py"), encoding="utf-8").read().splitlines()
+    b = open(os.path.join(kg, "gn_e7_scene.py"), encoding="utf-8").read().splitlines()
+    got = [(i1 + 1, tuple(a[i1:i2]), tuple(b[j1:j2]))
+           for t, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes() if t != "equal"]
+    assert got == E7_JOB_DIFF
+    import e7_estimate
+    import e7_scenes
+    import gn_e7_scene as job7
+
+    assert job7.es is e7_scenes and job7.est is e7_estimate and job7.SCENES == e7_scenes.SCENES
+    assert job7.COLUMNS[-3:] == ["arm", "e7_record", "timestamp"]
+
+
+def _e7_rows(scene, deltas, j0_noise=None, s1_offset=0.0, drop=()):
+    """Synthetic results rows for one E7 scene: per point the bytes and PSNR of a curve; every fine-tuned row 0.1 dB
+    above it; ``ogc_gram``'s fine-tuned row of arm X ``deltas[X]`` above ``c3dgs``'s (so BD_X = deltas[X]), its
+    unfine-tuned and own rows 0.3 above; in the j = 0 seed-1 process ``j0_noise[X]`` more on ``ogc_gram_ft_X`` (the
+    primaries' noise); in ``j-1_p1`` and ``j+1_p1`` ``s1_offset`` more on ``ogc_gram_ft`` (the seed-1 BD_R)."""
+    import e5
+    import e7_scenes as es
+
+    j0_noise = j0_noise or {}
+    base = {-1: (2.0e7, 20.40), 0: (1.4e7, 20.20), 1: (1.0e7, 20.00)}
+    out = []
+    for p in es.processes(scene):
+        for r in es.process_rows(scene, p):
+            b, q = base[p["j"]]
+            if r in es.FT_ROW_OF:
+                m, arm = es.arm_of(r)
+                q += 0.1
+                if m == "ogc_gram":
+                    q += deltas.get(arm, deltas.get("R", 0.0) if arm == "R2" else 0.0)
+                    if p["j"] == 0 and p["seed"] == 1:
+                        q += j0_noise.get(arm, 0.0)
+                    if p["j"] != 0 and p["seed"] == 1 and arm == "R":
+                        q += s1_offset
+            elif es.method_of(r) == "ogc_gram":
+                q += 0.3
+            cfg = e5.config_name(p["j"], p["seed"], r)
+            if cfg in drop:
+                continue
+            out.append({"scene": scene, "config": cfg, "status": "ok", "PSNR_ii": repr(q), "npz_bytes": str(int(b))})
+    return out
+
+
+def _e7_scenes(deltas_by_scene, noise=0.002, s1=0.0, drop=None, scenes=None):
+    import e7
+    import e7_scenes as es
+
+    out = {}
+    for i, s in enumerate(scenes or es.SCENES):
+        d = deltas_by_scene(i)
+        f, g = (1 + i % 3) * (-1) ** i, (1 + (i + 1) % 3) * (-1) ** (i + 1)  # refit's and cb's seed-pair noise
+        nz = {"R": noise * 0.5 * (-1) ** i}
+        nz["G"] = nz["R"] + noise * f
+        nz["CG"] = nz["G"] + noise * g
+        out[s] = e7.scene_data(_e7_rows(s, d, nz, s1 * (1 + i % 2), (drop or {}).get(s, ())), s)
+    return out
+
+
+def test_e7_verdict_reaches_every_outcome_both_holm_orders_and_the_fragile_flag():
+    """bench/gn/e7.py on constructed data: BD_X per scene is e5's fit of the arm's pair (a constant shift gives it
+    exactly); Delta_refit = BD_G - BD_R and Delta_cb = BD_CG - BD_G; SE = SD_pool / sqrt(n) from the j = 0 seed pair;
+    every outcome of 20 h; Holm's order by each test's own statistic, both ways; the second primary untested when the
+    first fails, and at the second position's (smaller) critical value when it is tested; a single complete primary at
+    the first position's value; the fragile flag from SE_BD; incomplete on n < 5 and on a missing row; a missing BD
+    entering as 0."""
+    import e7
+
+    t1, t2 = e7.t_quantile(1 - 0.0125, 7), e7.t_quantile(1 - 0.025, 7)
+    assert round(t1, 3) == 2.841 and round(t2, 3) == 2.365 and round(e7.t_quantile(0.95, 7), 3) == 1.895
+
+    seen = set()
+
+    def run(refit, cb, **k):  # per-scene Delta_refit and Delta_cb, R fixed at 0.05
+        out = e7.verdict_e7(_e7_scenes(lambda i: {"R": 0.05, "G": 0.05 + refit(i), "CG": 0.05 + refit(i) + cb(i)},
+                                       **k))
+        seen.update(out["outcomes"].values())
+        return out
+
+    v = run(lambda i: 0.20, lambda i: -0.20 + 0.0005 * i)
+    assert v["outcomes"] == {"refit": "superior, positive; not equivalent", "cb": "superior, negative; not equivalent"}
+    p = v["primaries"]["refit"]
+    assert p["delta_bar"] == pytest.approx(0.20, abs=1e-9)
+    assert p["per_scene"]["room"]["BD_G"] == pytest.approx(0.25, abs=1e-9)
+    nz = p["noise"]
+    assert nz["SE"] == pytest.approx(nz["SD_pool"] / math.sqrt(7)) and nz["n"] == 7
+    assert not any(v["fragile"].values())
+    # superior and equivalent; equivalent and not superior
+    v = run(lambda i: 0.03, lambda i: 0.01 * (-1) ** i, noise=0.0003)
+    assert v["outcomes"] == {"refit": "superior and equivalent", "cb": "equivalent; not superior"}
+    # the equivalence family's order both ways: the larger margin m first
+    assert run(lambda i: 0.0, lambda i: 0.03, noise=0.0003)["tests"]["equivalence"]["order"] == ["refit", "cb"]
+    assert run(lambda i: 0.03, lambda i: 0.0, noise=0.0003)["tests"]["equivalence"]["order"] == ["cb", "refit"]
+    # neither (large noise)
+    v = run(lambda i: 0.05, lambda i: 0.0, noise=0.05)
+    assert v["outcomes"]["refit"] == "neither"
+    # Holm's order both ways: the larger |Delta_bar| / SE first
+    v1 = run(lambda i: 0.30, lambda i: 0.06)
+    v2 = run(lambda i: 0.06, lambda i: 0.30)
+    assert v1["tests"]["superiority"]["order"] == ["refit", "cb"] and v2["tests"]["superiority"]["order"] == ["cb", "refit"]
+    # the first fails its count (4 of 7) despite a large statistic: the second is not tested, though alone it passes
+    v = run(lambda i: 0.5 if i < 4 else -0.05, lambda i: 0.02, noise=0.001)
+    sup = v["tests"]["superiority"]
+    assert sup["order"][0] == "refit" and not sup["results"]["refit"]["c2_count"]
+    assert not sup["results"]["cb"]["tested"] and not sup["results"]["cb"]["superior"]
+    assert sup["results"]["cb"]["c1_nonzero"] and sup["results"]["cb"]["c2_count"] and sup["results"]["cb"]["c3_above"]
+    # the second position's critical value: cb's statistic between t2 and t1 passes second, fails alone (refit
+    # incomplete: a missing row) at the first position's value
+    import e5
+
+    base = _e7_scenes(lambda i: {"R": 0.05, "G": 0.35, "CG": 0.35}, noise=0.001)
+    se = e7.verdict_e7(base)["primaries"]["cb"]["noise"]["SE"]
+    target = 2.6 * e5.r9(se)
+    v = run(lambda i: 0.30, lambda i: target, noise=0.001)
+    stat = v["tests"]["superiority"]["results"]["cb"]["statistic"]
+    assert t2 < stat < t1 and v["tests"]["superiority"]["results"]["cb"]["superior"]
+    assert v["tests"]["superiority"]["results"]["cb"]["position"] == 2
+    vm = e7.verdict_e7(_e7_scenes(lambda i: {"R": 0.05, "G": 0.35, "CG": 0.35 + target}, noise=0.001,
+                                  drop={"room": ("p0_c3dgs_ft",)}))
+    assert vm["outcomes"]["refit"] == "incomplete" and "rows missing" in vm["incomplete_reasons"]["refit"][0]
+    assert vm["missing_primary_rows"]["cb"] == {}
+    r = vm["tests"]["superiority"]["results"]["cb"]
+    assert r["position"] == 1 and r["critical_t"] == pytest.approx(t1) and not r["superior"]
+    # fragile: superior under SE, not under SE_BD (a large seed-1 BD_R spread)
+    vf = run(lambda i: 0.03, lambda i: -0.20, noise=0.0003, s1=0.4)
+    assert vf["outcomes"]["refit"] == "superior and equivalent" and vf["robustness"]["outcomes"]["refit"] != \
+        vf["outcomes"]["refit"] and vf["fragile"]["refit"]
+    sdb = vf["robustness"]["SD_BD"]
+    assert sdb["n_used"] == 7 and vf["robustness"]["SE_BD"] == pytest.approx(math.sqrt(2) * sdb["SD_BD"] / math.sqrt(7))
+    # incomplete: n < 5
+    v4 = run(lambda i: 0.2, lambda i: 0.2, scenes=("bonsai", "counter", "kitchen", "room"))
+    assert v4["outcomes"] == {"refit": "incomplete", "cb": "incomplete"} and "n = 4" in v4["incomplete_reasons"]["cb"][0]
+    # a missing BD (no shared byte range) enters as 0 and is not positive
+    import e7_scenes as es
+
+    sc = _e7_scenes(lambda i: {"R": 0.05, "G": 0.25, "CG": 0.25})
+    rows = _e7_rows("truck", {"R": 0.05, "G": 0.25, "CG": 0.25})
+    for row in rows:
+        if row["config"].endswith("ogc_gram_ft_g"):
+            row["npz_bytes"] = str(int(float(row["npz_bytes"]) * 3))
+    sc["truck"] = e7.scene_data(rows, "truck")
+    v = e7.verdict_e7(sc)
+    pt = v["primaries"]["refit"]["per_scene"]["truck"]
+    assert pt["BD_G"] is None and pt["missing_BD"] == ["G"] and pt["delta"] == pytest.approx(-0.05, abs=1e-9)
+    assert v["primaries"]["cb"]["per_scene"]["truck"]["delta"] == pytest.approx(0.25, abs=1e-9)
+    assert seen == set(e7.OUTCOMES) and es.ARM_ORDER == ("R", "G", "CG", "K", "O")
+
+
+def test_e7_secondaries_on_constructed_data():
+    """20 g on constructed data: BD_K - BD_CG and BD_O - BD_G; P1 with the own grid against P1; P1 and P_FT replicated
+    with E5's criteria under both SEs; the seed-1 BDs and SD_BD; the replicate pair; bytes and BD-rate per arm with the
+    shared PSNR range."""
+    import e7
+
+    sc = _e7_scenes(lambda i: {"R": 0.05, "G": 0.10, "CG": 0.12, "K": 0.20, "O": 0.15}, s1=0.01)
+    g = e7.verdict_e7(sc)["secondaries"]
+    assert g["g1_codebook_alone"]["K_minus_CG"]["delta_bar"] == pytest.approx(0.08, abs=1e-9)
+    assert g["g2_own_grid_arm"]["O_minus_G"]["delta_bar"] == pytest.approx(0.05, abs=1e-9)
+    assert g["g3_P1_own_grid"]["P1_own_minus_P1"]["room"] == pytest.approx(0.0, abs=1e-9)
+    d = g["g4_replicated"]["P_FT"]
+    assert d["criteria_e5_se"]["SE_noise"] == pytest.approx(d["SE_n"] / math.sqrt(2))
+    assert g["g5_bd_noise"]["P_FT"]["n_used"] == 7 and g["g5_bd_noise"]["P_FT"]["SD_BD"] > 0
+    assert g["g5_bd_noise"]["P1"]["SD_BD"] == pytest.approx(0.0, abs=1e-9)
+    assert g["g6_replicate"]["per_scene"]["room"]["pair_replicate_minus_R"] == pytest.approx(0.0, abs=1e-12)
+    b = g["g8_bytes_and_bd_rate"]["room"]["K"]
+    assert b["bytes"]["j0_p0"]["ratio"] == 1.0 and b["shared_psnr_range"] == pytest.approx(0.2, abs=1e-9)
+    assert b["bd_rate_interpretable"] and b["bd_rate_percent"] < 0
