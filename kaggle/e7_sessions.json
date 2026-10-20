@@ -1,0 +1,16 @@
+{
+  "note": "kaggle/PREREG_GN.md Amendment 20 note 1: every scene split (20 j's rule on E5's model with E7's rows); one lane per session; the seed-0 halves first, longest first; then the seed-1 halves, two to a session where both fit, packed for the most spare time in the tightest session and run tightest first; within a lane the longer half first; a half with an unsettled process is carried into the next session, after that session's own lane",
+  "sessions": {
+    "S1": {"lanes": [[{"scene": "room", "half": 0}]]},
+    "S2": {"lanes": [[{"scene": "kitchen", "half": 0}]]},
+    "S3": {"lanes": [[{"scene": "drjohnson", "half": 0}]]},
+    "S4": {"lanes": [[{"scene": "bonsai", "half": 0}]]},
+    "S5": {"lanes": [[{"scene": "counter", "half": 0}]]},
+    "S6": {"lanes": [[{"scene": "playroom", "half": 0}]]},
+    "S7": {"lanes": [[{"scene": "truck", "half": 0}]]},
+    "S8": {"lanes": [[{"scene": "kitchen", "half": 1}, {"scene": "playroom", "half": 1}]]},
+    "S9": {"lanes": [[{"scene": "bonsai", "half": 1}, {"scene": "counter", "half": 1}]]},
+    "S10": {"lanes": [[{"scene": "room", "half": 1}, {"scene": "truck", "half": 1}]]},
+    "S11": {"lanes": [[{"scene": "drjohnson", "half": 1}]]}
+  }
+}

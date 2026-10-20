@@ -6890,3 +6890,103 @@ def test_e7_install_picks_e7s_hooks(tmp_path, monkeypatch):
         p.write_text(json.dumps(flags))
         e4p_hooks.install(fork=str(p))
         assert made[-1] == want
+
+
+def test_e7_estimate_reproduces_amendment_20_note_1():
+    """Amendment 20 note 1's time table, split and session plan to the digit printed (bench/gn/e7_estimate.py,
+    kaggle/e7_sessions.json): every scene split; each half alone fits, no seed-0 half fits beside any other half, the
+    seed-1 halves need four sessions; the plan is note 1's rule (seed-0 halves longest first; the seed-1 packing with the
+    most spare in its tightest session, tightest first, the longer half first); both of Note 4's limits met; the totals,
+    the per-row figures and E6's context line; E5's estimate table unchanged afterwards."""
+    import itertools
+
+    import e5_estimate as est
+    import e6_estimate as e6e
+    import e7_estimate as e7e
+
+    note = _note("Amendment 20 note 1 (")
+    flat = " ".join(note.split())
+    U = e7e.units()
+    f0 = lambda x: f"{x:,.0f}"  # noqa: E731
+    for s in e7e.GATE:
+        pre, procs = e7e.scene_parts(s, 1, U)
+        x = e7e.cpu_x(s)
+        line = (f"| {s} | {f0(e7e.scene_s(s, 0, U))} - {f0(e7e.scene_s(s, 1, U))} | {f0(pre * x)} | "
+                + ", ".join(f0(p * x) for p in procs)
+                + f" | {f0(e7e.half_s(s, 0, 0, U))} - {f0(e7e.half_s(s, 0, 1, U))} | "
+                f"{f0(e7e.half_s(s, 1, 0, U))} - {f0(e7e.half_s(s, 1, 1, U))} |")
+        assert line in note, line
+        dev = "cpu" if x > 1 else "cuda"
+        assert [f0(e7e.process_high_s(s, i, dev, U)) for i in range(6)] == [f0(p * x) for p in procs]
+        assert abs(e7e.half_s(s, 0, 1, U) + e7e.half_s(s, 1, 1, U) - e7e.scene_s(s, 1, U) - pre * x) < 1e-6
+    assert all(e7e.split(U).values())
+    h0 = {s: e7e.half_s(s, 0, 1, U) for s in e7e.GATE}
+    h1 = {s: e7e.half_s(s, 1, 1, U) for s in e7e.GATE}
+    assert max(list(h0.values()) + list(h1.values())) < e7e.DEADLINE_S
+    assert min(h0.values()) + min(h1.values()) > e7e.DEADLINE_S
+    assert sum(h1.values()) > 3 * e7e.DEADLINE_S == 117_540
+    assert f"shortest seed-0 half ({f0(min(h0.values()))} s) and the shortest seed-1 half ({f0(min(h1.values()))} s)" in flat
+    assert f"The seed-1 halves**, {f0(sum(h1.values()))} s in all at the high end" in flat
+    ft = [e6e.extra_ft_row_s(s, e, U) for s in e7e.GATE for e in (0, 1)]
+    own = [e7e.own_row_s(s, e, U) for s in e7e.GATE for e in (0, 1)]
+    assert f"That is {f0(min(ft))}-{f0(max(ft))} s per row by scene" in flat
+    assert f"decoded-row steps, {f0(min(own))}-{f0(max(own))} s per row by scene" in flat
+    J = e7e.e6_jobs()
+    lo, hi = [J[s]["of_low"] for s in J], [J[s]["of_high"] for s in J]
+    assert f"came in at {min(lo):.2f}-{max(lo):.2f} of E6's model's low end and {min(hi):.2f}-{max(hi):.2f} of its high" in flat
+    # the plan: note 1's rule
+    P = e7e.plan(U)
+    assert list(P) == [f"S{i}" for i in range(1, 12)] and all(v["fits"] for v in P.values())
+    seed0 = [v["entries"] for k, v in P.items() if all(h == 0 for _, h in v["entries"])]
+    seed1 = [v["entries"] for k, v in P.items() if all(h == 1 for _, h in v["entries"])]
+    assert [e for (e,) in seed0] == sorted(((s, 0) for s in e7e.GATE), key=lambda e: -h0[e[0]])
+    assert len(seed0) == 7 and len(seed1) == 4 and list(P)[:7] == [k for k, v in P.items() if v["entries"] in seed0]
+    for lane in seed1:
+        assert [h1[s] for s, _ in lane] == sorted((h1[s] for s, _ in lane), reverse=True)
+    spares = [P[k]["spare"] for k in list(P)[7:]]
+    assert spares == sorted(spares)  # tightest first
+
+    def packings(items, k):
+        if not items:
+            yield [[] for _ in range(k)]
+            return
+        for p in packings(items[1:], k):
+            for i in range(k):
+                q = [list(b) for b in p]
+                q[i].append(items[0])
+                yield q
+
+    # every assignment that meets both limits, with its spares from the tightest session up. Note 1's rule (the most
+    # spare in the tightest session) ties between two packings (both 2,355 s); its table has the one with more spare in
+    # the next-tightest session (5,213 s against 5,122)
+    found = {}
+    for p in packings(list(e7e.GATE), 4):
+        if any(not b for b in p):
+            continue
+        lanes = [sorted(b, key=lambda s: -h1[s]) for b in p]
+        if any(sum(h1[s] for s in b) >= e7e.DEADLINE_S or sum(h1[s] for s in b[:-1]) >= e7e.CUTOFF_S for b in lanes):
+            continue
+        found[tuple(sorted(tuple(b) for b in lanes))] = sorted(e7e.DEADLINE_S - sum(h1[s] for s in b) for b in lanes)
+    top = max(v[0] for v in found.values())
+    tied = {k: v for k, v in found.items() if v[0] == top}
+    assert len(tied) == 2 and f0(top) == "2,355" and sorted(f0(v[1:][1]) for v in tied.values()) == ["5,122", "5,213"]
+    assert max(tied, key=lambda k: tied[k]) == tuple(sorted(tuple(s for s, _ in lane) for lane in seed1))
+    assert f0(top) == f0(min(spares))
+    for k, v in P.items():
+        half = v["entries"][0][1]
+        ents = ", ".join(f"{s} seed {h}" for s, h in v["entries"])
+        later = "; ".join(f"{s} {f0(a)} - {f0(b)}" for (s, _), (a, b) in list(zip(v["entries"], v["starts"]))[1:]) or "-"
+        row = (f"| {k}, seed {half} | E7 OGC FT-dissection {k} | {ents} | {later} | {f0(v['end'][0])} - "
+               f"{f0(v['end'][1])} | {f0(v['spare'])} | {v['hours'][0]:.2f} - {v['hours'][1]:.2f} |")
+        assert row in note, row
+    jobs = [sum(e7e.half_s(s, h, e, U) for s in e7e.GATE for h in (0, 1)) for e in (0, 1)]
+    assert (f"The jobs come to {f0(jobs[0])}-{f0(jobs[1])} s ({jobs[0] / 3600:.2f}-{jobs[1] / 3600:.2f} GPU-hours), the "
+            "seven repeated harnesses included.**") in flat
+    hours = [sum(v["hours"][i] for v in P.values()) for i in (0, 1)]
+    assert f"**{hours[0]:.2f}-{hours[1]:.2f} session-hours**" in flat
+    tight = sorted((k for k in list(P)[1:] if P[k]["spare"] < 3000), key=lambda k: int(k[1:]))
+    sp = [P[k]["spare"] for k in tight]
+    assert f"S1's spare is {f0(P['S1']['spare'])} s at the high end" in flat
+    assert f"{', '.join(tight[:-1])} and {tight[-1]} have {f0(min(sp))}-{f0(max(sp))} s spare" in flat
+    assert "flowers" not in est.SCENES and "treehill" not in est.SCENES
+    assert "should read \"after FINDINGS sections 21-25\"" in flat
