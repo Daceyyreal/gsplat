@@ -152,6 +152,15 @@ not pre-register; no new run and no verdict.**
 - **Fine-tuning re-fits OGC's AC grid** (`ogc_gram_ft` x 1.59 to 3.16 against `c3dgs_ft` x 0.80 to 1.13), as sections 18
   and 20 inferred; across runs the fine-tuned pair's mean at j = 0 moves less (0.0085) than `SD_pool` (0.0326).
 
+**E6 part (a) (section 23, branch `bench/gn-vq`): descriptive fine-tuning curves on flowers, treehill and train
+(Amendment 19 b); no criterion.**
+- **All three pre-registered predictions held on all three scenes.** Prediction 3 (P_FT below P1) held on treehill and
+  train with P_FT below 0; on flowers P_FT was positive.
+- **Train's P_FT is not interpreted:** its fine-tuned points move by up to 0.19 dB between runs. Treehill's P_FT stays
+  negative with either seed at j = 0. Train's unfine-tuned BDs reproduce E5p's within 0.001 dB.
+- **Section 22 d's pattern** (the per-j difference after fine-tuning rising with j) held on flowers but not on train or
+  treehill.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -258,6 +267,13 @@ not pre-register; no new run and no verdict.**
   comparison, E5's three bundles (`9a90dabb`, `1710cc8a`, `88b5ebed`). `bench/gn/check_s22.py` recomputes every number
   in the section from those files, with `bench/gn/check_s21.py`'s loaders and its own BD fit, and checks each against
   the text.
+- Section 23: every number comes from the two E6 part (a) session bundles, `kaggle/gn_e6/S4/gn6/` (`9ce9b36e`) and
+  `kaggle/gn_e6/S5/gn6/` (`6ff4877e`), each unpacked unchanged (two Kaggle sessions on 2x T4, gsplat commits `bef7ef60`
+  and `eb0e0189`, a restored wheel), each scene from the session that ran it, through `bench/gn/e6.py a`. The exceptions
+  are E5p attempt 2's train rows (`8eadc81e`), the part (b) bundles (`87cc6a59`, `94551278`, `13a95aa1`) for the gate
+  scenes' ranges, and the quoted predictions from `kaggle/PREREG_GN.md` (`f7716485`). `bench/gn/check_s23.py`
+  recomputes every number in the section from those files, with `bench/gn/check_s21.py`'s fit beside the tool's and the
+  sessions' summaries, and checks each against the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -4622,3 +4638,240 @@ fine-tuning) and the `.npz` change:
   - why OGC's lead shrinks with fine-tuning (the records show the grid and the bytes, not the cause);
   - BD's own noise (one process per point);
   - the cause of the protocol gap on kitchen and bonsai.
+
+## 23. E6 part (a), descriptive (Amendment 19 b; no criterion) — all three predictions held on flowers, treehill and train; P_FT was negative on treehill and train, and train's is not interpreted
+
+Part (a) is descriptive: Amendment 19 applies no criterion to it (L3434–3435). On flowers, treehill and train, all three
+pre-registered predictions held as written. Prediction 3 (P_FT below P1) held on treehill and train with P_FT negative
+there (-0.026, -0.007). Train's P_FT is dominated by fine-tuning noise (replacing its j = 0 fine-tuned point with E5p's
+changes it by 0.23 dB) and is not interpreted; treehill's stays negative with j = 0 seed 1 (-0.042). Flowers' P_FT was
+positive (+0.034). Train's unfine-tuned BDs are stable across runs (P1 +0.0005 against E5p's); it is the only part (a)
+scene with an earlier run.
+
+- **The scenes and checkpoints:** INRIA's 30k checkpoints of flowers, treehill and train, all development scenes
+  (Amendment 19 b), none a gate scene.
+- **The processes:** four per scene (j = 0 with seeds 0 and 1, j = -1 and j = +1 with seed 0), each with E5's rows
+  (`c3dgs`, `ogc_plain`, `ogc_scalar`, `ogc_gram`, `ogc_gram_ours`) and both fine-tuned rows (`c3dgs_ft`, `ogc_gram_ft`;
+  5,000 iterations).
+- **The sources:** the two part (a) session bundles, `kaggle/gn_e6/S4/gn6/` (`9ce9b36e`: flowers, train) and
+  `kaggle/gn_e6/S5/gn6/` (`6ff4877e`: treehill, with S4's two scenes carried byte-identical). For the cross-run items,
+  E5p attempt 2's train rows (`8eadc81e`); for the gate scenes' ranges, the part (b) bundles (section 21).
+
+### What Amendment 19 b pre-specified (`kaggle/PREREG_GN.md` L3472–3480, verbatim)
+
+> **Predictions** (written before any E6 data and checked after it, per scene; not criteria):
+> 1. **P1 > 0:** BD-PSNR of `ogc_gram` against `c3dgs`, as Amendment 17 d computes it.
+> 2. **P2 > 0:** BD-PSNR of `ogc_gram` against `ogc_scalar`.
+> 3. **The BD-PSNR after fine-tuning is below P1:** BD-PSNR of `ogc_gram_ft` against `c3dgs_ft`, computed as P1 with the
+>    fine-tuned rows' protocol ii PSNR and `.npz` bytes at j = -1, 0 and +1 (seed 0), is below the scene's P1.
+>
+> Each prediction is reported per scene as holding or not, with its values. A BD-PSNR that is missing (no shared byte
+> range, Note 2 C2) makes its prediction "not checkable", reported so. None has a bar against noise, and none decides
+> anything.
+
+Amendment 19 e also lists, per scene, Amendment 17 d's secondaries: `ogc_scalar` - `ogc_plain` and `ogc_plain` - `c3dgs`,
+each as BD-PSNR and as the paired j = 0 difference. The tool compares 9-decimal values: r(P1) > 0, r(P2) > 0 and
+r(P_FT) < r(P1).
+
+### The predictions
+
+The tool (`bench/gn/e6.py a`, over every E6 bundle; only S4 and S5 hold part (a) scenes) printed:
+
+```
+E6 part (a), descriptive: 3 scenes; dropped -
+  flowers: P1 0.1239132064489453, P2 0.06924976954330893, P_FT 0.034106008276629615; predictions {'P1_positive': True, 'P2_positive': True, 'ft_below_P1': True}
+  treehill: P1 0.02506197418038251, P2 0.002488066754541963, P_FT -0.026188422564282634; predictions {'P1_positive': True, 'P2_positive': True, 'ft_below_P1': True}
+  train: P1 0.129723405087498, P2 0.06493792256322709, P_FT -0.006561561332006164; predictions {'P1_positive': True, 'P2_positive': True, 'ft_below_P1': True}
+```
+
+BD-PSNR per scene (dB; each over the three seed-0 points), and each prediction:
+
+| Scene | P1 | P2 | `ogc_scalar` vs `ogc_plain` | `ogc_plain` vs `c3dgs` | P_FT | Predictions 1 / 2 / 3 |
+|---|---|---|---|---|---|---|
+| flowers | +0.123913 | +0.069250 | +0.068761 | -0.013664 | +0.034106 | held / held / held |
+| treehill | +0.025062 | +0.002488 | +0.102726 | -0.077859 | -0.026188 | held / held / held |
+| train | +0.129723 | +0.064938 | +0.008808 | +0.057308 | -0.006562 | held / held / held |
+
+- **No value is missing,** so no prediction is "not checkable": every pair's byte ranges overlap.
+- **Prediction 3 held on treehill and train with P_FT below 0,** and on flowers with P_FT positive and below P1.
+
+The paired j = 0 differences, `D_s` (dB, the mean over the two j = 0 processes), in the same order (the last column is
+`ogc_gram_ft` - `c3dgs_ft`):
+
+| Scene | P1's pair | P2's pair | `ogc_scalar` - `ogc_plain` | `ogc_plain` - `c3dgs` | After fine-tuning |
+|---|---|---|---|---|---|
+| flowers | +0.2300 | +0.1254 | +0.0808 | +0.0238 | +0.0755 |
+| treehill | +0.1071 | +0.0282 | +0.1250 | -0.0461 | -0.0250 |
+| train | +0.1698 | +0.0785 | +0.0104 | +0.0810 | -0.0518 |
+
+### BD-rates and their overlaps
+
+Every BD-rate of part (a): the six pairs of the four unfine-tuned rows and the fine-tuned pair, with the shared PSNR
+range (dB) and the shared log10-byte range as a fraction of the reference (second) curve's span. By section 21's
+convention a BD-rate whose shared PSNR range is below 0.1 dB is shown but not interpretable.
+
+| Scene | Pair | BD-rate | Shared PSNR range | Log-byte overlap | Status |
+|---|---|---|---|---|---|
+| flowers | plain vs c3dgs | +0.92% | 0.301 | 0.912 | interpretable |
+| flowers | scalar vs c3dgs | -6.78% | 0.207 | 0.938 | interpretable |
+| flowers | P1 (gram vs c3dgs) | -18.08% | 0.045 | 0.824 | not interpretable (overlap < 0.1 dB) |
+| flowers | scalar vs plain | -7.60% | 0.214 | 0.987 | interpretable |
+| flowers | gram vs plain | -18.76% | 0.051 | 0.910 | not interpretable (overlap < 0.1 dB) |
+| flowers | P2 (gram vs scalar) | -12.16% | 0.087 | 0.884 | not interpretable (overlap < 0.1 dB) |
+| flowers | P_FT (gram_ft vs c3dgs_ft) | -8.33% | 0.073 | 0.837 | not interpretable (overlap < 0.1 dB) |
+| treehill | plain vs c3dgs | +9.68% | 0.170 | 0.902 | interpretable |
+| treehill | scalar vs c3dgs | -9.37% | 0.081 | 0.918 | not interpretable (overlap < 0.1 dB) |
+| treehill | P1 (gram vs c3dgs) | -11.93% | 0.037 | 0.808 | not interpretable (overlap < 0.1 dB) |
+| treehill | scalar vs plain | -19.91% | 0.040 | 0.992 | not interpretable (overlap < 0.1 dB) |
+| treehill | gram vs plain | undefined | 0.000 | 0.903 | undefined (no shared PSNR range) |
+| treehill | P2 (gram vs scalar) | -1.83% | 0.046 | 0.887 | not interpretable (overlap < 0.1 dB) |
+| treehill | P_FT (gram_ft vs c3dgs_ft) | +21.62% | 0.034 | 0.777 | not interpretable (overlap < 0.1 dB) |
+| train | plain vs c3dgs | -12.57% | 0.178 | 0.954 | interpretable |
+| train | scalar vs c3dgs | -15.07% | 0.153 | 0.956 | interpretable |
+| train | P1 (gram vs c3dgs) | -36.10% | 0.016 | 0.918 | not interpretable (overlap < 0.1 dB) |
+| train | scalar vs plain | -2.46% | 0.180 | 1.000 | interpretable |
+| train | gram vs plain | -27.47% | 0.042 | 0.963 | not interpretable (overlap < 0.1 dB) |
+| train | P2 (gram vs scalar) | -26.61% | 0.043 | 0.961 | not interpretable (overlap < 0.1 dB) |
+| train | P_FT (gram_ft vs c3dgs_ft) | +78.95% | 0.137 | 0.774 | meets the convention; not interpreted (its fine-tuned points are noisy) |
+
+Of part (a)'s 21 BD-rates, 8 have a shared PSNR range of at least 0.1 dB and are interpretable by section 21's
+convention: flowers plain vs c3dgs +0.92% (0.301 dB), scalar vs c3dgs -6.78% (0.207 dB), scalar vs plain -7.60% (0.214
+dB); train plain vs c3dgs -12.57% (0.178 dB), scalar vs c3dgs -15.07% (0.153 dB), scalar vs plain -2.46% (0.180 dB),
+P_FT +78.95% (0.137 dB); treehill plain vs c3dgs +9.68% (0.170 dB). Every BD-rate for P1, P2 and `ogc_gram` vs
+`ogc_plain` is below 0.1 dB and not interpretable. Treehill's `ogc_gram` vs `ogc_plain` BD-rate is undefined (no shared
+PSNR range). Train's P_FT BD-rate meets the overlap convention but is not interpreted, for item a's reason (its
+fine-tuned points are noisy). Every BD-PSNR is defined.
+
+### Three sources that agree
+
+The tool, each session's own `per_scene_parts` (`gn5_summary_S4.json` for flowers and train, `gn5_summary_S5.json` for
+treehill) and a separate `numpy.polyfit` recompute from the CSVs that imports none of `e6.py`, `e5.py` or `g2.py`
+(`bench/gn/check_s23.py`, with `check_s21.py`'s fit): the largest absolute difference among the three over the five
+BD-PSNRs above, and between the recompute and the tool over the BD-rates (percentage points):
+
+| Scene | Session | BD-PSNR | BD-rate |
+|---|---|---|---|
+| flowers | S4 | 6e-12 | 7e-09 |
+| treehill | S5 | 6e-12 | 2e-07 |
+| train | S4 | 2e-12 | 2e-07 |
+
+`D_sp` is identical in all three sources for every pair.
+
+### a. Train's P_FT and its j = 0 fine-tuned point (descriptive, not pre-registered)
+
+- **Across runs, train's fine-tuned rows move far more than its unfine-tuned rows** (E6 minus E5p attempt 2, the same
+  configs; E5p's seed-1 process had its images on the CPU, so that pair differs in device as well as seed):
+
+| Row | Protocol ii PSNR (dB) | `.npz` bytes |
+|---|---|---|
+| `p0_c3dgs_ft` | +0.18995 | +6,972 |
+| `p1_c3dgs_ft` | +0.07033 | -8,696 |
+| `p0_ogc_gram_ft` | -0.09386 | -7,126 |
+| `p1_ogc_gram_ft` | -0.02968 | -4,354 |
+
+- **The fine-tuned pair at j = 0** (`ogc_gram_ft` - `c3dgs_ft`, seed 0 / seed 1): E5p +0.25918 / +0.02113 (mean
+  +0.14016), E6 -0.02462 / -0.07889 (mean -0.05175).
+- **Replacing train's j = 0 fine-tuned point with E5p's seed-0 rows** gives P_FT +0.220875, a change of +0.2274 dB.
+- **Per test view,** fine-tuning moves train's protocol ii by -2.135 to +3.477 dB across E6's fine-tuned rows (E5p's
+  -2.310 to +3.470), against flowers -0.219 to +0.510 and treehill -0.262 to +1.328.
+- **So train's P_FT is not interpreted.** P_FT is set by six fine-tuned points, and on train those points move by up
+  to 0.19 dB between runs.
+
+### b. P_FT with j = 0 seed 1 in place of seed 0 (descriptive, not pre-registered)
+
+| Scene | P_FT (seed 0 at j = 0) | With seed 1 at j = 0 | Change |
+|---|---|---|---|
+| flowers | +0.034106 | +0.023247 | -0.010859 |
+| treehill | -0.026188 | -0.042281 | -0.016093 |
+| train | -0.006562 | -0.048141 | -0.041579 |
+
+Treehill's P_FT stays negative with either seed at j = 0; flowers' stays positive.
+
+### c. Cross-run stability of train's unfine-tuned BDs (descriptive, not pre-registered)
+
+Train is the only part (a) scene with an earlier run inside C3DGS (E5p attempt 2, the same processes and points without
+the j = -1 and j = +1 fine-tuned rows, so E5p has no P_FT). BD-PSNR (dB):
+
+| Pair | E5p | E6 | E6 minus E5p |
+|---|---|---|---|
+| P1 | +0.129184 | +0.129723 | +0.000540 |
+| P2 | +0.064122 | +0.064938 | +0.000816 |
+| scalar vs plain | +0.008966 | +0.008808 | -0.000158 |
+| plain vs c3dgs | +0.057402 | +0.057308 | -0.000094 |
+
+- **Every difference is below 0.001 dB.**
+- **P1 on the part (a) scenes** (0.1239, 0.0251 and 0.1297 on flowers, treehill and train) is below the gate scenes'
+  P1 replicated mean, 0.3556 (section 21, secondary 1).
+
+### d. The signs of P2 and of the secondaries (descriptive, not pre-registered)
+
+- **P2 and `ogc_scalar` vs `ogc_plain` are positive on all three scenes.**
+- **`ogc_plain` vs `c3dgs` is negative on flowers and treehill and positive on train.** On the seven gate scenes it was
+  positive everywhere (section 19).
+
+### e. The per-j difference after fine-tuning and the same-bytes counterfactual (descriptive, not pre-registered)
+
+`ogc_gram_ft` minus `c3dgs_ft` in protocol ii's PSNR (dB, seed 0) at j = -1 / 0 / +1, then P_FT against section 22 c's
+counterfactual (`ogc_gram_ft`'s bytes replaced by `c3dgs_ft`'s at the same j, a counterfactual, not equal rate):
+
+| Scene | j = -1 / 0 / +1 | P_FT | Same bytes per j | P_FT minus same bytes |
+|---|---|---|---|---|
+| flowers | +0.0352 / +0.0795 / +0.1203 | +0.034106 | +0.054395 | -0.020289 |
+| treehill | -0.0141 / -0.0200 / -0.0081 | -0.026188 | -0.022196 | -0.003993 |
+| train | +0.1199 / -0.0246 / -0.1485 | -0.006562 | +0.001935 | -0.008496 |
+
+- **The difference rises with j on flowers only.** It falls on train and is not monotone on treehill.
+- **Section 22 d's pattern** (it rises with j on all seven gate scenes) **held on flowers but not on train or
+  treehill.** Section 22 d is left as written; its scope is the seven gate scenes, and `paper/CLAIMS.md` F8 now says so.
+- **Byte placement:** the counterfactual moves P_FT by -0.020289 to -0.003993 dB; it does not change P_FT's sign on
+  flowers or treehill.
+
+### Mechanics notes (descriptive, not pre-registered)
+
+- **Treehill's evaluator gap is negative.** C3DGS's evaluation minus protocol ii is negative on all 28 compressed rows,
+  median -0.0245, -0.0489 to -0.0010, against flowers 0.0110 and train 0.4834 (medians).
+- **Train's fine-tuned rows are not monotone in j under protocol ii** (seed 0, j = -1 / 0 / +1): `c3dgs_ft` 21.1845 /
+  21.3464 / 21.2993, `ogc_gram_ft` 21.3044 / 21.3218 / 21.1508. Under C3DGS's evaluation both fall with j. Every other
+  row kind on the three scenes is monotone under both evaluators.
+- **`ogc_gram_ours` equals `ogc_gram`** in all 12 part (a) processes: `.npz` bytes, every array's bytes, protocol ii and
+  C3DGS's PSNR (Amendment 18 d).
+- **Fine-tuning re-fits the int8 AC quantizer,** as on the gate scenes (section 22 e): over the 12 processes
+  `ogc_gram_ft` x 1.38 to 3.55, `c3dgs_ft` x 0.86 to 1.09. Train reaches x 3.55, above the gate scenes' maximum, x 3.16.
+- **`ogc_gram_ft` / `c3dgs_ft` bytes** at j = -1, j = 0 (seed 0), j = 0 (seed 1) and j = +1:
+
+| Scene | After fine-tuning |
+|---|---|
+| flowers | 1.0206 / 1.0422 / 1.0438 / 1.0538 |
+| treehill | 0.9853 / 1.0401 / 1.0423 / 1.0548 |
+| train | 0.8992 / 0.9512 / 0.9540 / 1.0177 |
+
+  Train's j = -1 ratio is below the gate scenes' j = -1 minimum (0.9209), and its two j = 0 ratios are below the gate
+  scenes' j = 0 minimum (0.9851).
+
+### How the sessions ran
+
+| Session | gsplat commit | Scenes, in the order run | Jobs (s) | Files in the bundle |
+|---|---|---|---|---|
+| S4 | `bef7ef60` | flowers, train | 9,600 / 6,810 | 12 |
+| S5 | `eb0e0189` | treehill | 9,990 | 13 |
+
+- **Two Kaggle sessions on 2x T4** ("E6 OGC descriptive S4" and "S5"), one scene at a time (note 1). The code paths are
+  unchanged from part (b)'s sessions: between `8f8295d5` and each session's commit, only `check_s21.py`, `check_s22.py`
+  and their tests changed in `bench/` and `kaggle/`.
+- **S5's bundle has 13 files:** it carries S4's results and metas but not their log tails, as S2 and S3 did.
+- **One Kaggle image throughout;** OGC's code came from its URL (HEAD `49ccae72`); C3DGS at `2a234af5`.
+- **Every scene ran cleanly:** 29 rows, all `ok`; each process once, on the GPU; no out-of-memory, deferral, deadline
+  cut, rerun, deviation, or failed or skipped step.
+
+### What section 23 settles, and what it does not
+
+- **Settled (descriptive):** all three predictions held on flowers, treehill and train as Amendment 19 b wrote them;
+  P_FT was positive on flowers and negative on treehill (with either seed at j = 0); train's unfine-tuned BDs reproduce
+  E5p's within 0.001 dB.
+- **Not settled, or limits:**
+  - part (a) has no criterion, and prediction 3 held on treehill and train because P_FT was negative;
+  - train's P_FT is not interpreted: its fine-tuned points move by up to 0.19 dB between runs;
+  - one process per point, so BD's own noise is not measured; three development scenes, INRIA's checkpoints,
+    K = 4,096, one GPU type and one Kaggle image;
+  - most of part (a)'s BD-rates are not interpretable (shared PSNR range below 0.1 dB);
+  - the cause of treehill's negative evaluator gap.
