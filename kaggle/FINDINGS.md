@@ -170,6 +170,13 @@ post hoc; no run.**
   and 24 to 157 of OGC's AC codebook values per process lie outside it; C3DGS's never do.
 - **Fine-tuning closes most of the gap the VQ left** (slope 0.73), a trend that is partly an identity.
 
+**The SE convention in E5's and E6's criterion 3 (section 25, branch `bench/gn-vq`): analysis only, not pre-registered;
+no run.**
+- **Each P is one seed-0 curve per scene,** so the matching standard error is `SD_pool` / sqrt(n), not the registered
+  `SD_pool` / sqrt(2 n); the margins shrink by sqrt(2) (E6's P_FT from 4.88 to 3.45).
+- **Every criterion still holds.** The registered verdicts stand under their pre-registered rule; this re-analysis
+  changes none of them.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -288,6 +295,10 @@ post hoc; no run.**
   counts from E5's bundles (`9a90dabb`, `1710cc8a`, `88b5ebed`). The readings of C3DGS's source (`2a234af5`) and of
   torch 2.11 are code reading, not checked. `bench/gn/check_s24.py` recomputes every number in the section from those
   files, with `bench/gn/check_s21.py`'s loaders, and checks each against the text.
+- Section 25: every number comes from E5's three session bundles (`9a90dabb`, `1710cc8a`, `88b5ebed`) and E6 part
+  (b)'s (`87cc6a59`, `94551278`, `13a95aa1`), each scene from the session that ran it. `bench/gn/check_s25.py`
+  recomputes every number in the section from those files, with `bench/gn/check_s21.py`'s loaders, fit and criteria,
+  and checks each against the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -5006,3 +5017,47 @@ after fine-tuning varies much less than the gap before it, not by what mechanism
 - **Not settled:** what makes OGC's lead shrink. The re-fit's effect on PSNR is untested, and the exploratory data run
   against it; codebook training, the re-fit of either grid and compensation by geometry and opacity are not separated.
   That needs a run with these factors held fixed in turn (CLAIMS gap 3; planned as E7, not yet registered).
+
+## 25. The SE convention in E5's and E6's criterion 3 (descriptive, analysis only, not pre-registered; from E5's and E6 part (b)'s committed bundles, no new run) — each P is one seed-0 curve per scene, so `SD_pool` / sqrt(n) is the matching standard error; with it every criterion still holds, and no verdict changes
+
+**What this section is:** a re-reading of how E5's and E6 part (b)'s criterion 3 measured noise, found while designing
+E7. Nothing here was pre-registered, no run was made, and **the registered verdicts stand under their pre-registered
+rule; this re-analysis changes none of them.** Every number comes from E5's bundles (`kaggle/gn_e5/S1-S3/gn5/`) and E6
+part (b)'s (`kaggle/gn_e6/S1-S3/gn6/`), each scene from the session that ran it.
+
+### The two standard errors
+
+- **What P is:** E5's P1 and P2 (Amendment 17 d) and E6's P_FT (Amendment 19 c) are, per scene, one BD-PSNR from the
+  seed-0 curve: three points at j = -1, 0 and +1, one process each.
+- **What `SE_noise` is:** `v_s`, the sum of squared deviations of the two j = 0 seeds' paired difference, is that
+  difference's sample variance (two values, one degree of freedom), so `SD_pool` = sqrt(mean of `v_s`) estimates the
+  noise of one process's paired difference. The registered `SE_noise` = `SD_pool` / sqrt(2 n) is then the standard
+  error of a mean over the scenes of **two-seed** averages.
+- **The mismatch:** `P_bar` is a mean over the scenes of **one** curve each, so the standard error that matches it, on
+  the same reading that a j = 0 point's noise stands for the BD's, is `SD_pool` / sqrt(n), larger by sqrt(2) = 1.4142.
+  Criterion 3's margins were therefore optimistic by that factor. Neither convention includes how P varies from scene
+  to scene (section 22 a).
+
+### The margins under each
+
+| Primary | `P_bar` | `SD_pool` | `SE_noise` = `SD_pool` / sqrt(2 n) (registered) | `P_bar` / `SE_noise` | `SD_pool` / sqrt(n) | `P_bar` / (`SD_pool` / sqrt(n)) | Criterion 3, registered / corrected |
+|---|---|---|---|---|---|---|---|
+| E5 P1 | 0.355834374 | 0.012122221 | 0.003239800 | 109.83 | 0.004581769 | 77.66 | holds / holds |
+| E5 P2 | 0.187408298 | 0.000627531 | 0.000167715 | 1117.42 | 0.000237184 | 790.14 | holds / holds |
+| E6 P_FT | 0.042490731 | 0.032555899 | 0.008700930 | 4.88 | 0.012304973 | 3.45 | holds / holds |
+| E6 P1 replicated | 0.355602944 | 0.011294872 | 0.003018682 | 117.80 | 0.004269060 | 83.30 | holds / holds |
+
+n = 7 throughout. E6's P1 replicated is a report-only secondary (section 21), its criteria evaluated as a description.
+
+- **E6's P_FT,** the closest, is at 3.45 x the corrected standard error against the registered 4.9: its criterion 3
+  needs `P_bar` above 2 x 0.012304973 = 0.024609946, and `P_bar` is 0.042490731.
+- **E6's leave-one-out** (section 22 a, descriptive): `P_bar` / `SE` runs from 3.88 to 5.46 with the registered
+  standard error and from 2.75 to 3.86 with the corrected one, and every case still meets all three criteria.
+
+### What section 25 settles, and what it does not
+
+- **Settled (descriptive):** with `SD_pool` / sqrt(n), every criterion of E5 and E6 part (b) still holds. **The
+  registered verdicts stand under their pre-registered rule; this re-analysis changes none of them.** E7 (planned)
+  uses `SD_pool` / sqrt(n).
+- **Not settled:** BD-level noise itself, against a j = 0 point's (`paper/CLAIMS.md` gap 8); and scene-to-scene spread,
+  which neither standard error includes.
