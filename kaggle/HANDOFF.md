@@ -62,7 +62,9 @@ is ingested** (`87cc6a59`), **and so are S2** (`94551278`) **and S3** (`13a95aa1
 passes (FINDINGS section 21, `6bd340a0`, `check_s21.py` `251c305c`; descriptive section 22, `4686acc0`, `check_s22.py`
 `faedf2dd`; CLAIMS group F, `faa99c55`, 59 rows). **E6 S4 and S5 ran and are ingested** (`9ce9b36e`, `6ff4877e`). **E6 is closed**
 (parts (a) and (b)): FINDINGS section 23 (`0049d81f`, `check_s23.py` `52b6ab0c`), CLAIMS group G (`eb4d6620`, 67 rows).
-**Next: none queued; awaiting Dace** (see "E6 closed (2026-10-20)").
+**Amendment 20 (E7) committed `53dde708`; next: Amendment 20 note 1 (estimate re-derivation), then E7 code, tests,
+dry run.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
+`check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
 `4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b)), checker `check_figs.py` (paper figures:
 960 checks, 0 failures; run by pytest).
@@ -4755,7 +4757,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
       (see "E6 S5 (2026-10-20)");
   14. ~~Dace's reading of part (a); FINDINGS (E6 part (a)) and its checker; CLAIMS~~ **done (2026-10-20):** `0049d81f`,
       `52b6ab0c`, `eb4d6620` (see "E6 closed (2026-10-20)"); E6 closed;
-  15. **next: none queued; awaiting Dace.**
+  15. ~~next: none queued~~ FINDINGS sections 24-25 and Amendment 20 (E7, `53dde708`) committed;
+  16. **next: Amendment 20 note 1 (estimate re-derivation), then E7 code, tests, dry run.**
 - ~~**Note 4's S2 session-hours** are printed as 4.32-7.71 h; the code gives 7.70 h.~~ **Corrected (2026-10-12):** the
   erratum `1b532e40`. Dace approved rule (b)'s rewording the same day.
 - **The unexplained npz2ply failure** (one dry run, 2026-10-10, room's rerun `ogc_gram`): not reproduced alone or under
@@ -5062,8 +5065,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   plan A: three sessions; code `48d01a60`-`2e03d98d`) followed. E5 ran in three sessions (`9a90dabb`, `1710cc8a`,
   `88b5ebed`) and passed (FINDINGS sections 19-20). Amendment 19 (`f7716485`, note 1 `0f77b0de`, its erratum
   `8ea6e0c9`, note 2 `b7ad2329`) registers E6; E6 ran in five sessions (`87cc6a59`, `94551278`, `13a95aa1`, `9ce9b36e`,
-  `6ff4877e`): part (b) passed (FINDINGS sections 21-22), part (a) is FINDINGS section 23. **E6 is closed; next: none
-  queued.** `paper/CLAIMS.md` holds 67 rows (groups A-G). `bench/gn/check_s11.py` to `check_s23.py` re-check FINDINGS
+  `6ff4877e`): part (b) passed (FINDINGS sections 21-22), part (a) is FINDINGS section 23. **E6 is closed; Amendment 20 (E7) is
+  committed (`53dde708`); next: Amendment 20 note 1, then E7 code, tests, dry run.** `paper/CLAIMS.md` holds 67 rows (groups A-G). `bench/gn/check_s11.py` to `check_s23.py` re-check FINDINGS
   sections 11-23 and run under pytest; sections 1-10 have no committed checker. The rest of E3's design (other codecs,
   INRIA checkpoints) is not written yet.
 
