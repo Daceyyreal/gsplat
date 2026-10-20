@@ -6,7 +6,8 @@ claim restates FINDINGS no more strongly than FINDINGS does, and every number is
 FINDINGS section 19 (`de8690ca`, `check_s19.py` `63fe6de0`); updated the same day after FINDINGS section 20
 (`847e39ee`, `check_s20.py` `8258a0b1`): rows A8-A11, B8, E13-E15 and the Gaps' statuses; updated 2026-10-18 after
 FINDINGS sections 21 and 22 (E6 part (b): `6bd340a0`, `check_s21.py` `251c305c`; `4686acc0`, `check_s22.py`
-`faedf2dd`): group F and the Gaps' statuses.
+`faedf2dd`): group F and the Gaps' statuses; updated 2026-10-20 after FINDINGS section 23 (E6 part (a): `0049d81f`,
+`check_s23.py` `52b6ab0c`): group G, F8's scope and conflict 3.
 
 **Status labels:**
 - **confirmatory:** a pre-registered criterion and its verdict;
@@ -127,10 +128,32 @@ OGC.** Inside C3DGS, OGC is ahead of GN-VQ on development scenes (D5, D6).
 | F5 | P_FT survives leaving out any one scene: every leave-one-out case passes all three criteria (`P_bar` / `SE_noise` 3.88 to 5.46), but 6 of the 7 cases meet the count with exactly 5. Across scenes P_FT has SD 0.0373 dB, t = 3.0. | exploratory, not pre-registered | s22 a | `check_s22.py` | as F1 | descriptive; the count is the tight criterion | no |
 | F6 | As a ratio of means P_FT is 0.1195 of P1 replicated; per scene the ratio runs from -0.017 to +0.331. | exploratory, not pre-registered | s22 b | `check_s22.py` | as F1 | **not** "the share of the unfine-tuned lead that survives": P1 and P_FT integrate over different byte ranges | no |
 | F7 | P_FT is not produced by where the bytes fall: with `ogc_gram_ft`'s bytes set to `c3dgs_ft`'s at the same j, the mean is +0.0458 dB against `P_bar` +0.0425 dB. | exploratory, not pre-registered; a counterfactual | s22 c | `check_s22.py` | as F1 | a counterfactual, **not equal rate**: it pairs OGC's PSNR with bytes OGC did not produce | no |
-| F8 | The PSNR difference `ogc_gram_ft` - `c3dgs_ft` at the same j rises with j on all seven scenes (j = -1 -0.119 to +0.023, j = 0 +0.024 to +0.112, j = +1 +0.061 to +0.379). | exploratory, not pre-registered | s22 d | `check_s22.py` | as F1 | not rate-matched: at j = +1 OGC's row has 3.5% to 7.9% more bytes, at j = -1 0.3% to 7.9% fewer | no |
+| F8 | The PSNR difference `ogc_gram_ft` - `c3dgs_ft` at the same j rises with j on all seven scenes (j = -1 -0.119 to +0.023, j = 0 +0.024 to +0.112, j = +1 +0.061 to +0.379). | exploratory, not pre-registered | s22 d | `check_s22.py` | as F1 | not rate-matched: at j = +1 OGC's row has 3.5% to 7.9% more bytes, at j = -1 0.3% to 7.9% fewer; **scope: the seven gate scenes only** (on part (a)'s scenes it rose on flowers but fell on train and was not monotone on treehill, G5) | no |
 | F9 | Fine-tuning re-fits the int8 AC quantizer: `ogc_gram_ft`'s AC scale grows x 1.59 to 3.16 and its `.npz` shrinks (-10.68% to -0.63%), `c3dgs_ft`'s scale x 0.80 to 1.13 and its `.npz` -0.31% to +1.01%. This records directly the mechanism E5 and E13 inferred. | exploratory, not pre-registered (from Amendment 18 note 2's records) | s22 e | `check_s22.py` | as F1 | the records show the grid and the bytes, not the grid's effect on PSNR | no |
 | F10 | Across runs the fine-tuned pair's j = 0 mean moves less than the seed pair's spread within a run: SD of E6 minus E5 over sqrt(2) 0.0085 against `SD_pool` 0.0326 (mean difference -0.0080). Against E5's own seed spread, `ogc_gram_ft`'s bytes differ on five scenes (through the AC grid after fine-tuning) and 12 PSNR rows on five scenes. | exploratory, not pre-registered | s22 f | `check_s22.py` | as F1; E5's bundles | E5's `ogc_gram` seed pair shares OGC's fixed seed, so E5's spread understates variation between runs; `geometry_sha1` differs on every row (E2) | no |
 | F11 | Mechanics: PSNR is not monotone in j on playroom's `ogc_gram` and drjohnson's and room's `ogc_gram_ft` (room's order flips between the two evaluations); the evaluation gap on kitchen and bonsai matches E5's (E14); the session attempt files carry a stale label. | descriptive | s22 g | `check_s22.py` | as F1 | records, no effect on any criterion | no |
+
+## (G) E6 part (a): descriptive fine-tuning curves on flowers, treehill and train
+
+**Limits common to every G row:**
+- **Scenes and checkpoints:** flowers, treehill and train, development scenes (Amendments 9 b, 10 b, 16 b), INRIA's
+  published 30k checkpoints, C3DGS at `2a234af5` with the recorded deviations, OGC's code at `49ccae72`, K = 4,096.
+- **Points:** three colour thresholds (j = -1, 0, +1), one process (seed 0) per point; every process fine-tunes both rows
+  (5,000 iterations); two seeds at j = 0 only.
+- **Evaluation and hardware:** protocol ii; 2x T4; one Kaggle image.
+- **Status:** part (a) has no criterion (Amendment 19 b); its three predictions are checked, not judged. No G row is a
+  held-out claim, and no G row may be pooled with E5's or part (b)'s results.
+
+| ID | Claim | Status | Evidence | Check | Data | Scope limits that travel with it | Corr. |
+|---|---|---|---|---|---|---|---|
+| G1 | All three pre-registered predictions held on flowers, treehill and train: P1 > 0 (0.1239 / 0.0251 / 0.1297), P2 > 0 (0.0692 / 0.0025 / 0.0649), and P_FT below P1. No value missing. | descriptive: Amendment 19 b's predictions, checked after the run (not criteria) | s23 "The predictions" (tool output, per-scene table) | `check_s23.py` (its own polyfit BD; three sources agree to within 6.5e-12) | `kaggle/gn_e6/S4/gn6/`, `S5/gn6/` | prediction 3 held on treehill and train **because P_FT was negative** (G2); no criterion | no |
+| G2 | P_FT (BD-PSNR of `ogc_gram_ft` against `c3dgs_ft`) was positive on flowers (+0.0341) and negative on treehill (-0.0262; -0.0423 with j = 0 seed 1) and train (-0.0066). | descriptive | s23 "The predictions", item b | `check_s23.py` | as G1 | train's value **not interpreted** (G3); three development scenes; not a held-out claim | no |
+| G3 | Train's P_FT is dominated by fine-tuning noise: its fine-tuned rows differ from E5p's by up to 0.19 dB at j = 0; replacing the j = 0 fine-tuned point with E5p's seed-0 rows moves P_FT from -0.0066 to +0.2209 (+0.2274), and seed 1 at j = 0 gives -0.0481; per test view fine-tuning moves train's protocol ii by -2.135 to +3.477 dB. | exploratory, not pre-registered | s23 a, b | `check_s23.py` | as G1; `kaggle/gn_e5p/attempt2/gn5p/` | E5p's seed-1 process ran with CPU images (seed and device confounded) | no |
+| G4 | Train's unfine-tuned BDs reproduce across runs: P1, P2, scalar vs plain and plain vs c3dgs within 0.001 dB of E5p's (P1 +0.0005). | exploratory, not pre-registered | s23 c | `check_s23.py` | as G3 | one scene (the only part (a) scene with an earlier run) | no |
+| G5 | The PSNR difference `ogc_gram_ft` - `c3dgs_ft` at the same j rose with j on flowers (+0.0352 / +0.0795 / +0.1203) but fell on train and was not monotone on treehill; the same-bytes counterfactual keeps P_FT's sign on flowers and treehill. | exploratory, not pre-registered | s23 e | `check_s23.py` | as G1 | limits F8's pattern to the gate scenes; not rate-matched | no |
+| G6 | Of part (a)'s 21 BD-rates, 8 have a shared PSNR range of at least 0.1 dB; every BD-rate of P1, P2 and `ogc_gram` vs `ogc_plain` is below it, and treehill's `ogc_gram` vs `ogc_plain` is undefined. | descriptive | s23 "BD-rates and their overlaps" | `check_s23.py` | as G1 | train's P_FT BD-rate (+78.95%) meets the convention but is **not interpreted** (G3) | no |
+| G7 | On part (a)'s scenes P1 (0.0251-0.1297 dB) is below the gate scenes' P1 replicated mean (0.3556), and `ogc_plain` vs `c3dgs` is negative on flowers and treehill (positive on all seven gate scenes). | exploratory, not pre-registered | s23 c, d | `check_s23.py` | as G1; part (b) and E5 bundles | three development scenes against seven gate scenes; different scene sets, no test | no |
+| G8 | Mechanics: treehill's evaluator gap (C3DGS's evaluation minus protocol ii) is negative on all 28 compressed rows (median -0.0245); train's fine-tuned rows are not monotone in j under protocol ii but are under C3DGS's evaluation; `ogc_gram_ours` equals `ogc_gram` in all 12 processes; fine-tuning re-fits OGC's AC grid (x 1.38 to 3.55; train above the gate maximum x 3.16). | descriptive | s23 "Mechanics notes" | `check_s23.py` | as G1 | records only; the cause of treehill's negative gap is not known | no |
 
 ## Gaps
 
@@ -172,7 +195,8 @@ OGC.** Inside C3DGS, OGC is ahead of GN-VQ on development scenes (D5, D6).
    confounded, `SE_noise` 0.1190), against E5's mean +0.0604 dB over seven scenes. Different scenes and designs; E5p's
    value must not be quoted as a replication of the paper's +0.09.
    E6 part (b) adds a third value: the equal-rate P_FT `P_bar` 0.0425 dB (F1). E5's +0.0604 dB (A5, j = 0, unequal bytes)
-   and F1 measure different things on separate runs; neither replaces the other.
+   and F1 measure different things on separate runs; neither replaces the other. E6 part (a)'s per-scene P_FT values
+   (G2) are on development scenes, descriptive, and must not be pooled with F1.
 4. **Gate-scene reuse:** E2c's closing remark (s12) says any later held-out claim needs "new scenes or checkpoints".
    E5 reuses five of E2c's scenes with INRIA's checkpoints. That is consistent with "or checkpoints" but must travel
    as a disclosure (Amendment 17 d).
