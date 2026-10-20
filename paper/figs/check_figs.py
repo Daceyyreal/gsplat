@@ -213,16 +213,17 @@ def run():
         C.has(s23, f"| {s} | {row} | {held} |", f"T3 FINDINGS s23 {s}")
         C.has(T, f"{s} & " + row.replace(" | ", " & ") + f" & {held}" + r" \\", f"T3 tex {s}")
 
-    # ---- F1: every plotted point equals its bundle row
+    # ---- F1: every plotted point equals its bundle row; both panels from E6 part (b), the same processes
     f1 = read_csv("f1_rd_points.csv")
     want = []
     for s in GATE:
-        for run, rows in (("E5", ("c3dgs", "ogc_scalar", "ogc_gram")), ("E6", ("c3dgs_ft", "ogc_gram_ft"))):
-            R = R5[s] if run == "E5" else R6[s]
+        for run, rows in (("E6", ("c3dgs", "ogc_gram")), ("E6", ("c3dgs_ft", "ogc_gram_ft"))):
+            R = R6[s]
             for row in rows:
                 for p, j in zip(SEED0, (-1, 0, 1)):
                     want.append((s, run, row, str(j), R[p + row]["npz_bytes"], float(R[p + row]["PSNR_ii"])))
     C.ok(len(f1) == len(want), f"F1 point count {len(f1)} != {len(want)}")
+    C.ok({g["row"] for g in f1} == {"c3dgs", "ogc_gram", "c3dgs_ft", "ogc_gram_ft"}, "F1 rows: no ogc_scalar")
     for g, w in zip(f1, want):
         C.ok((g["scene"], g["run"], g["row"], g["j"], g["npz_bytes"]) == w[:5], f"F1 point {w[:4]}")
         C.num(g["PSNR_ii"], w[5], f"F1 PSNR {w[:4]}")
