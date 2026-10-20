@@ -3170,6 +3170,13 @@ def test_findings_section_24_numbers_recheck_from_the_repo():
     assert res["fails"] == [] and res["n_numbers"] > 30
 
 
+def test_findings_section_25_numbers_recheck_from_the_repo():
+    import check_s25
+
+    res = check_s25.run()
+    assert res["fails"] == [] and res["n_numbers"] >= 10
+
+
 def test_paper_figs_recheck_from_the_repo():
     """paper/figs/check_figs.py: every table cell and plotted value in paper/figs/out/ recomputed independently from
     the committed bundles and matched against the FINDINGS values it mirrors. The outputs are committed after the
