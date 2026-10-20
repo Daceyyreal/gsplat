@@ -7279,3 +7279,47 @@ def test_e7_carry_over_of_halves():
     assert _carried("S1", {"kitchen": {"processes": {}}}) == []  # kitchen's seed-0 half is S2's
     assert _carried("S9", {"kitchen": {"processes": settled0}}) == [{"scene": "kitchen", "half": 1}]  # S8's, unsettled
     assert _carried("S8", {"kitchen": {"processes": settled0}}) == []  # S8's own lane
+
+
+E7_E5_E6_FILES_SHA256 = {  # sha256 of each file's content at 53dde708 (Amendment 20), LF line endings
+    "kaggle/e5_scenes.py": "91358c31ca4aec1e1c2b14434f9cb0a58a3b3d2147cc60e9d908a26e723190db",
+    "bench/gn/e5.py": "4e444ae6205e283c6257f99d0159d883762daa9294d250951f7db48e3e1e4b5e",
+    "bench/gn/e5_verdict.py": "7a939fa713a6b5f4b09f26f6809f73d838e0c97115d16165b6bad70e81ffe6ae",
+    "kaggle/gn_e5_scene.py": "2c83bf106645791e242b048b7948de2ab758ee563b0b4aeb98caf529297283bb",
+    "bench/gn/e5_estimate.py": "9735a29e0ff6832ce91b1d6a941c730f2b06b23da2243aa19f0a7b8c8689426e",
+    "bench/gn/e5_feasibility.py": "e63b9090bf30e933584d03925e9648df5974f44cbfd61b42bd27b14d6d9e6234",
+    "kaggle/build_gn_e5_bench.py": "0da014d4ad17b7051c19dc20bf73aa5b29e186efbf6fc6811598266a18950757",
+    "kaggle/gn_e5_bench_S1.ipynb": "32f7adbc88868cf4eca3801f6672c6aa124aa8b978c2252bbd5f884420d3eacf",
+    "kaggle/gn_e5_bench_S2.ipynb": "ed9927ac8de23d03a247dcfd69137638023b874a36ad5f9ee816629f6de25c03",
+    "kaggle/gn_e5_bench_S3.ipynb": "3d72bceebb7c492cf294bfa7030c73f974ec4ed1fa66c82943a7ec0b93aaccf1",
+    "kaggle/e5_hooks.py": "3d85ceebc0c4cb8cf7d06e9820105d8497754d9568ea77e684ed09df25066548",
+    "kaggle/e5_data.py": "2bb5c397fdfe9d9bbd99d6c421623eff100368a2ec2f2f7299dfdccd88b84dd8",
+    "kaggle/e6_scenes.py": "eb0fcac52ca2c10bbaed167eabc0e518a014267770620474948efc5b898f9ff7",
+    "kaggle/gn_e6_scene.py": "ed84b70badb53c9915d888a8cd5f921e5c43fbe3bdd9073f8f9d1205fedad5f1",
+    "bench/gn/e6.py": "3b8b459913f540351013f59e05a91aca1fe5dd41079d76794e36565fa53841f6",
+    "bench/gn/e6_estimate.py": "c1db3b1151391f34e701b298306f34eaf22959d0a063df8626ea9995f16dc801",
+    "bench/gn/e6_feasibility.py": "3f91310a16e363662d106a1a4fedc7dcebfdc62208b013d5cb21660888a2de88",
+    "kaggle/build_gn_e6_bench.py": "5257e49f2461ddcfbdb7c87d6b31d9f01a107077dadcb2094f382263cc12b4d3",
+    "kaggle/e6_sessions.json": "7a8361ea00d1baaf13366a0c1482805f216b723e6c8a911a5babe9cd7ee6f1b9",
+    "kaggle/gn_e6_bench_S1.ipynb": "2a5efada252c685229872b8c7216a854a0b88d9e93c2033c4af0ad6c9de39fee",
+    "kaggle/gn_e6_bench_S2.ipynb": "da03a12bef4c92818c893b3f4dfee830a8beddb69dc8713ef90b2910d1437f11",
+    "kaggle/gn_e6_bench_S3.ipynb": "a8bdaa6f85d7f8d4ebf5ef911a9480727dc7c65b8feb726a62e69b3f7297e43e",
+    "kaggle/gn_e6_bench_S4.ipynb": "7e8667adb1986621c7a8bf20a2fea05ba8a8e2543a7a36157b2ab411e6bf6f57",
+    "kaggle/gn_e6_bench_S5.ipynb": "cbf16e3a457ea1389895afb44ed46607475e08644f3db3ae24a8addbb457434f",
+}
+
+
+def test_e7_leaves_e5_and_e6_files_byte_identical():
+    """Amendment 20 k: E5's files (Amendment 19 g's list, with e5_hooks.py and e5_data.py as E6's test pins them) and
+    E6's (e6_scenes.py, gn_e6_scene.py, e6.py, e6_estimate.py, e6_feasibility.py, build_gn_e6_bench.py, e6_sessions.json
+    and the five notebooks) are byte-identical to 53dde708 (CRLF normalised to LF, as the repository stores them). The
+    FINDINGS checkers of sections 19-25 run in this suite unchanged (test_findings_section_19 ... _25)."""
+    import hashlib
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    for rel, want in E7_E5_E6_FILES_SHA256.items():
+        data = open(os.path.join(repo, *rel.split("/")), "rb").read().replace(b"\r\n", b"\n")
+        assert hashlib.sha256(data).hexdigest() == want, rel
+    assert set(E6_E5_FILES_SHA256.items()) <= set(E7_E5_E6_FILES_SHA256.items())  # E6's pins, unchanged since f7716485
+    for n in range(19, 26):
+        assert callable(globals()[f"test_findings_section_{n}_numbers_recheck_from_the_repo"]), n
