@@ -4258,3 +4258,95 @@ process one E6 process plus 8 fine-tuned and 2 `*_own` rows, and a `j±1_p1` pro
 - **Amendment 19:** E6's verdict, rows and bundles are untouched; E7's arm R repeats E6's fine-tuning and is reported
   beside it (g.4) without re-judging it.
 - **Unchanged:** everything not named here.
+
+### Amendment 20 note 1 (2026-10-20, after Amendment 20 (`53dde708`) and before any E7 code): the estimate from E5's model, the split and the session plan (20 j)
+
+Amendment 20 j asks for this dated note before any E7 code. It is an estimate, not a measurement. It reads no scene data,
+and it changes no scene, process, row, arm, guard, primary, test, margin or outcome of Amendment 20. It replaces 20 j's
+time table, its nine-session list and its 71-75 GPU-hour total with the figures below. 20 j's rule is applied unchanged:
+a scene whose high estimate exceeds the session's budget is split into its seed-0 half and its seed-1 half. Dace chose,
+on 2026-10-20, to apply that rule to the model's figures as written.
+
+**The model** is E6's (`bench/gn/e6_estimate.py`, Amendment 19 note 1), by import. That is E5's
+`bench/gn/e5_estimate.py` with E6 part (b)'s rows and no edit to E5's or E6's files. E7's estimate module reproduces this
+note's tables by test (20 k). E7's rows are added to it as follows:
+- **every E7 process starts from E6's process with the same j and seed** (`c3dgs`, `ogc_gram` and arm R). The j = 0
+  processes' fine-tuned rows are the model's, and the j = -1 and +1 ones are at FINDINGS section 20's per-row time;
+- **a full process** (`j-1_p0`, `p0`, `j+1_p0`, `p1`) adds:
+  - the eight fine-tuned rows of arms G, CG, K and O, each at E6's figure for a fine-tuned row E5 did not run: section
+    20's per-row fine-tuning time (365.2 s at the low end, 698.4 s at the high end), its C3DGS evaluation and its
+    decoded-row steps. That is 449-956 s per row by scene at the low to high end, before the CPU ratio;
+  - the two `*_own` rows. They have no VQ and no fine-tuning: each is the model's save per splat, its C3DGS evaluation
+    and its decoded-row steps, 87-260 s per row by scene;
+- **`p0`** also adds the replicate pair, two more fine-tuned rows at the same figure;
+- **`j-1_p1` and `j+1_p1`** are E6's j = -1 and j = +1 processes;
+- **the harness before the processes** (fetch, download, runner, protocol ii of the uncompressed model, the GN pass and
+  note ii) is E6's. A split scene runs it once in each of its two sessions;
+- **drjohnson** runs with its images on the CPU (Amendment 17 Note 1), so its figures are x 1.01255
+  (`e5_estimate.cpu_ratio()`).
+
+**Time per scene** (s; the process figures are Note 4 (a)'s guard values for E7, each process with its decoded rows):
+
+| Scene | Whole scene, one harness (low - high) | Harness (high) | Processes at the high end: `j-1_p0`, `p0`, `j+1_p0`, `p1`, `j-1_p1`, `j+1_p1` | Seed-0 half (low - high) | Seed-1 half (low - high) |
+|---|---|---|---|---|---|
+| bonsai | 35,733 - 54,704 | 700 | 11,018, 13,909, 11,018, 12,030, 3,015, 3,015 | 23,636 - 36,645 | 12,231 - 18,760 |
+| counter | 33,098 - 51,238 | 685 | 10,328, 13,087, 10,328, 11,295, 2,757, 2,757 | 21,880 - 34,430 | 11,348 - 17,493 |
+| kitchen | 35,478 - 56,798 | 742 | 10,956, 15,012, 10,956, 13,142, 2,995, 2,995 | 23,457 - 37,666 | 12,169 - 19,873 |
+| room | 36,716 - 57,387 | 729 | 11,286, 14,878, 11,286, 12,967, 3,120, 3,120 | 24,288 - 38,180 | 12,571 - 19,937 |
+| truck | 24,391 - 42,048 | 741 | 8,734, 10,551, 8,734, 8,960, 2,164, 2,164 | 16,483 - 28,759 | 8,056 - 14,030 |
+| drjohnson | 31,904 - 56,178 | 838 | 10,320, 15,510, 10,320, 13,713, 2,739, 2,739 | 21,228 - 36,988 | 10,855 - 20,028 |
+| playroom | 28,696 - 48,989 | 752 | 9,514, 13,008, 9,514, 11,317, 2,442, 2,442 | 19,148 - 32,789 | 9,700 - 16,952 |
+
+- **The budget** is Note 4's: from setup's end (setup taken at 420 s), every C3DGS run ends by 39,180 s and every scene
+  starts by 33,780 s.
+- **Every scene's whole high estimate is above 39,180 s, so all seven scenes are split.** Every half fits a session
+  alone. No seed-0 half fits beside any other half: the shortest seed-0 half (28,759 s) and the shortest seed-1 half
+  (14,030 s) together are above the budget. So each seed-0 half has a session of its own.
+- **The seed-1 halves**, 127,073 s in all at the high end, are above three sessions' budget (117,540 s), so they need
+  four sessions.
+- **Against 20 j:** j's table took E6 part (b)'s measured jobs and added E7's rows. Those jobs (`timings_s.job` in
+  each scene's meta) came in at 0.79-1.07 of E6's model's low end and 0.47-0.61 of its high end. That is why j split only
+  kitchen, room and drjohnson, and why the model's high end splits all seven. Context only.
+
+**The session plan** (one lane per session, as 20 j: no pair fits under Note 3's model with E6's x 1.094 miss,
+Amendment 19 note 1):
+- **The seed-0 halves come first,** one per session, the longest first (the tightest session first, so that a
+  deferred process carries into a later session, as in Amendment 19 note 1).
+- **Then the seed-1 halves,** packed two to a session where both fit. Of every assignment to four sessions that meets
+  both limits at the high end, the plan takes the one that leaves the most spare time in its tightest session. These
+  sessions also run tightest first, and within a lane the longer half runs first.
+- **Every scene's seed-1 half runs in a later session than its seed-0 half.** So each scene's j = 0 seed pair (`p0`
+  against `p1`) spans two sessions, and its seed-1 curve and arm R's seed-1 points come from one session. Note 2 C6
+  reports a pair that spans two Kaggle images.
+
+| Session | Kaggle title | Halves, in order | Later half starts (low - high) | Lane ends (low - high) | Spare at the high end | Session hours, setup included |
+|---|---|---|---|---|---|---|
+| S1, seed 0 | E7 OGC FT-dissection S1 | room seed 0 | - | 24,288 - 38,180 | 1,000 | 6.86 - 10.72 |
+| S2, seed 0 | E7 OGC FT-dissection S2 | kitchen seed 0 | - | 23,457 - 37,666 | 1,514 | 6.63 - 10.58 |
+| S3, seed 0 | E7 OGC FT-dissection S3 | drjohnson seed 0 | - | 21,228 - 36,988 | 2,192 | 6.01 - 10.39 |
+| S4, seed 0 | E7 OGC FT-dissection S4 | bonsai seed 0 | - | 23,636 - 36,645 | 2,535 | 6.68 - 10.30 |
+| S5, seed 0 | E7 OGC FT-dissection S5 | counter seed 0 | - | 21,880 - 34,430 | 4,750 | 6.19 - 9.68 |
+| S6, seed 0 | E7 OGC FT-dissection S6 | playroom seed 0 | - | 19,148 - 32,789 | 6,391 | 5.44 - 9.22 |
+| S7, seed 0 | E7 OGC FT-dissection S7 | truck seed 0 | - | 16,483 - 28,759 | 10,421 | 4.70 - 8.11 |
+| S8, seed 1 | E7 OGC FT-dissection S8 | kitchen seed 1, playroom seed 1 | playroom 12,169 - 19,873 | 21,869 - 36,825 | 2,355 | 6.19 - 10.35 |
+| S9, seed 1 | E7 OGC FT-dissection S9 | bonsai seed 1, counter seed 1 | counter 12,231 - 18,760 | 23,579 - 36,253 | 2,927 | 6.67 - 10.19 |
+| S10, seed 1 | E7 OGC FT-dissection S10 | room seed 1, truck seed 1 | truck 12,571 - 19,937 | 20,627 - 33,967 | 5,213 | 5.85 - 9.55 |
+| S11, seed 1 | E7 OGC FT-dissection S11 | drjohnson seed 1 | - | 10,855 - 20,028 | 19,152 | 3.13 - 5.68 |
+
+- **Eleven sessions.** Every half starts before 33,780 s and every lane ends before 39,180 s, at the high end with no
+  retry.
+- **The jobs come to 227,051-372,530 s (63.07-103.48 GPU-hours), the seven repeated harnesses included.** With setup,
+  that is **64.35-104.76 session-hours**: at the high end at least four weeks of Kaggle's 30 GPU-hours a week. A session
+  that does not fit the week's remaining quota waits for the next week (Note 4).
+- **Titles and bundles** (20 l): "E7 OGC FT-dissection S1" to "S11", bundles `E7_bundle_S1.zip` to `E7_bundle_S11.zip`,
+  arcname `gn7/`. Each session attaches every earlier E7 session's output.
+
+**Known risks.**
+- **S1's spare is 1,000 s at the high end.** A retry of one of room's seed-0 processes (11,286-14,878 s), or a wheel
+  rebuild (3,922.0 s in E5p), does not fit it. Under Note 4 (a) the guard then defers room's last processes. They carry
+  into the next session after its own lane, and any process S11 leaves runs in an added E7 session, whose notebook is
+  built then (Note 4).
+- **The tight sessions:** S2, S3, S4, S8 and S9 have 1,514-2,927 s spare, so the same applies to them.
+
+**Erratum to Amendment 20:** its heading should read "after FINDINGS sections 21-25". Section 25 (`1b063523`) was
+committed before the amendment.
