@@ -62,8 +62,8 @@ is ingested** (`87cc6a59`), **and so are S2** (`94551278`) **and S3** (`13a95aa1
 passes (FINDINGS section 21, `6bd340a0`, `check_s21.py` `251c305c`; descriptive section 22, `4686acc0`, `check_s22.py`
 `faedf2dd`; CLAIMS group F, `faa99c55`, 59 rows). **E6 S4 and S5 ran and are ingested** (`9ce9b36e`, `6ff4877e`). **E6 is closed**
 (parts (a) and (b)): FINDINGS section 23 (`0049d81f`, `check_s23.py` `52b6ab0c`), CLAIMS group G (`eb4d6620`, 67 rows).
-**Amendment 20 (E7) committed `53dde708`; next: Amendment 20 note 1 (estimate re-derivation), then E7 code, tests,
-dry run.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
+**Amendment 20 (E7) `53dde708` and its note 1 `2d8056ec` (every scene split, eleven sessions); E7 built
+(`dd483073`-`075d8d5f`) and its dry run passed (`17161955`); next: E7 S1 on Kaggle.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
 `4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b)), checker `check_figs.py` (paper figures:
@@ -172,6 +172,7 @@ Untracked local drafts (excluded in `.git/info/exclude`, never commit or post): 
 | `e6_scenes.py` | E6's scenes, processes and rows (Amendment 19, note 1): the two parts' scene sets, INRIA pins (flowers' from `gn_e6_flowers/`), covered sizes, start devices, rows per part |
 | `gn_e6_scene.py` | E6's job, one scene per process: `gn_e5_scene.py` with only pinned lines changed (`test_gn_e6_scene_diff_is_pinned`); E5's files byte-identical by test |
 | `e6_sessions.json` | Amendment 19 note 1's session plan (S1-S3 part (b), S4-S5 part (a)) |
+| `e7_scenes.py` / `e7_hooks.py` / `gn_e7_scene.py` / `e7_sessions.json` / `build_gn_e7_bench.py` / `gn_e7_bench_S1.ipynb` to `S11` | E7 (Amendment 20, note 1): the scenes, processes, halves, rows and arms; the arms inside C3DGS's process through `e4p_hooks`' per-row hook (own grids, guard, logs); the job (E6's, diff pinned; `--halves`); note 1's eleven sessions; the notebooks "E7 OGC FT-dissection S#" (bundles `E7_bundle_S#.zip`, arcname `gn7/`; build output, edit the builder). `bench/gn/e7.py` is the verdict, `bench/gn/e7_estimate.py` note 1's estimate, `bench/gn/dryrun/dryrun_gn_e7.py` the dry run |
 | `build_gn_e6_bench.py` / `gn_e6_bench_S1.ipynb` to `gn_e6_bench_S5.ipynb` | E6's notebooks (titles "E6 OGC FT-curves S1"-"S3", "E6 OGC descriptive S4"-"S5"; bundles `E6_bundle_S#.zip`, arcname `gn6/`); build output, edit the builder |
 | `gn_e6_flowers/` | flowers' header read (`header_read.py`, `header_read.json`; Amendment 19 note 2) |
 | `gn_e6/S1/gn6/` to `gn_e6/S5/gn6/` | E6's five session bundles (15 / 18 / 22 / 12 / 13 files; `87cc6a59`, `94551278`, `13a95aa1`, `9ce9b36e`, `6ff4877e`), unpacked unchanged, file names kept from E5 (`gn5_*`); S1-S3 part (b) (FINDINGS sections 21-22), S4-S5 part (a) (section 23) |
@@ -4645,6 +4646,87 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   Nothing in PREREG changed.
 - **Next action: none queued; awaiting Dace.**
 
+### Amendment 20 note 1 and E7's build (2026-10-20)
+
+- **Orientation:** the tree was clean and HEAD = `fork/bench/gn-vq` = `c493dfd4`, as expected.
+- **Dace's decision (2026-10-20), before note 1:** E5's model (through E6's estimate) with E7's rows puts every
+  scene's whole high estimate above the 39,180 s budget. So 20 j's rule, applied as written, splits all seven scenes:
+  **eleven sessions, not nine.** Dace chose this over keeping 20 j's nine sessions or amending j first.
+  - A correction to the question as it was put: it said E6 part (b)'s measured jobs ran at "about 0.6 to 0.8" of
+    the model's high end. The computed figure, now in note 1, is 0.47-0.61 of the high end (0.79-1.07 of the low).
+- **Commits, in order** (pytest before each through `.venv`'s Python with pipefail, a kept log in `F:\pytest_logs\`
+  and `GN_OGC_SRC`, never alongside a dry run; the ancestor check; fast-forward pushes to `fork`):
+
+  | Commit | What | Gate log | pytest |
+  |---|---|---|---|
+  | `2d8056ec` | Amendment 20 note 1, alone: the estimate, the split (all seven), eleven sessions, the erratum to 20's heading | `gate_20261020_225014_a20_note1.log` | 209 |
+  | `dd483073` | `kaggle/e4p_hooks.py`: the opt-in per-row hook (no-op by default); test: E4p's, E5's, E6's forks bit-identical against `2d8056ec`'s file, the diff pinned | `gate_20261020_230013_e7_hook.log` | 210 |
+  | `433ec4db` | `kaggle/e7_hooks.py`, `kaggle/e7_scenes.py`, install's `"e7"` branch, the stand-in's opt-in gradient fine-tuning; tests | `gate_20261020_231316_e7_hooks_scenes.log` | 216 |
+  | `b7a8e84f` | `bench/gn/e7_estimate.py`, `kaggle/e7_sessions.json`; test reproducing note 1 | `gate_20261020_231831_e7_estimate.log` | 217 |
+  | `37836004` | `kaggle/gn_e7_scene.py` (diff pinned) and `bench/gn/e7.py` (the verdict); tests | `gate_20261020_232828_e7_job_verdict.log` | 220 |
+  | `318d50cc` | `kaggle/build_gn_e7_bench.py`, `kaggle/gn_e7_bench_S1.ipynb` to `S11`; tests | `gate_20261020_233352_e7_notebooks.log` | 222 |
+  | `ffde8bca` | the byte-identity test of E5's and E6's files (sha256 at `53dde708`) | `gate_20261020_233722_e7_byte_identity.log` | 223 |
+  | `52785c26` | `bench/gn/e7.py`: per-scene image spans (Note 2 C6); test | `gate_20261020_234119_e7_spans_images.log` | 223 |
+  | `075d8d5f` | the guard test on `j0_p0` (the replicate passing), the K-restore check by row | `gate_20261021_000642_e7_guard_replicate.log` | 223 |
+  | `17161955` | `bench/gn/dryrun/dryrun_gn_e7.py` | `gate_20261021_002846_e7_dryrun.log` | 223 |
+
+  Step 2's order was a, b, d, c, e, f: the estimate (d) went before the job (c) because the job imports it for Note 4
+  (a)'s guard. Tests added: 14 (209 at note 1, 223 now; the dry run is not collected by pytest).
+- **The code, and the choices the amendment left open:**
+  - **`kaggle/e4p_hooks.py`** gains `ft_before_finetune` (after the row's restore, install and `pre_finetune_sha1`) and
+    `ft_before_save` (after Amendment 18 note 2's record, before `save_npz`), both doing nothing, and `install`'s
+    `"e7"` branch (before `"e5"`, since E7's config carries both). The test runs E4p's, E5's and E6's forks on the
+    stand-in with `2d8056ec`'s `e4p_hooks.py` (via `git show`) and with the current one: the saved arrays and the
+    reports (times, host RSS and paths left out) are equal. FINDINGS section 24 cites `e4p_hooks.py` line numbers at
+    its own commit; they have moved by two lines and section 24 is not edited.
+  - **`kaggle/e7_hooks.py`** (`E7Hooks`, a subclass of E5's) takes E7's fine-tuned rows by full name. The fork's loop
+    names a row `self.e4p.ft_name(row)`, so E7 wraps `e4p` (`_Names`) instead of changing the shared file again.
+  - **The own grid** is torch's min/max qparams for qint8 (`MinMaxObserver`'s, computed in `own_qparams`; a test shows
+    it equal to the observer's). One end of the range can then lie up to half a step past the end code, where it rounds
+    to that code. So "no value outside it" is read as **no value clamped**, which a test and every `*_own` row's log
+    check (`max_steps_beyond` <= 0.5). `own_grid` also writes the observer's minimum and maximum, so C3DGS's evaluation
+    of an `*_own` row (observer on) keeps the row's grid.
+  - **`j-1_p1` and `j+1_p1` have no primary rows** (they serve g.5 only): a failure there is recorded, not rerun.
+  - **One complete primary:** if the other is incomplete, it is tested alone at the first position's critical value
+    (conservative; 20 f does not say).
+  - **Note 1's packing rule ties:** two packings of the seed-1 halves leave 2,355 s in the tightest session. Note 1's
+    table has the one with more spare in the next-tightest session (5,213 s against 5,122). The test pins both facts.
+  - **The restore** (E7's notebooks) takes each scene's result files and INRIA members and **no work directory**: a
+    later process re-lays out its model and reruns the harness, and a work directory keeps every row's `.npz` (66 rows
+    a scene).
+  - **The stand-in** (`bench/gn/dryrun/fake_c3dgs/`) fine-tunes by gradients through its fake quantizers with C3DGS's
+    seven Adam groups when `E7_FAKE_FINETUNE=1`; off by default, so every earlier dry run and test is unchanged.
+  - **E5's and E6's files are byte-identical** to `53dde708` (24 files, sha256, LF): E6's list (E5's twelve, with
+    `e5_hooks.py` and `e5_data.py`) plus E6's six modules, `e6_sessions.json` and five notebooks. `check_s19` to
+    `check_s25` pass unchanged in every gate.
+- **The dry run** (`bench/gn/dryrun/dryrun_gn_e7.py`, alone): `F:\pytest_logs\dryrun_20261021_001002_e7.log`, exit 0, 1,101 s, from `075d8d5f`'s code (the script committed in `17161955`):
+  - (0) the eleven notebooks: titles, halves, attachments, 8 code cells in order, all compiling; `e7_sessions.json` as note 1;
+  - (1) **room split**: its seed-0 half in a session run with S1's notebook (44 rows, every arm, the replicate and the `*_own` rows ok, every guard passing), its seed-1 half in one run with S10's notebook on another image (22 rows); the harness reran in S10 (`gn_history`); S1's result files and INRIA members restored, no work directory;
+  - (2) **counter unsplit**: both halves in one session, one GN pass and one note ii, 66 rows ok;
+  - (3) **the inverted guards** in a throwaway copy whose save hook moves one frozen value: every G, CG, K and O row of kitchen's seed-0 half failed with `frozen_changed` (G and O `colour grids`, CG `_features_dc[:16]`, K `_opacity`), R's and the replicate's ok; each process lost its primary rows, was rerun once (17 i), then done;
+  - (4) the bundles `E7_bundle_S1.zip` (8 files), `_S5` (9), `_S10` (10, carrying room's and counter's files), all under `gn7/`, no `.npz` / `.ply` / `.pt` / `.py`; `bench/gn/e7.py` over them: both primaries `incomplete` (n = 7, five scenes without stand-in rows), room's and counter's BD per arm and noise computed, room's seed pair spanning two images; the guard's estimates are `e7_estimate`'s. The stand-in values mean nothing.
+  - **One fix, in the dry run only:** the first attempt (`dryrun_20261020_234729_e7.log`) passed stages 0-3 and failed stage 4 on its own expectation of `gn5_env_S1.json`, which the install cell writes and the dry run does not run (as E6's). No run-path file changed.
+- **The code-identity rule for E7's ingest.** At each session's ingest,
+  `git diff --stat `17161955`..<the session's gsplat commit> -- kaggle/*.py kaggle/gn_e7_bench_S*.ipynb kaggle/e7_sessions.json bench/gn/*.py bench/gn/dryrun/fake_c3dgs/`
+  **must list no run-path file.** The run-path files are every file under those paths except `bench/gn/test_gn.py`
+  and `bench/gn/check_s*.py`, which the run path does not import (checked 2026-10-21: importing the job, the verdict, the scenes, the estimate, the builder, the wrapper and the hooks loads 1,703 modules, 87 from the repository, none of them `check_s*` or `test_gn` (`F:\pytest_logs\importtrace_e7_runpath.log`; `python -X importtime` lists neither, `F:\pytest_logs\importtime_e7_runpath.log`); the run path's other mentions of those names are comments and the wrapper's `check_sample` / `check_seed`). If anything else is listed: STOP. A
+  checker or test added before a session is listed, and its import trace is checked against this rule first, as for
+  E6 S4.
+- **E7 S1 on Kaggle:**
+  1. Import `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e7_bench_S1.ipynb`; title
+     **"E7 OGC FT-dissection S1"**.
+  2. Attach **"E5p OGC dissection pilot", attempt 2's version, pinned** (the wheel), and the private dataset **"E5p OGC
+     source 49ccae72"**. There is no earlier E7 output.
+  3. Accelerator **GPU T4 x2**, Internet **on**. Save & Run All.
+  4. **The first output must be the `OGC PREFLIGHT` lines, both ok** (url and dataset).
+  5. S1 runs **room's seed-0 half** (`j-1_p0`, `j0_p0` with the replicate pair, `j+1_p0`; 44 rows and `uncompressed`)
+     on the GPU: note 1's 24,288-38,180 s, 1,000 s spare at the high end.
+  6. Bring back `/kaggle/working/E7_bundle_S1.zip` (arcname `gn7/`), and keep the session's output version: S2 ("E7 OGC
+     FT-dissection S2", kitchen's seed-0 half) attaches it, and every later session attaches every earlier one.
+- **S1 readiness:** `kaggle/gn_e7_bench_S1.ipynb`, sha256 `e55560f014c105447f089c6d64810e2a767bd4b62ed47de3983985ae909d1f26`
+  (LF), unchanged since `318d50cc` and equal at `17161955`; the builder rebuilds it byte-identical (pytest).
+- **Next action: run E7 S1 on Kaggle.**
+
 ### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; E6 part (a), FINDINGS section 23; E6 closed; next: none queued)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
@@ -4758,7 +4840,9 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   14. ~~Dace's reading of part (a); FINDINGS (E6 part (a)) and its checker; CLAIMS~~ **done (2026-10-20):** `0049d81f`,
       `52b6ab0c`, `eb4d6620` (see "E6 closed (2026-10-20)"); E6 closed;
   15. ~~next: none queued~~ FINDINGS sections 24-25 and Amendment 20 (E7, `53dde708`) committed;
-  16. **next: Amendment 20 note 1 (estimate re-derivation), then E7 code, tests, dry run.**
+  16. ~~Amendment 20 note 1, then E7 code, tests, dry run~~ **done (2026-10-20/21):** `2d8056ec`-`17161955` (see
+      "Amendment 20 note 1 and E7's build (2026-10-20)");
+  17. **next: E7 S1 on Kaggle, then S2-S11 in note 1's order.**
 - ~~**Note 4's S2 session-hours** are printed as 4.32-7.71 h; the code gives 7.70 h.~~ **Corrected (2026-10-12):** the
   erratum `1b532e40`. Dace approved rule (b)'s rewording the same day.
 - **The unexplained npz2ply failure** (one dry run, 2026-10-10, room's rerun `ogc_gram`): not reproduced alone or under
@@ -5066,7 +5150,7 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   `88b5ebed`) and passed (FINDINGS sections 19-20). Amendment 19 (`f7716485`, note 1 `0f77b0de`, its erratum
   `8ea6e0c9`, note 2 `b7ad2329`) registers E6; E6 ran in five sessions (`87cc6a59`, `94551278`, `13a95aa1`, `9ce9b36e`,
   `6ff4877e`): part (b) passed (FINDINGS sections 21-22), part (a) is FINDINGS section 23. **E6 is closed; Amendment 20 (E7) is
-  committed (`53dde708`); next: Amendment 20 note 1, then E7 code, tests, dry run.** `paper/CLAIMS.md` holds 67 rows (groups A-G). `bench/gn/check_s11.py` to `check_s23.py` re-check FINDINGS
+  committed (`53dde708`) with note 1 (`2d8056ec`); E7 is built and its dry run passed (`17161955`); next: E7 S1.** `paper/CLAIMS.md` holds 67 rows (groups A-G). `bench/gn/check_s11.py` to `check_s23.py` re-check FINDINGS
   sections 11-23 and run under pytest; sections 1-10 have no committed checker. The rest of E3's design (other codecs,
   INRIA checkpoints) is not written yet.
 
