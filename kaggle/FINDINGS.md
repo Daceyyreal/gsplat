@@ -161,6 +161,15 @@ not pre-register; no new run and no verdict.**
 - **Section 22 d's pattern** (the per-j difference after fine-tuning rising with j) held on flowers but not on train or
   treehill.
 
+**Fine-tuning and the int8 colour grids (section 24, branch `bench/gn-vq`): analysis-only corrections, descriptive and
+post hoc; no run.**
+- **The AC re-fit's documented effect is on bytes; that it causes the PSNR lead to shrink is untested,** and the
+  exploratory correlations run the wrong way (the gain difference against OGC's AC ratio: rho -0.89 over the seven
+  scenes).
+- **P1 was measured with OGC's AC codebook clamped:** the grid before fine-tuning is the checkpoint's own feature range,
+  and 24 to 157 of OGC's AC codebook values per process lie outside it; C3DGS's never do.
+- **Fine-tuning closes most of the gap the VQ left** (slope 0.73), a trend that is partly an identity.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -274,6 +283,11 @@ not pre-register; no new run and no verdict.**
   scenes' ranges, and the quoted predictions from `kaggle/PREREG_GN.md` (`f7716485`). `bench/gn/check_s23.py`
   recomputes every number in the section from those files, with `bench/gn/check_s21.py`'s fit beside the tool's and the
   sessions' summaries, and checks each against the text.
+- Section 24: every number comes from the three E6 part (b) session bundles, `kaggle/gn_e6/S1/gn6/` (`87cc6a59`),
+  `S2/gn6/` (`94551278`) and `S3/gn6/` (`13a95aa1`), each scene from the session that ran it, and for E5's clamping
+  counts from E5's bundles (`9a90dabb`, `1710cc8a`, `88b5ebed`). The readings of C3DGS's source (`2a234af5`) and of
+  torch 2.11 are code reading, not checked. `bench/gn/check_s24.py` recomputes every number in the section from those
+  files, with `bench/gn/check_s21.py`'s loaders, and checks each against the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -4875,3 +4889,120 @@ counterfactual (`ogc_gram_ft`'s bytes replaced by `c3dgs_ft`'s at the same j, a 
     K = 4,096, one GPU type and one Kaggle image;
   - most of part (a)'s BD-rates are not interpretable (shared PSNR range below 0.1 dB);
   - the cause of treehill's negative evaluator gap.
+
+## 24. Fine-tuning and the int8 colour grids (descriptive and post hoc; from E5's and E6 part (b)'s committed bundles and a reading of C3DGS's source, no new run) — the AC re-fit's documented effect is on bytes, OGC's AC codebook was already clamped before fine-tuning, and the exploratory correlations run against the re-fit as the cause of the shrinking lead
+
+**What this section is:** analysis-only corrections and additions that came out of the design study for CLAIMS gap 3
+(why OGC's lead shrinks with fine-tuning). Nothing here was pre-registered, no run was made, and no earlier verdict
+changes. Items are labelled **descriptive** (read from the bundles), **post hoc** (a computation chosen after seeing the
+data) or **code reading** (C3DGS at `2a234af5` and torch 2.11, read and not run; C3DGS's source is not in this
+repository, so these readings are **code reading, not checked** by `bench/gn/check_s24.py`). Every number not marked as
+code reading comes from the three E6 part (b) bundles (`kaggle/gn_e6/S1/gn6/` to `S3/gn6/`, each scene from the session
+that ran it) over all four processes of the seven gate scenes, except E5's counts, which come from E5's bundles.
+
+**The scope this section sets** (for sections 18, 20 and 22 e, which are not edited): **the AC re-fit's documented
+effect is on bytes; that it causes the PSNR lead to shrink is untested, and the exploratory correlations below run the
+wrong way.** Section 18's "a mechanism, inferred", section 20's "Fine-tuning re-fits OGC's AC grid" and section 22 e's
+"This is the mechanism sections 18 and 20 inferred" are read with this scope.
+
+### 1. Where the pre-fine-tuning grid comes from (code reading, not checked; descriptive where marked)
+
+- **C3DGS's colour quantizers are `FakeQuantize` modules with a moving-average min/max observer** (torch 2.11,
+  `fake_quantize.py:228-253`; `observer.py:675-679`, averaging constant 0.01 at `observer.py:635`). They are applied
+  in every render (`scene/gaussian_model.py:182-183, 192-193`; `gaussian_renderer/__init__.py:77, 130, 140`), and
+  every application updates the observer and recomputes the scale and zero point.
+- **The first renders are the sensitivity pass** over the uncompressed checkpoint's own per-splat features
+  (`compress.py:61-72`); the colour VQ reads the same tensor (`compression/vq.py:165-169`). After the VQ nothing
+  renders before the save, and the save (`gaussian_model.py:469-489`) quantizes with the quantizers' current state. So
+  the grid every unfine-tuned row is saved with is the checkpoint's own feature range, fitted to neither codebook.
+- **Descriptive:** `c3dgs` and `ogc_gram` record the same pre-fine-tuning grid (`qa_at_save`) in all 28 processes of
+  E6 part (b).
+
+### 2. OGC's AC codebook against that grid (descriptive)
+
+- **Before fine-tuning, OGC's AC codebook extends 159 to 389 grid steps beyond the grid** (per scene, the largest over
+  its four processes), and its values outside the grid are clamped at the save: 24 to 157 of OGC's AC codebook values
+  per process in E6 part (b), 41 to 110 in E5's j = 0 processes. **So P1 (sections 19 and 21) was measured with OGC's
+  AC codebook clamped.** OGC's DC codebook has at most 3 DC values outside the grid per process.
+- **C3DGS's AC codebook is never outside the grid,** in any process of E5 or E6 part (b).
+- **After fine-tuning, OGC's trained codebook still reaches 159 to 394 steps beyond the pre-fine-tuning grid** (its
+  extremes barely move), while its own grid has widened (`rest_scale` x 1.59 to 3.16, section 22 e) to cover it.
+
+| Scene | OGC's AC values clamped before fine-tuning (4 processes) | Steps beyond the grid, before fine-tuning | After fine-tuning, against the pre-fine-tuning grid |
+|---|---|---|---|
+| bonsai | 43-67 | 158.5 | 159.2 |
+| counter | 92-144 | 280.0 | 280.4 |
+| kitchen | 100-157 | 229.1 | 230.0 |
+| room | 24-64 | 187.6 | 186.3 |
+| truck | 78-144 | 279.4 | 283.1 |
+| drjohnson | 43-126 | 246.1 | 248.1 |
+| playroom | 37-50 | 389.2 | 394.2 |
+
+A step is the pre-fine-tuning AC scale; the distance is the codebook's minimum below the grid or its maximum above it,
+whichever is larger (`table_range`).
+
+### 3. The DC grid re-fits too (descriptive)
+
+Fine-tuning re-fits the DC grid as well as the AC grid, and the DC grid narrows (a finer step) more for C3DGS: the DC
+scale after over before fine-tuning is x 0.47 to 1.04, mean 0.72, for `c3dgs_ft` and x 0.58 to 1.06, mean 0.85, for
+`ogc_gram_ft`, over the 28 processes.
+
+### 4. What fine-tuning trains (code reading, not checked)
+
+C3DGS's `finetune` (`finetune.py:24, 31-73`) builds a new Adam optimizer (`gaussian_model.py:266`, `eps` 1e-15, no
+weight decay) over seven parameter groups (`training_setup`, `gaussian_model.py:223-266`):
+- `_features_dc` (`:235-237`, learning rate 0.0025) and `_features_rest` (`:240-242`, 0.0025 / 20): the whole colour
+  table, so **both the K codewords and the kept splats' own colours train** (the table is the codebook followed by the
+  kept rows, `set_color_indexed` `:796-799`, `kaggle/e4p_hooks.py:388-394`); with `color_compress_non_dir` on
+  (`arguments/__init__.py:81`) each codeword includes its DC;
+- `_opacity` (`:245-247`, 0.05), `_scaling` and `_rotation` (the geometry tables, `:250-252` and `:260-262`, 0.005 and
+  0.001, `set_gaussian_indexed` `:802-807`) and `_scaling_factor` (`:255-257`, 0.005);
+- `_xyz` (`:230-232`) at learning rate 0.00016 x `spatial_lr_scale`, which is 0 when a trained checkpoint is loaded
+  (`:69` is its only assignment; `scene/__init__.py:103` loads the model): **positions do not train** (the scheduler
+  returns 0, `utils/general_utils.py:51-53`; only xyz is scheduled, `:274-280`);
+- the indices are not trained (`:796-799`, `:802-807`).
+The learning rates are C3DGS's defaults (`arguments/__init__.py:106-109`). Our fork restores each fine-tuned row from
+the copy, quantizer state included, before C3DGS's `finetune` runs (`kaggle/e4p_hooks.py:458`, `:465`, `:479`).
+
+### 5. The fine-tuning gains (descriptive)
+
+Fine-tuning's gain in protocol ii's PSNR (the fine-tuned row minus its unfine-tuned row, same process) is
++0.15 to +1.42 dB for `c3dgs` and +0.08 to +0.69 dB for `ogc_gram` per process, and C3DGS gains more in every process.
+Per scene, the mean over the four processes, with OGC's AC scale ratio (after over before):
+
+| Scene | Gain, `c3dgs` | Gain, `ogc_gram` | Difference | OGC's AC ratio |
+|---|---|---|---|---|
+| bonsai | +0.977 | +0.418 | +0.560 | 1.93 |
+| counter | +0.757 | +0.372 | +0.385 | 2.83 |
+| kitchen | +1.169 | +0.620 | +0.549 | 2.37 |
+| room | +0.916 | +0.411 | +0.505 | 2.20 |
+| truck | +0.301 | +0.087 | +0.214 | 2.43 |
+| drjohnson | +0.747 | +0.316 | +0.431 | 2.42 |
+| playroom | +0.793 | +0.194 | +0.599 | 2.20 |
+
+### 6. Correlations that run against the re-fit as the cause (post hoc, exploratory)
+
+If the re-fit caused OGC's lead to shrink, a larger widening of OGC's AC grid should go with a larger gain difference
+(`c3dgs`'s gain minus `ogc_gram`'s). The Spearman correlation (average ranks for ties) between the gain difference and
+OGC's AC ratio is rho -0.89 over the seven scenes (Pearson -0.56), rho -0.21 over the 28 processes (Pearson -0.21) and
+rho -0.30 after the gap-closing trend below is removed: the wrong sign at every level. Across processes, the gain
+difference against j is rho +0.79, and OGC's AC ratio against j rho +0.01: the gain difference follows the colour
+threshold, and the re-fit does not. Seven scenes and 28 processes; none of this is a test.
+
+### 7. Fine-tuning closes most of the gap the VQ left (post hoc, with an identity caveat)
+
+Over the 28 processes, the gain difference tracks the pre-fine-tuning gap (`ogc_gram` minus `c3dgs` in protocol ii,
++0.075 to +1.105 dB before fine-tuning, -0.119 to +0.379 dB after it) with rho +0.97 (Pearson +0.97) and a least-squares
+slope 0.73, so the gap after fine-tuning keeps about 27% of the pre-fine-tuning gap; **because the gain difference is
+the pre-fine-tuning gap minus the post-fine-tuning gap, this correlation is partly an identity: it shows that the gap
+after fine-tuning varies much less than the gap before it, not by what mechanism.**
+
+### What section 24 settles, and what it does not
+
+- **Settled (descriptive):** P1 was measured with OGC's AC codebook clamped at the checkpoint's own feature range; both
+  colour grids re-fit during fine-tuning, the DC grid more in C3DGS's favour; fine-tuning trains every colour row,
+  opacity and the geometry tables, and not positions (code reading); C3DGS gains more from fine-tuning in every
+  process.
+- **Not settled:** what makes OGC's lead shrink. The re-fit's effect on PSNR is untested, and the exploratory data run
+  against it; codebook training, the re-fit of either grid and compensation by geometry and opacity are not separated.
+  That needs a run with these factors held fixed in turn (CLAIMS gap 3; planned as E7, not yet registered).
