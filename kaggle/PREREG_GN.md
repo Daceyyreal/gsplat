@@ -3900,3 +3900,361 @@ start device of Amendment 19 and note 1.
   - The loaded size is still read from the first image at run time (17 d).
   - The `.ply` member's compressed size (810,228,197 bytes) is below the uncompressed 901,840,636 that note 1's
     estimate took as its fetch bound, so note 1's times stay upper bounds.
+
+## Amendment 20 (2026-10-20, after FINDINGS sections 21-24 and before any E7 code or data): E7, a within-process dissection of why OGC's lead shrinks with fine-tuning, on E5's seven scenes
+
+E6 ran on Kaggle in five sessions; its bundles are committed unchanged in `kaggle/gn_e6/S1/gn6/` to `S5/gn6/`
+(`87cc6a59`, `94551278`, `13a95aa1`, `9ce9b36e`, `6ff4877e`). FINDINGS section 21 reports part (b)'s verdict, pass
+(`6bd340a0`, `check_s21.py` `251c305c`), section 22 its descriptive follow-up (`4686acc0`, `check_s22.py` `faedf2dd`),
+section 23 part (a) (`0049d81f`, `check_s23.py` `52b6ab0c`), and section 24 the analysis-only corrections from the
+design of this experiment (`083fb93b`, `check_s24.py` `46695420`). This amendment registers **E7**: why it exists (a),
+the disclosure (b), scenes and processes (c), rows and arms (d), the guards and logs (e), the primaries and their
+tests (f), the secondaries (g), the outcomes, written before any data (h), the protocol (i), feasibility and sessions
+(j), the code (k), notebooks and bundles (l), the limits (m) and how E7 stands with the earlier amendments (n). G0, G1,
+G2a, H2b, G2c, E2b's criteria, E4p, E4q, E5p, E5, E6 and Amendments 1-19 with their notes are unchanged except as
+stated here. This amendment's own dated notes are titled "Amendment 20 note 1" and so on.
+
+### a. Why E7
+
+- **OGC's lead shrinks with C3DGS's fine-tuning.** Before it, at equal rate over three colour thresholds, OGC's VQ leads
+  C3DGS's by P1 replicated `P_bar` 0.3556 dB; after it, by P_FT `P_bar` 0.0425 dB (FINDINGS section 21). The gap
+  closed is 0.3556 - 0.0425 = 0.3131 dB. Why is open (`paper/CLAIMS.md` gap 3).
+- **What is known** (section 24): fine-tuning trains every colour row (the K codewords and the kept splats' own
+  colours), opacity and the geometry tables, and not positions (code reading); both colour grids re-fit during it,
+  OGC's AC grid widening x 1.59 to 3.16 and the DC grid narrowing more for C3DGS; the AC re-fit's documented effect is
+  on bytes, and its effect on PSNR is untested; the exploratory correlations run against the re-fit as the cause; and
+  fine-tuning closes most of whatever gap the VQ left (slope 0.73, partly an identity).
+- **E7 holds the candidate factors fixed in turn, inside the same forked process,** so that each comparison is between
+  fine-tunings that start from the same model, tables, quantizer state and random states (Amendment 17 b's fork and
+  copy): the colour grids (arm G), the codewords under a fixed grid (arm CG), everything but the codewords (arm K) and
+  each method's own grid (arm O), against C3DGS's own fine-tuning (arm R).
+- **E7 does not re-judge E5 or E6.** Their verdicts, bundles and FINDINGS sections 19-24 stand as written.
+
+### b. Disclosure (written before any E7 data)
+
+- **The hypotheses were formed after seeing E5's and E6's results on these seven scenes,** and after section 24's
+  exploratory analysis of E6 part (b)'s bundles. E7's primaries test interventions within each scene; **E7 makes no
+  held-out claim.**
+- The scenes' history is Amendment 19 c's disclosure, unchanged: E2 and E2c used bonsai, counter, kitchen, room and
+  truck with this project's own checkpoints; OGC's paper reports bonsai, counter, kitchen and room in its C3DGS host;
+  E5 and E6 part (b) ran all seven.
+- **No E5 or E6 row is reused.** Seeded C3DGS runs are not reproduced on the GPU (FINDINGS section 15), so every E7
+  number comes from E7's own processes.
+- **The margin and the test form (f) were chosen from E6 part (b)'s noise** (`SD_pool` 0.0326, section 21; the
+  across-scene SD of P_FT, 0.0373, section 22 a) and from E6's cross-run comparison (section 22 f), before any E7 data.
+- **E7's standard error is `SD_pool` / sqrt(n), not E5's and E6's `SD_pool` / sqrt(2 n)** (f). Each primary is a mean
+  over scenes of one BD per scene from the seed-0 curve; `SD_pool` estimates the noise of one process's paired
+  difference, so the standard error of that mean is `SD_pool` / sqrt(n). E5's and E6's `SE_noise` is the standard error
+  of a mean of two seeds per scene, which their BD values are not. Recomputed with `SD_pool` / sqrt(n) (FINDINGS section 25, `1b063523`), E5's P1 and P2
+  and E6's P_FT still pass their criterion 3 (P_FT at 3.45 x the corrected standard error against the registered 4.9);
+  E7's write-up reports this beside E7's own numbers, and it changes no earlier verdict.
+
+### c. Scenes and processes
+
+**Scenes:** E5's seven (bonsai, counter, kitchen, room, truck, drjohnson, playroom), INRIA's 30k checkpoints through
+Amendment 15 note i's pins, with E5's start devices, covered sizes, datasets and data factors (`kaggle/e5_scenes.py`;
+Amendment 17 Notes 1 and 2).
+
+**Processes per scene,** each on the scene's start device (Note 2 C1), in this order:
+
+| Process | j | seed | Rows |
+|---|---|---|---|
+| `j-1_p0` | -1 | 0 | every row of d |
+| `p0` | 0 | 0 | every row of d, and the replicate R pair |
+| `j+1_p0` | +1 | 0 | every row of d |
+| `p1` | 0 | 1 | every row of d |
+| `j-1_p1` | -1 | 1 | `c3dgs`, `ogc_gram`, `c3dgs_ft`, `ogc_gram_ft` (arm R) only |
+| `j+1_p1` | +1 | 1 | `c3dgs`, `ogc_gram`, `c3dgs_ft`, `ogc_gram_ft` (arm R) only |
+
+The seed-0 processes give every arm's curve; `p1` gives the j = 0 seed pair for the noise (f); `j±1_p1` with `p1` give
+a second, seed-1 curve for the shared-grid rows and arm R, so that P1 and P_FT each have two BD values per scene (g.5;
+CLAIMS gap 8).
+
+### d. Rows and arms
+
+**Unfine-tuned rows** (in the four full processes; the shared-grid pair in all six):
+- `c3dgs` and `ogc_gram`: C3DGS's own `vq_features` and OGC's `gram_kmeans` with `metric="gram"` (Amendment 17 b's
+  call), each saved with **the shared pre-fine-tuning grid**: the colour quantizers' state when `compress_gaussians`
+  returns, which is the checkpoint's own feature range (section 24), as in E5 and E6.
+- `c3dgs_own` and `ogc_gram_own`: the same tables, each saved with **its own grid**: each colour quantizer's scale and
+  zero point set from that row's own table part (`_features_dc`, `_features_rest`; codewords and kept rows), computed
+  as C3DGS's observer computes them (torch's min/max qparams for `qint8`, per-tensor affine) from the part's minimum
+  and maximum, so that no value of the table lies outside it. No quantizer module is called to do this.
+
+**Fine-tuned arms,** each a fine-tuning of 5,000 iterations through C3DGS's own `finetune`, started from the copy with
+the row's table installed and the copy's random states (Amendment 17 b), one per method (`c3dgs`, `ogc_gram`) and arm:
+
+| Arm | Row names | Colour grids (`features_dc_qa`, `features_rest_qa`) | What trains |
+|---|---|---|---|
+| **R** | `c3dgs_ft`, `ogc_gram_ft` | moving, as C3DGS does (observer on) | everything C3DGS trains (as E6) |
+| **G** | `c3dgs_ft_g`, `ogc_gram_ft_g` | frozen at the restored pre-fine-tuning state (observer off) | everything C3DGS trains |
+| **CG** | `c3dgs_ft_cg`, `ogc_gram_ft_cg` | as G | everything but the K codewords' DC and AC rows |
+| **K** | `c3dgs_ft_k`, `ogc_gram_ft_k` | as G | only the K codewords' DC and AC rows |
+| **O** | `c3dgs_ft_o`, `ogc_gram_ft_o` | frozen at the row's own grid (as `*_own`) | everything C3DGS trains |
+| **R, replicate** (`p0` only) | `c3dgs_ft_r2`, `ogc_gram_ft_r2` | as R | as R |
+
+- **"Everything C3DGS trains"** is its seven Adam groups (section 24): the colour table, `_opacity`, `_scaling`,
+  `_rotation`, `_scaling_factor` and `_xyz` (whose learning rate is 0 when a trained checkpoint is loaded).
+- **Freezing a grid:** after the restore and install and before `finetune`, `disable_observer()` on both colour
+  quantizers (for O, after setting the own grid). Fake quantization stays on, so fine-tuning remains
+  quantization-aware against the frozen grid. The next row's restore puts the observer flags back (the copy holds the
+  quantizers' `state_dict`).
+- **Freezing the codewords (CG):** a gradient hook on `_features_dc` and `_features_rest` that zeroes rows `[:K]`.
+  Adam's state is new at each fine-tuning (`training_setup`), so those rows' moments stay 0 and their update is
+  exactly 0.
+- **Training only the codewords (K):** the same hook zeroing rows `[K:]` (the kept splats' colours), and
+  `requires_grad_(False)` on `_opacity`, `_scaling`, `_rotation`, `_scaling_factor` and `_xyz` for that row; the next
+  row's restore puts `requires_grad` back.
+- **The geometry quantizers** (`opacity_qa`, `scaling_qa`, `scaling_factor_qa`, `rotation_qa`) run as C3DGS runs them in
+  every arm; their state at save is recorded (e).
+- **The replicate pair** repeats arm R from the same copy and random states, so that it differs from R only by the
+  GPU's nondeterminism.
+- **Not computed:** `ogc_plain`, `ogc_scalar` and `ogc_gram_ours` (settled by E5; Amendment 19 c's reasons).
+
+Every row is saved before any row is evaluated, and evaluated by protocol ii and by C3DGS (17 b, 17 e.2). For a
+frozen-grid arm, C3DGS's evaluation keeps the observer off, so it evaluates with the grid the row was saved with.
+
+### e. Guards and logs
+
+- **The inverted no-movement guard,** at every fine-tuned row's save, before `save_npz`: every tensor, row block and
+  grid the arm freezes must be bit-identical to its state before `finetune` (host snapshots taken after the install;
+  `torch.equal`; for a grid, E4p's `qa_snapshot` and `qa_changed`, empty). A failed guard fails the row with the
+  differences recorded (`frozen_changed`), as Amendment 18 note 2's guard does; for a primary row it counts as a lost
+  primary row (f).
+- **The existing guard stays:** recording a row must not move a colour quantizer (Amendment 18 note 2).
+- **Logged for every fine-tuned row** (report only): Amendment 18 note 2's `qa_at_save`, `table_range` and
+  `codebook_int8`, and, new, the trained table against **the pre-fine-tuning grid** and against **the grid the row is
+  saved with**, each for AC and DC and separately for the codewords (rows `[:K]`) and the kept rows (`[K:]`): the
+  number of values outside the grid and the largest distance beyond it in grid steps. Also the geometry quantizers'
+  scale and zero point at save, and the labels' survival.
+
+### f. The primaries and their tests
+
+For an arm X, **BD_X** is the BD-PSNR of `ogc_gram_ft_X` against `c3dgs_ft_X` (for R, `ogc_gram_ft` against
+`c3dgs_ft`), computed exactly as E6's P_FT (Amendment 19 c): each curve the row's protocol ii test PSNR against its
+`.npz` bytes at j = -1, 0 and +1, seed 0, one process per point; Amendment 9 a's domain-scaled fit of degree 2 through
+the three points, averaged over the overlap of the two curves' byte ranges; a missing BD (no shared byte range) enters
+as 0 and counts as not positive (Note 2 C2). r(x) = round(x, 9), every comparison strict (Note 2 C7).
+
+**The two primaries,** per scene s:
+1. **Δ_refit,s = BD_G,s - BD_R,s:** what holding both colour grids fixed during fine-tuning does to OGC's lead.
+   Positive: the grids' re-fit reduces OGC's lead.
+2. **Δ_cb,s = BD_CG,s - BD_G,s:** what freezing the K codewords does to OGC's lead, under the fixed grid. Positive:
+   codebook training reduces OGC's lead.
+
+**Noise, per primary,** in E5's form (Amendment 17 d), on the j = 0 seed pair of the primary's paired difference:
+- for Δ_refit, `d_sp` = (`ogc_gram_ft_g` - `c3dgs_ft_g`) - (`ogc_gram_ft` - `c3dgs_ft`) in protocol ii's PSNR in the
+  j = 0 process with seed p; for Δ_cb, the same with CG and G;
+- `d_s` the mean of the two, `v_s` the sum of squared deviations (with two values, the sample variance of one
+  process's paired difference), `SD_pool` = sqrt(mean of `v_s` over the n scenes), with n degrees of freedom (one per
+  scene);
+- **`SE` = `SD_pool` / sqrt(n).** Each primary averages one BD per scene, from the seed-0 curve (one process per point),
+  so its standard error is that of a mean of n single-process values. E5's and E6's `SD_pool` / sqrt(2 n) would be the
+  standard error of a mean over two seeds per scene, which the BD values are not (b). The j = 0 point's noise stands
+  for the BD's (Amendment 17 d's reading); BD-level noise is checked by the robustness reading below.
+
+**Each primary has two tests, superiority and equivalence. Each test type is one family of two hypotheses (one per
+primary), Holm-corrected at a family-wise 0.05, with the two primaries ordered by that test's own p-value** (t(q, n)
+is Student's quantile with n degrees of freedom; the statistics use r(`Δ_bar`) and r(`SE`)):
+- **Superiority (two-sided),** in E5's criteria form.
+  - **Order:** the primary with the larger |`Δ_bar`| / `SE` first.
+  - **The first** is superior, with sign σ = sign of r(`Δ_bar`), if all three hold:
+    1. r(`Δ_bar`) ≠ 0;
+    2. #{s : sign(r(Δ_s)) = σ} >= (7 n + 9) // 10 (5 of 7);
+    3. |r(`Δ_bar`)| > c_sup,1 x r(`SE`), c_sup,1 = t(1 - 0.0125, n) (two-sided 0.025; 2.841 at n = 7).
+  - **The second** is tested only if the first is superior, with the same three criteria and
+    c_sup,2 = t(1 - 0.025, n) (two-sided 0.05; 2.365 at n = 7). If the first is not superior, neither is the second.
+- **Equivalence (two one-sided tests)** at margin **δ = 0.07 dB**, on the smaller of the two one-sided margins,
+  m = (δ - |r(`Δ_bar`)|) / r(`SE`). Δ is equivalent at level α when m > t(1 - α, n), which is both
+  r(`Δ_bar`) - t(1 - α, n) x r(`SE`) > -δ and r(`Δ_bar`) + t(1 - α, n) x r(`SE`) < δ.
+  - **Order:** the primary with the larger m first.
+  - **The first** is equivalent if m > c_eq,1 = t(1 - 0.025, n) (each one-sided test at 0.025; 2.365 at n = 7).
+  - **The second** is tested only if the first is equivalent, with c_eq,2 = t(1 - 0.05, n) (each one-sided test at
+    0.05; 1.895 at n = 7). If the first is not equivalent, neither is the second.
+
+**Why δ = 0.07 dB** (22% of the 0.3131 dB gap). With `SE` = `SD_pool` / sqrt(n) and n = 7, a TOST at one-sided level
+α has about 80% power at a true Δ of 0 when δ >= (t(1 - α, n) + t(0.90, n)) x `SE` (a normal-theory approximation
+that treats `SE` as known), with t(0.90, 7) = 1.415. Under three assumptions about the noise of Δ, from E6 part (b):
+
+| Assumption | Per-scene SD of Δ (dB) | `SE` (n = 7) | Smallest δ, first in Holm's order (α 0.025) | Second (α 0.05) |
+|---|---|---|---|---|
+| pessimistic: the two arms' fine-tunings independent, each as noisy as E6's paired difference (sqrt(2) x 0.0326) | 0.0461 | 0.0174 | 0.066 | 0.058 |
+| scene spread: Δ varies across scenes as P_FT does (0.0373, section 22 a) | 0.0373 | 0.0141 | 0.053 | 0.047 |
+| optimistic: the arms' noise as correlated as E6's cross-run comparison (sqrt(2) x 0.0120, section 22 f) | 0.0170 | 0.0064 | 0.024 | 0.021 |
+
+Which primary comes first in Holm's order depends on the data, so δ must be powered in the first position. 0.07 dB is
+the smallest round value powered there under both the pessimistic and the scene-spread assumptions (about 86% power
+under the pessimistic one, 96% under the scene-spread one); 0.05 dB, the earlier proposal, would have about 37% and
+72% there. A smaller margin would be powered only under the optimistic assumption, which E7 measures (g.6) but cannot
+assume in advance.
+
+**A pre-registered robustness reading for BD-level noise:** each primary's tests are recomputed with `SE` replaced by
+`SE_BD` = sqrt(2) x `SD_BD` / sqrt(n), in the same convention as `SE`:
+- `SD_BD` = sqrt(mean over the n scenes of (BD_R,s from the seed-0 curve - BD_R,s from the seed-1 curve)^2 / 2) (g.5):
+  the pooled noise of one curve's BD, as `SD_pool` is of one process's paired difference (the two curves share no
+  process);
+- times sqrt(2) because each primary is the difference of two arms' BD values, taken as independent, with arm R's
+  BD-level noise standing for every arm's;
+- divided by sqrt(n) because each primary averages one BD difference per scene.
+
+A primary whose outcome (h) differs between `SE` and `SE_BD` is reported **fragile**; the outcome with `SE` is the one
+of record.
+
+**Completeness:** a primary is `incomplete` if n < 5 after drops, or if any of its four arm rows (for Δ_refit
+`c3dgs_ft`, `ogc_gram_ft`, `c3dgs_ft_g`, `ogc_gram_ft_g`; for Δ_cb the G and CG rows), or their unfine-tuned rows, is
+missing in any of a non-dropped scene's four full processes after one rerun of that process, whole, with the same seed
+(17 d, 17 i, Note 2 C9). A failed inverted guard on such a row is a missing row. `incomplete` comes before every
+outcome of h.
+
+The verdict is computed locally over every E7 session's committed bundle by E7's verdict module (k); a session's own
+summary holds per-scene parts only (Note 2 C5). Every part is reported whatever the outcome.
+
+### g. Secondaries (report only, no bars)
+
+1. **The codebook-alone share:** BD_K - BD_CG and BD_K - BD_R per scene, their means and j = 0 paired differences with
+   `SE` in the primaries' form (`SD_pool` / sqrt(n)). K trains only the codewords and CG everything but them, so K
+   against CG separates codebook training from the compensation by opacity, geometry and the kept colours.
+2. **The own grid:** BD_O - BD_G per scene: fine-tuning with each method's own grid against the shared
+   pre-fine-tuning grid. The own grid removes the clamping (OGC's codebook lies outside the shared grid, section 24)
+   **and changes the step**: OGC's own grid is wider than the shared one, so its step is coarser, and C3DGS's own grid
+   is fitted to a table inside the shared range. O against G therefore measures the removed clamping and the changed
+   step together, not clamping alone; g.7 gives the step ratios.
+3. **P1 with each method's own grid:** P1_own = BD-PSNR(`ogc_gram_own` against `c3dgs_own`) beside P1 =
+   BD-PSNR(`ogc_gram` against `c3dgs`), in the same processes, per scene and as means, with their j = 0 paired
+   differences. As in g.2, the own grid removes OGC's clamping and also coarsens OGC's step (and changes C3DGS's), so
+   P1_own against P1 measures both together; it does not by itself say whether P1 understates OGC.
+4. **P1 and P_FT replicated** (BD_R), with E5's three criteria evaluated as a description, beside E5's P1 and E6's
+   P_FT. They re-judge nothing.
+5. **BD noise (gap 8):** P1 and P_FT (BD_R) from the seed-1 curve (`j-1_p1`, `p1`, `j+1_p1`) beside the seed-0 curve,
+   per scene, with their difference and the pooled `SD_BD` of f (for P1 and for P_FT). This is E5's and E6's protocol,
+   so it bears on their P1 and P_FT as an estimate of BD-level noise, labelled so.
+6. **Within-process fine-tuning noise:** per scene, (`ogc_gram_ft_r2` - `c3dgs_ft_r2`) - (`ogc_gram_ft` - `c3dgs_ft`)
+   in `p0`, and each method's replicate difference; their across-scene SD against the primaries' `SD_pool`.
+7. **The logs of e,** per arm: values outside the pre-fine-tuning grid and outside the saved grid, for AC and DC,
+   codewords and kept rows; each arm's AC and DC scale after over before; the geometry quantizers. **And, for every row
+   with an own grid (`*_own`, arm O), the own grid's step over the shared grid's step, for DC and AC, per method** (the
+   scale ratio; arm O keeps its own grid fixed, so its ratio is the `*_own` row's).
+8. **Bytes per arm and point;** BD-rate per arm pair (undefined without a shared PSNR range, not interpretable below a
+   0.1 dB shared PSNR range, section 21's convention); C3DGS's evaluation, SSIM and LPIPS; time and memory per row.
+
+### h. Outcomes, written before any data
+
+For each primary, with "superior" from f's superiority test and "equivalent" from its TOST:
+
+| Outcome | Δ_refit (grids frozen minus moving) | Δ_cb (codewords frozen minus training, grids fixed) |
+|---|---|---|
+| superior, positive; not equivalent | the grids' re-fit reduces OGC's lead after fine-tuning, by more than δ | codebook training reduces OGC's lead by more than δ: it helps C3DGS's codebook more |
+| superior, negative; not equivalent | the re-fit increases OGC's lead: holding the grids costs OGC more than C3DGS (for example through its clamped codewords, g.2) | codebook training increases OGC's lead |
+| superior and equivalent | a real effect within ±δ: the factor matters, but by less than 22% of the gap | as for Δ_refit |
+| equivalent; not superior | the re-fit does not explain the shrink beyond ±δ | codebook training does not explain the shrink beyond ±δ |
+| neither | inconclusive at E7's noise: no claim either way | inconclusive |
+| `incomplete` | no reading | no reading |
+
+- If **both are equivalent to 0,** the shrink is carried mostly by what neither primary holds fixed (opacity, the
+  geometry tables and the kept colours training against whatever codebook the VQ left), which g.1 reads directly.
+- If **Δ_cb is superior and positive,** g.1 (K against CG) says how much of it codebook training does alone.
+- A **fragile** outcome (f) is reported as such beside its reading.
+
+### i. The protocol: E6 part (b)'s
+
+As Amendment 19 d for part (b), unchanged: C3DGS at `2a234af5` with Amendment 13 b's build, the `<cstdint>` retry
+where the image needs it (18 b), Amendment 13 g's chunked `eigh` and `det`, Amendment 14 f's seeding; the fork, the copy
+and E4p's three checks (17 b); K = 4,096; the colour threshold 6e-7 x 3^j at j = -1, 0, +1; OGC's call with `lam` 1e-3,
+15 iterations, seed 0, chunk 25,000; fine-tuning 5,000 iterations with the labels checked to survive; protocol ii and
+C3DGS's evaluation with 17 e.2's fix (Note 2 C13); E5's harness phase per scene; the data, start devices, drop rules,
+memory rules, 17 i, Note 2 C6, C9, C11 and C12, Note 4's guard and deadline-cut and its carry-over within E7; Amendment
+18 c's chain and bundle guard with note 3's sources.
+
+### j. Feasibility and sessions (an estimate, not a measurement)
+
+**Per row, from E6 part (b)'s bundles** (`row_time_s`, `eval_ii_time_s`, `fidelity_time_s`, `npz2ply_time_s`,
+`process_wall_s`, and each job's time less its processes' wall times for the harness): a fine-tuned row's fine-tuning
+and save took 331-809 s by scene, its job-side evaluation 33-53 s, and C3DGS's evaluation about 60 s a row (E5p: 413.7 s
+for 7 rows). So an added fine-tuned row costs about 430-920 s by scene, an added `*_own` row about 110 s, a full E7
+process one E6 process plus 8 fine-tuned and 2 `*_own` rows, and a `j±1_p1` process about one E6 process.
+
+| Scene | E6 part (b) job (s) | E7, whole scene (h) | Seed-0 half (h, high) | Seed-1 half (h, high) | Sessions |
+|---|---|---|---|---|---|
+| truck | 6,015 | 6.8-7.3 | | | one |
+| playroom | 7,020 | 8.4-8.8 | | | one |
+| bonsai | 8,115 | 9.7-10.3 | | | one |
+| counter | 8,085 | 10.1-10.5 | | | one |
+| drjohnson | 8,805 | 10.5-11.0 | 7.6 | 3.8 | **two** |
+| room | 8,850 | 10.7-11.2 | 7.7 | 3.8 | **two** |
+| kitchen | 10,095 | 12.7-13.4 | 9.2 | 4.5 | **two** |
+
+- **The budget:** a session allows 11.5 h less the 1,800 s reserve, 39,600 s, less the setup (383-600 s in E5 and E6),
+  about 39,000 s for the scenes. A scene whose high estimate exceeds it is split.
+- **How a split scene runs:** the first session runs the harness and the seed-0 processes (`j-1_p0`, `p0` with the
+  replicate, `j+1_p0`), so that every arm's curve comes from one session and one image; the second runs the harness
+  again (the GN cache is per session; Amendment 17 Note 2's `gn_history`) and the seed-1 processes (`p1`, `j-1_p1`,
+  `j+1_p1`). The j = 0 seed pair and the seed-1 curve then span two sessions, which Note 2 C6 reports if the images
+  differ.
+- **Sessions,** one lane each (no pair is below 0.8 x the session's RAM under Note 3's model with E6's x 1.094 miss,
+  Amendment 19 note 1), scenes in sequence within a session: kitchen (seed 0), room (seed 0), drjohnson (seed 0),
+  kitchen and room (seed 1), drjohnson (seed 1), truck, playroom, bonsai, counter. Nine sessions.
+- **Total: about 69-73 GPU-hours of jobs, plus about 1.1 h for the three repeated harness phases and about 1-1.5 h of
+  setup, so about 71-75 GPU-hours,** two and a half weeks or more of a 30 h per week Kaggle quota.
+- **Amendment 20 note 1,** dated and committed alone before any E7 code, recomputes this from E5's estimate model
+  (`bench/gn/e5_estimate.py`) with E7's rows, by test, and fixes the session order and the split.
+
+### k. Code (after this amendment and its note 1; none yet)
+
+- **E5's and E6's files stay byte-identical,** by test (sha256): E5's list (Amendment 19 g) and `kaggle/e6_scenes.py`,
+  `kaggle/gn_e6_scene.py`, `bench/gn/e6.py`, `bench/gn/e6_estimate.py`, `bench/gn/e6_feasibility.py`,
+  `kaggle/build_gn_e6_bench.py` and E6's notebooks. `check_s19.py` to `check_s24.py` keep passing unchanged.
+- **The one shared file that changes is `kaggle/e4p_hooks.py`:** an opt-in per-row hook in the fine-tuning branch
+  (`:447-500`), called after the restore and install and before C3DGS's `finetune`, and again just before the save;
+  its default does nothing. A test runs E4p's, E5's and E6's forks on the CPU stand-in with and without the change and
+  asserts that the saved arrays and records are bit-identical; their dry runs pass unchanged.
+- **New files beside E6's:**
+  - `kaggle/e7_hooks.py`: the arms of d through that hook (freezing grids and row blocks, the own grids, the replicate),
+    the guards and the logs of e;
+  - `kaggle/e7_scenes.py`: E5's seven by import, and the processes and rows of c and d;
+  - `kaggle/gn_e7_scene.py`: copied from `gn_e6_scene.py`, its diff pinned by test;
+  - `bench/gn/e7.py`: the verdict of f, importing `bench/gn/e5.py`'s BD and noise functions, the t quantiles by
+    `scipy.stats`;
+  - `bench/gn/e7_estimate.py`: note 1's table, reproduced by test;
+  - `kaggle/build_gn_e7_bench.py` and the notebooks (l).
+- **Tests,** on the CPU stand-in: each arm's guard passes on an honest run and fails when a frozen value is moved by
+  hand; a frozen grid stays bit-identical through a stand-in `finetune`; the own grid leaves no table value outside
+  it; Adam leaves zero-gradient rows bit-identical; the verdict on constructed data reaches every outcome of h, Holm's
+  order and the fragile flag; the diff pin; E5's and E6's byte identity.
+- **A dry run** on the stand-ins, alone, never alongside the pytest gate, before any E7 run, including a split scene
+  across two sessions.
+
+### l. Notebooks, titles and bundles
+
+- One Kaggle notebook per session, titled "E7 OGC FT-dissection S#"; bundles `E7_bundle_S#.zip`, arcname `gn7/`; a 17 i
+  rerun after a dated bug-fix note adds `_a2` (Note 2 C8).
+- Each session attaches every earlier E7 session's output, E5p attempt 2's output for the wheel (pinned to that
+  version) and the private dataset "E5p OGC source 49ccae72".
+
+### m. Limits, stated before any data
+
+- **Compensation:** in CG, opacity, the geometry tables and the kept colours still train and can make up for frozen
+  codewords; K against CG (g.1) measures part of this, not all of it.
+- **Clamping under a fixed grid:** in G, CG and K, OGC's codewords outside the pre-fine-tuning grid stay clamped and get
+  no gradient through the fake quantizer. O (g.2) and the `*_own` rows (g.3) remove the clamping but also change the
+  step (OGC's own grid is wider, so its step is coarser), so they measure the two together and cannot separate
+  clamping from step size.
+- **The standard error:** `SE` = `SD_pool` / sqrt(n) takes the j = 0 point's noise for the BD's and leaves out how Δ
+  varies from scene to scene; the robustness reading (f) and g.5 check the first, and the scene-spread row of f's power
+  table bounds the second.
+- **The geometry quantizers re-fit in every arm;** E7 records them and does not hold them.
+- **BD noise:** only arm R and the shared-grid rows have a seed-1 curve; the other arms' BD values rest on one process
+  per point, and their BD-level noise is taken from R's (f's robustness reading).
+- **GPU nondeterminism:** fine-tunings from the same state differ; the replicate pair (g.6) measures it at one point per
+  scene.
+- **One GPU type (T4);** seven scenes; K = 4,096; INRIA's checkpoints; a split scene's seed pair can span two images
+  (j).
+
+### n. How E7 stands with the earlier amendments
+
+- **E5's scenes:** no rule bars a later registration on them (Amendment 19 i); E7 discloses that its hypotheses came
+  from E5's, E6's and section 24's results (b) and makes no held-out claim.
+- **Amendment 17 a:** GN-VQ stays retired; E7 has no GN-VQ row.
+- **Amendment 18 d:** `ogc_gram_ours` is not computed, as in E6 part (b).
+- **Amendment 19:** E6's verdict, rows and bundles are untouched; E7's arm R repeats E6's fine-tuning and is reported
+  beside it (g.4) without re-judging it.
+- **Unchanged:** everything not named here.
