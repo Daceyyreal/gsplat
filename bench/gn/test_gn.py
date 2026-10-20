@@ -7209,3 +7209,73 @@ def test_e7_secondaries_on_constructed_data():
     b = g["g8_bytes_and_bd_rate"]["room"]["K"]
     assert b["bytes"]["j0_p0"]["ratio"] == 1.0 and b["shared_psnr_range"] == pytest.approx(0.2, abs=1e-9)
     assert b["bd_rate_interpretable"] and b["bd_rate_percent"] < 0
+
+
+def test_e7_notebooks_rebuild_and_name_their_session():
+    """kaggle/build_gn_e7_bench.py: the eleven committed notebooks equal the builder's output; titles "E7 OGC
+    FT-dissection S1"-"S11" from kaggle/e7_sessions.json (Amendment 20 note 1); E7_bundle_S#.zip under gn7/; E7's job
+    with --halves per lane entry; the carry-over of halves planned for earlier sessions; the restore without work
+    directories; every earlier session's output attached; every code cell compiles."""
+    import build_gn_e7_bench as b7
+
+    kg = os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle")
+    plan = json.load(open(os.path.join(kg, "e7_sessions.json")))["sessions"]
+    assert b7.SESSIONS == tuple(f"S{i}" for i in range(1, 12)) == tuple(plan)
+    for i, s in enumerate(b7.SESSIONS):
+        nb = {"cells": b7.cells_for(s),
+              "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
+                           "language_info": {"name": "python"}},
+              "nbformat": 4, "nbformat_minor": 5}
+        assert open(os.path.join(kg, f"gn_e7_bench_{s}.ipynb"), encoding="utf-8").read() == json.dumps(
+            nb, indent=1, ensure_ascii=False) + "\n", s
+        t = f"E7 OGC FT-dissection {s}"
+        md = nb["cells"][0]["source"]
+        assert md.startswith(f"# {t}") and f"Kaggle notebook title: **{t}**" in md
+        for scene, half in b7.entries(s):
+            assert f"**{scene}** (seed {half}" in md, (s, scene)
+        earlier = b7.SESSIONS[:i]
+        assert all(f'"E7 OGC FT-dissection {e}"' in md for e in earlier) and ("every earlier E7 session" in md) == bool(i)
+        code = "\n".join(c["source"] for c in nb["cells"] if c["cell_type"] == "code")
+        for c in nb["cells"]:
+            if c["cell_type"] == "code":
+                compile(c["source"], s, "exec")
+        assert f'SESSION = "{s}"' in code and 'BUNDLE = f"{WORK}/E7_bundle_{SESSION}"' in code and 'arc="gn7"' in code
+        assert "kaggle/gn_e7_scene.py" in code and "import e7_scenes as es" in code and "gn_e5_scene" not in code
+        assert '"--halves", str(half)' in code and 'name = f"gn_e7_{scene}_h{half}"' in code
+        assert 'json.dump({"e7": True, "session": SESSION' in code and "e5_sessions" not in code
+        assert 'for sub, dst in (("e7_inria", INRIA_DIR),):' in code and '"gn5_work"' not in code
+        assert "def carried_scenes(out_dir, lanes):" in code and "es.half_processes(scene, (half,))" in code
+
+
+def _carried(session, metas, lanes=None):
+    """build_gn_e7_bench's carry-over function, run on hand-made metas."""
+    import build_gn_e7_bench as b7
+
+    kg = os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle")
+    ns = {"json": json, "os": os, "SESSION": session, "ASSIGNMENT": os.path.join(kg, "e7_sessions.json")}
+    import e7_scenes
+
+    ns["es"] = e7_scenes
+    exec(b7.CARRIED_E7, ns)
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as d:
+        for scene, m in metas.items():
+            json.dump({"scene": scene, **m}, open(os.path.join(d, f"gn5_meta_{scene}.json"), "w"))
+        return ns["carried_scenes"](d, lanes if lanes is not None else b7.PLAN[session]["lanes"])
+
+
+def test_e7_carry_over_of_halves():
+    """Note 4 with Amendment 20 note 1: a half planned for an earlier session is carried when a process of it is not
+    settled (or never started), never when it is settled, dropped or stopped, never one planned for this or a later
+    session, never one in this session's own lane."""
+    settled0 = {k: {"settled": True} for k in ("j-1_p0", "j0_p0", "j+1_p0")}
+    assert _carried("S2", {"room": {"processes": settled0}}) == []
+    assert _carried("S2", {"room": {"processes": {**settled0, "j+1_p0": {"settled": False}}}}) == [
+        {"scene": "room", "half": 0}]
+    assert _carried("S2", {"room": {"processes": {"j-1_p0": {"settled": True}}}}) == [{"scene": "room", "half": 0}]
+    assert _carried("S2", {"room": {"processes": {}, "dropped": {"reason": "x"}}}) == []
+    assert _carried("S2", {"room": {"processes": {}, "stopped_17i": {"reason": "x"}}}) == []
+    assert _carried("S1", {"kitchen": {"processes": {}}}) == []  # kitchen's seed-0 half is S2's
+    assert _carried("S9", {"kitchen": {"processes": settled0}}) == [{"scene": "kitchen", "half": 1}]  # S8's, unsettled
+    assert _carried("S8", {"kitchen": {"processes": settled0}}) == []  # S8's own lane
