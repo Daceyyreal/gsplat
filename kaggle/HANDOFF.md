@@ -60,8 +60,9 @@ fine-tuning curves on flowers, treehill and train; (b) pre-registered P_FT on E5
 and dry run are done** (`9f79e414`-`3fb985b4`); note 2 (`b7ad2329`) records flowers' metadata read. **E6 S1 ran and
 is ingested** (`87cc6a59`), **and so are S2** (`94551278`) **and S3** (`13a95aa1`). **E6 part (b) is closed:** it
 passes (FINDINGS section 21, `6bd340a0`, `check_s21.py` `251c305c`; descriptive section 22, `4686acc0`, `check_s22.py`
-`faedf2dd`; CLAIMS group F, `faa99c55`, 59 rows). **E6 S4 and S5 ran and are ingested** (`9ce9b36e`, `6ff4877e`); part (a) is
-computed, awaiting Dace's reading (see "E6 S5 (2026-10-20)").
+`faedf2dd`; CLAIMS group F, `faa99c55`, 59 rows). **E6 S4 and S5 ran and are ingested** (`9ce9b36e`, `6ff4877e`). **E6 is closed**
+(parts (a) and (b)): FINDINGS section 23 (`0049d81f`, `check_s23.py` `52b6ab0c`), CLAIMS group G (`eb4d6620`, 67 rows).
+**Next: none queued; awaiting Dace** (see "E6 closed (2026-10-20)").
 
 ## Context and rules
 
@@ -4589,8 +4590,47 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     -E5p +0.0005), P2 +0.0641 (+0.0008); P_FT not computable for E5p (no fine-tuned rows at j = +-1); with E5p's seed-0
     fine-tuned rows at j = 0 in place of E6's, train's P_FT reads +0.2209.
 - **Next:** Dace's reading of part (a); then FINDINGS (E6 part (a), descriptive) and its checker; then CLAIMS.
+  **Done:** see "E6 closed (2026-10-20)".
 
-### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; next: E6 S4)
+### E6 closed (2026-10-20)
+
+- **Dace's reading of part (a)** (R1-R7) was checked against the files before anything was written. R6 and the opening
+  paragraph were disputed and corrected first (the work stopped after step 1, as asked); Dace accepted the corrections.
+- **Commits, in order** (pytest before each through `.venv`'s Python with pipefail, a kept log in `F:\pytest_logs\` and
+  `GN_OGC_SRC`; the ancestor check; fast-forward pushes to `fork`):
+
+  | Commit | What | Gate log | pytest |
+  |---|---|---|---|
+  | `0049d81f` | FINDINGS section 23, alone, with its summary paragraph and Sources entry | `gate_20261020_165057_findings_s23.log` | 205 |
+  | `52b6ab0c` | `bench/gn/check_s23.py` and its pytest test | `gate_20261020_165247_check_s23.log` | 206 |
+  | `eb4d6620` | `paper/CLAIMS.md`: group G (G1-G8), F8 scoped to the gate scenes, conflict 3 extended; 67 rows | `gate_20261020_165500_claims_s23.log` | 206 |
+
+- **The checkers:** `check_s23.py`: "90 recomputed numbers, 226 numeric tokens checked, 0 failures". It recomputes every
+  BD with `check_s21.py`'s polyfit fit beside the tool (`bench/gn/e6.py a`) and the sessions' `per_scene_parts`, checks
+  S5's carried copies against S4's, asserts the quoted PREREG lines (L3472-3480, L3434-3435), and failed each of three
+  deliberate edits (a seed-1 P_FT digit, an added number, a per-j difference). `check_s19` to `check_s22` pass unchanged
+  (73 / 100 / 52 / 88 recomputed numbers, 0 failures each).
+- **Section 23 (descriptive, no criterion):** all three predictions held on flowers, treehill and train; P_FT +0.0341 /
+  -0.0262 / -0.0066 (prediction 3 held on treehill and train with P_FT below 0); train's P_FT not interpreted (its
+  fine-tuned points move by up to 0.19 dB across runs; E5p's j = 0 point moves it by +0.2274); treehill's stays negative
+  with j = 0 seed 1; train's unfine-tuned BDs within 0.001 dB of E5p's; 8 of 21 BD-rates interpretable; the per-j
+  difference after fine-tuning rises with j on flowers only.
+- **Section 22 d was not edited.** FINDINGS sections are not rewritten after they are checked; section 23 e states that
+  22 d's pattern held on flowers but not on train or treehill, and CLAIMS F8's scope column now limits it to the gate
+  scenes (G5).
+- **Numbers corrected between the reports in chat and the documents:**
+  - R6's count: 8 of 21 BD-rates are interpretable, not 9 (the step 1 report miscounted its own list of 3 + 4 + 1);
+  - R2's change: +0.2274 (Dace's +0.2275);
+  - **S4's parked item s** gave train's per-view fine-tuning swing as up to -2.135 / +3.389 dB; the maximum is +3.477
+    (`p1_ogc_gram`, view 33). Section 23 a has the corrected range;
+  - **S4's parked item w** said train's j = 0 byte ratios (0.9512, 0.9540) are below the gate scenes' j = -1 minimum
+    (0.9209); they are not. Train's j = -1 ratio (0.8992) is below the gate scenes' j = -1 minimum, and its j = 0 ratios
+    are below the gate scenes' j = 0 minimum (0.9851). Section 23 has the corrected comparison.
+- **E6 is closed.** Part (b) passed (section 21) with its descriptive section 22; part (a) is described in section 23.
+  Nothing in PREREG changed.
+- **Next action: none queued; awaiting Dace.**
+
+### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; E6 part (a), FINDINGS section 23; E6 closed; next: none queued)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
   `kaggle/gn_e0/gn/` and FINDINGS section 8 quotes it. Nothing in E0 is left to run. The session took
@@ -4699,7 +4739,9 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   12. ~~E6 S4 (flowers, train)~~ **done (2026-10-19):** bundle `9ce9b36e` (see "E6 S4 (2026-10-19)");
   13. ~~E6 S5 (treehill); part (a)'s reader~~ **done (2026-10-20):** bundle `6ff4877e`; part (a) computed, not recorded
       (see "E6 S5 (2026-10-20)");
-  14. **next:** Dace's reading of part (a); FINDINGS (E6 part (a)) and its checker; CLAIMS.
+  14. ~~Dace's reading of part (a); FINDINGS (E6 part (a)) and its checker; CLAIMS~~ **done (2026-10-20):** `0049d81f`,
+      `52b6ab0c`, `eb4d6620` (see "E6 closed (2026-10-20)"); E6 closed;
+  15. **next: none queued; awaiting Dace.**
 - ~~**Note 4's S2 session-hours** are printed as 4.32-7.71 h; the code gives 7.70 h.~~ **Corrected (2026-10-12):** the
   erratum `1b532e40`. Dace approved rule (b)'s rewording the same day.
 - **The unexplained npz2ply failure** (one dry run, 2026-10-10, room's rerun `ogc_gram`): not reproduced alone or under
