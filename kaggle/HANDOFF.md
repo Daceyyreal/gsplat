@@ -63,6 +63,9 @@ passes (FINDINGS section 21, `6bd340a0`, `check_s21.py` `251c305c`; descriptive 
 `faedf2dd`; CLAIMS group F, `faa99c55`, 59 rows). **E6 S4 and S5 ran and are ingested** (`9ce9b36e`, `6ff4877e`). **E6 is closed**
 (parts (a) and (b)): FINDINGS section 23 (`0049d81f`, `check_s23.py` `52b6ab0c`), CLAIMS group G (`eb4d6620`, 67 rows).
 **Next: none queued; awaiting Dace** (see "E6 closed (2026-10-20)").
+`paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
+`4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b)), checker `check_figs.py` (paper figures:
+960 checks, 0 failures; run by pytest).
 
 ## Context and rules
 
