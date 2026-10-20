@@ -546,6 +546,10 @@ def install(record: Optional[str] = None, fork: Optional[str] = None, defer_eval
         import e4q_hooks
 
         cls = e4q_hooks.E4qHooks
+    elif cfg.get("e7"):  # E7's fork (Amendment 20 d), E5's with its arms: kaggle/e7_hooks.py
+        import e7_hooks
+
+        cls = e7_hooks.E7Hooks
     elif cfg.get("e5"):  # E5p's and E5's fork (Amendment 17 b): kaggle/e5_hooks.py
         import e5_hooks
 

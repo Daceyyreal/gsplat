@@ -2,7 +2,12 @@
 and methods E3r's and E4p's hooks touch, with C3DGS's semantics. ``get_features`` runs the two real
 ``torch.ao.quantization.FakeQuantize`` modules, whose observers update on every call, and counts its calls.
 ``training_setup`` puts an optimizer and a scheduler on the model, as C3DGS's does; ``load_npz`` reads what
-``save_npz`` wrote (C3DGS's decoder of its own ``.npz``)."""
+``save_npz`` wrote (C3DGS's decoder of its own ``.npz``).
+
+With ``E7_FAKE_FINETUNE=1`` (E7, PREREG_GN.md Amendment 20; off by default, so E3r-E6's stand-in is unchanged) the
+model also has C3DGS's ``_scaling_factor`` and its geometry fake quantizers (``scaling_qa``, ``scaling_factor_qa``,
+``rotation_qa``), and ``training_setup`` builds C3DGS's Adam over its seven groups (``scene/gaussian_model.py:223-266``
+at ``2a234af5``: ``eps`` 1e-15; ``xyz`` at learning rate 0, as for a loaded checkpoint)."""
 
 import os
 import sys
@@ -15,6 +20,7 @@ sys.path.insert(0, os.environ["E3R_FAKE_KAGGLE"])  # e3p_inria's .ply reader and
 import e3p_inria as ei  # noqa: E402
 
 GET_FEATURES_CALLS = [0]
+E7 = os.environ.get("E7_FAKE_FINETUNE") == "1"
 
 
 class GaussianModel:
@@ -27,6 +33,10 @@ class GaussianModel:
         self.features_dc_qa = torch.ao.quantization.FakeQuantize(dtype=torch.qint8)
         self.features_rest_qa = torch.ao.quantization.FakeQuantize(dtype=torch.qint8)
         self.opacity_qa = torch.ao.quantization.FakeQuantize(dtype=torch.qint8)
+        if E7:
+            self.scaling_qa = torch.ao.quantization.FakeQuantize(dtype=torch.qint8)
+            self.scaling_factor_qa = torch.ao.quantization.FakeQuantize(dtype=torch.qint8)
+            self.rotation_qa = torch.ao.quantization.FakeQuantize(dtype=torch.qint8)
 
     def load_ply(self, path: str) -> None:
         s, _ = ei.read_inria_ply(path)
@@ -36,6 +46,8 @@ class GaussianModel:
         self._opacity = nn.Parameter(s["opacities"].float()[:, None])
         self._scaling = nn.Parameter(s["scales"].float())
         self._rotation = nn.Parameter(s["quats"].float())
+        if E7:
+            self._scaling_factor = nn.Parameter(s["scales"].float().norm(dim=1, keepdim=True))
 
     @property
     def get_features(self):
@@ -56,7 +68,8 @@ class GaussianModel:
 
     def mask_splats(self, mask):
         with torch.no_grad():
-            for k in ("_xyz", "_opacity", "_scaling", "_rotation", "_features_dc", "_features_rest"):
+            for k in ("_xyz", "_opacity", "_scaling", "_rotation", "_features_dc", "_features_rest") + (
+                    ("_scaling_factor",) if E7 else ()):
                 setattr(self, k, nn.Parameter(getattr(self, k)[mask]))
 
     def set_color_indexed(self, features, indices):
@@ -70,6 +83,15 @@ class GaussianModel:
         self._scaling = nn.Parameter(scaling.detach())
 
     def training_setup(self, training_args):
+        if E7:
+            groups = (("xyz", self._xyz, 0.0), ("f_dc", self._features_dc, 0.0025),
+                      ("f_rest", self._features_rest, 0.0025 / 20.0), ("opacity", self._opacity, 0.05),
+                      ("scaling", self._scaling, 0.005), ("scaling_factor", self._scaling_factor, 0.005),
+                      ("rotation", self._rotation, 0.001))
+            self.optimizer = torch.optim.Adam([{"params": [p], "lr": lr, "name": n} for n, p, lr in groups], lr=0.0,
+                                              eps=1e-15)
+            self.xyz_scheduler_args = lambda step: 0.0
+            return
         params = [self._features_dc, self._features_rest]
         self.optimizer = torch.optim.Adam(params, lr=0.0, eps=1e-15)
         self.xyz_scheduler_args = lambda step: 0.0

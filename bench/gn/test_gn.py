@@ -6509,7 +6509,8 @@ def test_e6_notebooks_rebuild_and_name_their_session():
 # ------------------------------------------------------------------------------ E7 (PREREG_GN.md Amendment 20)
 E7_HOOKS_BASE = "2d8056ec"  # Amendment 20 note 1: the last commit before E7's code; e4p_hooks.py as E4p-E6 ran it
 # Amendment 20 k: the only lines in which kaggle/e4p_hooks.py differs from E7_HOOKS_BASE's (stripped): the docstring's
-# step (c), the two hook calls in the fine-tuning branch and the two hook methods, which do nothing
+# step (c), the two hook calls in the fine-tuning branch, the two hook methods, which do nothing, and install's branch
+# for a config that says "e7" (E7's class; E4q's and E5's branches unchanged)
 E7_E4P_HOOKS_DIFF = [
     (26, ("row installed, C3DGS's ``finetune`` with 5,000 iterations, saved, evaluated; (d) row 1's saved state put back,",
           "and row 1's metrics returned, so ``compress.py`` writes ``results.json`` as usual."),
@@ -6525,6 +6526,8 @@ E7_E4P_HOOKS_DIFF = [
                "", "def ft_before_save(self, g, row: str, rec: Dict) -> None:",
                '"""Called for each fine-tuned row just before its save, after Amendment 18 note 2\'s record; an exception fails',
                "the row. It does nothing here; E7's hooks run their guard and logs.\"\"\"")),
+    (537, (), ("elif cfg.get(\"e7\"):  # E7's fork (Amendment 20 d), E5's with its arms: kaggle/e7_hooks.py", "import e7_hooks",
+               "", "cls = e7_hooks.E7Hooks")),
 ]
 
 
@@ -6593,7 +6596,8 @@ def _fork_outputs(tmp_path, rep):
 
 
 def test_e7_e4p_hooks_hook_changes_nothing_for_e4p_e5_e6(tmp_path, monkeypatch):
-    """Amendment 20 k: kaggle/e4p_hooks.py gains only the opt-in per-row hook (its diff against E7_HOOKS_BASE pinned).
+    """Amendment 20 k: kaggle/e4p_hooks.py gains only the opt-in per-row hook and install's "e7" branch (its diff
+    against E7_HOOKS_BASE pinned).
     E4p's fork (rows 1-5 and their fine-tuning), E5's (c3dgs, OGC's three rows and ogc_gram_ours, j = 0 fine-tuning)
     and E6's part (b) fork (c3dgs, ogc_gram, both fine-tuned) on the CPU stand-in give bit-identical saved arrays and
     reports (without times, host RSS and paths) with E7_HOOKS_BASE's e4p_hooks.py and with the current one. Their dry
@@ -6637,3 +6641,252 @@ def test_e7_e4p_hooks_hook_changes_nothing_for_e4p_e5_e6(tmp_path, monkeypatch):
             out[which] = _fork_outputs(d, rep)
         assert out["base"][1] == out["now"][1] and len(out["now"][1]) >= 4, case
         assert out["base"][0] == out["now"][0], case
+
+
+def test_e7_scenes_processes_rows_and_arms():
+    """kaggle/e7_scenes.py against Amendment 20 c, d, f and note 1: E5's seven scenes and constants; the six processes
+    in c's order with their halves; the rows per process (66 configs per scene); the arm table of d; the primary rows of
+    f's completeness (none in j-1_p1 and j+1_p1); the fork config's flags."""
+    import e5
+    import e5_scenes as e5s
+    import e7_scenes as es
+
+    assert es.SCENES == tuple(e5s.SCENES) and es.START_DEVICE == e5s.START_DEVICE and es.COVERED == e5s.COVERED
+    assert es.INRIA_PINS == e5s.INRIA_PINS and es.DATA_FACTOR == e5s.DATA_FACTOR and es.TITLE == "E7 OGC FT-dissection"
+    keys = [es.process_key(p) for p in es.PROCESSES]
+    assert keys == ["j-1_p0", "j0_p0", "j+1_p0", "j0_p1", "j-1_p1", "j+1_p1"]
+    assert [(p["full"], p["replicate"], p["half"]) for p in es.PROCESSES] == [
+        (True, False, 0), (True, True, 0), (True, False, 0), (True, False, 1), (False, False, 1), (False, False, 1)]
+    assert [i for i, _ in es.half_processes("room", (0,))] == [0, 1, 2]
+    assert [i for i, _ in es.half_processes("room", (1,))] == [3, 4, 5]
+    assert es.parse_halves("0,1") == (0, 1) and es.parse_halves("1") == (1,)
+    with pytest.raises(ValueError):
+        es.parse_halves("2")
+    with pytest.raises(ValueError):
+        es.half_processes("flowers")
+    full, rep, part = es.PROCESSES[0], es.PROCESSES[1], es.PROCESSES[4]
+    arms = ["c3dgs_ft", "ogc_gram_ft", "c3dgs_ft_g", "ogc_gram_ft_g", "c3dgs_ft_cg", "ogc_gram_ft_cg", "c3dgs_ft_k",
+            "ogc_gram_ft_k", "c3dgs_ft_o", "ogc_gram_ft_o"]
+    assert es.process_rows("room", full) == ["c3dgs", "ogc_gram", "c3dgs_own", "ogc_gram_own"] + arms
+    assert es.process_rows("room", rep) == es.process_rows("room", full) + ["c3dgs_ft_r2", "ogc_gram_ft_r2"]
+    assert es.process_rows("room", part) == ["c3dgs", "ogc_gram", "c3dgs_ft", "ogc_gram_ft"]
+    cfgs = es.wanted_configs("room")
+    assert len(cfgs) == len(set(cfgs)) == 3 * 14 + 16 + 2 * 4 == 66
+    assert "p0_ogc_gram_ft_r2" in cfgs and "j-1_p1_c3dgs_ft" in cfgs and "j-1_p1_c3dgs_ft_g" not in cfgs
+    assert es.primary_rows("room", full) == ("c3dgs", "ogc_gram", "c3dgs_ft", "ogc_gram_ft", "c3dgs_ft_g",
+                                             "ogc_gram_ft_g", "c3dgs_ft_cg", "ogc_gram_ft_cg")
+    assert es.primary_rows("room", part) == ()
+    assert {a: (v["grid"], v["zero_rows"], v["no_grad"]) for a, v in es.ARMS.items()} == {
+        "R": (None, None, ()), "G": ("pre", None, ()), "CG": ("pre", "codewords", ()),
+        "K": ("pre", "kept", ("_opacity", "_scaling", "_rotation", "_scaling_factor", "_xyz")),
+        "O": ("own", None, ()), "R2": (None, None, ())}
+    assert es.arm_of("ogc_gram_ft_cg") == ("ogc_gram", "CG") and es.method_of("c3dgs_own") == "c3dgs"
+    assert es.fork_flags(full) == {"e7": True, "own_rows": ["c3dgs_own", "ogc_gram_own"]}
+    assert es.fork_flags(part) == {"e7": True, "own_rows": []} and es.fork_rows("room") == ("ogc_gram",)
+    pairs = es.summary_pairs("room")
+    assert pairs["BD_CG"] == ("ogc_gram_ft_cg", "c3dgs_ft_cg") and pairs["P1"] == e5.PRIMARY_PAIRS["P1"]
+
+
+def test_e7_own_grid_is_torchs_qparams_and_clamps_nothing():
+    """20 d: the own grid is torch's min/max qparams for qint8, per-tensor affine, computed without a quantizer module
+    (equal to MinMaxObserver's in every case); under it no table value is clamped (each lies at most half a step past
+    the representable range, so its fake-quantization error is at most half a step); set into a FakeQuantize, an
+    observer that sees the same table keeps it (so C3DGS's evaluation of an *_own row keeps its grid)."""
+    import e7_hooks
+
+    gen = torch.Generator().manual_seed(3)
+    cases = [torch.randn(300, 15, 3, generator=gen) * 0.2, torch.rand(50, 1, 3, generator=gen) + 0.3,
+             -torch.rand(50, 1, 3, generator=gen) - 0.1, torch.zeros(4, 1, 3)]
+    big = torch.randn(400, 15, 3, generator=gen) * 0.05
+    big[0, 0, 0], big[1, 3, 2] = 2.7, -1.9  # far outliers
+    cases.append(big)
+    for x in cases:
+        scale, zp, mn, mx = e7_hooks.own_qparams(x)
+        obs = torch.ao.quantization.MinMaxObserver(dtype=torch.qint8)
+        obs(x)
+        s_ref, z_ref = obs.calculate_qparams()
+        assert torch.equal(scale, s_ref) and torch.equal(zp, z_ref.to(zp.dtype)), (scale, s_ref, zp, z_ref)
+        s, z = float(scale), int(zp)
+        log = e7_hooks.grid_log(x, s, z)
+        assert log["max_steps_beyond"] <= 0.5 + 1e-6, log
+        fq = torch.fake_quantize_per_tensor_affine(x, s, z, -128, 127)
+        assert float((fq - x).abs().max()) <= s / 2 * (1 + 1e-5)
+        qa = torch.ao.quantization.FakeQuantize(dtype=torch.qint8)
+        e7_hooks.set_grid(qa, scale, zp, mn, mx)
+        before = (qa.scale.clone(), qa.zero_point.clone())
+        qa(x)  # the observer on: it sees the same table
+        assert torch.equal(qa.scale, before[0]) and torch.equal(qa.zero_point, before[1])
+
+
+def test_e7_adam_leaves_zero_gradient_rows_bit_identical():
+    """20 d: C3DGS's Adam (a new one per fine-tuning, eps 1e-15) with a gradient hook zeroing rows [:K] leaves those
+    rows bit-identical over many steps while the others train; a tensor with requires_grad_(False) in its group is not
+    touched."""
+    import e7_hooks
+
+    gen = torch.Generator().manual_seed(5)
+    K = 7
+    table = torch.nn.Parameter(torch.randn(20, 15, 3, generator=gen))
+    other = torch.nn.Parameter(torch.randn(20, 1, generator=gen))
+    t0, o0 = table.detach().clone(), other.detach().clone()
+    h = table.register_hook(e7_hooks._zero_rows(slice(0, K)))
+    other.requires_grad_(False)
+    opt = torch.optim.Adam([{"params": [table], "lr": 0.0025 / 20}, {"params": [other], "lr": 0.05}], lr=0.0,
+                           eps=1e-15)
+    for i in range(30):
+        loss = ((table * (1 + i % 3)) ** 2).sum() + (table.sum(1) * other.unsqueeze(-1)).sum()
+        loss.backward()
+        opt.step()
+        opt.zero_grad()
+    h.remove()
+    assert torch.equal(table.detach()[:K], t0[:K]) and not torch.equal(table.detach()[K:], t0[K:])
+    assert torch.equal(other.detach(), o0) and other.grad is None
+
+
+def _e7_fork(tmp_path, monkeypatch, proc_index=1, hooks_cls=None):
+    """E7's fork in this process on the stand-in with its gradient fine-tuning (E7_FAKE_FINETUNE=1): process
+    ``e7_scenes.PROCESSES[proc_index]`` (default j0_p0: every arm and the replicate)."""
+    import e7_hooks
+    import e7_scenes as es
+
+    monkeypatch.setenv("E7_FAKE_FINETUNE", "1")
+    proc = es.PROCESSES[proc_index]
+    extra = {"e5": True, **es.fork_flags(proc), "rows": ["c3dgs"] + list(es.FORK_ROWS), "j": proc["j"],
+             "threshold": 6e-7, "seed": proc["seed"],
+             "ogc": {"clone": str(tmp_path / "ogc"), "device": "cpu", "chunk": 25000, "lam": 1e-3, "impl": "ogc"}}
+    return _fork_in_process(tmp_path, monkeypatch, hooks_cls=hooks_cls or e7_hooks.E7Hooks, ft_rows=es.ft_rows(proc),
+                            cfg_extra=extra)
+
+
+def test_e7_fork_arms_on_the_stand_in(tmp_path, monkeypatch):
+    """E7's arms on the CPU stand-in (its fine-tuning by gradients through the fake quantizers): every row of j0_p0
+    saved and ok, every guard passing honestly; a frozen grid (G, CG, K) is bit-identical at the save to the restored
+    pre-fine-tuning grid, while R's moved; O saves with its own grid, equal to the *_own row's; the saved .npz show CG's
+    codewords and K's kept rows and opacity exactly as before fine-tuning (against the unfine-tuned row's file); the own
+    grid clamps nothing; K's requires_grad is back for the next row; the logs of e are present. j-1_p1's process has
+    arm R only and no *_own row."""
+    import e7_scenes as es
+
+    hooks, rep = _e7_fork(tmp_path, monkeypatch)
+    fr = rep["fork"]
+    rows = fr["rows"]
+    assert fr["phase"] == "done" and fr["checks_failed"] == [] and fr["e7"]["own_rows"] == ["c3dgs_own", "ogc_gram_own"]
+    want = [r for r in es.process_rows("room", es.PROCESSES[1]) if r != "c3dgs"]
+    assert all(rows[r].get("status", "ok") == "ok" and os.path.exists(rows[r]["npz"]) for r in want), \
+        {r: rows[r].get("status") for r in want}
+    npz = {r: dict(np.load(rows[r]["npz"])) for r in want}
+    npz["c3dgs"] = dict(np.load(str(tmp_path / "out" / "point_cloud" / "iteration_30000" / "point_cloud.npz")))
+    for r in es.ft_rows(es.PROCESSES[1]):
+        m, arm = es.arm_of(r)
+        e = rows[r]["e7"]
+        K = e["K"]
+        assert rows[r]["frozen_changed"] == {} and e["arm"] == arm and e["method"] == m, r
+        assert rows[r]["labels_survived"], r
+        assert set(e["table_vs_grid"]) == {"pre", "saved"} and set(e["table_vs_grid"]["pre"]) == {"codewords", "kept"}
+        assert set(e["geometry_qa_at_save"]) == {"opacity_qa", "scaling_qa", "scaling_factor_qa", "rotation_qa"}
+        assert set(e["scale_after_over_before"]) == {"dc", "rest"}
+        assert all(e["requires_grad_at_start"].values()), (r, e["requires_grad_at_start"])  # K's flags restored
+        qa = rows[r]["qa_at_save"]
+        if arm in ("G", "CG", "K"):
+            assert qa == e["qa_pre"] and e["observer_enabled"] == {"features_dc_qa": 0, "features_rest_qa": 0}, r
+            assert "colour grids" in e["frozen"], r
+        elif arm == "O":
+            own = rows[f"{m}_own"]["own_grid"]
+            assert (qa["dc_scale"], qa["dc_zero_point"], qa["rest_scale"], qa["rest_zero_point"]) == (
+                own["dc"]["scale"], own["dc"]["zero_point"], own["rest"]["scale"], own["rest"]["zero_point"]), r
+            assert e["own_grid"]["dc"]["scale"] == own["dc"]["scale"] and e["frozen"] == ["colour grids"], r
+        else:
+            assert qa != e["qa_pre"] and e["frozen"] == [] and e["observer_enabled"]["features_dc_qa"] == 1, r
+        base = npz[m]
+        for part in ("features_dc", "features_rest"):
+            if arm == "CG":
+                assert np.array_equal(npz[r][part][:K], base[part][:K]), (r, part)
+            if arm == "K":
+                assert np.array_equal(npz[r][part][K:], base[part][K:]), (r, part)
+        if arm in ("R", "R2", "G"):  # the DC rows move by about a grid step here (the AC rows' learning rate is 1/20)
+            assert not np.array_equal(npz[r]["features_dc"], base["features_dc"]), r
+        if arm == "K":
+            assert np.array_equal(npz[r]["opacity"], base["opacity"]), r
+            assert e["no_grad"] == ["_opacity", "_scaling", "_rotation", "_scaling_factor", "_xyz"]
+            assert sorted(e["frozen"]) == sorted(["colour grids", f"_features_dc[{K}:]", f"_features_rest[{K}:]"]
+                                                 + e["no_grad"])
+        if arm == "CG":
+            assert sorted(e["frozen"]) == sorted(["colour grids", f"_features_dc[:{K}]", f"_features_rest[:{K}]"])
+    assert not np.array_equal(npz["c3dgs_ft"]["opacity"], npz["c3dgs"]["opacity"])  # R trains the opacity
+    for own in ("c3dgs_own", "ogc_gram_own"):
+        g = rows[own]["own_grid"]
+        for block in ("codewords", "kept"):
+            for part in ("dc", "rest"):
+                assert g["table_vs_grid"][block][part]["max_steps_beyond"] <= 0.5 + 1e-6, (own, block, part)
+        assert rows[own]["qa_at_save"]["rest_scale"] == g["rest"]["scale"]
+        assert g["rest"]["step_ratio"] == pytest.approx(g["rest"]["scale"] / g["rest"]["shared_scale"])
+        assert rows[own]["table_range"]["dc"]["scale"] == g["dc"]["scale"]
+        assert float(npz[own]["features_rest_scale"].reshape(-1)[0]) == pytest.approx(g["rest"]["scale"])
+    assert hooks.fork_rows == ("ogc_gram", "c3dgs_own", "ogc_gram_own")
+    (tmp_path / "p").mkdir()
+    _, rep2 = _e7_fork(tmp_path / "p", monkeypatch, proc_index=4)
+    assert sorted(rep2["fork"]["rows"]) == ["c3dgs", "c3dgs_ft", "ogc_gram", "ogc_gram_ft"]
+    assert all(rep2["fork"]["rows"][r]["status"] == "ok" for r in ("c3dgs_ft", "ogc_gram_ft"))
+
+
+def test_e7_guard_fails_when_a_frozen_value_is_moved_by_hand(tmp_path, monkeypatch):
+    """20 e's inverted guard: with one frozen value moved by hand after the fine-tuning (G and O: a colour grid's
+    buffer; CG: a codeword; K: a kept row and the opacity), every such row fails, with frozen_changed naming what moved
+    and no .npz; R's rows, whose frozen set is empty, pass although their opacity was moved too."""
+    import e7_hooks
+
+    class Mover(e7_hooks.E7Hooks):
+        def ft_before_save(self, g, row, rec):
+            arm, K = self._arm["info"]["arm"], self._arm["info"]["K"]
+            with torch.no_grad():
+                if arm == "G":
+                    g.features_rest_qa.scale.mul_(1.5)
+                elif arm == "O":
+                    g.features_dc_qa.zero_point.add_(1)
+                elif arm == "CG":
+                    g._features_dc[0] += 1e-3
+                elif arm == "K":
+                    g._features_rest[K] += 1e-3
+                    g._opacity[0] += 1e-3
+                else:
+                    g._opacity[0] += 1e-3
+            return super().ft_before_save(g, row, rec)
+
+    _, rep = _e7_fork(tmp_path, monkeypatch, proc_index=0, hooks_cls=Mover)
+    rows = rep["fork"]["rows"]
+    want = {"G": ["colour grids"], "O": ["colour grids"], "CG": ["_features_dc[:16]"],
+            "K": ["_features_rest[16:]", "_opacity"]}
+    for m in ("c3dgs", "ogc_gram"):
+        for arm, moved in want.items():
+            r = rows[f"{m}_ft_{arm.lower()}"]
+            assert r["status"] == "failed" and "inverted guard" in r["error"] and "npz" not in r, (m, arm, r.get("error"))
+            assert sorted(r["frozen_changed"]) == moved, (m, arm, r["frozen_changed"])
+        assert rows[f"{m}_ft"]["status"] == "ok" and rows[f"{m}_ft"]["frozen_changed"] == {}
+    assert list(rows["c3dgs_ft_g"]["frozen_changed"]["colour grids"]) == ["features_rest_qa.scale"]
+
+
+def test_e7_install_picks_e7s_hooks(tmp_path, monkeypatch):
+    """kaggle/e4p_hooks.install: a fork config with "e7" (and E5's "e5") gets E7's class; "e5" alone E5's."""
+    import e4p_hooks
+    import e5_hooks
+    import e7_hooks
+
+    made = []
+
+    def fake(name):
+        class F:
+            def __init__(self, **k):
+                made.append(name)
+
+            def install(self):
+                return self
+
+        return F
+
+    monkeypatch.setattr(e7_hooks, "E7Hooks", fake("e7"))
+    monkeypatch.setattr(e5_hooks, "E5Hooks", fake("e5"))
+    for flags, want in (({"e5": True, "e7": True}, "e7"), ({"e5": True}, "e5")):
+        p = tmp_path / f"{want}.json"
+        p.write_text(json.dumps(flags))
+        e4p_hooks.install(fork=str(p))
+        assert made[-1] == want
