@@ -3163,6 +3163,23 @@ def test_findings_section_23_numbers_recheck_from_the_repo():
     assert res["fails"] == [] and res["n_numbers"] > 85
 
 
+def test_paper_figs_recheck_from_the_repo():
+    """paper/figs/check_figs.py: every table cell and plotted value in paper/figs/out/ recomputed independently from
+    the committed bundles and matched against the FINDINGS values it mirrors. The outputs are committed after the
+    scripts, so without paper/figs/out/ (that one commit) the test is skipped, not passed."""
+    import importlib.util
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    path = os.path.join(repo, "paper", "figs", "check_figs.py")
+    if not os.path.isdir(os.path.join(repo, "paper", "figs", "out")):
+        pytest.skip("paper/figs/out/ not generated (run paper/figs/make_all.py)")
+    spec = importlib.util.spec_from_file_location("check_figs", path)
+    cf = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cf)
+    res = cf.run()
+    assert res["fails"] == [] and res["n_checks"] > 900
+
+
 # --------------------------------------------------------------------------------- E3r (Amendment 14)
 
 
