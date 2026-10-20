@@ -23,8 +23,9 @@ Three modes:
      (a) every other row restored, installed, checked and saved (``save_npz``, which sorts in place), each saved
      state copied; (b) only then every row evaluated with C3DGS's ``render_and_eval``, each from its own saved state;
      (c) fine-tuning of rows 1, 2 and 5 (Amendment 15 e): restored from the copy with the copy's random states, the
-     row installed, C3DGS's ``finetune`` with 5,000 iterations, saved, evaluated; (d) row 1's saved state put back,
-     and row 1's metrics returned, so ``compress.py`` writes ``results.json`` as usual.
+     row installed, C3DGS's ``finetune`` with 5,000 iterations, saved, evaluated (Amendment 20 k: the opt-in per-row
+     hooks ``ft_before_finetune`` and ``ft_before_save`` around it, which do nothing here); (d) row 1's saved state
+     put back, and row 1's metrics returned, so ``compress.py`` writes ``results.json`` as usual.
   The checks per row (a failure is a bug; the process's rows enter nothing): the keep mask and quantized set equal
   row 1's, the geometry SHA-1 equal at its save, the colour indices just before its save equal its labels. Each row's
   installed state just before its save (and each fine-tuned row's before fine-tuning) is hashed (``e4p.state_sha1``),
@@ -459,6 +460,7 @@ class ForkHooks(e3r_hooks.Hooks):
                     e4p.set_rng_state(self.copy["rng"])
                     self._install(g, src)
                     rec["pre_finetune_sha1"] = e4p.state_sha1(g)
+                    self.ft_before_finetune(g, row, rec)
                     comp_ft = copy.copy(comp)
                     comp_ft.finetune_iterations = int(ft.get("iterations", e4p.FINETUNE_ITERATIONS))
                     comp_ft.output_vq = os.path.dirname(path)
@@ -475,6 +477,7 @@ class ForkHooks(e3r_hooks.Hooks):
                     if moved:
                         rec["qa_changed_by_record"] = moved
                         raise RuntimeError(f"the fine-tuned row's record changed the colour quantizers: {sorted(moved)}")
+                    self.ft_before_save(g, row, rec)
                     os.makedirs(os.path.dirname(path), exist_ok=True)
                     self.orig["save_npz"](g, path, sort_morton=sort)
                 rec["npz"] = path
@@ -503,6 +506,15 @@ class ForkHooks(e3r_hooks.Hooks):
 
     def _row_label(self, row: str) -> str:
         return self.e4p.ROW_NUMBER[row]
+
+    # ------------------------------------------------------------------ Amendment 20 k: the per-row fine-tuning hook
+    def ft_before_finetune(self, g, row: str, rec: Dict) -> None:
+        """Called for each fine-tuned row after its restore and install and before C3DGS's ``finetune``. It does
+        nothing here (E4p, E4q, E5 and E6 are unchanged); E7's hooks (``kaggle/e7_hooks.py``) set the row's arm."""
+
+    def ft_before_save(self, g, row: str, rec: Dict) -> None:
+        """Called for each fine-tuned row just before its save, after Amendment 18 note 2's record; an exception fails
+        the row. It does nothing here; E7's hooks run their guard and logs."""
 
     # ------------------------------------------------------------------ eval_npz
     def _evaluate_npz(self, scene_obj) -> None:

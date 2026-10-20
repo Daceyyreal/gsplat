@@ -6504,3 +6504,136 @@ def test_e6_notebooks_rebuild_and_name_their_session():
         assert 'BUNDLE = f"{WORK}/E6_bundle_{SESSION}"' in code and 'arc="gn6"' in code
         assert "kaggle/gn_e6_scene.py" in code and "import e6_scenes as es" in code and "gn_e5_scene" not in code
         assert '"e6": True, "part": PART' in code and "e5_sessions" not in code
+
+
+# ------------------------------------------------------------------------------ E7 (PREREG_GN.md Amendment 20)
+E7_HOOKS_BASE = "2d8056ec"  # Amendment 20 note 1: the last commit before E7's code; e4p_hooks.py as E4p-E6 ran it
+# Amendment 20 k: the only lines in which kaggle/e4p_hooks.py differs from E7_HOOKS_BASE's (stripped): the docstring's
+# step (c), the two hook calls in the fine-tuning branch and the two hook methods, which do nothing
+E7_E4P_HOOKS_DIFF = [
+    (26, ("row installed, C3DGS's ``finetune`` with 5,000 iterations, saved, evaluated; (d) row 1's saved state put back,",
+          "and row 1's metrics returned, so ``compress.py`` writes ``results.json`` as usual."),
+     ("row installed, C3DGS's ``finetune`` with 5,000 iterations, saved, evaluated (Amendment 20 k: the opt-in per-row",
+      "hooks ``ft_before_finetune`` and ``ft_before_save`` around it, which do nothing here); (d) row 1's saved state",
+      "put back, and row 1's metrics returned, so ``compress.py`` writes ``results.json`` as usual.")),
+    (462, (), ("self.ft_before_finetune(g, row, rec)",)),
+    (478, (), ("self.ft_before_save(g, row, rec)",)),
+    (506, (), ("", "# ------------------------------------------------------------------ Amendment 20 k: the per-row fine-tuning hook",
+               "def ft_before_finetune(self, g, row: str, rec: Dict) -> None:",
+               '"""Called for each fine-tuned row after its restore and install and before C3DGS\'s ``finetune``. It does',
+               "nothing here (E4p, E4q, E5 and E6 are unchanged); E7's hooks (``kaggle/e7_hooks.py``) set the row's arm.\"\"\"",
+               "", "def ft_before_save(self, g, row: str, rec: Dict) -> None:",
+               '"""Called for each fine-tuned row just before its save, after Amendment 18 note 2\'s record; an exception fails',
+               "the row. It does nothing here; E7's hooks run their guard and logs.\"\"\"")),
+]
+
+
+def _git_show(commit, rel):
+    import subprocess
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    return subprocess.run(["git", "-C", repo, "show", f"{commit}:{rel}"], capture_output=True, text=True,
+                          check=True).stdout
+
+
+def _hooks_at_base(tmp_path):
+    """``ForkHooks`` and ``E5Hooks`` with ``kaggle/e4p_hooks.py`` as it was at ``E7_HOOKS_BASE`` (``e5_hooks.py`` loaded
+    afresh on top of it), as fresh modules; the current modules are left in ``sys.modules``."""
+    import importlib.util
+
+    d = tmp_path / "base_kaggle"
+    d.mkdir()
+    (d / "e4p_hooks.py").write_text(_git_show(E7_HOOKS_BASE, "kaggle/e4p_hooks.py"), encoding="utf-8")
+
+    def load(name, path):
+        spec = importlib.util.spec_from_file_location(name, path)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        return m
+
+    saved = sys.modules.get("e4p_hooks")
+    try:
+        old = load("e4p_hooks", str(d / "e4p_hooks.py"))
+        sys.modules["e4p_hooks"] = old  # e5_hooks' "import e4p_hooks" binds to it
+        old5 = load("e5_hooks_at_base", os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle", "e5_hooks.py"))
+    finally:
+        if saved is not None:
+            sys.modules["e4p_hooks"] = saved
+        else:
+            sys.modules.pop("e4p_hooks", None)
+    return old.ForkHooks, old5.E5Hooks
+
+
+_E7_VOLATILE = ("cost", "time_s", "host", "traceback", "wall_s")
+
+
+def _fork_outputs(tmp_path, rep):
+    """A fork's report without times, host RSS and its own directory, and every saved ``.npz``'s arrays (row 1's is
+    ``compress.py``'s own)."""
+    root = str(tmp_path)
+    text = json.dumps(rep, default=str)
+    for r in (root, root.replace("\\", "\\\\"), root.replace("\\", "/")):
+        text = text.replace(r, "<root>")
+
+    def strip(x):
+        if isinstance(x, dict):
+            return {k: strip(v) for k, v in x.items() if k not in _E7_VOLATILE}
+        if isinstance(x, list):
+            return [strip(v) for v in x]
+        return x
+
+    arrays = {}
+    for row, r in rep["fork"]["rows"].items():
+        p = r.get("npz")
+        p = os.path.join(root, "out", "point_cloud", "iteration_30000", "point_cloud.npz") if row == "c3dgs" else p
+        if p and os.path.exists(p):
+            with np.load(p) as z:
+                arrays[row] = {k: z[k].tobytes() for k in sorted(z.files)}
+    return strip(json.loads(text)), arrays
+
+
+def test_e7_e4p_hooks_hook_changes_nothing_for_e4p_e5_e6(tmp_path, monkeypatch):
+    """Amendment 20 k: kaggle/e4p_hooks.py gains only the opt-in per-row hook (its diff against E7_HOOKS_BASE pinned).
+    E4p's fork (rows 1-5 and their fine-tuning), E5's (c3dgs, OGC's three rows and ogc_gram_ours, j = 0 fine-tuning)
+    and E6's part (b) fork (c3dgs, ogc_gram, both fine-tuned) on the CPU stand-in give bit-identical saved arrays and
+    reports (without times, host RSS and paths) with E7_HOOKS_BASE's e4p_hooks.py and with the current one. Their dry
+    runs' paths are unchanged: the hook's two methods do nothing, and no class E4p-E6 use overrides them."""
+    import difflib
+    import types
+
+    import e4p_hooks
+    import e4q_hooks
+    import e5_hooks
+
+    a = _git_show(E7_HOOKS_BASE, "kaggle/e4p_hooks.py").splitlines()
+    b = open(os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle", "e4p_hooks.py"), encoding="utf-8").read().splitlines()
+    got = [(i1 + 1, tuple(x.strip() for x in a[i1:i2]), tuple(x.strip() for x in b[j1:j2]))
+           for t, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes() if t != "equal"]
+    assert got == E7_E4P_HOOKS_DIFF
+    for cls in (e4p_hooks.ForkHooks, e4q_hooks.E4qHooks, e5_hooks.E5Hooks):
+        for name in ("ft_before_finetune", "ft_before_save"):
+            assert getattr(cls, name) is getattr(e4p_hooks.ForkHooks, name), (cls, name)
+    rec, t = {"x": 1}, torch.ones(2)
+    g = types.SimpleNamespace(_features_dc=t)
+    assert e4p_hooks.ForkHooks.ft_before_finetune(None, g, "c3dgs", rec) is None
+    assert e4p_hooks.ForkHooks.ft_before_save(None, g, "c3dgs", rec) is None
+    assert rec == {"x": 1} and vars(g) == {"_features_dc": t} and torch.equal(t, torch.ones(2))
+    OldFork, OldE5 = _hooks_at_base(tmp_path)
+    assert OldFork is not e4p_hooks.ForkHooks and not hasattr(OldFork, "ft_before_save")
+    e5cfg = lambda d, rows: {"e5": True, "rows": rows, "j": 0, "threshold": 6e-7, "seed": 0,  # noqa: E731
+                             "ogc": {"clone": str(d / "ogc"), "device": "cpu", "chunk": 25000, "lam": 1e-3, "impl": "ogc"}}
+    cases = {"E4p": (OldFork, e4p_hooks.ForkHooks, ("c3dgs", "ogc", "gnvq_cv"), lambda d: {}),
+             "E5": (OldE5, e5_hooks.E5Hooks, ("c3dgs", "ogc_gram"),
+                    lambda d: e5cfg(d, ["c3dgs", "ogc_plain", "ogc_scalar", "ogc_gram", "ogc_gram_ours"])),
+             "E6": (OldE5, e5_hooks.E5Hooks, ("c3dgs", "ogc_gram"), lambda d: e5cfg(d, ["c3dgs", "ogc_gram"]))}
+    for case, (old_cls, new_cls, ft_rows, extra) in cases.items():
+        out = {}
+        for which, cls in (("base", old_cls), ("now", new_cls)):
+            d = tmp_path / case / which
+            d.mkdir(parents=True)
+            _, rep = _fork_in_process(d, monkeypatch, hooks_cls=cls, ft_rows=ft_rows, cfg_extra=extra(d))
+            assert rep["fork"]["phase"] == "done" and rep["fork"]["checks_failed"] == [], case
+            assert [r for r, v in rep["fork"]["rows"].items() if r.endswith("_ft") and v.get("status") != "ok"] == [], case
+            out[which] = _fork_outputs(d, rep)
+        assert out["base"][1] == out["now"][1] and len(out["now"][1]) >= 4, case
+        assert out["base"][0] == out["now"][0], case
