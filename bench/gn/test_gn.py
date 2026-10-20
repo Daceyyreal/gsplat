@@ -7107,7 +7107,7 @@ def test_e7_verdict_reaches_every_outcome_both_holm_orders_and_the_fragile_flag(
     every outcome of 20 h; Holm's order by each test's own statistic, both ways; the second primary untested when the
     first fails, and at the second position's (smaller) critical value when it is tested; a single complete primary at
     the first position's value; the fragile flag from SE_BD; incomplete on n < 5 and on a missing row; a missing BD
-    entering as 0."""
+    entering as 0; a seed pair spanning two Kaggle images reported (Note 2 C6)."""
     import e7
 
     t1, t2 = e7.t_quantile(1 - 0.0125, 7), e7.t_quantile(1 - 0.025, 7)
@@ -7187,6 +7187,13 @@ def test_e7_verdict_reaches_every_outcome_both_holm_orders_and_the_fragile_flag(
     pt = v["primaries"]["refit"]["per_scene"]["truck"]
     assert pt["BD_G"] is None and pt["missing_BD"] == ["G"] and pt["delta"] == pytest.approx(-0.05, abs=1e-9)
     assert v["primaries"]["cb"]["per_scene"]["truck"]["delta"] == pytest.approx(0.25, abs=1e-9)
+    # Note 2 C6: a split scene's seed-1 processes on another Kaggle image: its j = 0 pair spans images, its curve not
+    rows = _e7_rows("room", {"R": 0.05, "G": 0.25, "CG": 0.25})
+    for row in rows:
+        row["image"] = "B" if row["config"].startswith(("p1_", "j-1_p1_", "j+1_p1_")) else "A"
+    sc["room"] = e7.scene_data(rows, "room")
+    assert e7.verdict_e7(sc)["primaries"]["refit"]["per_scene"]["room"]["spans_images"] == {"curves": False,
+                                                                                            "j0_pair": True}
     assert seen == set(e7.OUTCOMES) and es.ARM_ORDER == ("R", "G", "CG", "K", "O")
 
 

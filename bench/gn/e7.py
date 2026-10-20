@@ -171,7 +171,8 @@ def difference_parts(scenes: Dict[str, Dict], arm_a: str, arm_b: str) -> Dict:
     for s, sd in scenes.items():
         A, B = bd_arm(sd, arm_a), bd_arm(sd, arm_b)
         per[s] = {"delta": _z(A["value"]) - _z(B["value"]), f"BD_{arm_a}": A["value"], f"BD_{arm_b}": B["value"],
-                  "missing_BD": [x for x, v in ((arm_a, A["value"]), (arm_b, B["value"])) if v is None]}
+                  "missing_BD": [x for x, v in ((arm_a, A["value"]), (arm_b, B["value"])) if v is None],
+                  "spans_images": e5.spans_images(sd, *arm_pair(arm_a))}  # Note 2 C6: the seed pair spans sessions
         da, db = arm_j0(sd, arm_a), arm_j0(sd, arm_b)
         diffs[s] = [None if x is None or y is None else x - y for x, y in zip(da, db)]
     nz = noise_n(diffs)
