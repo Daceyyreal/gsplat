@@ -6813,6 +6813,10 @@ def test_e7_fork_arms_on_the_stand_in(tmp_path, monkeypatch):
         if arm == "CG":
             assert sorted(e["frozen"]) == sorted(["colour grids", f"_features_dc[:{K}]", f"_features_rest[:{K}]"])
     assert not np.array_equal(npz["c3dgs_ft"]["opacity"], npz["c3dgs"]["opacity"])  # R trains the opacity
+    order = es.ft_rows(es.PROCESSES[1])  # K's requires_grad_(False) is gone in the row after each K row
+    for k in ("c3dgs_ft_k", "ogc_gram_ft_k"):
+        nxt = order[order.index(k) + 1]
+        assert rows[k]["e7"]["no_grad"] and all(rows[nxt]["e7"]["requires_grad_at_start"].values()), (k, nxt)
     for own in ("c3dgs_own", "ogc_gram_own"):
         g = rows[own]["own_grid"]
         for block in ("codewords", "kept"):
@@ -6832,7 +6836,8 @@ def test_e7_fork_arms_on_the_stand_in(tmp_path, monkeypatch):
 def test_e7_guard_fails_when_a_frozen_value_is_moved_by_hand(tmp_path, monkeypatch):
     """20 e's inverted guard: with one frozen value moved by hand after the fine-tuning (G and O: a colour grid's
     buffer; CG: a codeword; K: a kept row and the opacity), every such row fails, with frozen_changed naming what moved
-    and no .npz; R's rows, whose frozen set is empty, pass although their opacity was moved too."""
+    and no .npz; R's and the replicate's rows (j0_p0), whose frozen set is empty, pass although their opacity was moved
+    too."""
     import e7_hooks
 
     class Mover(e7_hooks.E7Hooks):
@@ -6852,7 +6857,7 @@ def test_e7_guard_fails_when_a_frozen_value_is_moved_by_hand(tmp_path, monkeypat
                     g._opacity[0] += 1e-3
             return super().ft_before_save(g, row, rec)
 
-    _, rep = _e7_fork(tmp_path, monkeypatch, proc_index=0, hooks_cls=Mover)
+    _, rep = _e7_fork(tmp_path, monkeypatch, proc_index=1, hooks_cls=Mover)
     rows = rep["fork"]["rows"]
     want = {"G": ["colour grids"], "O": ["colour grids"], "CG": ["_features_dc[:16]"],
             "K": ["_features_rest[16:]", "_opacity"]}
@@ -6861,7 +6866,8 @@ def test_e7_guard_fails_when_a_frozen_value_is_moved_by_hand(tmp_path, monkeypat
             r = rows[f"{m}_ft_{arm.lower()}"]
             assert r["status"] == "failed" and "inverted guard" in r["error"] and "npz" not in r, (m, arm, r.get("error"))
             assert sorted(r["frozen_changed"]) == moved, (m, arm, r["frozen_changed"])
-        assert rows[f"{m}_ft"]["status"] == "ok" and rows[f"{m}_ft"]["frozen_changed"] == {}
+        for ok in (f"{m}_ft", f"{m}_ft_r2"):
+            assert rows[ok]["status"] == "ok" and rows[ok]["frozen_changed"] == {} and os.path.exists(rows[ok]["npz"]), ok
     assert list(rows["c3dgs_ft_g"]["frozen_changed"]["colour grids"]) == ["features_rest_qa.scale"]
 
 
