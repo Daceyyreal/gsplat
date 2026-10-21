@@ -4350,3 +4350,65 @@ Amendment 19 note 1):
 
 **Erratum to Amendment 20:** its heading should read "after FINDINGS sections 21-25". Section 25 (`1b063523`) was
 committed before the amendment.
+
+### Amendment 20 note 2 (2026-10-21, after E7's code and dry run, before any E7 run): readings the code implements that Amendment 20 and note 1 do not state
+
+This note records choices E7's code already implements where Amendment 20 and its note 1 are silent. It is written
+before any E7 data and changes no code, scene, process, row, arm, guard, primary, test, margin, outcome or session. The
+code it cites is at `17161955` (E7's dry-run commit).
+
+**a. One complete primary.** 20 f orders each test type's family of two by its own statistic and tests the second only
+if the first passes; it does not say what happens when one primary is `incomplete`. The code tests the other primary
+alone, at the first Holm position's critical values: superiority at c_sup,1 = t(1 - 0.0125, n), equivalence at
+c_eq,1 = t(1 - 0.025, n). This is the conservative reading.
+- **Code:** `bench/gn/e7.py`, `superiority` and `equivalence` (each takes the first position's value when only one
+  primary is in the family), called by `run_tests`; commit `37836004`.
+- **Test:** `test_e7_verdict_reaches_every_outcome_both_holm_orders_and_the_fragile_flag`. With Delta_refit incomplete
+  (a missing row), Delta_cb is tested at position 1 with critical value t(1 - 0.0125, 7). Its statistic lies between
+  t(1 - 0.025, 7) and t(1 - 0.0125, 7), so it is superior in second position when both are complete and not superior
+  alone. The test asserts the superiority value only; the equivalence value follows the same rule in `equivalence` and
+  is not asserted separately.
+
+**b. The own grid.** 20 d sets each `*_own` row's colour quantizers (and arm O's) "from the part's minimum and maximum,
+so that no value of the table lies outside it", computed as torch's min/max qparams for qint8, per-tensor affine. Those
+qparams round the zero point, so one end of the part's range can lie up to half a grid step beyond the representable
+end. That value rounds to the end code. **"No value lies outside it" is read as "no value is clamped"**: every value is
+within half a step of the grid's representable range, and its fake-quantization error is at most half a step.
+- **Code:** `kaggle/e7_hooks.py`, `own_qparams` (the qparams as `MinMaxObserver` computes them, no quantizer module
+  called) and `own_grid`; commit `433ec4db`.
+- **Tests:** `test_e7_own_grid_is_torchs_qparams_and_clamps_nothing` (the qparams equal `MinMaxObserver`'s; at most
+  half a step beyond; fake-quantization error at most half a step) and `test_e7_fork_arms_on_the_stand_in` (every
+  `*_own` row's logged `max_steps_beyond` is at most 0.5).
+- **Also in `own_grid`:** it writes the observer's minimum and maximum (the part's) as well as the scale and zero point.
+  C3DGS's evaluation of an `*_own` row runs with the observer on, as for every unfine-tuned row (20 d turns it off only
+  for the frozen-grid arms). The observer then sees the same table and keeps the row's own grid (tested in
+  `test_e7_own_grid_is_torchs_qparams_and_clamps_nothing`).
+
+**c. Other choices the amendment and note 1 do not state:**
+1. **`j-1_p1` and `j+1_p1` have no primary rows.** 20 f's completeness names the four full processes; these two serve
+   g.5 only. So a failure there is recorded and does not rerun the process (`kaggle/e7_scenes.py`, `primary_rows`,
+   `433ec4db`; `test_e7_scenes_processes_rows_and_arms`).
+2. **Holm's order on a tie:** Delta_refit first (`bench/gn/e7.py`, `ORDER`, `37836004`).
+3. **A zero `SE`:** the superiority statistic is +inf when r(Delta_bar) != 0 and 0 when it is 0; the equivalence
+   margin m is +inf when |r(Delta_bar)| < delta and -inf otherwise (`e7._stat_sup`, `e7._margin`, `37836004`).
+4. **The noise's n:** `SD_pool` and `SE` count the scenes with both j = 0 values (E5's `e5.noise`). A scene without
+   them is incomplete for that primary in any case.
+5. **`SD_BD`:** a scene without a seed-1 BD_R is left out of the mean of squared differences, and the count is
+   reported (`n_used`); `SE_BD` still divides by the primaries' n (`e7.sd_bd`, `e7.verdict_e7`, `37836004`).
+6. **Note 1's packing tie:** two packings of the seed-1 halves leave 2,355 s in the tightest session. Note 1's table has
+   the one with more spare in the next-tightest session (5,213 s against 5,122 s) (`test_e7_estimate_reproduces_
+   amendment_20_note_1`, `b7a8e84f`).
+7. **The carry-over within E7** (20 i: Note 4's): a half that note 1 plans for an earlier session, of a restored scene
+   neither dropped nor stopped, with a process of that half not settled (or never started), is appended after this
+   session's own lane (`kaggle/build_gn_e7_bench.py`, `CARRIED_E7`, `318d50cc`; `test_e7_carry_over_of_halves`).
+8. **The restore** takes each scene's result files and INRIA members from earlier E7 outputs and no work directory. A
+   later process re-lays out its model and reruns the harness (`318d50cc`).
+9. **A seed-1 half's harness** includes note ii's reference renders and coverage as well as the GN pass, because the
+   per-session cache holds both (`kaggle/gn_e7_scene.py`, as E6's job; shown in the dry run).
+10. **What each row records:** two CSV columns, `arm` and `e7_record` (the arm's settings, the guard's
+    `frozen_changed`, the logs of 20 e, an `*_own` row's own grid), and an `*_own` row's cost as its save
+    (`kaggle/e7_scenes.py`, `row_record`; `kaggle/gn_e7_scene.py`, `433ec4db`, `37836004`).
+11. **Per-scene image spans** (Note 2 C6): each primary's per-scene part reports whether its seed-0 curve or its j = 0
+    seed pair spans Kaggle images (`bench/gn/e7.py`, `52785c26`).
+
+Beyond these, the code implements no choice that Amendment 20 and note 1 leave open.
