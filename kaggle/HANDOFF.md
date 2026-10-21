@@ -4725,6 +4725,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
      FT-dissection S2", kitchen's seed-0 half) attaches it, and every later session attaches every earlier one.
 - **S1 readiness:** `kaggle/gn_e7_bench_S1.ipynb`, sha256 `e55560f014c105447f089c6d64810e2a767bd4b62ed47de3983985ae909d1f26`
   (LF), unchanged since `318d50cc` and equal at `17161955`; the builder rebuilds it byte-identical (pytest).
+- **Amendment 20 note 2** (`710e7f88`, 2026-10-21, text only, alone, before any E7 run) records the readings the code implements that
+  Amendment 20 and note 1 do not state; no code changed, and S1's readiness above is unchanged.
 - **Next action: run E7 S1 on Kaggle.**
 
 ### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; E6 part (a), FINDINGS section 23; E6 closed; next: none queued)
