@@ -64,7 +64,8 @@ passes (FINDINGS section 21, `6bd340a0`, `check_s21.py` `251c305c`; descriptive 
 (parts (a) and (b)): FINDINGS section 23 (`0049d81f`, `check_s23.py` `52b6ab0c`), CLAIMS group G (`eb4d6620`, 67 rows).
 **Amendment 20 (E7) `53dde708` and its note 1 `2d8056ec` (every scene split, eleven sessions); E7 built
 (`dd483073`-`075d8d5f`) and its dry run passed (`17161955`); E7 S1 ran and is ingested (`b592a57e`, room seed 0,
-mechanics clean); next: E7 S2 on Kaggle.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
+mechanics clean); S1's output does not mount, so later sessions attach the dataset "E7 S1 bundle" (Amendment 20
+note 3, `f4cc49b2`); next: E7 S2 on Kaggle.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
 `4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b)), checker `check_figs.py` (paper figures:
@@ -4793,8 +4794,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   1. Import `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e7_bench_S2.ipynb`; title
      **"E7 OGC FT-dissection S2"**.
   2. Attach **"E5p OGC dissection pilot", attempt 2's version, pinned** (the wheel); the private dataset **"E5p OGC
-     source 49ccae72"**; and **S1's output ("E7 OGC FT-dissection S1"), pinned to its version** (its `gn7/` and
-     `e7_inria/`).
+     source 49ccae72"**; and the private dataset **"E7 S1 bundle"** (`E7_bundle_S1.zip` unchanged; Amendment 20 note 3),
+     **not** S1's output version, which does not mount (see "E7 S2: S1's output does not mount; note 3 (2026-10-23)").
   3. Accelerator **GPU T4 x2**, Internet **on**. Save & Run All.
   4. **The first output must be the `OGC PREFLIGHT` lines, both ok** (url and dataset).
   5. S2 runs **kitchen's seed-0 half** (`j-1_p0`, `j0_p0` with the replicate pair, `j+1_p0`; 44 rows and
@@ -4806,6 +4807,42 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   (LF), unchanged since `318d50cc`; the builder rebuilds it byte-identical (pytest). At S2's ingest the code-identity
   rule applies to S2's gsplat commit and may list only `bench/gn/test_gn.py`.
 - **Next action: run E7 S2 on Kaggle.**
+
+### E7 S2: S1's output does not mount; note 3 (2026-10-23)
+
+- **Two S2 attempts, no data.** Both stopped at input mounting with `ERRORED_MOUNTING_DATASET` on S1's output version
+  (`gs://kaggle-script-versions/360810926/output`, at `/kaggle/input/notebooks/daceyy/e7-ogc-ft-dissection-s1`; "retry
+  budget exhausted (30 attempts) ... dataset loading failed"). No cell ran: no row, no bundle; not an attempt in 17 i's
+  sense.
+- **Read-only diagnosis (2026-10-23):** S1's output holds nothing E6's outputs did not (E6's restore copied every work
+  directory, so E6 S3's output carried about 2.4 GB of `.npz` and seven hard-linked model folders, and mounted fine; E7
+  restores no work directory). Most likely a Kaggle-side storage failure; not verifiable from here. The restore finds
+  earlier outputs by contents (cell 3, `discover`: any `gn7/` whose `gn5_attempt.json` says `"e7": true` and attempt 1),
+  so a dataset holding the bundle is found with no code change. Without any S1 input, S2 would still run kitchen, but
+  room's files would not reach S10, whose fresh `(room, uncompressed)` row would make `bench/gn/e7.py`'s `load` raise
+  `BundleConflict`.
+- **Amendment 20 note 3** (`f4cc49b2`, alone, text only; gate `gate_20261023_021359_a20_note3.log`, 224 passed): for an
+  earlier session whose output version does not mount, a private Kaggle dataset "E7 S# bundle" holding `E7_bundle_S#.zip`
+  unchanged (sha256 equal to the committed bundle's) meets 20 l; members not restored are re-fetched through their pins;
+  attaching both is harmless; at every ingest from now on the carried scenes' result files must be byte-identical to the
+  bundle that first committed them. Applied to S1: **"E7 S1 bundle"**, `E7_bundle_S1.zip`, 254,046 bytes, sha256
+  `cd25fba9c666924520e5cd3c07f808dbebbd208c0b3d732f55f26ef57b37e729` (`~/Downloads/E7_bundle_S1.zip`, checked
+  2026-10-23), its `gn7/` as committed in `b592a57e`.
+- **Attach lists, S2-S11:** every later session attaches **"E7 S1 bundle"** in place of "E7 OGC FT-dissection S1"
+  (the notebooks' markdown still names S1's output; no notebook changes), plus every other earlier session's output
+  version (or its "E7 S# bundle" if that one does not mount either), "E5p OGC dissection pilot" attempt 2's version
+  pinned, and "E5p OGC source 49ccae72".
+- **Added to S2's ingest checklist:**
+  - room's carried `gn5_meta_room.json` and `gn5_results_room.csv` in S2's bundle must be byte-identical to
+    `kaggle/gn_e7/S1/gn7/` as the zip holds them (the working copies, CRLF in the CSV; not git's LF blobs);
+  - the restore's log must show `restoring room from <dir>` with `<dir>` under the "E7 S1 bundle" dataset's mount path;
+  - room's INRIA members are not in the dataset: S2 does not run room, so it fetches none; they are fetched by room's
+    seed-1 half in S10;
+  - the rest as before: zip sha256 and size, every `gn7/` file against its zip entry, the code-identity rule
+    (`17161955..<S2's gsplat commit>` lists only `bench/gn/test_gn.py`), no `.npz` / `.ply` / `.pt` / `.py`, no OGC file
+    or author / committer line, kitchen's mechanics only; no `per_scene_parts`, BD or arm comparison until all eleven
+    sessions are in.
+- **Next action: run E7 S2 on Kaggle** with "E7 S1 bundle" attached.
 
 ### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; E6 part (a), FINDINGS section 23; E6 closed; next: none queued)
 
