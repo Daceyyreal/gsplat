@@ -4412,3 +4412,39 @@ within half a step of the grid's representable range, and its fake-quantization 
     seed pair spans Kaggle images (`bench/gn/e7.py`, `52785c26`).
 
 Beyond these, the code implements no choice that Amendment 20 and note 1 leave open.
+
+### Amendment 20 note 3 (2026-10-23, after E7 S1's bundle (`b592a57e`) and before any further E7 run): an earlier session's output that does not mount
+
+This note records an input failure and the substitute that meets Amendment 20 l with no code change. It changes no
+scene, process, row, arm, guard, test, margin, outcome or session.
+
+**The event.** E7 S2 ("E7 OGC FT-dissection S2") was started twice with S1's output version attached
+(`gs://kaggle-script-versions/360810926/output`, mounted at `/kaggle/input/notebooks/daceyy/e7-ogc-ft-dissection-s1`).
+Both times Kaggle stopped at input mounting with `ERRORED_MOUNTING_DATASET` ("retry budget exhausted (30 attempts) ...
+dataset loading failed"). Nothing ran in either attempt: no cell, no row, no bundle. Neither counts as an attempt in
+17 i's sense (no data).
+
+**The rule.** For any earlier E7 session whose output version fails to mount, Amendment 20 l's "each session attaches
+every earlier E7 session's output" is met by a private Kaggle dataset titled "E7 S# bundle" holding that session's
+`E7_bundle_S#.zip` unchanged, its sha256 equal to the committed bundle's.
+- **No code changes.** The restore (step 2, cell 3 of `kaggle/gn_e7_bench_S#.ipynb`; `discover` and `attempt_of`, as
+  `kaggle/build_gn_e7_bench.py:103-110` substitutes them into E5's cell) walks `/kaggle/input` and takes any `gn7/`
+  whose `gn5_attempt.json` says `"e7": true` and this attempt, wherever it is mounted: it finds an output by its
+  contents, not by its name. Kaggle unpacks an uploaded zip (E5s found the private OGC dataset unpacked, Amendment 18
+  note 3), so the bundle's arcname puts its files in `<dataset>/gn7/`, which the restore reads as it would an output's
+  `gn7/`: each scene's `gn5_meta_<scene>.json` and `gn5_results_<scene>.csv` (`kaggle/build_gn_e7_bench.py:109-110`).
+  The restore's log line (`restoring <scene> from <dir>`) names the path each scene came from.
+- **INRIA members.** The bundle holds no `e7_inria/`. A scene whose members are not restored has them fetched again by
+  its job through their pins, with the existing size and CRC32 checks, the path every first session of a scene takes.
+  No earlier session's work directory is restored in any case (`kaggle/build_gn_e7_bench.py:111-112`).
+- **Both attached** (the dataset and a working output of the same session) is harmless: the two hold the same `gn7/`
+  files, and the restore takes each scene from one of them.
+
+**Applied now to S1.** Dataset "E7 S1 bundle", private, holding `E7_bundle_S1.zip` (254,046 bytes, sha256
+`cd25fba9c666924520e5cd3c07f808dbebbd208c0b3d732f55f26ef57b37e729`), whose `gn7/` is the one committed in `b592a57e`
+(`kaggle/gn_e7/S1/gn7/`). Every later session, S2 to S11, attaches it in place of S1's output version.
+
+**Verification at ingest.** From this note on, at each session's ingest the carried scenes' result files
+(`gn5_meta_<scene>.json`, `gn5_results_<scene>.csv`) in its bundle must be byte-identical to the copies in the bundle
+that first committed them, compared as the zip's bytes (the working copies), not as git's LF-normalized blobs. This is
+how a dataset substitute is verified.
