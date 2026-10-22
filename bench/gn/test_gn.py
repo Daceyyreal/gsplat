@@ -7203,6 +7203,33 @@ def test_e7_verdict_reaches_every_outcome_both_holm_orders_and_the_fragile_flag(
     assert seen == set(e7.OUTCOMES) and es.ARM_ORDER == ("R", "G", "CG", "K", "O")
 
 
+def test_e7_single_primary_equivalence_at_the_first_positions_critical_value():
+    """Amendment 20 note 2 a, the equivalence half: with Delta_refit incomplete (a missing row), Delta_cb's TOST is
+    tested alone at the first Holm position's c_eq,1 = t(1 - 0.025, n). Its margin m lies between c_eq,2 =
+    t(1 - 0.05, n) and c_eq,1, so it is equivalent in second position when both are complete and not equivalent
+    alone."""
+    import e5
+    import e7
+
+    c1, c2 = e7.t_quantile(1 - 0.025, 7), e7.t_quantile(1 - 0.05, 7)
+    se = e5.r9(e7.verdict_e7(_e7_scenes(lambda i: {"R": 0.05, "G": 0.05, "CG": 0.05}))["primaries"]["cb"]["noise"]["SE"])
+    cb = e7.DELTA - 2.1 * se  # m = 2.1, between c2 (1.895) and c1 (2.365)
+    vals = lambda i: {"R": 0.05, "G": 0.05, "CG": 0.05 + cb}  # Delta_refit = 0: the larger m, first
+    v = e7.verdict_e7(_e7_scenes(vals))
+    eq = v["tests"]["equivalence"]
+    r = eq["results"]["cb"]
+    assert eq["order"] == ["refit", "cb"] and eq["results"]["refit"]["equivalent"]
+    assert r["position"] == 2 and r["critical_t"] == pytest.approx(c2) and c2 < r["m"] < c1 and r["equivalent"]
+    vm = e7.verdict_e7(_e7_scenes(vals, drop={"room": ("p0_c3dgs_ft",)}))
+    assert vm["outcomes"]["refit"] == "incomplete" and vm["missing_primary_rows"]["cb"] == {}
+    eq = vm["tests"]["equivalence"]
+    r = eq["results"]["cb"]
+    assert eq["order"] == ["cb"] and r["position"] == 1 and r["tested"]
+    assert r["critical_t"] == pytest.approx(c1) and c2 < r["m"] < c1 and not r["equivalent"]
+    assert r["interval"] == pytest.approx([e5.r9(cb) - c1 * se, e5.r9(cb) + c1 * se], abs=1e-9)
+    assert vm["outcomes"]["cb"] in ("neither", "superior, positive; not equivalent")
+
+
 def test_e7_secondaries_on_constructed_data():
     """20 g on constructed data: BD_K - BD_CG and BD_O - BD_G; P1 with the own grid against P1; P1 and P_FT replicated
     with E5's criteria under both SEs; the seed-1 BDs and SD_BD; the replicate pair; bytes and BD-rate per arm with the
