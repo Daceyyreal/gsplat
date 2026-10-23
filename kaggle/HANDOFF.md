@@ -65,7 +65,8 @@ passes (FINDINGS section 21, `6bd340a0`, `check_s21.py` `251c305c`; descriptive 
 **Amendment 20 (E7) `53dde708` and its note 1 `2d8056ec` (every scene split, eleven sessions); E7 built
 (`dd483073`-`075d8d5f`) and its dry run passed (`17161955`); E7 S1 ran and is ingested (`b592a57e`, room seed 0,
 mechanics clean); S1's output does not mount, so later sessions attach the dataset "E7 S1 bundle" (Amendment 20
-note 3, `f4cc49b2`); next: E7 S2 on Kaggle.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
+note 3, `f4cc49b2`); E7 S2 ingested (`d0d6df8a`, kitchen seed 0, mechanics clean); every later session attaches
+"E7 S# bundle" datasets (note 4, `5bf93e0e`); next: E7 S3 on Kaggle.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
 `4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b)), checker `check_figs.py` (paper figures:
@@ -4843,6 +4844,94 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     or author / committer line, kitchen's mechanics only; no `per_scene_parts`, BD or arm comparison until all eleven
     sessions are in.
 - **Next action: run E7 S2 on Kaggle** with "E7 S1 bundle" attached.
+
+### E7 S2 (2026-10-23)
+
+- **S2 done and ingested:** `E7_bundle_S2.zip` (sha256 `ce580220afa1abb9e14f67974a52cad4652c87b04b7423fb638e6dcc200d1a1e`,
+  480,434 bytes): its 11 `gn7/` files committed unchanged, data only, in `kaggle/gn_e7/S2/gn7/` (`d0d6df8a`; gate
+  `gate_20261023_140442_e7_s2_bundle.log`, 224 passed). The working copies are byte-identical to the zip; each blob
+  equals its file with CRs removed. It ran with "E7 S1 bundle" attached (Amendment 20 note 3).
+- **Code identity:** S2 ran gsplat `5418fec3` (every row and `gn5_env_S2.json`); `17161955..5418fec3` over the rule's
+  paths lists only `bench/gn/test_gn.py` (exempt).
+- **Note 3's verification:** room's carried `gn5_meta_room.json` and `gn5_results_room.csv` are byte-identical to
+  `kaggle/gn_e7/S1/gn7/` (the zip copies). The bundle does not record the restore's source path (the `restoring room
+  from <dir>` line is in Kaggle's notebook log only; `timings_S2.json` has `restore_s` 5.79); the dataset was S2's only
+  E7 input, so room can only have come from it.
+- **Contents:** no `.npz`, `.ply`, `.pt` or `.py`, no `ogc-3dgs` tree, no author or committer line. OGC text: the clone
+  URL, the preflight lines and the dataset's source paths, as S1. OGC's code came from the URL (`49ccae72`).
+- **Mechanics clean (kitchen, seed-0 half):**
+  - 45 rows (44 and `uncompressed`), all `ok`; `j-1_p0`, `j0_p0`, `j+1_p0` each settled on attempt 0 on `cuda`, OOM
+    false; no C3DGS evaluation error, deadline guard or cut, deviation, failed or skipped step (242 steps, all ok), NaN
+    or infinite value; labels survived in every fine-tuned row; `frozen_changed` empty on all 30 fine-tuned rows;
+  - `missing_or_failed` is exactly the 22 seed-1-half rows (planned for S8); `unsettled_processes` empty;
+  - `cfg_args` `sh_degree` 3, `eval` True, `white_background` False; loaded 1558 x 1039 (`images_2`), 279 views (Note
+    1's covered size); protocol ii used 35 test views;
+  - one image (Python 3.13.15, torch 2.11.0+cu128, cuDNN 91900, driver 580.178.04), the wheel restored;
+  - **job 32,205.6 s** in the queue (`timings_s.job` 32,186.1): note 1's kitchen seed-0 half 23,457-37,666 s, so 1.373 of
+    the low end and 0.855 of the high (S1: 1.087 / 0.692); processes 9,522.4 / 10,858.9 / 9,083.9 s (note 1's high
+    10,956 / 15,012 / 10,956); process GPU peaks 9,274,402,304-9,482,844,672 bytes allocated; setup (preflight, restore,
+    install, C3DGS build) 385.1 s.
+- **A stale label, kept:** `gn5_attempt.json` names "Amendment 20; note 1", as S1.
+- **Not read:** `per_scene_parts`; no BD, Delta or arm comparison (20 f: after all eleven sessions, by `bench/gn/e7.py`).
+- **Parked (mechanics, numbers only; checked against the bundle 2026-10-23; not findings):**
+  - **Monotone in j (seed 0):** `.npz` bytes and protocol ii both fall with j for all 14 row kinds (in S1, protocol ii
+    for 13).
+  - **Bytes after over before fine-tuning,** j = -1 / 0 / +1: `ogc_gram_ft_g` 1.0071 / 1.0034 / 1.0006, `ogc_gram_ft`
+    (R) 0.9353 / 0.9632 / 0.9895, `ogc_gram_ft_cg` 1.0076 / 1.0027 / 1.0002, `ogc_gram_ft_k` 1.0036 / 1.0052 / 1.0061,
+    `ogc_gram_ft_o` 0.9367 / 0.9638 / 0.9893; `c3dgs_ft_g` 1.0074 / 1.0028 / 0.9995, `c3dgs_ft` 0.9991 / 0.9999 / 0.9987,
+    `c3dgs_ft_cg` 1.0082 / 1.0027 / 0.9985, `c3dgs_ft_k` 1.0039 / 1.0058 / 1.0069, `c3dgs_ft_o` 1.0084 / 1.0042 / 0.9996.
+  - **The replicate (`j0_p0`):** `c3dgs_ft_r2` minus `c3dgs_ft` +0.03084 dB / +5,241 bytes; `ogc_gram_ft_r2` minus
+    `ogc_gram_ft` +0.01922 dB / +11,267 bytes.
+  - **Grids:** `qa_pre` is the same in every row of the three processes and equals the unfine-tuned rows' `qa_at_save`
+    (DC scale 0.038276806473731995, zero point -63; AC 0.006016124971210957, 9). G, CG and K rows are saved with it
+    (`qa_at_save` equal, observers off); every O row with its own grid (observers off); R and R2 move (observers on).
+  - **Scale after over before (DC, AC), j = -1 / 0 / +1:** `c3dgs_ft` (0.9064, 1.0941) / (0.7764, 1.0996) / (0.7535,
+    1.1038); `ogc_gram_ft` (0.8949, 1.9780) / (0.7398, 2.4354) / (0.7443, 2.6427); `c3dgs_ft_r2` (0.7709, 1.0985),
+    `ogc_gram_ft_r2` (0.7445, 2.4312).
+  - **OGC's AC codewords beyond the pre-fine-tuning grid** (count / largest steps, trained table), j = -1 / 0 / +1:
+    R 96 / 142.83, 102 / 224.15, 161 / 218.56; R2 (j = 0) 102 / 223.43; G 100 / 138.10, 104 / 223.40, 161 / 215.36; CG
+    100 / 138.10, 100 / 223.40, 157 / 215.36; K 107 / 138.10, 106 / 223.40, 164 / 215.36; O 96 / 139.59, 102 / 224.19,
+    161 / 217.17. C3DGS's codewords: 0 in every arm and point, AC and DC; OGC's DC codewords: 0. Kept rows against the
+    pre-fine-tuning grid: DC 0-1 values, AC 1-32 values; up to 15.37 steps in R, R2 and O, up to 0.955 in G and CG,
+    0.000 in K.
+  - **Against the saved grid:** R, R2 and O 0-2 codeword values and 0-2 kept values beyond it in each part. **Arm O's
+    largest drift beyond its frozen own grid: 1.019 steps** (`j+1_p0_ogc_gram_ft_o`, a DC codeword; S1: 1.018, a kept
+    DC value): the own grid is frozen while the table trains, as in S1. G, CG, K: identical to the pre-grid counts (the
+    same grid).
+  - **`*_own` rows, own step over shared step (DC, AC),** j = -1 / 0 / +1: `c3dgs_own` (0.8588, 1.0000) / (0.7229,
+    1.0000) / (0.7036, 1.0000); `ogc_gram_own` (0.8588, 1.9584) / (0.7136, 2.4228) / (0.7130, 2.6328). Their tables
+    against their own grid: 1-2 values beyond, at most 0.377 steps (`max_steps_beyond` <= 0.5 in all six: none clamped,
+    note 2 b). C3DGS's AC own step equals the shared one at every j (S1: 0.8745-0.9961).
+- **Amendment 20 note 4** (`5bf93e0e`, alone, text only; gate `gate_20261023_140702_a20_note4.log`, 224 passed): for
+  every earlier E7 session, mounted output or not, the private dataset "E7 S# bundle" (`E7_bundle_S#.zip` unchanged,
+  sha256 equal to the committed bundle's) meets 20 l, in place of the output version or beside it; verification
+  unchanged (carried scenes' files byte-identical to the bundle that first committed them).
+- **The attach rule for S3-S11 (note 4):** "E5p OGC dissection pilot", attempt 2's version, pinned (the wheel); the
+  private dataset "E5p OGC source 49ccae72"; and **"E7 S# bundle" for every earlier session** (created by Dace, private,
+  from the committed `E7_bundle_S#.zip` after checking its sha256). Output versions are not needed. The notebooks'
+  markdown still names the output versions; no notebook changes.
+- **E7 S3 on Kaggle:**
+  1. Import `https://raw.githubusercontent.com/Daceyyreal/gsplat/5bf93e0e/kaggle/gn_e7_bench_S3.ipynb` (pinned; the
+     notebook is unchanged since `318d50cc`, and at run time it checks out the branch head of `bench/gn-vq`); title
+     **"E7 OGC FT-dissection S3"**.
+  2. Attach **"E5p OGC dissection pilot", attempt 2's version, pinned**; the private dataset **"E5p OGC source
+     49ccae72"**; **"E7 S1 bundle"** (`E7_bundle_S1.zip`, sha256 `cd25fba9...`); **"E7 S2 bundle"**, to be created from
+     `~/Downloads/E7_bundle_S2.zip` (480,434 bytes, sha256 `ce580220...`), private.
+  3. Accelerator **GPU T4 x2**, Internet **on**. Save & Run All.
+  4. **The first output must be the `OGC PREFLIGHT` lines, both ok** (url and dataset); the restore must print
+     `restoring kitchen from ...` and `restoring room from ...` under the two bundle datasets.
+  5. S3 runs **drjohnson's seed-0 half** (`j-1_p0`, `j0_p0` with the replicate pair, `j+1_p0`; 44 rows and
+     `uncompressed`), **images on the CPU from the start** (`e5_scenes.START_DEVICE`, Amendment 17 Note 1): note 1's
+     21,228-36,988 s, 2,192 s spare at the high end.
+  6. Bring back `/kaggle/working/E7_bundle_S3.zip` (arcname `gn7/`).
+- **S3 readiness:** `kaggle/gn_e7_bench_S3.ipynb`, sha256 `1349daedf04c95d2d2b0428078d7220b3ad49bbf2a43539e01f0da9cda9f2599`,
+  unchanged since `318d50cc`; the builder rebuilds it byte-identical (pytest). At S3's ingest: the code-identity rule
+  on S3's gsplat commit (only `bench/gn/test_gn.py`); room's and kitchen's carried files byte-identical to S1's and S2's
+  zip copies (note 3).
+- **Quota needed per session** (Kaggle GPU hours; note 1's lane end at the high end plus setup at 420 s, its "session
+  hours" high column; S1 and S2 measured 465.3 s and 385.1 s of setup): S3 10.39, S4 10.30, S5 9.68, S6 9.22, S7 8.11,
+  S8 10.35, S9 10.19, S10 9.55, S11 5.68. The measured jobs so far ran at 0.692 (S1) and 0.855 (S2) of the high end.
+- **Next action: create "E7 S2 bundle", then run E7 S3 on Kaggle.**
 
 ### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; E6 part (a), FINDINGS section 23; E6 closed; next: none queued)
 
