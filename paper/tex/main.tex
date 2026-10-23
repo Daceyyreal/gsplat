@@ -1,0 +1,43 @@
+% The paper's skeleton: one file per section, figures and tables from paper/figs/out/ (generated; do not edit there).
+% Every result sentence carries a trailing comment naming its FINDINGS section (s##) and its paper/CLAIMS.md row;
+% paper/tex/check_tex.py checks the numbers against those files.
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{../figs/out/}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\TODO}[1]{\textcolor{red}{[TODO: #1]}}
+
+\title{\TODO{title}}
+\author{\TODO{authors}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\TODO{abstract, written last}
+\end{abstract}
+
+\input{sec1_introduction}
+\input{sec2_setup}
+\input{sec3_replication}
+\input{sec4_dissection}
+\input{sec5_finetuning}
+\input{sec6_limits}
+
+\appendix
+\input{appendix}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

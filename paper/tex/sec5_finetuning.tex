@@ -1,0 +1,66 @@
+% Section 5: fine-tuning. 5.1 written (E6, H2); 5.2 a stub until E7's verdict. Sources: FINDINGS s19-s23, s25;
+% CLAIMS A5, F1-F8, G1-G7, conflict 3. One sentence per line; each result sentence names its s## and CLAIMS row.
+\section{Fine-tuning}
+\label{sec:finetuning}
+
+\subsection{The lead after fine-tuning}
+\label{sec:ft-result}
+
+\paragraph{Hypothesis and test.}
+E6 part (b) asked whether OGC's Gram-metric VQ still beats C3DGS's own colour VQ at equal rate after C3DGS's 5,000-iteration fine-tuning, on the seven gate scenes (P\_FT, BD-PSNR of \code{ogc\_gram\_ft} against \code{c3dgs\_ft}, computed as P1 with the fine-tuned rows). % Am19 c; s21
+It used E5's three criteria on fresh processes, four per scene, each fine-tuning both rows, so that the fine-tuned rows have a curve over the three colour thresholds. % Am19 c; s21
+The hypothesis was formed after seeing E5's results on these scenes, so this is a pre-registered test on them and not a held-out claim. % Am19 c; s21; CLAIMS group F limits
+
+\paragraph{Result (pre-registered).}
+E6 part (b) passed as pre-registered: after fine-tuning OGC's VQ led C3DGS's own at equal rate with $\bar P_{\mathrm{FT}} = 0.0425$ dB, positive on 6 of 7 scenes, and $\bar P_{\mathrm{FT}} = 4.9\,\mathrm{SE}_{\mathrm{noise}}$ against the required 2 ($2\,\mathrm{SE}_{\mathrm{noise}} = 0.0174$ dB). % s21 "The verdict"; F1
+The one negative scene was drjohnson, at $-0.0046$ dB (Table~\ref{tab:t2}). % s21 per-scene table; F1
+No scene was dropped and no primary row or value was missing. % s21 "The verdict"; F1
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{E6 part (b) per scene (dB). P\_FT is the pre-registered primary (9 decimals, as compared). P1 replicated is a report-only secondary beside E5's P1. The leave-one-out (LOO) columns, not pre-registered, give the three criteria over the six scenes left when the row's scene is removed. Generated from the committed bundles.}
+\label{tab:t2}
+\resizebox{\linewidth}{!}{\input{../figs/out/t2_e6_pft.tex}}
+\end{table}
+
+\paragraph{How firm the result is (descriptive, not pre-registered).}
+Leaving out any one scene, every case still met all three criteria, with $\bar P / \mathrm{SE}_{\mathrm{noise}}$ from 3.88 to 5.46, but 6 of the 7 cases met the count with exactly 5 positive scenes, so the count is the tight criterion. % s22 a; F5
+Across scenes P\_FT had a standard deviation of 0.0373 dB ($t = 3.0$), which $\mathrm{SE}_{\mathrm{noise}}$ does not measure. % s22 a; F5
+Under the standard error that matches one curve per scene, $\mathrm{SD}_{\mathrm{pool}}/\sqrt{n}$, $\bar P_{\mathrm{FT}}$ lay 3.45 standard errors above zero against the registered 4.9, and the leave-one-out cases 2.75 to 3.86; criterion 3 still held in every case, and the registered verdict stands under its pre-registered rule. % s25; F1, F5
+With OGC's bytes set to C3DGS's at each $j$, a counterfactual and not equal rate, the mean was $+0.0458$ dB against $\bar P_{\mathrm{FT}} = +0.0425$ dB, so the result is not produced by where the bytes fall. % s22 c; F7
+
+\paragraph{Against the lead before fine-tuning (descriptive).}
+As a ratio of means P\_FT was 0.1195 of P1 replicated, with per-scene ratios from $-0.017$ to $+0.331$; the two measures average over different byte ranges, so the ratio is not the share of the earlier lead that survives at any one rate. % s22 b; F6
+E5's own $j = 0$ comparison after fine-tuning, $+0.0604$ dB at unequal bytes, measures a different quantity on separate runs; neither value replaces the other. % s19 secondaries; A5; CLAIMS conflict 3
+
+\paragraph{Where along the curve (descriptive, not pre-registered).}
+On all seven gate scenes the fine-tuned rows' PSNR difference at the same $j$ rose from $j = -1$ to $j = +1$: from $-0.119$ to $+0.023$ dB at $j = -1$, $+0.024$ to $+0.112$ dB at $j = 0$, and $+0.061$ to $+0.379$ dB at $j = +1$. % s22 d; F8
+These points are not rate-matched: at $j = +1$ OGC's row had 3.5\% to 7.9\% more bytes, and at $j = -1$ 0.3\% to 7.9\% fewer. % s22 d; s21 secondary 2; F8
+After fine-tuning OGC's \code{.npz} was smaller than C3DGS's at $j = -1$ on every scene and larger at $j = +1$ on every scene, while before fine-tuning it was larger at every point. % s21 secondary 2; F3
+The rising pattern is scoped to the gate scenes: on the development scenes it rose on flowers but fell on train and was not monotone on treehill. % s23 e; F8, G5
+
+\paragraph{The development scenes (descriptive).}
+E6 part (a) ran the same rows on flowers, treehill and train with three predictions and no criterion (Table~\ref{tab:t3}). % Am19 b; s23; CLAIMS group G limits
+All three predictions held on all three scenes: P1 $> 0$, P2 $> 0$, and P\_FT below P1. % s23 "The predictions"; G1
+P\_FT was $+0.0341$ dB on flowers and negative on treehill ($-0.0262$ dB) and train ($-0.0066$ dB), so the third prediction held on treehill and train because P\_FT was negative. % s23 "The predictions"; G1, G2
+Treehill's P\_FT stayed negative with the $j = 0$ seed-1 process in place of seed 0 ($-0.0423$ dB). % s23 b; G2
+Train's P\_FT is not interpreted: its fine-tuned points moved by up to 0.19 dB between runs, and replacing its $j = 0$ fine-tuned point with the pilot's changed it by $+0.2274$ dB. % s23 a; G3
+These are development scenes; no part (a) value is pooled with the gate scenes' results. % Am19 b; CLAIMS group G limits
+
+\begin{table}[t]
+\centering
+\small
+\caption{E6 part (a) on the development scenes (BD-PSNR, dB). Descriptive: three predictions checked, no criterion. Generated from the committed bundles.}
+\label{tab:t3}
+\input{../figs/out/t3_e6_part_a.tex}
+\end{table}
+
+\paragraph{The curves.}
+The right panels of Figure~\ref{fig:f1} show the fine-tuned curves; each scene's two panels share the PSNR axis, and the shaded band marks the byte range over which P\_FT averages. % paper/figs/f1_rd_curves.py; s21
+
+\subsection{Why the lead shrinks (E7, pending)}
+\label{sec:ft-why}
+
+\TODO{E7 (Amendment 20): the within-process dissection of the shrink (arms R, G, CG, K, O). Written after all eleven sessions and E7's verdict; no mechanism is stated before then.}

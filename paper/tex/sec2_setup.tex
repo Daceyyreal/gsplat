@@ -1,0 +1,61 @@
+% Section 2: setup and protocol. Facts only, each sourced: FINDINGS sections as s##, paper/CLAIMS.md rows by ID,
+% kaggle/PREREG_GN.md amendments as Am## (e.g. Am17 b). One sentence per line; check_tex.py reads the trailing comments.
+\section{Setup and protocol}
+\label{sec:setup}
+
+\subsection{Host, checkpoints and code}
+
+All experiments ran inside the C3DGS compression pipeline \citep{niedermayr2024compressed} at commit \code{2a234af5}, on INRIA's published 30k checkpoints of 3D Gaussian Splatting \citep{kerbl2023gaussian}. % Am13 b; Am15 d; CLAIMS common E5 limits
+C3DGS's source was not edited; the build and run deviations were recorded: a \code{<cstdint>} rebuild of one extension, a wrapper that chunks \code{torch.linalg.eigh} and \code{det} (8,192 matrices per call) after the unchunked call failed in cuSOLVER, and a fix that lets C3DGS's own evaluation run when the training images are kept on the CPU. % s14, s17, s18, s19; E1, E7
+On the development scene train, the host reproduced C3DGS's published row within 0.020 dB in PSNR and 0.134\% in size. % s14; E3
+OGC's colour VQ \citep{pietroszek2026ogc} was run from its released code at commit \code{49ccae72}, unedited, under its PolyForm Noncommercial licence, for noncommercial research; none of its files is in this project's repository or result bundles. % Am18 c; E12
+All runs used two NVIDIA T4 GPUs on Kaggle and one software image per experiment. % s19, s21; CLAIMS common E5 limits
+
+\subsection{Scenes}
+
+The gate scenes were INRIA's checkpoints of seven scenes: bonsai, counter, kitchen and room from Mip-NeRF 360 \citep{barron2022mipnerf360}, truck from Tanks and Temples \citep{knapitsch2017tanks}, and drjohnson and playroom from Deep Blending \citep{hedman2018deep}. % Am15 d; Am17 d; CLAIMS common E5 limits
+They were fixed before any of their pixels, splat values, renders or metrics had been read by this project; only camera counts, image sizes and splat counts were read beforehand, under a header-read rule written in advance. % Am15 d; Am17 a
+Three INRIA scenes, train, treehill and flowers, served as development scenes and are never gate scenes. % Am16 b; Am19 b; CLAIMS group G limits
+\emph{Disclosure.} Earlier experiments of this project used bonsai, counter, kitchen, room and truck with its own gsplat checkpoints, and OGC's paper reports bonsai, counter, kitchen and room in its C3DGS host. % Am15 d (kept by Am17 d); CLAIMS common E5 limits
+The fine-tuning test of Section~\ref{sec:finetuning} reuses the same seven scenes, and its hypothesis was formed after the replication's results on them, so it is a pre-registered test on these scenes and not a held-out claim. % Am19 c; CLAIMS group F limits
+
+\subsection{Rows and the forked process}
+
+Each process runs C3DGS once and forks it at the colour VQ: C3DGS's own VQ (\code{c3dgs}) runs first, unchanged, and the other rows are computed at the same call from the same inputs, while the geometry VQ runs once and is shared. % Am17 b; Am15 b
+The model, the quantizers and the random states are copied when C3DGS's compression returns, each row's colour table is installed into a restore of that copy, and every row is saved before any row is evaluated. % Am17 b; Am15 b
+The rows are C3DGS's VQ and OGC's \code{gram\_kmeans} under its three metrics: the identity (\code{ogc\_plain}), the trace weight $\operatorname{tr}(G_i)/16\cdot I$ (\code{ogc\_scalar}) and the per-splat $16\times16$ Gram matrix $G_i$ (\code{ogc\_gram}, OGC's method). % Am17 b
+OGC's call is the same in every row except for the metric: $K$~=~4,096, 15 iterations, seed 0, a chunk of 25,000 splats and its code's default ridge $\lambda = 10^{-3}$, with its own initialisation, reseeding and final assignment. % Am17 b
+$\lambda = 10^{-3}$ is also the value that held-out-view cross-validation chose on both development scenes where it was run. % s17; B7
+The metric $G$ is this project's per-splat Gauss--Newton metric over all training views, a 16-probe estimate whose expectation is OGC's observation Gram; on train its total trace was 0.919 of the exact Gram's. % Am17 b; s16; E4
+A derived reimplementation of OGC's VQ (\code{ogc\_gram\_ours}) ran beside OGC's in every process, report only. % Am18 d; A6
+Fine-tuning, where a test calls for it, is C3DGS's own 5,000-iteration fine-tuning, started from the copy with the row's table installed; the labels were checked to survive it. % Am17 b; Am19 c
+
+\subsection{Rate and the BD measures}
+
+The rate knob is C3DGS's colour threshold, $6\times10^{-7}\cdot 3^{j}$ at $j = -1, 0, +1$, with $K$ fixed: on train the threshold spanned 2.49 times in bytes and $K$ only 1.02 times. % Am17 d; s15; E10
+Each point is one process with seed 0, and $j = 0$ also has a second process with seed 1. % Am17 d; Am19 c
+A row's curve is its test PSNR against $\log_{10}$ of its compressed \code{.npz} bytes at the three points, fitted by the parabola through them. % s19 "How the numbers are computed"
+BD-PSNR averages the difference of two parabolas over the range of $\log_{10}$ bytes the two curves share, and is defined whenever the byte ranges overlap. % s19 "How the numbers are computed"
+BD-rate fits $\log_{10}$ bytes against PSNR and averages over the shared PSNR range; it is undefined without one and is not interpreted when that range is below 0.1 dB. % s19; s21 secondary 2; F3
+
+\subsection{Evaluation}
+
+The primary evaluation is protocol~ii: INRIA's evaluation set-up, with the dataset's own test images at the checkpoint's training resolution and renders quantised to 8 bits, scored by this project's PSNR, SSIM and LPIPS-VGG modules. % Am12 a; s13
+Every row was also evaluated by C3DGS's own evaluation, which scores float renders with its own SSIM and LPIPS code. % Am17 b, e.2; s14
+The two protocols disagree by a scene-dependent amount: C3DGS's evaluation reads higher by 0.429 dB on kitchen and 0.167 dB on bonsai, and by 0.007 to 0.035 dB on the other five, for reasons the files do not show. % s20; E14
+
+\subsection{Pre-registration history}
+
+Every experiment was pre-registered in a dated amendment committed before its code or data, and no rule was edited after results existed; later changes are new dated amendments or notes. % PREREG_GN.md (every amendment's heading)
+The project began with a Gauss--Newton-weighted VQ (GN-VQ) inside gsplat's PNG codec; its first gate failed on the size rule, and the project continued after that result as a declared deviation. % s9; D1; Am7 b
+A gate of GN-VQ inside C3DGS was registered with a pilot on train, and was withdrawn before any gate-scene data once the pilot showed its primaries were about zero or compared unequal codebooks. % Am15; Am16 a; s16; D5
+An exploratory dissection on the development scenes then found that OGC needed 14.42\% fewer bytes than GN-VQ at equal quality on train, and GN-VQ was retired from any gate. % s17; Am17 a; D6
+The replication of OGC inside C3DGS (E5, Section~\ref{sec:replication}) and its pilot on train were registered next, with OGC's source chain and the derived reimplementation in the following amendment. % Am17; Am18
+The fine-tuning curves (E6, Section~\ref{sec:finetuning}) were registered after E5's verdict, and the dissection of the fine-tuning result (E7) after E6's. % Am19; Am20
+
+\subsection{Criteria, noise and the standard error}
+
+Each primary $P$ is one BD-PSNR per scene, and the registered verdict has three criteria: $\bar P > 0$, $P > 0$ on at least $\lfloor (7n+9)/10 \rfloor$ scenes (5 of 7), and $\bar P > 2\,\mathrm{SE}_{\mathrm{noise}}$, every compared value rounded to 9 decimals, with the verdict order incomplete, then fail, then pass. % Am17 d; Am17 Note 2 C2, C7; Am19 c
+$\mathrm{SE}_{\mathrm{noise}}$ is seed noise only: the two $j = 0$ seeds' paired difference, pooled over the scenes as $\mathrm{SD}_{\mathrm{pool}}$ with one degree of freedom per scene, and divided by $\sqrt{2n}$; it does not include how $P$ varies from scene to scene. % s19 "How the numbers are computed"; s21
+A later re-reading found that $\mathrm{SD}_{\mathrm{pool}}/\sqrt{n}$ is the standard error that matches a mean of one seed-0 curve per scene, larger than the registered one by $\sqrt{2}$. % s25; A1
+Under it every criterion of E5 and E6 still holds, and the registered verdicts stand under their pre-registered rule; Sections~\ref{sec:replication} and~\ref{sec:finetuning} report both. % s25; A1, F1
