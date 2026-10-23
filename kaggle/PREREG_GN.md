@@ -4448,3 +4448,23 @@ every earlier E7 session's output" is met by a private Kaggle dataset titled "E7
 (`gn5_meta_<scene>.json`, `gn5_results_<scene>.csv`) in its bundle must be byte-identical to the copies in the bundle
 that first committed them, compared as the zip's bytes (the working copies), not as git's LF-normalized blobs. This is
 how a dataset substitute is verified.
+
+### Amendment 20 note 4 (2026-10-23, after E7 S2's bundle (`d0d6df8a`) and before any further E7 run): the bundle dataset for every earlier session
+
+This note extends note 3's rule to every earlier E7 session. It changes no code, scene, process, row, arm, guard, test,
+margin, outcome or session.
+
+**The rule.** For any earlier E7 session, whether or not its output version mounts, Amendment 20 l's "each session
+attaches every earlier E7 session's output" is met by attaching the private Kaggle dataset "E7 S# bundle" holding that
+session's `E7_bundle_S#.zip` unchanged, its sha256 equal to the committed bundle's, in place of the output version or
+beside it. The restore finds the dataset's `gn7/` by its contents, as note 3 states; members not restored are fetched
+through their pins with the existing size and CRC32 checks; attaching both the dataset and the output version is
+harmless.
+
+**Why.** S1's output version failed to mount twice (note 3), and each failed mount cost a session start. E7's output
+versions hold every row's `.npz` and the model folders, none of which a later session restores (no work directory is
+restored, `kaggle/build_gn_e7_bench.py:111-112`); a bundle dataset holds only the files the restore reads.
+
+**Verification, unchanged from note 3:** at each ingest, the carried scenes' result files (`gn5_meta_<scene>.json`,
+`gn5_results_<scene>.csv`) in the session's bundle must be byte-identical to the copies in the bundle that first
+committed them, compared as the zip's bytes.
