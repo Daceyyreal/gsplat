@@ -10,7 +10,7 @@ FINDINGS sections 21 and 22 (E6 part (b): `6bd340a0`, `check_s21.py` `251c305c`;
 `check_s23.py` `52b6ab0c`): group G, F8's scope and conflict 3; updated 2026-10-20 after FINDINGS section 24
 (analysis-only, `083fb93b`, `check_s24.py` `46695420`): E5, E13, F9 and candidate headline 2 scoped to bytes, gap 3's
 planned test. Updated 2026-10-20 after FINDINGS section 25 (`1b063523`, `check_s25.py` `3de53fc9`): the SE-convention
-caveat on A1, A2, B1, F1 and F5.
+caveat on A1, A2, B1, F1 and F5. Updated 2026-10-23 from the paper draft's review: A12 (E5 replicates OGC's VQ given this project's estimate of OGC's metric).
 
 **Status labels:**
 - **confirmatory:** a pre-registered criterion and its verdict;
@@ -48,6 +48,7 @@ room in its C3DGS host.
 | A9 | The lead does not depend on the evaluation protocol: under C3DGS's own evaluation `ogc_gram` - `c3dgs` at j = 0 averages +0.5205 dB (protocol ii: +0.5239), positive on every scene, and +0.0718 dB after fine-tuning. | exploratory, not pre-registered | s20 "C3DGS's own evaluation against protocol ii" | `check_s20.py` | as A1 | j = 0 only (no BD under C3DGS's evaluation); C3DGS at `2a234af5` with this project's deviations | no |
 | A10 | SSIM and LPIPS agree with PSNR in sign on every scene, at j = 0 and in BD, for both primary pairs (mean BD-SSIM +0.0071 and +0.0036; BD-LPIPS -0.0089 and -0.0052). | report-only at j = 0; the BD exploratory, not pre-registered | s20 "SSIM and LPIPS" | `check_s20.py` | as A1 | the BD reuses E5's PSNR fit on SSIM and LPIPS | no |
 | A11 | Every pair of rows is more faithful to the uncompressed model at 0 degrees on all seven scenes (`ogc_gram` - `c3dgs` +3.214 dB mean PSNR), and the gaps fall away toward the larger orbit angles. | pre-registered secondary (Amendment 17 d, note ii's fidelity per angle) | s20 "Fidelity to the uncompressed model per angle" | `check_s20.py` | as A1 | at +40 degrees drjohnson is undefined (an infinite PSNR in every row), so the mean there is over 6 scenes; the pooled-MSE measure turns two pairs negative at -40 degrees | no |
+| A12 | E5 (and E6 part (b)) ran OGC's released `gram_kmeans`, unedited, on this project's 16-probe estimate of OGC's observation Gram (equal to it in expectation), not on OGC's own Gram computation; P1 and P2 therefore replicate OGC's VQ given an estimated metric. | descriptive (design fact) | PREREG Amendment 17 b; s16 (the exact-Gram comparison) | `check_s16.py` | as A1 | on train the estimate's total trace is 0.919 of the exact Gram's (E4), cause not settled; no gate scene has an exact-Gram comparison | no |
 
 ## (B) The dissection: plain, scalar and Gram metrics in OGC's Lloyd
 

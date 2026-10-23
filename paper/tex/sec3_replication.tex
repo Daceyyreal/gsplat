@@ -6,7 +6,7 @@
 \subsection{Hypothesis and test}
 
 The replication (E5) asked whether, inside C3DGS and at equal rate over the three colour thresholds, OGC's Gram-metric VQ beats C3DGS's own colour VQ (P1, BD-PSNR of \code{ogc\_gram} against \code{c3dgs}) and beats the same Lloyd with the metric's trace (P2, \code{ogc\_gram} against \code{ogc\_scalar}), on the seven gate scenes. % Am17 d
-It runs OGC's released VQ code (\code{gram\_kmeans}, unedited) on this project's estimate of OGC's metric (Section~\ref{sec:setup}), not on OGC's own Gram computation. % Am17 b; s16; E4
+It runs OGC's released VQ code (\code{gram\_kmeans}, unedited) on this project's estimate of OGC's metric (Section~\ref{sec:setup}), not on OGC's own Gram computation. % Am17 b; s16; E4, A12
 Both primaries were tested with the three criteria of Section~\ref{sec:setup}, before fine-tuning, on four processes per scene. % Am17 d; s19
 
 \subsection{Result (pre-registered)}
@@ -58,7 +58,7 @@ Figure~\ref{fig:f1} shows each scene's two curves before fine-tuning (left panel
 
 \subsection{Caveats}
 
-The test runs OGC's released VQ on this project's 16-probe estimate of OGC's metric, not on OGC's own Gram computation, so this replication (H1) replicates OGC's VQ given an estimated metric; a difference between our $G$ and OGC's own Gram, such as the trace shortfall on train (Section~\ref{sec:setup}), lies outside this test. % Am17 b; s16; E4
+The test runs OGC's released VQ on this project's 16-probe estimate of OGC's metric, not on OGC's own Gram computation, so this replication (H1) replicates OGC's VQ given an estimated metric; a difference between our $G$ and OGC's own Gram, such as the trace shortfall on train (Section~\ref{sec:setup}), lies outside this test. % Am17 b; s16; E4, A12
 The result covers seven scenes, INRIA's published checkpoints, $K$~=~4,096 and three colour thresholds, on one host commit, one GPU type and one software image. % s19 "What E5 settles"; CLAIMS common E5 limits
 Five of the seven scenes had been used earlier by this project with its own checkpoints, and four appear in OGC's paper (Section~\ref{sec:setup}). % Am15 d; CLAIMS common E5 limits
 $\mathrm{SE}_{\mathrm{noise}}$ is seed noise at $j = 0$ only; it does not include how P varies from scene to scene, and the points at $j = -1$ and $j = +1$ have one seed each, so the noise of the BD values themselves was not measured. % s19 "What E5 settles"; A2; CLAIMS Gap 8
