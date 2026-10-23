@@ -77,7 +77,9 @@ MiKTeX's `latexmk -pdf` from `paper/tex/` (set `BIBINPUTS` to that folder when u
 **Paper review (2026-10-23):** T2 split into T2a/T2b (`c72fc1f3`), tex edits and the verified bibliography (`26d411c4`),
 `check_tex.py` checks counts (`5384997f`); **Amendment 17 erratum** (`54e26432`: 17 a's "no pixel, splat value, render
 or metric" holds for INRIA's checkpoints, not the scenes); **CLAIMS A12** (the estimated metric; 68 rows) cited in the
-three metric-caveat lines (`48dc283a`).
+three metric-caveat lines (`48dc283a`). **Section 4 (Dissection)** written (`e1557b28`); **E7's tables and figures**
+(`paper/figs/e7_*.py`: T4, T5, F6, F7, from `bench/gn/e7.py`'s verdict; run with `e7_make_all.py` after all eleven
+sessions; tested on stand-in bundles only, no output committed) in `366b7d5c`.
 
 ## Context and rules
 
