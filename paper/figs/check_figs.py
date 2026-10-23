@@ -227,6 +227,15 @@ def run():
     for g, w in zip(f1, want):
         C.ok((g["scene"], g["run"], g["row"], g["j"], g["npz_bytes"]) == w[:5], f"F1 point {w[:4]}")
         C.num(g["PSNR_ii"], w[5], f"F1 PSNR {w[:4]}")
+    # each panel's shaded band: the byte range its two curves share (what BD-PSNR averages over)
+    ov = read_csv("f1_rd_overlap.csv")
+    wantb = []
+    for s in GATE:
+        for title, rows in (("before fine-tuning", ("c3dgs", "ogc_gram")), ("after fine-tuning", ("c3dgs_ft", "ogc_gram_ft"))):
+            rng = [[int(R6[s][p + r]["npz_bytes"]) for p in SEED0] for r in rows]
+            lo, hi = max(min(x) for x in rng), min(max(x) for x in rng)
+            wantb.append((s, title, str(lo) if lo < hi else "", str(hi) if lo < hi else ""))
+    C.ok([(g["scene"], g["panel"], g["lo_bytes"], g["hi_bytes"]) for g in ov] == wantb, "F1 shaded bands = shared byte ranges")
 
     # ---- F2: P1's steps (section 19)
     f2 = {r["scene"]: r for r in read_csv("f2_p1_decomposition.csv")}
