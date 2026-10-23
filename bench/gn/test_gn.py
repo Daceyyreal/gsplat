@@ -7279,6 +7279,96 @@ def test_e7_single_primary_equivalence_at_the_first_positions_critical_value():
     assert vm["outcomes"]["cb"] in ("neither", "superior, positive; not equivalent")
 
 
+def _e7_bundles(root, scenes_rows, session="S1"):
+    """A directory of E7 bundles as the notebooks write them (``<root>/<session>/gn7/``: the attempt file and one
+    results CSV per scene)."""
+    import csv as _csv
+
+    d = os.path.join(root, session, "gn7")
+    os.makedirs(d, exist_ok=True)
+    with open(os.path.join(d, "gn5_attempt.json"), "w") as f:
+        json.dump({"e7": True, "session": session, "attempt": 1}, f)
+    for s, rows in scenes_rows.items():
+        keys = sorted({k for r in rows for k in r})
+        with open(os.path.join(d, f"gn5_results_{s}.csv"), "w", newline="") as f:
+            w = _csv.DictWriter(f, keys)
+            w.writeheader()
+            w.writerows(rows)
+    return root
+
+
+def test_paper_e7_figures_on_stand_in_bundles(tmp_path, monkeypatch):
+    """paper/figs/e7_*.py (T4, T5, F6, F7) on stand-in E7 bundles in tmp_path, never kaggle/gn_e7/: every output is
+    written, T4's and T5's values are bench/gn/e7.py's verdict to the digit, F6 plots each scene's Delta, F7 every
+    seed-0 point of every arm; the scripts refuse to write stand-in outputs into paper/figs/out/. With the E7 dry run's
+    kept bundles in GN_E7_DRYRUN_BUNDLES (bench/gn/dryrun/dryrun_gn_e7.py with GN_DRYRUN_KEEP=1), they run on those too."""
+    import csv as _csv
+    import importlib
+
+    import e7
+    import e7_scenes as es
+
+    figs = os.path.join(os.path.dirname(os.path.dirname(HERE)), "paper", "figs")
+    monkeypatch.syspath_prepend(figs)
+    ed = importlib.import_module("e7_figdata")
+    make = importlib.import_module("e7_make_all")
+    monkeypatch.setattr(ed, "E7_ROOT", str(tmp_path / "no_real_e7_data"))
+    ed._CACHE.clear()
+
+    rows = {}
+    for i, s in enumerate(es.SCENES):
+        deltas = {"R": 0.05, "G": 0.05 + 0.01 * (i - 3), "CG": 0.06 + 0.01 * (i - 3), "K": 0.08, "O": 0.07}
+        f, g = (1 + i % 3) * (-1) ** i, (1 + (i + 1) % 3) * (-1) ** (i + 1)
+        nz = {"R": 0.001 * (-1) ** i}
+        nz["G"] = nz["R"] + 0.002 * f
+        nz["CG"] = nz["G"] + 0.002 * g
+        rows[s] = _e7_rows(s, deltas, nz, 0.005 * (1 + i % 2))
+    root = _e7_bundles(str(tmp_path / "bundles"), rows)
+    out = str(tmp_path / "out")
+    make.run(root, out, "room")
+    want = {f"e7_t4_primaries.{x}" for x in ("tex", "csv")} | {"e7_t4_tests.tex", "e7_t5_secondaries.tex",
+                                                                "e7_t5_secondaries.csv"}
+    want |= {f"{stem}.{x}" for stem in ("e7_f6_deltas", "e7_f7_arm_curves_room") for x in ("pdf", "png", "csv")}
+    assert set(os.listdir(out)) == want
+    assert all(os.path.getsize(os.path.join(out, n)) > 100 for n in want)
+
+    v = e7.verdict(root)
+    t4 = list(_csv.reader(open(os.path.join(out, "e7_t4_primaries.csv"), newline="")))
+    per = {r[1]: r for r in t4 if r[0] == "scene"}
+    for s in es.SCENES:
+        assert float(per[s][5]) == v["primaries"]["refit"]["per_scene"][s]["delta"]
+        assert float(per[s][6]) == v["primaries"]["cb"]["per_scene"][s]["delta"]
+        assert float(per[s][3]) == v["primaries"]["refit"]["per_scene"][s]["BD_G"]
+    outc = {r[1]: r[2:5] for r in t4 if r[0] == "outcome"}
+    assert outc == {k: [v["outcomes"][k], v["robustness"]["outcomes"][k], str(v["fragile"][k])] for k in ("refit", "cb")}
+    assert outc["cb"][0] == "superior and equivalent" and outc["refit"][0] == "equivalent; not superior"
+    order = {r[1]: r[2] for r in t4 if r[0] == "order"}
+    assert order["superiority"] == " > ".join(v["tests"]["superiority"]["order"])
+    tex = open(os.path.join(out, "e7_t4_tests.tex"), encoding="utf-8").read()
+    assert "superior and equivalent" in tex and "equivalent; not superior" in tex
+
+    t5 = {r[0]: r for r in _csv.reader(open(os.path.join(out, "e7_t5_secondaries.csv"), newline=""))}
+    g = v["secondaries"]
+    assert float(t5["room"][1]) == g["g1_codebook_alone"]["K_minus_CG"]["per_scene"]["room"]["delta"]
+    assert float(t5["room"][3]) == g["g2_own_grid_arm"]["O_minus_G"]["per_scene"]["room"]["delta"]
+    assert float(t5["stat:SD_BD"][5]) == g["g5_bd_noise"]["P_FT"]["SD_BD"]
+
+    f6 = list(_csv.DictReader(open(os.path.join(out, "e7_f6_deltas.csv"), newline="")))
+    assert len(f6) == 2 * (len(es.SCENES) + 1)
+    f7 = list(_csv.DictReader(open(os.path.join(out, "e7_f7_arm_curves_room.csv"), newline="")))
+    assert len(f7) == 2 * 6 * 3  # two methods, the unfine-tuned row and five arms, three points
+
+    with pytest.raises(SystemExit):
+        ed.check_out(root, ed.PAPER_OUT)
+
+    dry = os.environ.get("GN_E7_DRYRUN_BUNDLES")
+    if dry:
+        ed._CACHE.clear()
+        out2 = str(tmp_path / "out_dryrun")
+        make.run(dry, out2, "room")
+        assert set(os.listdir(out2)) == want
+
+
 def test_e7_secondaries_on_constructed_data():
     """20 g on constructed data: BD_K - BD_CG and BD_O - BD_G; P1 with the own grid against P1; P1 and P_FT replicated
     with E5's criteria under both SEs; the seed-1 BDs and SD_BD; the replicate pair; bytes and BD-rate per arm with the
