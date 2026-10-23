@@ -4468,3 +4468,21 @@ restored, `kaggle/build_gn_e7_bench.py:111-112`); a bundle dataset holds only th
 **Verification, unchanged from note 3:** at each ingest, the carried scenes' result files (`gn5_meta_<scene>.json`,
 `gn5_results_<scene>.csv`) in the session's bundle must be byte-identical to the copies in the bundle that first
 committed them, compared as the zip's bytes.
+
+### Amendment 17, erratum (2026-10-23, after E7 S2's bundle (`d0d6df8a`) and before E7 S3): the scope of 17 a's statement about the seven scenes
+
+Amendment 17 a ("When") says:
+
+> No pixel, splat value, render or metric of bonsai, counter, kitchen, room, truck, drjohnson or playroom has been read.
+
+**Read literally, this is not accurate.** Before Amendment 17, E2 (Amendment 7; bundle `kaggle/gn_e2/gn2/`, `9287eb47`;
+FINDINGS section 10) and E2c (Amendment 11; bundle `kaggle/gn_e2c/gn2c/`, `b1163f24`; FINDINGS section 12) had read the
+test images of bonsai, counter, kitchen, room and truck, and rendered and measured those scenes, with this project's own
+gsplat MCMC checkpoints. Amendment 15 d and Amendment 19 c disclose this.
+
+**The correct scope:** before E5's code, no splat value, render or metric of **INRIA's checkpoints** of these seven
+scenes had been read, beyond camera counts, image sizes and splat counts read under the header-read rule (Amendment
+15 d; Amendment 15 note i for drjohnson and playroom). Amendment 15 d's own wording is that these checkpoints had not
+been fetched, loaded or rendered. Amendment 16 a's "When" carries the same sentence, and the same scope applies to it.
+
+This erratum corrects the record's wording only. It changes no rule, scene, process, row, criterion, outcome or verdict.
