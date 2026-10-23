@@ -10,11 +10,16 @@ sections (``s19``, ``s21 secondary 1``) and its ``paper/CLAIMS.md`` rows (``A2``
    ``\\includegraphics`` arguments and lengths removed; a leading sign ignored; thousands separators kept, as FINDINGS
    prints them) must be in ``ALLOW`` or appear, at the same rounding, as a number in the line's cited sources: the
    cited FINDINGS sections and CLAIMS rows. A line that cites neither is checked against all of FINDINGS and CLAIMS.
-2. **Citations.** A line that states a result (a number outside ``ALLOW``, or one of ``RESULT_WORDS``) must cite at
-   least one CLAIMS row in its trailing comment. Every cited CLAIMS row and FINDINGS section must exist.
+2. **Counts.** Every "k of n" (also "k of the n") and "k/n" in the line's text must appear as written in its cited
+   sources (or, with no citation, in FINDINGS or CLAIMS), in either form: so a count is checked even where k and n are
+   integers that ``ALLOW`` lets pass as numbers.
+3. **Citations.** A line that states a result (a number outside ``ALLOW``, a count, or one of ``RESULT_WORDS``) must
+   cite at least one CLAIMS row in its trailing comment. Every cited CLAIMS row and FINDINGS section must exist. A
+   figure named in a comment as ``Fig.N`` is not a CLAIMS row and is ignored for the lookup.
 
-Lines holding a ``\\TODO`` placeholder are skipped. The tables and figures come from ``paper/figs/`` (checked by ``paper/figs/check_figs.py``) and are not read here.
-Integers 0-10 are allowed without a source (counts such as "5 of 7", j, seeds, criteria), so they are not checked.
+Lines holding a ``\\TODO`` placeholder are skipped. The tables and figures come from ``paper/figs/`` (checked by
+``paper/figs/check_figs.py``) and are not read here. Other integers 0-10 (j, seeds, criteria, "8 bits") are allowed
+without a source.
 
 It prints each failure and exits 1 if there is any, 0 otherwise.
 """
@@ -41,6 +46,8 @@ STRIP = [
     re.compile(r"\d+(?:\.\d+)?\s*(?:\\linewidth|\\textwidth|\\columnwidth|pt|em|cm|mm|in)\b"),
 ]
 CLAIM_ID = re.compile(r"\b([A-G]\d{1,2})\b")
+FIG = re.compile(r"\bFig\.\s*\d+")
+COUNT = re.compile(r"(?<![\w.,/])(\d+)(?:\s+of\s+(?:the\s+)?|/)(\d+)(?![\w.,/])")
 SECTION = re.compile(r"\bs(\d{1,2})\b")
 
 
@@ -70,6 +77,11 @@ def sources():
     return f, sec_text, c, rows
 
 
+def counts(text):
+    """The "k of n" / "k of the n" / "k/n" phrases of ``text`` as (k, n) pairs."""
+    return COUNT.findall(text)
+
+
 def tokens(text):
     # FINDINGS and CLAIMS write ratios as "2.49x"; read them as the number
     return set(numbers(re.sub(r"(\d)x\b", r"\1 x", text)))
@@ -88,7 +100,7 @@ def run(tex_dir=HERE):
             if not text.strip() or r"\TODO" in text:
                 continue  # a placeholder states nothing
             n_lines += 1
-            ids = CLAIM_ID.findall(comment)
+            ids = CLAIM_ID.findall(FIG.sub(" ", comment))
             secs = [int(s) for s in SECTION.findall(comment)]
             for cid in ids:
                 if cid not in rows:
@@ -102,6 +114,16 @@ def run(tex_dir=HERE):
             for cid in ids:
                 cited |= tokens(rows.get(cid, ""))
             pool = cited if (secs or ids) else all_tokens
+            src = " ".join([sec_text.get(s, "") for s in secs] + [rows.get(c, "") for c in ids]) if (secs or ids) \
+                else f_all + " " + c_all
+            src_counts = set(counts(" ".join(src.split())))
+            line_counts = counts(" ".join(text.split()))
+            for k, n in line_counts:
+                n_numbers += 1
+                if (k, n) not in src_counts:
+                    where = "its cited sources " + ", ".join([f"s{s}" for s in secs] + ids) if (secs or ids) else \
+                        "FINDINGS or CLAIMS"
+                    fails.append(f"{name}:{i}: the count {k} of {n} is not in {where}")
             checked = [x for x in numbers(text) if x not in ALLOW]
             for x in checked:
                 n_numbers += 1
@@ -109,7 +131,7 @@ def run(tex_dir=HERE):
                     where = "its cited sources " + ", ".join([f"s{s}" for s in secs] + ids) if (secs or ids) else \
                         "FINDINGS or CLAIMS"
                     fails.append(f"{name}:{i}: {x} is not in {where}")
-            if checked or RESULT_WORDS.search(text):
+            if checked or line_counts or RESULT_WORDS.search(text):
                 n_result += 1
                 if not ids:
                     fails.append(f"{name}:{i}: states a result without a CLAIMS row in its trailing comment: "

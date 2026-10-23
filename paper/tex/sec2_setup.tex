@@ -55,7 +55,7 @@ The fine-tuning curves (E6, Section~\ref{sec:finetuning}) were registered after 
 
 \subsection{Criteria, noise and the standard error}
 
-Each primary $P$ is one BD-PSNR per scene, and the registered verdict has three criteria: $\bar P > 0$, $P > 0$ on at least $\lfloor (7n+9)/10 \rfloor$ scenes (5 of 7), and $\bar P > 2\,\mathrm{SE}_{\mathrm{noise}}$, every compared value rounded to 9 decimals, with the verdict order incomplete, then fail, then pass. % Am17 d; Am17 Note 2 C2, C7; Am19 c
+Each primary $P$ is one BD-PSNR per scene, and the registered verdict has three criteria: $\bar P > 0$, $P > 0$ on at least $\lfloor (7n+9)/10 \rfloor$ scenes (5 needed when $n = 7$), and $\bar P > 2\,\mathrm{SE}_{\mathrm{noise}}$, every compared value rounded to 9 decimals, with the verdict order incomplete, then fail, then pass. % Am17 d; Am17 Note 2 C2, C7; Am19 c
 $\mathrm{SE}_{\mathrm{noise}}$ is seed noise only: the two $j = 0$ seeds' paired difference, pooled over the scenes as $\mathrm{SD}_{\mathrm{pool}}$ with one degree of freedom per scene, and divided by $\sqrt{2n}$; it does not include how $P$ varies from scene to scene. % s19 "How the numbers are computed"; s21
 A later re-reading found that $\mathrm{SD}_{\mathrm{pool}}/\sqrt{n}$ is the standard error that matches a mean of one seed-0 curve per scene, larger than the registered one by $\sqrt{2}$. % s25; A1
 Under it every criterion of E5 and E6 still holds, and the registered verdicts stand under their pre-registered rule; Sections~\ref{sec:replication} and~\ref{sec:finetuning} report both. % s25; A1, F1

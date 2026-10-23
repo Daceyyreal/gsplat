@@ -3226,6 +3226,21 @@ def test_paper_tex_numbers_and_claims_references(tmp_path):
     bad = ct.run(str(tmp_path))["fails"]  # also 0.0003, which only B1 holds
     line = next(i for i, ln in enumerate(sec3.splitlines(), 1) if ln.endswith("% s19 per-scene table; B1"))
     assert any("without a CLAIMS row" in b for b in bad) and all(b.startswith(f"sec3_replication.tex:{line}:") for b in bad)
+    (tmp_path / "sec3_replication.tex").write_text(sec3, encoding="utf-8")
+
+    # a count: "6 of 7" positive scenes planted as "5 of 7" (both integers pass the 0-10 allowance as numbers)
+    sec5 = (tmp_path / "sec5_finetuning.tex").read_text(encoding="utf-8")
+    assert sec5.count("positive on 6 of 7 scenes") == 1
+    (tmp_path / "sec5_finetuning.tex").write_text(sec5.replace("positive on 6 of 7 scenes", "positive on 5 of 7 scenes"),
+                                                  encoding="utf-8")
+    bad = ct.run(str(tmp_path))["fails"]
+    assert len(bad) == 1 and "the count 5 of 7 is not in its cited sources s21, F1" in bad[0]
+
+    # a figure named in a comment is not a CLAIMS row: a result line citing only "Fig.1" lacks one
+    (tmp_path / "sec5_finetuning.tex").write_text(sec5.replace('% s21 "The verdict"; F1\n', "% Fig.1\n", 1),
+                                                  encoding="utf-8")
+    bad = ct.run(str(tmp_path))["fails"]
+    assert any("without a CLAIMS row" in b for b in bad)
 
 
 # --------------------------------------------------------------------------------- E3r (Amendment 14)
