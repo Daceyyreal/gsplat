@@ -79,7 +79,8 @@ MiKTeX's `latexmk -pdf` from `paper/tex/` (set `BIBINPUTS` to that folder when u
 or metric" holds for INRIA's checkpoints, not the scenes); **CLAIMS A12** (the estimated metric; 68 rows) cited in the
 three metric-caveat lines (`48dc283a`). **Section 4 (Dissection)** written (`e1557b28`); **E7's tables and figures**
 (`paper/figs/e7_*.py`: T4, T5, F6, F7, from `bench/gn/e7.py`'s verdict; run with `e7_make_all.py` after all eleven
-sessions; tested on stand-in bundles only, no output committed) in `366b7d5c`.
+sessions; tested on stand-in bundles only, no output committed) in `366b7d5c`. CLAIMS E16-E18 from section 24 (71
+rows, `debbf41d`); Section 4 fixes citing them (`77905c3f`).
 
 ## Context and rules
 
