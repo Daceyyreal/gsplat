@@ -74,6 +74,10 @@ byte overlap: scripts `aa7b2db0`, outputs `a45f6041`), checker `check_figs.py` (
 run by pytest). **`paper/tex/` started (2026-10-23):** skeleton and Sections 2, 3, 5.1 (`c7d80e37`; 5.2 a stub until
 E7's verdict), checker `paper/tex/check_tex.py` with its pytest test (`2439de4f`; 74 numbers, 0 failures); builds with
 MiKTeX's `latexmk -pdf` from `paper/tex/` (set `BIBINPUTS` to that folder when using `-outdir`; 8 pages).
+**Paper review (2026-10-23):** T2 split into T2a/T2b (`c72fc1f3`), tex edits and the verified bibliography (`26d411c4`),
+`check_tex.py` checks counts (`5384997f`); **Amendment 17 erratum** (`54e26432`: 17 a's "no pixel, splat value, render
+or metric" holds for INRIA's checkpoints, not the scenes); **CLAIMS A12** (the estimated metric; 68 rows) cited in the
+three metric-caveat lines (`48dc283a`).
 
 ## Context and rules
 
