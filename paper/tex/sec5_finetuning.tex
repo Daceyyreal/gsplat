@@ -13,20 +13,28 @@ The hypothesis was formed after seeing E5's results on these scenes, so this is 
 
 \paragraph{Result (pre-registered).}
 E6 part (b) passed as pre-registered: after fine-tuning OGC's VQ led C3DGS's own at equal rate with $\bar P_{\mathrm{FT}} = 0.0425$ dB, positive on 6 of 7 scenes, and $\bar P_{\mathrm{FT}} = 4.9\,\mathrm{SE}_{\mathrm{noise}}$ against the required 2 ($2\,\mathrm{SE}_{\mathrm{noise}} = 0.0174$ dB). % s21 "The verdict"; F1
-The one negative scene was drjohnson, at $-0.0046$ dB (Table~\ref{tab:t2}). % s21 per-scene table; F1
+The one negative scene was drjohnson, at $-0.0046$ dB (Table~\ref{tab:t2a}). % s21 per-scene table; F1
 No scene was dropped and no primary row or value was missing. % s21 "The verdict"; F1
 
 \begin{table}[t]
 \centering
-\scriptsize
-\setlength{\tabcolsep}{3pt}
-\caption{E6 part (b) per scene (dB). P\_FT is the pre-registered primary (9 decimals, as compared). P1 replicated is a report-only secondary beside E5's P1. The leave-one-out (LOO) columns, not pre-registered, give the three criteria over the six scenes left when the row's scene is removed. Generated from the committed bundles.}
-\label{tab:t2}
-\resizebox{\linewidth}{!}{\input{../figs/out/t2_e6_pft.tex}}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\caption{E6 part (b) per scene (dB). P\_FT is the pre-registered primary (9 decimals, as compared). $D_{s0}$ and $D_{s1}$ are the fine-tuned pair's protocol~ii difference at $j = 0$ with seeds 0 and 1, $D_s$ their mean and $v_s$ their sum of squared deviations. P1 replicated is a report-only secondary beside E5's P1. Generated from the committed bundles.}
+\label{tab:t2a}
+\input{../figs/out/t2a_e6_pft.tex}
+\end{table}
+
+\begin{table}[t]
+\centering
+\small
+\caption{E6 part (b), leave-one-out (descriptive, not pre-registered): the three criteria over the six scenes left when the row's scene is removed. Generated from the committed bundles.}
+\label{tab:t2b}
+\input{../figs/out/t2b_e6_loo.tex}
 \end{table}
 
 \paragraph{How firm the result is (descriptive, not pre-registered).}
-Leaving out any one scene, every case still met all three criteria, with $\bar P / \mathrm{SE}_{\mathrm{noise}}$ from 3.88 to 5.46, but 6 of the 7 cases met the count with exactly 5 positive scenes, so the count is the tight criterion. % s22 a; F5
+Leaving out any one scene (Table~\ref{tab:t2b}), every case still met all three criteria, with $\bar P / \mathrm{SE}_{\mathrm{noise}}$ from 3.88 to 5.46, but 6 of the 7 cases met the count with exactly 5 positive scenes, so the count is the tight criterion. % s22 a; F5
 Across scenes P\_FT had a standard deviation of 0.0373 dB ($t = 3.0$), which $\mathrm{SE}_{\mathrm{noise}}$ does not measure. % s22 a; F5
 Under the standard error that matches one curve per scene, $\mathrm{SD}_{\mathrm{pool}}/\sqrt{n}$, $\bar P_{\mathrm{FT}}$ lay 3.45 standard errors above zero against the registered 4.9, and the leave-one-out cases 2.75 to 3.86; criterion 3 still held in every case, and the registered verdict stands under its pre-registered rule. % s25; F1, F5
 With OGC's bytes set to C3DGS's at each $j$, a counterfactual and not equal rate, the mean was $+0.0458$ dB against $\bar P_{\mathrm{FT}} = +0.0425$ dB, so the result is not produced by where the bytes fall. % s22 c; F7

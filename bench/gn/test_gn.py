@@ -3224,7 +3224,8 @@ def test_paper_tex_numbers_and_claims_references(tmp_path):
     (tmp_path / "sec3_replication.tex").write_text(sec3.replace("% s19 per-scene table; B1", "% s19 per-scene table"),
                                                    encoding="utf-8")
     bad = ct.run(str(tmp_path))["fails"]  # also 0.0003, which only B1 holds
-    assert any("without a CLAIMS row" in b for b in bad) and all(b.startswith("sec3_replication.tex:15:") for b in bad)
+    line = next(i for i, ln in enumerate(sec3.splitlines(), 1) if ln.endswith("% s19 per-scene table; B1"))
+    assert any("without a CLAIMS row" in b for b in bad) and all(b.startswith(f"sec3_replication.tex:{line}:") for b in bad)
 
 
 # --------------------------------------------------------------------------------- E3r (Amendment 14)

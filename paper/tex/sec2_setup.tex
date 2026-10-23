@@ -8,13 +8,13 @@
 All experiments ran inside the C3DGS compression pipeline \citep{niedermayr2024compressed} at commit \code{2a234af5}, on INRIA's published 30k checkpoints of 3D Gaussian Splatting \citep{kerbl2023gaussian}. % Am13 b; Am15 d; CLAIMS common E5 limits
 C3DGS's source was not edited; the build and run deviations were recorded: a \code{<cstdint>} rebuild of one extension, a wrapper that chunks \code{torch.linalg.eigh} and \code{det} (8,192 matrices per call) after the unchunked call failed in cuSOLVER, and a fix that lets C3DGS's own evaluation run when the training images are kept on the CPU. % s14, s17, s18, s19; E1, E7
 On the development scene train, the host reproduced C3DGS's published row within 0.020 dB in PSNR and 0.134\% in size. % s14; E3
-OGC's colour VQ \citep{pietroszek2026ogc} was run from its released code at commit \code{49ccae72}, unedited, under its PolyForm Noncommercial licence, for noncommercial research; none of its files is in this project's repository or result bundles. % Am18 c; E12
+OGC's colour VQ \citep{pietroszek2026only} was run from its released code at commit \code{49ccae72}, unedited, under its PolyForm Noncommercial 1.0.0 licence, for noncommercial research; none of its files is in this project's repository or result bundles. % Am18 c; E12
 All runs used two NVIDIA T4 GPUs on Kaggle and one software image per experiment. % s19, s21; CLAIMS common E5 limits
 
 \subsection{Scenes}
 
 The gate scenes were INRIA's checkpoints of seven scenes: bonsai, counter, kitchen and room from Mip-NeRF 360 \citep{barron2022mipnerf360}, truck from Tanks and Temples \citep{knapitsch2017tanks}, and drjohnson and playroom from Deep Blending \citep{hedman2018deep}. % Am15 d; Am17 d; CLAIMS common E5 limits
-They were fixed before any of their pixels, splat values, renders or metrics had been read by this project; only camera counts, image sizes and splat counts were read beforehand, under a header-read rule written in advance. % Am15 d; Am17 a
+INRIA's checkpoints of these scenes were chosen as the gate before this project had fetched, loaded or rendered any of them, and before E5's code no splat value, render or metric from them had been read beyond camera counts, image sizes and splat counts, under a header-read rule written in advance. % Am15 d ("has not fetched, loaded or rendered"); Am15 note i; Am17 a
 Three INRIA scenes, train, treehill and flowers, served as development scenes and are never gate scenes. % Am16 b; Am19 b; CLAIMS group G limits
 \emph{Disclosure.} Earlier experiments of this project used bonsai, counter, kitchen, room and truck with its own gsplat checkpoints, and OGC's paper reports bonsai, counter, kitchen and room in its C3DGS host. % Am15 d (kept by Am17 d); CLAIMS common E5 limits
 The fine-tuning test of Section~\ref{sec:finetuning} reuses the same seven scenes, and its hypothesis was formed after the replication's results on them, so it is a pre-registered test on these scenes and not a held-out claim. % Am19 c; CLAIMS group F limits
@@ -26,7 +26,7 @@ The model, the quantizers and the random states are copied when C3DGS's compress
 The rows are C3DGS's VQ and OGC's \code{gram\_kmeans} under its three metrics: the identity (\code{ogc\_plain}), the trace weight $\operatorname{tr}(G_i)/16\cdot I$ (\code{ogc\_scalar}) and the per-splat $16\times16$ Gram matrix $G_i$ (\code{ogc\_gram}, OGC's method). % Am17 b
 OGC's call is the same in every row except for the metric: $K$~=~4,096, 15 iterations, seed 0, a chunk of 25,000 splats and its code's default ridge $\lambda = 10^{-3}$, with its own initialisation, reseeding and final assignment. % Am17 b
 $\lambda = 10^{-3}$ is also the value that held-out-view cross-validation chose on both development scenes where it was run. % s17; B7
-The metric $G$ is this project's per-splat Gauss--Newton metric over all training views, a 16-probe estimate whose expectation is OGC's observation Gram; on train its total trace was 0.919 of the exact Gram's. % Am17 b; s16; E4
+The metric $G$ is this project's per-splat Gauss--Newton metric over all training views, a 16-probe estimate equal in expectation to OGC's observation Gram by construction; on train its total trace measured 0.919 of the exact Gram's, a shortfall the files do not explain. % Am17 b; s16; E4 ("the trace shortfall's cause is not settled"); RELATED_WORK_OGC.md section 3
 A derived reimplementation of OGC's VQ (\code{ogc\_gram\_ours}) ran beside OGC's in every process, report only. % Am18 d; A6
 Fine-tuning, where a test calls for it, is C3DGS's own 5,000-iteration fine-tuning, started from the copy with the row's table installed; the labels were checked to survive it. % Am17 b; Am19 c
 

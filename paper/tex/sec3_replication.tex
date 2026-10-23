@@ -6,6 +6,7 @@
 \subsection{Hypothesis and test}
 
 The replication (E5) asked whether, inside C3DGS and at equal rate over the three colour thresholds, OGC's Gram-metric VQ beats C3DGS's own colour VQ (P1, BD-PSNR of \code{ogc\_gram} against \code{c3dgs}) and beats the same Lloyd with the metric's trace (P2, \code{ogc\_gram} against \code{ogc\_scalar}), on the seven gate scenes. % Am17 d
+It runs OGC's released VQ code (\code{gram\_kmeans}, unedited) on this project's estimate of OGC's metric (Section~\ref{sec:setup}), not on OGC's own Gram computation. % Am17 b; s16; E4
 Both primaries were tested with the three criteria of Section~\ref{sec:setup}, before fine-tuning, on four processes per scene. % Am17 d; s19
 
 \subsection{Result (pre-registered)}
@@ -46,7 +47,7 @@ The BD on SSIM and LPIPS reuses E5's fit with those metrics in place of PSNR and
 
 \subsection{The curves}
 
-Figure~\ref{fig:f1} shows each scene's two curves before fine-tuning (left panels) from E6 part (b)'s processes, the same processes whose fine-tuned rows appear in the right panels; E5's P1 of record comes from E5's own processes. % F1 caption source: paper/figs/f1_rd_curves.py; s21 secondary 1
+Figure~\ref{fig:f1} shows each scene's two curves before fine-tuning (left panels) from E6 part (b)'s processes, the same processes whose fine-tuned rows appear in the right panels; E5's P1 of record comes from E5's own processes. % Fig.1 caption source: paper/figs/f1_rd_curves.py; s21 secondary 1
 
 \begin{figure}[t]
 \centering
@@ -57,8 +58,9 @@ Figure~\ref{fig:f1} shows each scene's two curves before fine-tuning (left panel
 
 \subsection{Caveats}
 
+The test runs OGC's released VQ on this project's 16-probe estimate of OGC's metric, not on OGC's own Gram computation, so this replication (H1) replicates OGC's VQ given an estimated metric; a difference between our $G$ and OGC's own Gram, such as the trace shortfall on train (Section~\ref{sec:setup}), lies outside this test. % Am17 b; s16; E4
 The result covers seven scenes, INRIA's published checkpoints, $K$~=~4,096 and three colour thresholds, on one host commit, one GPU type and one software image. % s19 "What E5 settles"; CLAIMS common E5 limits
 Five of the seven scenes had been used earlier by this project with its own checkpoints, and four appear in OGC's paper (Section~\ref{sec:setup}). % Am15 d; CLAIMS common E5 limits
 $\mathrm{SE}_{\mathrm{noise}}$ is seed noise at $j = 0$ only; it does not include how P varies from scene to scene, and the points at $j = -1$ and $j = +1$ have one seed each, so the noise of the BD values themselves was not measured. % s19 "What E5 settles"; A2; CLAIMS Gap 8
 Each P rests on six measurements, since a parabola through three points per curve fits them exactly. % s19; A2
-Before fine-tuning, the $j = 0$ difference of $+0.5239$ dB (95\% interval $+0.3798$ to $+0.6681$) sits beside OGC's reported $+0.49$ dB, but the two are not like for like: OGC's is a mean over nine Mip-NeRF 360 scenes under its own evaluation, ours over seven scenes, four of them shared, under protocol~ii and at unequal bytes. % s19 secondaries; A4
+Before fine-tuning, the $j = 0$ difference of $+0.5239$ dB (95\% interval $+0.3798$ to $+0.6681$) sits beside OGC's reported $+0.49$ dB, but the two are not like for like: OGC's is a paired mean over nine Mip-NeRF 360 scenes, one run each, under its own evaluation and at a larger size than its reproduction, ours over seven scenes, four of them shared, under protocol~ii and at unequal bytes. % s19 secondaries; A4; RELATED_WORK_OGC.md section 2 g (OGC's Table 1)
