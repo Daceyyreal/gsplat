@@ -160,19 +160,30 @@ def run():
         P1e[s] = P["P1"][s]
     KF, K1 = crit(PF, DF), crit(P1r, D1r)
     t2 = {r["scene"]: r for r in read_csv("t2_e6_pft.csv")}
-    T = tex("t2_e6_pft.tex")
+    T = tex("t2a_e6_pft.tex")
+    Tb = tex("t2b_e6_loo.tex")
+    C.ok(not os.path.exists(os.path.join(OUT, "t2_e6_pft.tex")), "T2: the unsplit t2_e6_pft.tex is gone")
     for s in GATE:
         L = crit({x: PF[x] for x in GATE if x != s}, {x: DF[x] for x in GATE if x != s})
+        d0, d1 = DF[s]
+        ds, vs = (d0 + d1) / 2, (d0 - d1) ** 2 / 2  # with two values the sum of squared deviations is (d0 - d1)^2 / 2
+        c1, c2, c3 = round(L["P_bar"], 9) > 0, L["n_pos"] >= L["need"], round(L["P_bar"], 9) > 2 * round(L["SE_noise"], 9)
         want = {"P_FT": PF[s], "P1_replicated": P1r[s], "P1_E5": P1e[s], "P1_rep_minus_E5": P1r[s] - P1e[s],
-                "loo_P_bar": L["P_bar"], "loo_SE_noise": L["SE_noise"], "loo_ratio": L["P_bar"] / L["SE_noise"]}
+                "loo_P_bar": L["P_bar"], "loo_SE_noise": L["SE_noise"], "loo_ratio": L["P_bar"] / L["SE_noise"],
+                "D_sp_seed0": d0, "D_sp_seed1": d1, "D_s": ds, "v_s": vs}
         for col, v in want.items():
             C.num(t2[s][col], v, f"T2 {s} {col}")
         C.ok(int(t2[s]["loo_n_pos"]) == L["n_pos"] and int(t2[s]["loo_need"]) == L["need"]
-             and int(t2[s]["loo_all_criteria"]) == int(L["ok"]), f"T2 {s} leave-one-out counts")
-        cells = [f9(PF[s]), f"{P1r[s]:.4f}", f"{P1e[s]:.4f}", f"{P1r[s] - P1e[s]:+.4f}", f"{L['P_bar']:.6f}",
-                 f"{L['SE_noise']:.6f}", f"{L['P_bar'] / L['SE_noise']:.2f}", f"{L['n_pos']} of 6 ({L['need']} needed)",
-                 "yes" if L["ok"] else "no"]
-        C.has(T, f"{s} & " + " & ".join(cells) + r" \\", f"T2 tex {s}")
+             and int(t2[s]["loo_all_criteria"]) == int(L["ok"])
+             and (int(t2[s]["loo_c1"]), int(t2[s]["loo_c2"]), int(t2[s]["loo_c3"])) == (c1, c2, c3),
+             f"T2 {s} leave-one-out counts and criteria")
+        sp = [f"{d0:+.6f}", f"{d1:+.6f}", f"{ds:+.6f}", f"{vs:.2e}"]
+        cells = [f9(PF[s])] + sp + [f"{P1r[s]:.4f}", f"{P1e[s]:.4f}"]
+        C.has(T, f"{s} & " + " & ".join(cells) + r" \\", f"T2a tex {s}")
+        C.has(s21, f"| {s} | {f9(PF[s])} | " + " | ".join(sp) + " |", f"T2a FINDINGS s21 {s} P_FT and D_sp")
+        yn = " / ".join("yes" if b else "no" for b in (c1, c2, c3))
+        C.has(Tb, f"{s} & {L['P_bar']:.6f} & {L['SE_noise']:.6f} & {L['P_bar'] / L['SE_noise']:.2f} & "
+                  f"{L['n_pos']} of 6 ({L['need']} needed) & {yn}" + r" \\", f"T2b tex {s}")
         C.has(s21, f"| {s} | {f9(PF[s])} |", f"T2 FINDINGS s21 {s} P_FT")
         C.has(s21, f"| {s} | {P1r[s]:.4f} | {P1e[s]:.4f} | {P1r[s] - P1e[s]:+.4f} |", f"T2 FINDINGS s21 {s} P1")
         C.has(s22, f"| {s} | {L['P_bar']:.6f} | {L['SE_noise']:.6f} | {2 * L['SE_noise']:.6f} | "
@@ -193,8 +204,8 @@ def run():
           "T2 FINDINGS s21 positives")
     C.has(flat[21], f"`P_bar` {K1['P_bar']:.4f} dB (E5: {st.fmean(P1e.values()):.4f}), positive on {K1['n_pos']} of 7, "
                     f"`SE_noise` {K1['SE_noise']:.4f}", "T2 FINDINGS s21 P1 replicated summary")
-    C.has(T, f"{KF['n_pos']} ({KF['need']} needed) & {K1['n_pos']} of 7", "T2 tex positives")
-    C.has(T, f"{f9(KF['P_bar'])} & {K1['P_bar']:.4f}", "T2 tex P_bar row")
+    C.has(T, f"{KF['n_pos']} ({KF['need']} needed) &  &  &  &  & {K1['n_pos']} of 7", "T2a tex positives")
+    C.has(T, f"{f9(KF['P_bar'])} &  &  &  &  & {K1['P_bar']:.4f}", "T2a tex P_bar row")
     C.ok(KF["ok"], "T2 P_FT passes all three criteria")
 
     # ---- T3: E6 part (a) (section 23)
