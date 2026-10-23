@@ -69,8 +69,11 @@ note 3, `f4cc49b2`); E7 S2 ingested (`d0d6df8a`, kitchen seed 0, mechanics clean
 "E7 S# bundle" datasets (note 4, `5bf93e0e`); next: E7 S3 on Kaggle.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
-`4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b)), checker `check_figs.py` (paper figures:
-960 checks, 0 failures; run by pytest).
+`4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b); F1's shared y-axis, round ticks and shaded
+byte overlap: scripts `aa7b2db0`, outputs `a45f6041`), checker `check_figs.py` (paper figures: 961 checks, 0 failures;
+run by pytest). **`paper/tex/` started (2026-10-23):** skeleton and Sections 2, 3, 5.1 (`c7d80e37`; 5.2 a stub until
+E7's verdict), checker `paper/tex/check_tex.py` with its pytest test (`2439de4f`; 74 numbers, 0 failures); builds with
+MiKTeX's `latexmk -pdf` from `paper/tex/` (set `BIBINPUTS` to that folder when using `-outdir`; 8 pages).
 
 ## Context and rules
 
