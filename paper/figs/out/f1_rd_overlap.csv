@@ -1,0 +1,15 @@
+scene,panel,lo_bytes,hi_bytes
+bonsai,before fine-tuning,11785611,19279533
+bonsai,after fine-tuning,11587099,18210012
+counter,before fine-tuning,12449962,20412724
+counter,after fine-tuning,12134515,18748878
+kitchen,before fine-tuning,17458383,29581448
+kitchen,after fine-tuning,17281932,28218449
+room,before fine-tuning,14339130,20304450
+room,after fine-tuning,14158588,19504652
+truck,before fine-tuning,21089653,28487043
+truck,after fine-tuning,20802197,27308547
+drjohnson,before fine-tuning,29750153,37704936
+drjohnson,after fine-tuning,29562225,37030166
+playroom,before fine-tuning,22781588,28178476
+playroom,after fine-tuning,22473486,28315274
