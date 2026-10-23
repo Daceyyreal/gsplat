@@ -3194,6 +3194,39 @@ def test_paper_figs_recheck_from_the_repo():
     assert res["fails"] == [] and res["n_checks"] > 900
 
 
+def test_paper_tex_numbers_and_claims_references(tmp_path):
+    """paper/tex/check_tex.py: every number in the paper's LaTeX sources appears in the FINDINGS sections and CLAIMS
+    rows its line cites (or is a listed constant), and every result sentence cites a CLAIMS row. It passes on the
+    committed sources, and fails on a copy with one planted wrong number and on a copy with one citation removed."""
+    import importlib.util
+    import shutil
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    tex = os.path.join(repo, "paper", "tex")
+    if not os.path.isfile(os.path.join(tex, "check_tex.py")):
+        pytest.skip("paper/tex/ not present")
+    spec = importlib.util.spec_from_file_location("check_tex", os.path.join(tex, "check_tex.py"))
+    ct = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ct)
+    res = ct.run()
+    assert res["fails"] == [] and res["n_numbers"] >= 60 and res["n_result_lines"] >= 30
+
+    for name in os.listdir(tex):
+        if name.endswith(".tex"):
+            shutil.copy(os.path.join(tex, name), tmp_path / name)
+    sec3 = (tmp_path / "sec3_replication.tex").read_text(encoding="utf-8")
+    assert sec3.count("$\\bar P_1 = 0.3558$ dB") == 1
+    (tmp_path / "sec3_replication.tex").write_text(sec3.replace("$\\bar P_1 = 0.3558$ dB", "$\\bar P_1 = 0.3585$ dB"),
+                                                   encoding="utf-8")
+    bad = ct.run(str(tmp_path))["fails"]
+    assert len(bad) == 1 and "0.3585 is not in its cited sources s19, A2" in bad[0]
+
+    (tmp_path / "sec3_replication.tex").write_text(sec3.replace("% s19 per-scene table; B1", "% s19 per-scene table"),
+                                                   encoding="utf-8")
+    bad = ct.run(str(tmp_path))["fails"]  # also 0.0003, which only B1 holds
+    assert any("without a CLAIMS row" in b for b in bad) and all(b.startswith("sec3_replication.tex:15:") for b in bad)
+
+
 # --------------------------------------------------------------------------------- E3r (Amendment 14)
 
 
