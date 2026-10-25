@@ -67,8 +67,8 @@ passes (FINDINGS section 21, `6bd340a0`, `check_s21.py` `251c305c`; descriptive 
 mechanics clean); S1's output does not mount, so later sessions attach the dataset "E7 S1 bundle" (Amendment 20
 note 3, `f4cc49b2`); E7 S2 ingested (`d0d6df8a`, kitchen seed 0, mechanics clean); every later session attaches
 "E7 S# bundle" datasets (note 4, `5bf93e0e`); E7 S3 ingested (`30431fc3`, drjohnson seed 0, mechanics clean);
-E7 S4 ingested (`04bdf4b6`, bonsai seed 0, mechanics clean; "E7 S1 bundle" did not mount, room came through a
-later bundle, byte-identical); next: E7 S5 on Kaggle (counter seed 0).** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
+E7 S4 ingested (`04bdf4b6`, bonsai seed 0, mechanics clean; restore log: room from "E7 S1 bundle", kitchen and
+drjohnson from "E7 S3 bundle"; whether "E7 S2 bundle" was found in S4 is open); next: E7 S5 on Kaggle (counter seed 0).** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
 `4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b); F1's shared y-axis, round ticks and shaded
@@ -5052,15 +5052,27 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   differ by session (S1 `f029da7a`, S2 `5418fec3`, S3 `2334728c`, S4 `43751390`); the rule holds for each.
 - **Notes 3-4 verification:** the carried `gn5_meta_<scene>.json` and `gn5_results_<scene>.csv` are byte-identical
   (sha256) to the bundle that first committed them: room to `kaggle/gn_e7/S1/gn7/`, kitchen to `S2/`, drjohnson to `S3/`.
-- **Room's provenance:** Dace reports that "E7 S1 bundle" failed to mount in S4, yet room is in S4's bundle. The
-  bundle does not record restore paths (`timings_S4.json` `restore_s` 7.08; the `restoring <scene> from <dir>` line is
-  in Kaggle's notebook log only). Cell 3's `restore_scenes` takes each scene from the first attached E7 output, in
-  `discover`'s sorted walk of `/kaggle/input`, with the most settled processes (strict `>`, so the first wins a tie).
-  "E7 S2 bundle" and "E7 S3 bundle" both carry room with 3 settled processes, byte-identical to S1's (checked at S2's
-  and S3's ingests), so room came through one of them: most likely "E7 S2 bundle", the first in the sorted walk if the
-  two mount side by side (inferred, not recorded). Either way its files equal S1's original. Note 4's rule is met in
-  substance (every earlier session's result files reached S4 through a bundle dataset), not in the letter (S1's own
-  dataset was not mounted).
+- **Restore provenance (S4's Kaggle notebook log, lines 55-57, pasted by Dace 2026-10-25; the bundle does not record
+  restore paths, `timings_S4.json` `restore_s` 7.08):**
+  - `restoring drjohnson from /kaggle/input/datasets/daceyy/e7-s3-bundle (session S3, 3 settled processes)`;
+  - `restoring kitchen from /kaggle/input/datasets/daceyy/e7-s3-bundle (session S3, 3 settled processes)`;
+  - `restoring room from /kaggle/input/datasets/daceyy/e7-s1-bundle (session S1, 3 settled processes)`.
+  - So **"E7 S1 bundle" mounted in S4** and room came from it. This entry's first version (`444c79d3`) said, from an
+    earlier report, that it had not mounted, and inferred room came "most likely" from "E7 S2 bundle"; both were wrong.
+  - **The rule** (`kaggle/build_gn_e5_bench.py:306-352`, cell 3 of every E7 notebook through
+    `kaggle/build_gn_e7_bench.py`'s substitutions): `discover` walks `/kaggle/input` top-down with `os.walk`, each
+    level's subdirectories sorted by name (`:310`), and appends every `gn7/`'s parent of this attempt to `outputs` in
+    walk order (`:319`). `restore_scenes` goes through `outputs` in that order and replaces a scene's source only if
+    its meta has strictly more settled processes (`:340`, `n > best[scene][1]`), so on a tie **the first output in the
+    sorted walk wins**. The `restoring` lines print in scene-name order (`sorted(best.items())`), not walk order.
+  - **What it predicts** (S1, S2 and S3 each carry their scenes with 3 settled processes, and the carried metas are
+    byte-identical): with all three found, room from e7-s1-bundle and kitchen from **e7-s2-bundle** (sorted before
+    e7-s3-bundle); with S2's not found, room from e7-s1-bundle and kitchen from e7-s3-bundle. **The log matches the
+    second case.** So `discover` did not find a `gn7/` of attempt 1 in "E7 S2 bundle" ahead of e7-s3-bundle in the walk:
+    not attached, not mounted, mounted without its `gn7/` within the walk's depth (6), or under a slug sorting after
+    `e7-s3-bundle`. Which is **open**: it needs S4's Input panel or the log's `FOUND` dump
+    (`build_gn_e5_bench.py:357`, printed before line 55) and any `not restoring ...` line.
+  - The data are unaffected: room, kitchen and drjohnson are byte-identical to S1's, S2's and S3's bundles (above).
 - **Mechanics clean (bonsai, seed-0 half), each as in S1-S3:**
   - 45 rows (44 and `uncompressed`) in `rows_ok`, all `ok`; `j-1_p0`, `j0_p0`, `j+1_p0` each settled on attempt 0 on
     `cuda`, phase `done`, OOM false; C3DGS's evaluation of every row with no error; no deviation, deadline guard or
@@ -5083,8 +5095,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   `https://raw.githubusercontent.com/Daceyyreal/gsplat/04bdf4b6/kaggle/gn_e7_bench_S5.ipynb` (pinned; unchanged since
   `318d50cc`, sha256 `eb1320b7e2877b46214f13d61534fc21646d88c45854f3c711f38c8c113d08cd`, LF); title **"E7 OGC
   FT-dissection S5"**; attach "E5p OGC dissection pilot" attempt 2 pinned, "E5p OGC source 49ccae72", and "E7 S1
-  bundle" to "E7 S4 bundle" ("E7 S4 bundle" created from `~/Downloads/E7_bundle_S4.zip`, sha256 `1646f4ac...`; if S1's
-  does not mount again, the later bundles carry room). Runs **counter's seed-0 half** on `cuda`: note 1's
+  bundle" to "E7 S4 bundle" ("E7 S4 bundle" created from `~/Downloads/E7_bundle_S4.zip`, sha256 `1646f4ac...`; check
+  before the run that all four show in the Input panel, "E7 S2 bundle" included, see above). Runs **counter's seed-0 half** on `cuda`: note 1's
   21,880-34,430 s, quota 9.68 h. At S5's ingest: the code-identity rule; room, kitchen, drjohnson and bonsai carried
   byte-identical to S1-S4.
 - **Next action: create "E7 S4 bundle", then run E7 S5 on Kaggle.**
