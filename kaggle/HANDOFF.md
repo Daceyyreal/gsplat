@@ -68,7 +68,8 @@ mechanics clean); S1's output does not mount, so later sessions attach the datas
 note 3, `f4cc49b2`); E7 S2 ingested (`d0d6df8a`, kitchen seed 0, mechanics clean); every later session attaches
 "E7 S# bundle" datasets (note 4, `5bf93e0e`); E7 S3 ingested (`30431fc3`, drjohnson seed 0, mechanics clean);
 E7 S4 ingested (`04bdf4b6`, bonsai seed 0, mechanics clean; restore log: room from "E7 S1 bundle", kitchen and
-drjohnson from "E7 S3 bundle"; S2 attached as its output version, no data effect); next: E7 S5 on Kaggle (counter seed 0).** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
+drjohnson from "E7 S3 bundle"; S2 attached as its output version, no data effect); E7 S5 ingested (`ddef31f4`, counter seed 0, mechanics
+clean); next: E7 S6 on Kaggle (playroom seed 0).** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
 `4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b); F1's shared y-axis, round ticks and shaded
@@ -5122,7 +5123,59 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   the bundle that first committed them (room S1, kitchen S2, drjohnson S3, bonsai S4) are binding. **Optional:** if
   Dace pastes the restore log's `restoring <scene> from <dir>` lines (the bundle does not record them), they should name
   only `/kaggle/input/datasets/daceyy/e7-s#-bundle` directories; byte identity is the binding check.
-- **Next action: create "E7 S2 bundle" (if missing) and "E7 S4 bundle", then run E7 S5 on Kaggle.**
+- **Next action: create "E7 S2 bundle" (if missing) and "E7 S4 bundle", then run E7 S5 on Kaggle.** **Done:** see
+  "E7 S5 (2026-10-25)".
+
+### E7 S5 (2026-10-25)
+
+- **Orientation:** the tree was clean; local HEAD `9551fa9e` held two unpushed HANDOFF commits (`ac8d0629`, `9551fa9e`)
+  on `fork/bench/gn-vq` = `444c79d3`. Dace reported S5 finished, S6 not started, no Kaggle session running.
+- **S5 done and ingested:** `E7_bundle_S5.zip` (sha256 `41f377fd630ae1f334c8e15a43297c02a1ff0b0b867e36a0b73c969bccb3c8b1`,
+  1,136,984 bytes): its **17** `gn7/` files (7 per-session files and each of five scenes' meta and results; the request
+  said 18, a miscount: S4 had 15 with four scenes) committed unchanged, data only, in `kaggle/gn_e7/S5/gn7/`
+  (`ddef31f4`; gate `gate_20261025_223730_e7_s5_bundle.log`, 226 passed). Unzipped outside the repository; no `.npz`,
+  `.ply`, `.pt` or `.py`, no `ogc-3dgs` tree. Working copies byte-identical to the zip; each blob equals its file with
+  CRs removed.
+- **Code identity:** S5 ran gsplat `444c79d3` (every row, `gn5_env_S5.json` and the meta's session record), the
+  pushed head when it started; the held `ac8d0629` and `9551fa9e` are not ancestors of it. `17161955..444c79d3` over the
+  rule's paths lists only `bench/gn/test_gn.py` (exempt).
+- **Carried scenes:** `gn5_meta_<scene>.json` and `gn5_results_<scene>.csv` byte-identical (sha256) to the bundle that
+  first committed them: room S1, kitchen S2, drjohnson S3, bonsai S4. S5's inputs and restore lines were not reported
+  (the restore-line check is optional).
+- **Mechanics clean (counter, seed-0 half), each as in S1-S4:**
+  - 45 rows in `rows_ok`, all `ok`; `j-1_p0`, `j0_p0`, `j+1_p0` each settled on attempt 0 on `cuda`, phase `done`, OOM
+    false; C3DGS's evaluation of every row with no error; no deviation, deadline guard or cut, unsettled process,
+    failed or skipped step (242 steps, all ok); labels survived; `frozen_changed` empty on all 32 fine-tuned rows; the
+    meta's `done` false (seed-1 half pending); the job log's exit code 0, not skipped by the cutoff;
+  - `missing_or_failed` is exactly the 22 seed-1-half rows (planned for S9);
+  - `cfg_args` `sh_degree` 3, `eval` True, `white_background` False; `loaded_size_check` ok: 1558 x 1038 (`images_2`),
+    240 views (Note 1's covered size); protocol ii used 30 test views;
+  - OGC preflight: url and dataset both ok at HEAD `49ccae72`, tree `9feebced`; `first_ok` url; every row from the URL;
+  - C3DGS build ok at `2a234af5`, its 7 deviations (Amendment 13 b) identical to S1-S4's;
+  - image string (`py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04`) and wheel key
+    (`33734f894b0a-95f8de51-torch2.11.0_cu128-sm7.5`, restored) identical to S1-S4;
+  - **job 26,175.5 s** in the queue (`timings_s.job` 26,168.5): note 1's counter seed-0 half 21,880-34,430 s, so **1.196
+    of the low end and 0.760 of the high** (S1 1.087 / 0.692, S2 1.373 / 0.855, S3 1.225 / 0.703, S4 0.984 / 0.634);
+    processes 7,587.4 / 8,757.9 / 7,226.5 s (note 1's high 10,328 / 13,087 / 10,328); process GPU peaks
+    8,049,231,360-8,189,470,208 bytes allocated; setup (preflight 20.7, restore 3.0, install 132.0, C3DGS build 218.4)
+    374.0 s; **session 26,549.5 s = 7.37 h, 0.762 of the 9.68 h quota** (note 1's 6.19-9.68 session hours).
+- **Not read:** `per_scene_parts`; no BD, P1, Delta or arm comparison (20 f).
+- **E7 S6 on Kaggle:**
+  1. Import `https://raw.githubusercontent.com/Daceyyreal/gsplat/ddef31f4f2cd21ebb49ef6eac6b91c0835829383/kaggle/gn_e7_bench_S6.ipynb`
+     (pinned; unchanged since `318d50cc`, sha256 `57f19cd3220b43fdbbee8442c7670bdb18220015d6e64f8d077b0f6c4a18d492`,
+     LF); title **"E7 OGC FT-dissection S6"**.
+  2. Attach exactly seven inputs, datasets and the pilot only: "E5p OGC dissection pilot" attempt 2's version, pinned
+     (the wheel); the private dataset "E5p OGC source 49ccae72"; and the private datasets "E7 S1 bundle" to "E7 S5
+     bundle" ("E7 S5 bundle" created from `~/Downloads/E7_bundle_S5.zip`, 1,136,984 bytes, sha256 `41f377fd...`). **No
+     "E7 OGC FT-dissection S#" output version.**
+  3. Accelerator **GPU T4 x2**, Internet **on**. Save & Run All; the first output must be the `OGC PREFLIGHT` lines,
+     both ok.
+  4. S6 runs **playroom's seed-0 half** (`j-1_p0`, `j0_p0` with the replicate pair, `j+1_p0`) on `cuda`: note 1's
+     19,148-32,789 s, 6,391 s spare at the high end; **quota needed 9.22 h** (note 1's 5.44-9.22 session hours).
+  5. Bring back `/kaggle/working/E7_bundle_S6.zip` (arcname `gn7/`).
+  - At S6's ingest: the code-identity rule on S6's gsplat commit; room, kitchen, drjohnson, bonsai and counter
+    byte-identical to S1-S5.
+- **Next action: create "E7 S5 bundle", then run E7 S6 on Kaggle.**
 
 ### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; E6 part (a), FINDINGS section 23; E6 closed; next: none queued)
 
