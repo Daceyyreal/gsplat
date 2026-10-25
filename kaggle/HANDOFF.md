@@ -5118,10 +5118,10 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   `ce580220...`); "E7 S4 bundle" from `~/Downloads/E7_bundle_S4.zip` (930,946 bytes, sha256 `1646f4ac...`). Check
   the Input panel lists the six before Save & Run All. Runs **counter's seed-0 half** on `cuda`: note 1's
   21,880-34,430 s, quota 9.68 h.
-- **At-ingest checks from S5 on (added 2026-10-25),** besides the code-identity rule and the carried scenes
-  byte-identical to the bundle that first committed them (room S1, kitchen S2, drjohnson S3, bonsai S4): **the restore
-  log's `restoring <scene> from <dir>` lines name only `/kaggle/input/datasets/daceyy/e7-s#-bundle` directories**, one
-  line per carried scene (Dace pastes them from the Kaggle log, since the bundle does not record them).
+- **At-ingest checks from S5 on (added 2026-10-25):** the code-identity rule and the carried scenes byte-identical to
+  the bundle that first committed them (room S1, kitchen S2, drjohnson S3, bonsai S4) are binding. **Optional:** if
+  Dace pastes the restore log's `restoring <scene> from <dir>` lines (the bundle does not record them), they should name
+  only `/kaggle/input/datasets/daceyy/e7-s#-bundle` directories; byte identity is the binding check.
 - **Next action: create "E7 S2 bundle" (if missing) and "E7 S4 bundle", then run E7 S5 on Kaggle.**
 
 ### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; E6 part (a), FINDINGS section 23; E6 closed; next: none queued)
