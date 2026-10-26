@@ -5223,8 +5223,9 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   4. S7 runs **truck's seed-0 half** (`j-1_p0`, `j0_p0` with the replicate pair, `j+1_p0`) on `cuda`: note 1's
      16,483-28,759 s, 10,421 s spare at the high end; **quota needed 8.11 h** (note 1's 4.70-8.11 session hours).
   5. Bring back `/kaggle/working/E7_bundle_S7.zip` (arcname `gn7/`).
-  - At S7's ingest: the code-identity rule on S7's gsplat commit; room, kitchen, drjohnson, bonsai, counter and
-    playroom byte-identical to S1-S6.
+  - At S7's ingest: the code-identity rule on S7's gsplat commit; `bench/check_e7_ingest.py` on the unzipped `gn7/`
+    (room, kitchen, drjohnson, bonsai, counter and playroom carried, byte-identical to S1-S6; see "Amendment 20 note 5
+    and the ingest checker (2026-10-26)").
 - **Next action: create "E7 S6 bundle", then run E7 S7 on Kaggle.**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
@@ -5267,7 +5268,7 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     reused by `e7.py`). If it ever fires, the smallest remedy is a dated note (alone) saying that a row outside
     `config_keys` (`uncompressed`, which the verdict never reads) is kept from the bundle that first committed it, or
     that the conflict check covers `config_keys` rows only. Not written; Dace decides if needed.
-- **Open, needs Dace's decision before S8's ingest:** Amendment 20 notes 3-4 require each carried scene's
+- **Resolved by Amendment 20 note 5 (`200c6bcf`), below.** Was open, needs Dace's decision before S8's ingest: Amendment 20 notes 3-4 require each carried scene's
   `gn5_meta_<scene>.json` and `gn5_results_<scene>.csv` to be byte-identical to the bundle that first committed them.
   A scene whose seed-1 half runs in the session (kitchen and playroom in S8; bonsai and counter in S9; room and truck in
   S10; drjohnson in S11) is restored and extended, so its files cannot be byte-identical: rows are appended to the CSV
@@ -5279,6 +5280,36 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   1. `e7.py:448`: `--out` defaults into the bundle root (inside the repository). Proposed: make it required.
   2. `e7.py:398`, `:409`, `:418`, `:449`: `open` without `with` and without `encoding=` (ResourceWarnings; the platform
      default decoding). Proposed: `with open(path, encoding="utf-8") as f:` (CSV keeps `newline=""`).
+
+### Amendment 20 note 5 and the ingest checker (2026-10-26)
+
+- **Dace's decisions on the draft:** carried processes (note 2 c.7) in scope; a new `stopped_17i` naming a process the
+  session ran passes and is recorded at ingest; `note_ii`'s `geometry`, `orbit_reference` and `coverage` report only
+  (no reader in `bench/gn/e7.py`, `e5.py`, `e5_verdict.py`, `kaggle/e7_scenes.py` or `paper/figs/e7_*.py`: grep, no
+  hit); `c3dgs_build` must be equal (its four keys `ok`, `failed_step`, `missing`, `path`, one value in all 21 S1-S6
+  metas).
+- **Validated on the dry run first** (`bench/gn/dryrun/dryrun_gn_e7.py` with `GN_DRYRUN_KEEP=1`, temp on F:, log
+  `F:\pytest_logs\dryrun_20261026_141249_e7_keep_note5.log`, exit 0; no code change): the checker on S10's bundle
+  against S1 and S5 passed every check of note 5 for room (extended) and byte identity for counter (carried), except
+  `c3dgs_build`, whose `path` differs only because the dry run gives each session its own output directory. **Revision
+  (in the note as committed):** `c3dgs_build`'s `ok`, `failed_step` and `missing` must be equal, its `path` is report
+  only. Report-only differences on the dry run: `c3dgs_build.path`, `deadline`; all other report-only keys equal. The
+  dry run cannot exercise the INRIA fetch record, a real GN cache, a cuda -> cpu retry, a deadline cut, a 17 i stop, a
+  carried process or a `derived` OGC source.
+- **Commits:** `200c6bcf` Amendment 20 note 5, alone (gate `gate_20261026_142603_a20_note5.log`, 227 passed);
+  `e8a9baff` `bench/check_e7_ingest.py` and its test (gate `gate_20261026_142924_check_e7_ingest.log`, 228 passed).
+- **The checker** is standard library only (import trace: 45 modules, none from the repository) and lives outside the
+  code-identity rule's paths (`kaggle/*.py`, `bench/gn/*.py`, which git's pathspec matches at any depth); no run-path
+  module imports it. `17161955..HEAD` over the rule's paths still lists only `bench/gn/test_gn.py`.
+- **On the real bundles:** S2-S6 each checked against the bundles before them: every check passes (exit 0), every
+  carried scene byte-identical.
+- **The ingest procedure from S7 on:** unzip the bundle outside the repository, then
+  `.venv/Scripts/python.exe -I bench/check_e7_ingest.py <unzipped>/gn7` (defaults: `--committed kaggle/gn_e7`, `--plan
+  kaggle/e7_sessions.json`); exit 0 is required before the bundle is committed. It prints check names with pass / FAIL
+  / report-only, never a value. Carried scenes: byte identity (notes 3-4). From S8 to S11 (and for any carried process),
+  the extended scenes follow note 5; a report-only difference and a new `stopped_17i` are written into the session's
+  HANDOFF entry. The other checks (sha256 and size of the zip, the code-identity rule, the file list, mechanics) are
+  unchanged.
 
 ### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; E6 part (a), FINDINGS section 23; E6 closed; next: none queued)
 
