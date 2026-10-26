@@ -53,7 +53,7 @@ BD-PSNR uses each row's whole \code{.npz} size, indices included. % s19 "How the
 
 The project's own Gauss--Newton VQ (GN-VQ) was compared with OGC's VQ inside C3DGS only on the development scenes train and treehill, and never on a gate scene (exploratory, no verdict). % s17; Am16 b; D6
 With all of OGC's algorithmic choices made in GN-VQ's code (\code{lad\_all}), GN-VQ came within 0.0013 dB of OGC's VQ on train and 0.0009 dB on treehill. % s17 "What E4q settles"; B5
-The large single steps were the ones that fill empty codebook entries, reseeding ($+0.0394$ dB on train) and OGC's initial draw ($+0.0179$ dB on treehill), while each regularisation choice was worth 0.0097 dB or less, which points to codebook use rather than regularisation as the gap between GN-VQ and OGC (exploratory, two development scenes). % s17 "What E4q settles"; B5
+The large single steps were the ones that fill empty codebook entries, reseeding ($+0.0394$ dB on train) and OGC's initial draw ($+0.0179$ dB on treehill), while each regularisation choice was worth 0.0097 dB or less, which is consistent with codebook use, rather than regularisation, being the gap between GN-VQ and OGC (exploratory, two development scenes). % s17 "What E4q settles"; B5
 On train at equal rate OGC's VQ needed 14.42\% fewer bytes than GN-VQ (BD-PSNR $+0.0228$ dB), and GN-VQ's cross-validated floor was worth 0.0007 dB. % s17; s16; D6
 On this evidence GN-VQ was retired from any gate before E5's code (Section~\ref{sec:setup}). % Am17 a; D6
 These comparisons rest on two development scenes and do not bear on the gate scenes. % s17 "Not settled"; B5, D6
