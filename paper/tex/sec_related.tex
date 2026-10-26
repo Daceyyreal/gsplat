@@ -1,14 +1,16 @@
-% Related work. Literature, not results: citations only from references.bib (verified 2026-10-23); a needed reference
-% that is not in it is a \TODO{cite: ...} marker, not an entry. OGC's and Do et al.'s content from kaggle/RELATED_WORK_OGC.md
+% Related work. Literature, not results: citations only from references.bib, every entry verified (sources in its
+% comment there). Each method's description here follows its abstract (or, for C3DGS, its paper and code). OGC's and Do et al.'s content from kaggle/RELATED_WORK_OGC.md
 % (literature notes, paraphrased). A sentence that uses this project's results cites its CLAIMS row, as elsewhere.
 \section{Related work}
 \label{sec:related}
 
 \paragraph{Compressing 3D Gaussian Splatting.}
 3D Gaussian Splatting represents a scene by millions of anisotropic Gaussians, each with a position, a covariance, an opacity and a view-dependent colour stored as spherical-harmonic (SH) coefficients, which make up most of each Gaussian's stored floats \citep{kerbl2023gaussian}.
-Compression methods for it divide into those that learn a compact representation during training and those that start from a trained model \TODO{cite: a survey of 3DGS compression, e.g. Bagdasarian et al., 3DGS.zip}.
-Training-time methods prune Gaussians with learned masks, learn colour codebooks or hash-grid colour fields jointly with the scene, or anchor Gaussians to structured features \TODO{cite: Lee et al. 2024 (Compact 3D Gaussian representation); Navaneet et al. 2024 (CompGS); Girish et al. 2024 (EAGLES); Lu et al. 2024 (Scaffold-GS); Chen et al. 2024 (HAC)}.
-Post-training methods prune Gaussians, reduce the SH degree, or vector-quantise (VQ) the parameters of a trained model, usually followed by a short fine-tuning \TODO{cite: Fan et al. 2024 (LightGaussian); Papantonakis et al. 2024 (reducing the memory footprint of 3DGS)}.
+Bagdasarian et al.\ survey the compression methods for it \citep{bagdasarian2025zip}.
+Some learn the compact representation while the scene is trained: a mask that removes Gaussians, a grid-based neural field in place of SH colour and codebooks for the geometry \citep{lee2024compact}, or $k$-means vector quantisation (VQ) of the parameters while they are optimised \citep{navaneet2024compgs}.
+Others store quantised embeddings \citep{girish2024eagles} or entropy-code anchor attributes with a hash-grid context model \citep{chen2024hac}.
+Post-training methods start from a trained model: LightGaussian prunes Gaussians by their global significance with a recovery step, distils the SH colour to a lower degree and vector-quantises it \citep{fan2024lightgaussian}.
+Papantonakis et al.\ combine resolution-aware pruning, a per-Gaussian choice of SH degree, codebook quantisation and half-precision floats \citep{papantonakis2024reducing}.
 This paper works in the post-training setting, and its host is C3DGS \citep{niedermayr2024compressed}.
 
 C3DGS scores each colour and shape parameter by its sensitivity, the magnitude of the gradient of the rendered training images' total energy (the sum of their pixel values) with respect to it, accumulated over the training views, and gives each Gaussian the largest sensitivity among its colour parameters and, separately, among its shape parameters \citep{niedermayr2024compressed}. % C3DGS paper Sec. 4.1, Eq. 3, App. E; code at 2a234af5: compress.py:40-84, 154-156
@@ -29,8 +31,8 @@ Its square root orthonormalises the coefficients before uniform scalar quantisat
 
 \paragraph{Second-order and observation-weighted quantisation.}
 Weighting a quantiser's error by a second-order model of the loss predates both methods.
-In neural-network compression the Hessian of the loss, or its Gauss--Newton approximation, has been used to choose which weights to prune \TODO{cite: LeCun et al. 1990 (Optimal Brain Damage); Hassibi and Stork 1993 (Optimal Brain Surgeon)}, to weight the $k$-means clustering of weights \TODO{cite: Choi et al. 2017 (Towards the limit of network quantization)}, to set per-layer bit widths \TODO{cite: Dong et al. 2019 (HAWQ)}, and to quantise weights one at a time while the remaining weights compensate \TODO{cite: Frantar and Alistarh 2022 (OBQ); Frantar et al. 2023 (GPTQ)}.
-Layer-wise quantisers that minimise the error of a layer's outputs on calibration data weight the error by the Gram matrix of the layer's inputs, which is the same construction applied to activations \TODO{cite: Nagel et al. 2020 (AdaRound); Frantar et al. 2023 (GPTQ)}.
+In neural-network compression the Hessian of the loss, or its Gauss--Newton approximation, has been used to choose which weights to prune \citep{lecun1989optimal,hassibi1992second}, to weight the $k$-means clustering of weights \citep{choi2017towards}, to set per-layer bit widths \citep{dong2019hawq}, and to quantise weights one at a time while the remaining weights compensate \citep{frantar2022optimal,frantar2023optq}.
+Layer-wise quantisers that minimise the error of a layer's outputs on calibration data weight the error by the Gram matrix of the layer's inputs, which is the same construction applied to activations \citep{nagel2020up,frantar2023optq}.
 For one Gaussian the rendered colour is linear in its SH coefficients, ignoring the clamp of negative colours, so a Gauss--Newton metric of the image error with respect to those coefficients has the form of OGC's observation Gram; the metric used in this paper is a 16-probe estimate of it, equal to OGC's Gram in expectation by construction (Section~\ref{sec:setup}). % Am17 b; A12; RELATED_WORK_OGC.md 2 a, 3
 C3DGS's sensitivity is a first-order, scalar counterpart: one weight per Gaussian, the largest gradient magnitude among its colour parameters, so its clustering distance does not distinguish viewing directions. % C3DGS paper Sec. 4.1, Eq. 5; compress.py:154; compression/vq.py:37-60
 OGC's scalar variant, the trace of the Gram matrix times the identity, lies between the two, and Section~\ref{sec:gram-trace} tests the full matrix against it. % Am17 b; B1
