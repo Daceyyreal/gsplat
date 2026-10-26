@@ -7424,6 +7424,112 @@ def test_e7_secondaries_on_constructed_data():
     assert b["bd_rate_interpretable"] and b["bd_rate_percent"] < 0
 
 
+def test_e7_ingest_check_note5_extension_and_carried_scenes(tmp_path):
+    """bench/check_e7_ingest.py (Amendment 20 notes 3-5) on S1's committed room files: a planted clean extension in
+    S10 (room's seed-1 half: CSV rows appended, the meta changed only as note 5 c allows) passes; a byte change in the
+    CSV prefix, an appended row with a foreign config, a changed j0_p0 record and a shrunk sessions list each fail;
+    a carried scene must be byte-identical. The checker imports nothing from the repository."""
+    import ast
+    import copy
+    import csv as _csv
+    import importlib.util
+    import io
+    import shutil
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    path = os.path.join(repo, "bench", "check_e7_ingest.py")
+    src = open(path, encoding="utf-8").read()
+    imported = {n.names[0].name.split(".")[0] if isinstance(n, ast.Import) else n.module.split(".")[0]
+                for n in ast.walk(ast.parse(src)) if isinstance(n, (ast.Import, ast.ImportFrom))}
+    assert imported <= {"argparse", "csv", "io", "json", "os", "re", "sys"}
+    spec = importlib.util.spec_from_file_location("check_e7_ingest", path)
+    ck = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ck)
+    import e5
+    import e7_scenes as es
+
+    for p in es.PROCESSES:  # the checker's config names are e5's
+        key = e5.process_key(p["j"], p["seed"])
+        assert all(f"{ck.config_prefix(key)}_{r}" == e5.config_name(p["j"], p["seed"], r)
+                   for r in es.process_rows("room", p))
+    s1 = os.path.join(repo, "kaggle", "gn_e7", "S1", "gn7")
+    plan = os.path.join(repo, "kaggle", "e7_sessions.json")
+    committed = tmp_path / "committed"
+    shutil.copytree(s1, committed / "S1" / "gn7")
+    old_csv = open(os.path.join(s1, "gn5_results_room.csv"), "rb").read()
+    old = json.load(open(os.path.join(s1, "gn5_meta_room.json"), encoding="utf-8"))
+
+    def extension():
+        """room's seed-1 half run in S10, every change one note 5 allows."""
+        m = copy.deepcopy(old)
+        m["sessions"].append({**m["sessions"][0], "session": "S10", "halves": [1]})
+        m["ogc_sources"].append({"session": "S10", "ogc_source": "url"})
+        m["steps"].append({"name": "fetch_inria", "status": "ok"})
+        m["gn_history"] = [{**m["gn"]["full"], "replaced_in_session": "S10", "reason": "no cache in this session"}]
+        m["gn"]["full"] = {**m["gn"]["full"], "source": "computed", "time_s": 1.0}
+        m["deadline"] = m["deadline"] + 1.0
+        m["timings_s"]["job"] += 1.0
+        rows = []
+        for p in es.PROCESSES:
+            if p["half"] != 1:
+                continue
+            key = e5.process_key(p["j"], p["seed"])
+            names = es.process_rows("room", p)
+            m["processes"][key] = {"attempts": [{"attempt": 0, "session": "S10"}], "settled": True, "j": p["j"],
+                                   "seed": p["seed"], "rows": names}
+            m["runs"][f"{key}_a0"] = {"ok": True}
+            rows += [e5.config_name(p["j"], p["seed"], r) for r in names]
+        m["rows_ok"] = sorted(set(m["rows_ok"]) | set(rows))
+        m["missing_or_failed"] = []
+        m["done"] = True
+        header = next(_csv.reader(io.StringIO(old_csv.decode("utf-8"))))
+        buf = io.StringIO()
+        w = _csv.DictWriter(buf, fieldnames=header)
+        for c in rows:
+            w.writerow({"scene": "room", "config": c, "status": "ok", "session": "S10"})
+        return m, old_csv + buf.getvalue().encode("utf-8")
+
+    def run(meta, csv_bytes, name):
+        d = tmp_path / name / "gn7"
+        d.mkdir(parents=True)
+        (d / "gn5_attempt.json").write_text(json.dumps({"e7": True, "session": "S10", "attempt": 1}))
+        (d / "gn5_meta_room.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+        (d / "gn5_results_room.csv").write_bytes(csv_bytes)
+        rep = ck.check(str(d), str(committed), plan)
+        return rep.failed, [ln for ln in rep.lines if ln.endswith("FAIL") or "FAIL (" in ln]
+
+    m, c = extension()
+    failed, bad = run(m, c, "clean")
+    assert not failed, bad
+    # a byte change in the CSV prefix
+    i = c.index(b"room", 200)
+    failed, bad = run(m, c[:i] + b"ROOM" + c[i + 4:], "prefix")
+    assert failed and any("b.1" in x for x in bad)
+    # an appended row with a foreign config
+    failed, bad = run(m, c + c[c.rindex(b"\r\n", 0, len(c) - 2) + 2:].replace(b"j+1_p1_", b"j+2_p1_"), "foreign")
+    assert failed and any("b.2 CSV: appended configs" in x for x in bad)
+    # a changed seed-0 record
+    m2 = copy.deepcopy(m)
+    m2["processes"]["j0_p0"]["attempts"][0]["device"] = "cpu"
+    failed, bad = run(m2, c, "j0_p0")
+    assert failed and any("every process settled before this session" in x for x in bad)
+    # a shrunk sessions list
+    m3 = copy.deepcopy(m)
+    m3["sessions"] = m3["sessions"][1:]
+    failed, bad = run(m3, c, "sessions")
+    assert failed and any("c.2 grow only: sessions" in x for x in bad)
+    # carried (the session did not run the scene): byte identity; S1's files unchanged pass, one byte changed fails
+    d = tmp_path / "carried" / "gn7"
+    d.mkdir(parents=True)
+    (d / "gn5_attempt.json").write_text(json.dumps({"e7": True, "session": "S2", "attempt": 1}))
+    shutil.copy(os.path.join(s1, "gn5_meta_room.json"), d)
+    (d / "gn5_results_room.csv").write_bytes(old_csv)
+    assert not ck.check(str(d), str(committed), plan).failed
+    assert old_csv.endswith(b"\r\n")
+    (d / "gn5_results_room.csv").write_bytes(old_csv[:-3] + (b"0" if old_csv[-3:-2] != b"0" else b"1") + b"\r\n")
+    assert ck.check(str(d), str(committed), plan).failed
+
+
 def test_e7_notebooks_rebuild_and_name_their_session():
     """kaggle/build_gn_e7_bench.py: the eleven committed notebooks equal the builder's output; titles "E7 OGC
     FT-dissection S1"-"S11" from kaggle/e7_sessions.json (Amendment 20 note 1); E7_bundle_S#.zip under gn7/; E7's job
