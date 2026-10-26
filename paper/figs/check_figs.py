@@ -116,7 +116,7 @@ def run():
     C = Check()
     txt = open(FINDINGS, encoding="utf-8").read()
     s19, s20, s21, s22, s23 = (section(txt, n) for n in (19, 20, 21, 22, 23))
-    flat = {n: " ".join(s.split()) for n, s in ((20, s20), (21, s21), (22, s22), (19, s19))}
+    flat = {n: " ".join(s.split()) for n, s in ((20, s20), (21, s21), (22, s22), (19, s19), (25, section(txt, 25)))}
     tex = lambda name: open(os.path.join(OUT, name), encoding="utf-8").read()  # noqa: E731
     f9 = lambda v: f"{round(v, 9):.9f}"  # noqa: E731
     R5 = {s: rows_of(5, s) for s in GATE}
@@ -267,6 +267,18 @@ def run():
     C.has(flat[19], f"{M['gram_vs_scalar']:.4f} dB for `ogc_gram` against `ogc_scalar`", "F2 FINDINGS s19 mean gram")
     tot = M["plain_vs_c3dgs"] + M["scalar_vs_plain"] + M["gram_vs_scalar"]
     C.has(flat[19], f"They sum to {tot:.4f} dB against P1's {M['P1']:.4f} dB", "F2 FINDINGS s19 sum")
+    for s in list(GATE) + ["mean"]:  # the stacked total and its residual against P1
+        src = V[s] if s != "mean" else M
+        ssum = src["plain_vs_c3dgs"] + src["scalar_vs_plain"] + src["gram_vs_scalar"]
+        C.num(f2[s]["steps_sum"], ssum, f"F2 {s} steps_sum")
+        C.num(f2[s]["residual"], src["P1"] - ssum, f"F2 {s} residual")
+    d = {s: [float(R5[s][f"p{p}_ogc_gram"]["PSNR_ii"]) - float(R5[s][f"p{p}_c3dgs"]["PSNR_ii"]) for p in (0, 1)]
+         for s in GATE}
+    sd = math.sqrt(st.fmean(sum((x - sum(v) / 2) ** 2 for x in v) for v in d.values()))
+    C.num(f2["mean"]["P1_SE"], sd / math.sqrt(len(GATE)), "F2 mean P1_SE = SD_pool / sqrt(n)")
+    C.ok(all(f2[s]["P1_SE"] == "" for s in GATE), "F2 P1_SE only on the mean row")
+    C.has(flat[25], f"| {float(f2['mean']['P1_SE']):.9f} | {M['P1'] / float(f2['mean']['P1_SE']):.2f} |",
+          "F2 P1_SE in FINDINGS s25")
 
     # ---- F4: the AC grid re-fit (section 22 e)
     f4 = read_csv("f4_ac_refit.csv")

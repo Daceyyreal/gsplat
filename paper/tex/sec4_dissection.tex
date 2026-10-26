@@ -29,7 +29,7 @@ That share must not be read as \emph{the} metric's share: on train, the developm
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{f2_p1_decomposition.pdf}
-\caption{P1's steps per gate scene (BD-PSNR, dB, E5's seed-0 curves): OGC's Lloyd with the identity metric against C3DGS's VQ, the trace weight against the identity, and the Gram metric against its trace (P2), drawn side by side with P1. Each step has its own shared byte range, so the steps do not add to P1. Exploratory except P1 and P2.}
+\caption{P1's steps per gate scene, E5 before fine-tuning (BD-PSNR over E5's seed-0 curves), stacked from the bottom: OGC's Lloyd with the identity metric against C3DGS's VQ, the trace weight against the identity, and the Gram metric against its trace (P2). The diamond is P1; on the mean it carries $\pm1$ standard error, $\mathrm{SD}_{\mathrm{pool}}/\sqrt{n}$, smaller than the marker. Each step is a BD value over its own pair's shared byte range, so the top of a stack is the steps' sum, not P1: over the seven scenes the steps' means sum to 0.3579 dB against P1's 0.3558 dB, and per scene the two differ by a few thousandths of a dB. Exploratory except P1 and P2.} % s19 "Exploratory"; s25; B2, A2
 \label{fig:f2}
 \end{figure}
 
@@ -63,7 +63,14 @@ These comparisons rest on two development scenes and do not bear on the gate sce
 
 C3DGS stores the colour table through int8 quantisers whose grid, for every unfine-tuned row, is the checkpoint's own feature range, fitted to neither codebook (code reading). % s24 item 1; E16
 Before fine-tuning OGC's AC codebook reached 159 to 389 grid steps beyond that grid, and 24 to 157 of its AC codebook values per process were clamped at the save, so P1 was measured with OGC's AC codebook clamped; C3DGS's AC codebook was never outside the grid (descriptive). % s24 item 2; E17
-Fine-tuning re-fits the grid: OGC's AC scale grew by a factor of 1.59 to 3.16 and its \code{.npz} shrank by 10.68\% to 0.63\%, while C3DGS's AC scale changed by a factor of 0.80 to 1.13 and its \code{.npz} by $-0.31\%$ to $+1.01\%$ (descriptive). % s22 e; F9
+Fine-tuning re-fits the grid: OGC's AC scale grew by a factor of 1.59 to 3.16 and its \code{.npz} shrank by 10.68\% to 0.63\%, while C3DGS's AC scale changed by a factor of 0.80 to 1.13 and its \code{.npz} by $-0.31\%$ to $+1.01\%$ (descriptive; Fig.~\ref{fig:f4}). % s22 e; F9
 What this records is the re-fit's effect on bytes. % s24; F9, E13
 Its effect on the PSNR lead is untested, and the exploratory correlations run the wrong way for it to be the cause: across the seven scenes a larger widening of OGC's AC grid went with a smaller, not larger, fine-tuning gain difference (exploratory, $n = 7$; Spearman $\rho = -0.89$, $-0.21$ over the 28 processes and $-0.30$ after the gap-closing trend is removed). % s24 item 6; E18
 E7 holds the grids, the codewords and the rest of fine-tuning fixed in turn to test this (Section~\ref{sec:ft-why}). % Am20 a; CLAIMS Gap 3
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{f4_ac_refit.pdf}
+\caption{Fine-tuning re-fits the AC colour grid (E6 part (b), the seven gate scenes; descriptive). AC: the SH coefficients of degrees 1--3 (\code{features\_rest}). One point is one process of one scene (four per scene: $j = -1, 0, +1$ with seed 0 and $j = 0$ with seed 1), for C3DGS's VQ and for OGC's Gram-metric VQ. (a) The AC int8 grid's scale (\code{rest\_scale} of the quantizer at the save) after fine-tuning against before, with the lines $y = x$, $2x$ and $3x$. (b) The \code{.npz} size change from fine-tuning, per scene.} % s22 e; F9
+\label{fig:f4}
+\end{figure}

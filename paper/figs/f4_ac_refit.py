@@ -3,7 +3,8 @@
 For every process of E6 part (b) (seven gate scenes x four processes, ``kaggle/gn_e6/S1-S3/gn6/``) and each method
 (`c3dgs`, `ogc_gram`): the AC grid's scale (`rest_scale` of `qa_at_save`) before fine-tuning (the unfine-tuned row)
 and after it (the `_ft` row of the same process), and the `.npz` change, after over before. Panel (a): scale after
-against scale before, with the lines y = x, 2x, 3x. Panel (b): `.npz` change per scene. Section 22 e's ranges:
+against scale before on fixed limits, with the lines y = x, 2x, 3x clipped to the axes. Panel (b): `.npz` change per
+scene, one point per process. The caption (paper/tex) defines AC and names `rest_scale`. Section 22 e's ranges:
 `ogc_gram_ft` x 1.59 to 3.16, `c3dgs_ft` x 0.80 to 1.13; `.npz` `ogc_gram` -10.68% to -0.63%, `c3dgs` -0.31% to
 +1.01%. Outputs: ``f4_ac_refit.pdf/.png/.csv``.
 """
@@ -13,6 +14,7 @@ import numpy as np
 import figdata as fd
 
 METHODS = ("c3dgs", "ogc_gram")
+XLIM, YLIM = (0.003, 0.010), (0.003, 0.027)  # panel (a); every point lies inside (asserted)
 
 
 def compute():
@@ -34,23 +36,25 @@ def main():
     fd.write_csv("f4_ac_refit.csv", ["scene", "j", "seed", "method", "rest_scale_before", "rest_scale_after",
                                      "scale_ratio", "npz_before", "npz_after", "npz_change_pct"], P)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 2.8), gridspec_kw={"width_ratios": [1, 1.6]})
-    lo = min(min(p[4], p[5]) for p in P) * 0.9
-    hi = max(max(p[4], p[5]) for p in P) * 1.1
-    xx = np.array([lo, hi])
+    (x0, x1), (y0, y1) = XLIM, YLIM
+    assert all(x0 <= p[4] <= x1 and y0 <= p[5] <= y1 for p in P), "a point lies outside panel (a)'s fixed limits"
     for k, ls in ((1, "-"), (2, "--"), (3, ":")):
-        ax1.plot(xx, k * xx, color="grey", lw=0.6, ls=ls)
-        ax1.text(hi / k, hi, "y = x" if k == 1 else f"y = {k}x", fontsize=6, color="grey", ha="center", va="bottom")
+        xe = min(x1, y1 / k)  # each line clipped to the axes, its label inside the plot near its end
+        ax1.plot([max(x0, y0 / k), xe], [k * max(x0, y0 / k), k * xe], color="grey", lw=0.6, ls=ls)
+        lx = xe - (0.0001 if k == 1 else 0.0006)  # y = x labelled below its line, 2x and 3x above theirs
+        ly, va = (k * lx - 0.0003, "top") if k == 1 else (k * lx + 0.0004, "bottom")
+        ax1.text(lx, ly, "y = x" if k == 1 else f"y = {k}x", fontsize=6, color="grey", ha="right", va=va)
     for m in METHODS:
         st = fd.STYLE[m]
         q = [p for p in P if p[3] == m]
         ax1.plot([p[4] for p in q], [p[5] for p in q], ls="none", marker=st["marker"], color=st["color"], ms=4,
                  mfc="white", mew=1.0, label=st["label"])
-    ax1.set_xlim(lo, hi)
-    ax1.set_ylim(lo, hi)
+    ax1.set_xlim(x0, x1)
+    ax1.set_ylim(y0, y1)
     ax1.set_xlabel("AC grid scale before fine-tuning")
     ax1.set_ylabel("AC grid scale after fine-tuning")
-    ax1.set_title("(a) AC int8 grid scale (rest_scale)")
-    ax1.legend(frameon=False, loc="lower right")
+    ax1.set_title("(a) AC grid scale")
+    ax1.legend(frameon=False, loc="upper left")
     x = np.arange(len(fd.GATE))
     for i, m in enumerate(METHODS):
         st = fd.STYLE[m]
@@ -62,8 +66,8 @@ def main():
     ax2.set_xticks(x)
     ax2.set_xticklabels(fd.GATE, rotation=30, ha="right")
     ax2.set_ylabel(".npz change from fine-tuning (%)")
-    ax2.set_title("(b) .npz size, fine-tuned over unfine-tuned (4 processes)")
-    ax2.legend(frameon=False, loc="lower left")
+    ax2.set_title("(b) .npz size change after fine-tuning (%)")
+    ax2.legend(frameon=False, loc="lower center")
     fig.tight_layout()
     fd.save(fig, "f4_ac_refit")
     plt.close(fig)
