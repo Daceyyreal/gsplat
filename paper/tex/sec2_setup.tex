@@ -8,7 +8,7 @@
 All experiments ran inside the C3DGS compression pipeline \citep{niedermayr2024compressed} at commit \code{2a234af5}, on INRIA's published 30k checkpoints of 3D Gaussian Splatting \citep{kerbl2023gaussian}. % Am13 b; Am15 d; CLAIMS common E5 limits
 C3DGS's source was not edited; the build and run deviations were recorded: a \code{<cstdint>} rebuild of one extension, a wrapper that chunks \code{torch.linalg.eigh} and \code{det} (8,192 matrices per call) after the unchunked call failed in cuSOLVER, and a fix that lets C3DGS's own evaluation run when the training images are kept on the CPU. % s14, s17, s18, s19; E1, E7
 On the development scene train, the host reproduced C3DGS's published row within 0.020 dB in PSNR and 0.134\% in size. % s14; E3
-OGC's colour VQ \citep{pietroszek2026only} was run from its released code at commit \code{49ccae72}, unedited, under its PolyForm Noncommercial 1.0.0 licence, for noncommercial research; none of its files is in this project's repository or result bundles. % Am18 c; E12
+OGC's colour VQ \citep{pietroszek2026only} was run from its released code at commit \code{49ccae72} \citep{pietroszek2026ogccode}, unedited, under that code's public licence, the PolyForm Noncommercial License 1.0.0, which permits noncommercial research use; none of its files is in this project's repository or result bundles. % the repository's LICENSE at 49ccae72 (public); Am18 c; E12 (its licence statement only)
 All runs used two NVIDIA T4 GPUs on Kaggle and one software image per experiment. % s19, s21; CLAIMS common E5 limits
 
 \subsection{Scenes}
