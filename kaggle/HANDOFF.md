@@ -5227,6 +5227,59 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     playroom byte-identical to S1-S6.
 - **Next action: create "E7 S6 bundle", then run E7 S7 on Kaggle.**
 
+### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
+
+- **What ran:** `bench/gn/e7.py` (through its own `main`) and `paper/figs/e7_t4_primaries.py`, `e7_t5_secondaries.py`,
+  `e7_f6_deltas.py`, `e7_f7_arm_curves.py` (room) over `kaggle/gn_e7` (S1-S6), every output in a scratch directory
+  outside the repository, deleted afterwards. Nothing numeric was shown; `git status` stayed clean.
+- **Results (structure only):** exit 0, no exception. Both primaries `incomplete` ("rows missing after the rerun": the
+  six primary rows of each run scene's unrun `p1`, all 24 of truck's). `n` is 7: truck is in `es.SCENES`, not dropped,
+  with no rows. 45 rows merged per run scene, every carried copy identical (no `BundleConflict`), one session and one
+  image per scene. The four scripts wrote every expected file (T4: csv + 2 tex; T5: csv + tex; F6 and F7: csv, pdf,
+  png). Only warnings: `ResourceWarning: unclosed file` at `e7.py:398`, `:409`, `:418`, `:449`.
+- **Real against synthetic bundles:** the tests' bundles are one `S1/gn7/` with five columns and both halves of all
+  seven scenes, and no metas. The real ones are six cumulative bundles (9-19 files), 70 columns, an `uncompressed` row
+  per scene (not in `config_keys`, skipped by `scene_data`), metas (one per bundle carrying the scene), seed-1 halves
+  absent and one scene with no rows. drjohnson's CPU images and the `images` / `images_2` sets are only in the metas,
+  which `e7.py` reads for drops only. Every file is ASCII, so the Windows default decoding is harmless today.
+- **Procedure for any later blind run:** always pass `--out` outside the repository (without it the CLI writes
+  `gn7_verdict.json` into the bundle root, `kaggle/gn_e7`), and redirect stdout (the CLI prints `Delta_bar` and `SE`,
+  `e7.py:450-455`). The figure scripts take `--out` and refuse `paper/figs/out/` for any root but `kaggle/gn_e7`
+  (`e7_figdata.check_out`).
+- **Can S8-S11 raise `BundleConflict`?** Not on the normal path (read 2026-10-26):
+  - `e7.load` (`e7.py:405-416`) keys every results row by (scene, config), `uncompressed` included (the check is not
+    restricted to `config_keys`), and refuses two different rows of one attempt by whole-row comparison (`old[2] !=
+    row`, every column, timestamps and times too). So a recomputed row could never pass.
+  - A seed-1 session does not recompute the `uncompressed` row: `uncompressed_row` returns at once when the restored
+    CSV holds it with status `ok` (`kaggle/gn_e7_scene.py:343-345`), and every run scene's is `ok`. The harness reruns
+    for the GN cache (`:361-371`) but not that row.
+  - The seed-1 half runs only `p1`, `j-1_p1`, `j+1_p1` (`gn_e7_scene.py:378`, `e7_scenes.half_processes`,
+    `kaggle/e7_scenes.py:122-128`), whose configs no seed-0 process writes; rows are appended (`append_row`,
+    `gn_e7_scene.py:113-119`), and the only rewrite (`take_rows`, `:401-418`, called at `:458`) removes rows of the
+    current session's own deadline-cut attempt.
+  - **When it would fire:** if a seed-1 session's restore missed the scene's CSV (no bundle dataset), the job would
+    write a fresh CSV with a new `uncompressed` row, which differs by construction (timestamp, `eval_ii_time_s`,
+    session), so `load` would raise: loud, not silent. Also if a restored `uncompressed` row were not `ok`.
+  - **Precedent:** none in E5 or E6. In every E5 and E6 bundle each scene's rows come from one session; duplicated
+    rows across bundles are carried copies, all equal (checked 2026-10-26). The only split-scene precedent is E7's dry
+    run on the stand-in (room S1 -> S10; `e7.py` over S1, S5, S10 without a conflict).
+  - **PREREG is silent** on conflicting rows: the refusal is code only (E5's combiner, `bench/gn/e5_verdict.py:10`,
+    reused by `e7.py`). If it ever fires, the smallest remedy is a dated note (alone) saying that a row outside
+    `config_keys` (`uncompressed`, which the verdict never reads) is kept from the bundle that first committed it, or
+    that the conflict check covers `config_keys` rows only. Not written; Dace decides if needed.
+- **Open, needs Dace's decision before S8's ingest:** Amendment 20 notes 3-4 require each carried scene's
+  `gn5_meta_<scene>.json` and `gn5_results_<scene>.csv` to be byte-identical to the bundle that first committed them.
+  A scene whose seed-1 half runs in the session (kitchen and playroom in S8; bonsai and counter in S9; room and truck in
+  S10; drjohnson in S11) is restored and extended, so its files cannot be byte-identical: rows are appended to the CSV
+  and the meta is rewritten. Without a code change, the restored CSV's bytes stay a prefix of the extended CSV (rows
+  are only appended), so a check for "the first bundle's CSV is a byte prefix of this one, and the meta's seed-0
+  process records are equal" would verify the substitute in the same spirit. This changes how note 3's verification
+  reads for those scenes, so it would be a dated note committed alone (not written).
+- **Open items, deferred until after S11** (`bench/gn/e7.py` is a run-path file under the code-identity rule):
+  1. `e7.py:448`: `--out` defaults into the bundle root (inside the repository). Proposed: make it required.
+  2. `e7.py:398`, `:409`, `:418`, `:449`: `open` without `with` and without `encoding=` (ResourceWarnings; the platform
+     default decoding). Proposed: `with open(path, encoding="utf-8") as f:` (CSV keeps `newline=""`).
+
 ### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; E6 part (a), FINDINGS section 23; E6 closed; next: none queued)
 
 - ~~**Run E0 on Kaggle.**~~ **Done (2026-09-20): G0 passed.** The bundle is committed unchanged in
