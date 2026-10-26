@@ -3243,6 +3243,40 @@ def test_paper_tex_numbers_and_claims_references(tmp_path):
     assert any("without a CLAIMS row" in b for b in bad)
 
 
+def test_paper_tex_claims_ids_are_explicit_citation_items(tmp_path):
+    """check_tex.cited_ids: a CLAIMS row is cited only as its own ';'-separated item (optionally with one
+    parenthetical); an ID inside a phrase ("common E5 limits") fails as ambiguous instead of resolving to that row,
+    and quoted FINDINGS titles ("What E5 settles") are ignored."""
+    import importlib.util
+    import shutil
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    tex = os.path.join(repo, "paper", "tex")
+    if not os.path.isfile(os.path.join(tex, "check_tex.py")):
+        pytest.skip("paper/tex/ not present")
+    spec = importlib.util.spec_from_file_location("check_tex", os.path.join(tex, "check_tex.py"))
+    ct = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ct)
+
+    assert ct.cited_ids(" Am15 d; CLAIMS common E5 limits") == ([], ["E5"])
+    assert ct.cited_ids(" Am15 d; A1 (the common limits block)") == (["A1"], [])
+    assert ct.cited_ids(' s19 "What E5 settles"; A2; CLAIMS Gap 8') == (["A2"], [])
+    assert ct.cited_ids(" s19, s21; A4, A5") == (["A4", "A5"], [])
+    assert ct.cited_ids(" Am17 Note 2 C2, C7") == ([], ["C2", "C7"])
+
+    # planted in a real source: Section 2's A1 comment written back as the old phrase fails, on that line only
+    for name in os.listdir(tex):
+        if name.endswith(".tex"):
+            shutil.copy(os.path.join(tex, name), tmp_path / name)
+    sec2 = (tmp_path / "sec2_setup.tex").read_text(encoding="utf-8")
+    old = "; Am15 d; A1 (the common limits block)\n"
+    assert sec2.count(old) == 1
+    (tmp_path / "sec2_setup.tex").write_text(sec2.replace(old, "; Am15 d; CLAIMS common E5 limits\n"), encoding="utf-8")
+    line = next(i for i, ln in enumerate(sec2.splitlines(), 1) if ln.endswith(old.rstrip("\n")))
+    bad = ct.run(str(tmp_path))["fails"]
+    assert len(bad) == 1 and bad[0].startswith(f"sec2_setup.tex:{line}: 'E5'") and "ambiguous ID" in bad[0]
+
+
 # --------------------------------------------------------------------------------- E3r (Amendment 14)
 
 

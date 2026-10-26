@@ -15,7 +15,9 @@ sections (``s19``, ``s21 secondary 1``) and its ``paper/CLAIMS.md`` rows (``A2``
    integers that ``ALLOW`` lets pass as numbers.
 3. **Citations.** A line that states a result (a number outside ``ALLOW``, a count, or one of ``RESULT_WORDS``) must
    cite at least one CLAIMS row in its trailing comment. Every cited CLAIMS row and FINDINGS section must exist. A
-   figure named in a comment as ``Fig.N`` is not a CLAIMS row and is ignored for the lookup.
+   figure named in a comment as ``Fig.N`` is not a CLAIMS row and is ignored for the lookup. A row is cited only as its
+   own item (``cited_ids``): a ``;``-separated segment whose ``,``-separated parts are all IDs, each optionally with
+   one parenthetical. Any other ID-shaped token in a comment outside quotes and parentheses fails as ambiguous.
 
 Lines holding a ``\\TODO`` placeholder are skipped. The tables and figures come from ``paper/figs/`` (checked by
 ``paper/figs/check_figs.py``) and are not read here. Other integers 0-10 (j, seeds, criteria, "8 bits") are allowed
@@ -47,6 +49,29 @@ STRIP = [
 ]
 CLAIM_ID = re.compile(r"\b([A-G]\d{1,2})\b")
 FIG = re.compile(r"\bFig\.\s*\d+")
+QUOTED = re.compile(r'"[^"]*"')
+ITEM_ID = re.compile(r"^([A-G]\d{1,2})(?:\s*\([^()]*\))?$")
+
+
+def cited_ids(comment):
+    """CLAIMS rows cited by a trailing comment, and ID-shaped tokens that are not citations.
+
+    A ';'-separated segment cites rows only if every ','-separated part of it is an ID, optionally followed by one
+    parenthetical ("A1 (the common limits block)"). Quoted text (FINDINGS section titles) and parentheticals are
+    ignored. Any other ID-shaped token ("common E5 limits", "Am17 Note 2 C7", "as A4 and A5 state it") is returned
+    as ambiguous, so it can never resolve silently to a row."""
+    c = re.sub(r"\([^()]*\)", " ", QUOTED.sub(" ", FIG.sub(" ", comment)))
+    ids, ambiguous = [], []
+    for seg in c.split(";"):
+        parts = [p.strip() for p in seg.split(",")]
+        found = [CLAIM_ID.findall(p) for p in parts]
+        if not any(found):
+            continue
+        if all(ITEM_ID.match(p) for p in parts):
+            ids += [ITEM_ID.match(p).group(1) for p in parts]
+        else:
+            ambiguous += [x for f in found for x in f]
+    return ids, ambiguous
 COUNT = re.compile(r"(?<![\w.,/])(\d+)(?:\s+of\s+(?:the\s+)?|/)(\d+)(?![\w.,/])")
 SECTION = re.compile(r"\bs(\d{1,2})\b")
 
@@ -100,7 +125,10 @@ def run(tex_dir=HERE):
             if not text.strip() or r"\TODO" in text:
                 continue  # a placeholder states nothing
             n_lines += 1
-            ids = CLAIM_ID.findall(FIG.sub(" ", comment))
+            ids, ambiguous = cited_ids(comment)
+            for x in ambiguous:
+                fails.append(f"{name}:{i}: '{x}' in the comment is not a citation item; write it as its own "
+                             f"';'-separated item, or reword (ambiguous ID)")
             secs = [int(s) for s in SECTION.findall(comment)]
             for cid in ids:
                 if cid not in rows:
