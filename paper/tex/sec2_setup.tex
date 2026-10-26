@@ -5,18 +5,18 @@
 
 \subsection{Host, checkpoints and code}
 
-All experiments ran inside the C3DGS compression pipeline \citep{niedermayr2024compressed} at commit \code{2a234af5}, on INRIA's published 30k checkpoints of 3D Gaussian Splatting \citep{kerbl2023gaussian}. % Am13 b; Am15 d; CLAIMS common E5 limits
+All experiments ran inside the C3DGS compression pipeline \citep{niedermayr2024compressed} at commit \code{2a234af5}, on INRIA's published 30k checkpoints of 3D Gaussian Splatting \citep{kerbl2023gaussian}. % Am13 b; Am15 d; A1 (the common limits block)
 C3DGS's source was not edited; the build and run deviations were recorded: a \code{<cstdint>} rebuild of one extension, a wrapper that chunks \code{torch.linalg.eigh} and \code{det} (8,192 matrices per call) after the unchunked call failed in cuSOLVER, and a fix that lets C3DGS's own evaluation run when the training images are kept on the CPU. % s14, s17, s18, s19; E1, E7
 On the development scene train, the host reproduced C3DGS's published row within 0.020 dB in PSNR and 0.134\% in size. % s14; E3
 OGC's colour VQ \citep{pietroszek2026only} was run from its released code at commit \code{49ccae72} \citep{pietroszek2026ogccode}, unedited, under that code's public licence, the PolyForm Noncommercial License 1.0.0, which permits noncommercial research use; none of its files is in this project's repository or result bundles. % the repository's LICENSE at 49ccae72 (public); Am18 c; E12 (its licence statement only)
-All runs used two NVIDIA T4 GPUs on Kaggle and one software image per experiment. % s19, s21; CLAIMS common E5 limits
+All runs used two NVIDIA T4 GPUs on Kaggle and one software image per experiment. % s19, s21; A1 (the common limits block)
 
 \subsection{Scenes}
 
-The gate scenes were INRIA's checkpoints of seven scenes: bonsai, counter, kitchen and room from Mip-NeRF 360 \citep{barron2022mipnerf360}, truck from Tanks and Temples \citep{knapitsch2017tanks}, and drjohnson and playroom from Deep Blending \citep{hedman2018deep}. % Am15 d; Am17 d; CLAIMS common E5 limits
+The gate scenes were INRIA's checkpoints of seven scenes: bonsai, counter, kitchen and room from Mip-NeRF 360 \citep{barron2022mipnerf360}, truck from Tanks and Temples \citep{knapitsch2017tanks}, and drjohnson and playroom from Deep Blending \citep{hedman2018deep}. % Am15 d; Am17 d; A1 (the common limits block)
 INRIA's checkpoints of these scenes were chosen as the gate before this project had fetched, loaded or rendered any of them, and before E5's code no splat value, render or metric from them had been read beyond camera counts, image sizes and splat counts, under a header-read rule written in advance. % Am15 d ("has not fetched, loaded or rendered"); Am15 note i; Am17 a
 Three INRIA scenes, train, treehill and flowers, served as development scenes and are never gate scenes. % Am16 b; Am19 b; CLAIMS group G limits
-\emph{Disclosure.} Earlier experiments of this project used bonsai, counter, kitchen, room and truck with its own gsplat checkpoints, and OGC's paper reports bonsai, counter, kitchen and room in its C3DGS host. % Am15 d (kept by Am17 d); CLAIMS common E5 limits
+\emph{Disclosure.} Earlier experiments of this project used bonsai, counter, kitchen, room and truck with its own gsplat checkpoints, and OGC's paper reports bonsai, counter, kitchen and room in its C3DGS host. % Am15 d (kept by Am17 d); A1 (the disclosure in its limits column)
 The fine-tuning test of Section~\ref{sec:finetuning} reuses the same seven scenes, and its hypothesis was formed after the replication's results on them, so it is a pre-registered test on these scenes and not a held-out claim. % Am19 c; CLAIMS group F limits
 
 \subsection{Rows and the forked process}
