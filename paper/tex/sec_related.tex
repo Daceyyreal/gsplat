@@ -1,0 +1,37 @@
+% Related work. Literature, not results: citations only from references.bib (verified 2026-10-23); a needed reference
+% that is not in it is a \TODO{cite: ...} marker, not an entry. OGC's and Do et al.'s content from kaggle/RELATED_WORK_OGC.md
+% (literature notes, paraphrased). A sentence that uses this project's results cites its CLAIMS row, as elsewhere.
+\section{Related work}
+\label{sec:related}
+
+\paragraph{Compressing 3D Gaussian Splatting.}
+3D Gaussian Splatting represents a scene by millions of anisotropic Gaussians, each with a position, a covariance, an opacity and a view-dependent colour stored as spherical-harmonic (SH) coefficients, which make up most of each Gaussian's stored floats \citep{kerbl2023gaussian}.
+Compression methods for it divide into those that learn a compact representation during training and those that start from a trained model \TODO{cite: a survey of 3DGS compression, e.g. Bagdasarian et al., 3DGS.zip}.
+Training-time methods prune Gaussians with learned masks, learn colour codebooks or hash-grid colour fields jointly with the scene, or anchor Gaussians to structured features \TODO{cite: Lee et al. 2024 (Compact 3D Gaussian representation); Navaneet et al. 2024 (CompGS); Girish et al. 2024 (EAGLES); Lu et al. 2024 (Scaffold-GS); Chen et al. 2024 (HAC)}.
+Post-training methods prune Gaussians, reduce the SH degree, or vector-quantise (VQ) the parameters of a trained model, usually followed by a short fine-tuning \TODO{cite: Fan et al. 2024 (LightGaussian); Papantonakis et al. 2024 (reducing the memory footprint of 3DGS)}.
+This paper works in the post-training setting, and its host is C3DGS \citep{niedermayr2024compressed}.
+
+C3DGS scores each Gaussian's colour and shape parameters by their sensitivity, the magnitude of the training images' error gradient with respect to them, and clusters the colours into a codebook with sensitivity-weighted $k$-means, while the Gaussians whose sensitivity lies above a threshold keep their own colour \citep{niedermayr2024compressed}.
+It clusters the shape parameters in the same way, quantises the tables to 8 bits, fine-tunes the model with the quantisation in the loop, and stores the result in a compressed archive \citep{niedermayr2024compressed}.
+This paper changes only C3DGS's colour codebook and keeps the rest of its pipeline as released, fine-tuning included (Section~\ref{sec:setup}). % Am17 b
+
+\paragraph{Observation-Gram compaction.}
+OGC \citep{pietroszek2026only} weights a Gaussian's SH colour by what the training cameras saw.
+For each Gaussian it accumulates a $16\times16$ observation Gram matrix over the SH basis: a sum over the training views of the outer product of the SH basis at the viewing direction, weighted by the Gaussian's compositing weights in that view, so that a colour error in a direction no training camera observed costs nothing \citep{pietroszek2026only}.
+In its own pipeline OGC uses the matrix to project the colour onto fewer SH degrees, to allocate coefficients among Gaussians, and as the metric of a generalised Lloyd VQ of the AC coefficients \citep{pietroszek2026only}.
+Hosted in C3DGS, it replaces only C3DGS's colour VQ with that Gram-metric Lloyd VQ on all 16 SH rows, keeps C3DGS's pruning, shape VQ, fine-tuning and container, and reports a paired PSNR gain over its reproduction of C3DGS of +0.49 dB before C3DGS's fine-tuning and +0.09 dB after it, on nine Mip-NeRF 360 scenes \citep{pietroszek2026only,barron2022mipnerf360}. % OGC's Table 1, as A4 and A5 state it; A4, A5
+Its paper states a ridge of $10^{-6}$ in the VQ's codeword update, while its released code defaults to $10^{-3}$; this paper uses the code's value (Section~\ref{sec:setup}). % RELATED_WORK_OGC.md 2 b; Am17 b; B7; CLAIMS Gap 12
+This paper replicates OGC's host comparison under a pre-registered protocol (Section~\ref{sec:replication}), tests whether the lead survives fine-tuning at equal rate (Section~\ref{sec:finetuning}), and dissects which parts of OGC's VQ carry the lead (Section~\ref{sec:dissection}). % Am17; Am19
+OGC's code is released under a noncommercial licence; its author confirmed by email that it may be used for research, and stated that the method is patented for commercial use. % Am18 c; E12 (correspondence, paraphrased)
+
+Do, Chou and Cheung \citep{do2026transforming} also weight SH coefficients by how they are observed, but with one global Gram matrix over all basis functions of all splats, approximated as a product of spatial, directional and colour factors.
+Its square root orthonormalises the coefficients before uniform scalar quantisation and entropy coding; the method codes sparse voxel splats rather than 3DGS models, and has no VQ \citep{do2026transforming}.
+
+\paragraph{Second-order and observation-weighted quantisation.}
+Weighting a quantiser's error by a second-order model of the loss predates both methods.
+In neural-network compression the Hessian of the loss, or its Gauss--Newton approximation, has been used to choose which weights to prune \TODO{cite: LeCun et al. 1990 (Optimal Brain Damage); Hassibi and Stork 1993 (Optimal Brain Surgeon)}, to weight the $k$-means clustering of weights \TODO{cite: Choi et al. 2017 (Towards the limit of network quantization)}, to set per-layer bit widths \TODO{cite: Dong et al. 2019 (HAWQ)}, and to quantise weights one at a time while the remaining weights compensate \TODO{cite: Frantar and Alistarh 2022 (OBQ); Frantar et al. 2023 (GPTQ)}.
+Layer-wise quantisers that minimise the error of a layer's outputs on calibration data weight the error by the Gram matrix of the layer's inputs, which is the same construction applied to activations \TODO{cite: Nagel et al. 2020 (AdaRound); Frantar et al. 2023 (GPTQ)}.
+For one Gaussian the rendered colour is linear in its SH coefficients, ignoring the clamp of negative colours, so a Gauss--Newton metric of the image error with respect to those coefficients has the form of OGC's observation Gram; the metric used in this paper is a 16-probe estimate of it, equal to OGC's Gram in expectation by construction (Section~\ref{sec:setup}). % Am17 b; A12; RELATED_WORK_OGC.md 2 a, 3
+C3DGS's sensitivity is a first-order, scalar counterpart: one weight per Gaussian, from gradient magnitudes, with no dependence on direction.
+OGC's scalar variant, the trace of the Gram matrix times the identity, lies between the two, and Section~\ref{sec:gram-trace} tests the full matrix against it. % Am17 b; B1
+This project began with a Gauss--Newton-weighted VQ of the SH codebook in gsplat's PNG codec (GN-VQ), which was never compared with OGC on a gate scene and was retired before the replication (Section~\ref{sec:gnvq}). % s17; Am17 a; C5, D6
