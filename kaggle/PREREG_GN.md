@@ -4486,3 +4486,70 @@ scenes had been read, beyond camera counts, image sizes and splat counts read un
 been fetched, loaded or rendered. Amendment 16 a's "When" carries the same sentence, and the same scope applies to it.
 
 This erratum corrects the record's wording only. It changes no rule, scene, process, row, criterion, outcome or verdict.
+
+### Amendment 20 note 5 (2026-10-26, after E7 S6's bundle (`75d0209b`) and before any seed-1 session): the carried-scene check for a scene extended in the ingested session
+
+This note changes how notes 3 and 4's verification reads for one kind of scene. It changes no code, scene, process,
+row, arm, guard, primary, test, margin, outcome, session or verdict rule.
+
+**Why.** Notes 3 and 4 require each carried scene's `gn5_meta_<scene>.json` and `gn5_results_<scene>.csv` in a session's
+bundle to be byte-identical to the copies in the bundle that first committed them. A split scene's seed-1 half (S8
+kitchen and playroom, S9 bonsai and counter, S10 room and truck, S11 drjohnson) runs in a later session than its seed-0
+half. That session restores the scene's files, appends the seed-1 rows to its CSV (`append_row`,
+`kaggle/gn_e7_scene.py:113-119`) and rewrites its meta (`:204-209`), so on a clean run those files cannot be
+byte-identical.
+
+**a. Scope.** This note applies to a scene extended in the ingested session: its seed-1 half runs there, or a process of
+it planned for an earlier session runs there (note 2 c.7). A scene is extended when its meta records a session entry of
+the ingested session. Every other carried scene keeps notes 3 and 4's byte-identity rule unchanged. "The first bundle"
+below is the bundle that first committed the scene. The processes an extended scene ran in the session must belong to
+halves that `kaggle/e7_sessions.json` puts in that session or an earlier one, and every scene the committed bundles hold
+must be in the session's bundle.
+
+**b. The results file.**
+1. The first bundle's `gn5_results_<scene>.csv` is an exact byte prefix of the ingested bundle's, compared as the zip's
+   bytes.
+2. Every row after that prefix has `session` equal to the ingested session and a `config` belonging to a process the
+   session ran for the scene (a process absent from the first bundle's meta or unsettled there): one of the scene's 22
+   seed-1 configs (`p1_*`, `j-1_p1_*`, `j+1_p1_*`) for a seed-1 half, or a carried process's configs.
+3. No (scene, config) appears twice in the file.
+
+**c. The meta,** compared as parsed JSON against the first bundle's. Every key falls in one class below; a key in no
+class fails.
+1. **Exactly equal:** every process settled before the session (for a seed-1 half, `j-1_p0`, `j0_p0` and `j+1_p0`);
+   `scene`, `dataset`, `scene_set`, `data_factor`, `k`, `threshold`, `processes_planned`, `rows`, `secondary_rows`,
+   `ogc_metric`, `lam`, `ogc_chunk`, `ft_rows`, `c3dgs_commit`, `ogc_commit`, `reserve_s`, `n_splats`, `start_device`,
+   `covered`, `eval_device_fix`, `inria_cfg_args`, `cfg_check`, `camera_frame_check`, `split_check`, `n_train_views`,
+   `n_even_views`, `n_odd_views`, `total_train_pixels`, `even_pixels`, `settings`, `loaded_size_check`; and
+   `c3dgs_build`'s `ok`, `failed_step` and `missing` (its `path` is the session's output path, report only: c.6).
+2. **Grow only:** `sessions` (gaining one entry, the ingested session's), `ogc_sources`, `steps`, `deviations`,
+   `failed_steps`, `skipped_steps`, `deadline_cuts` and `gn_history` keep the old list as a prefix; `processes` and `runs`
+   keep every earlier settled process and every earlier run equal, and add only the session's processes and runs.
+3. **Set changes:** `rows_ok` is a superset of the old list, its additions configs from b.2; `missing_or_failed` is a
+   subset, its removals configs from b.2; `unsettled_processes` names only processes the session ran.
+4. **Scalar transitions only:** `results_exist` true -> true; `done` false -> false or true; `scene_device` unchanged,
+   or cuda -> cpu with its 17 d deviation recorded in the session; `timings_s` holds only `job`, not smaller; `dropped`
+   absent -> absent; `stopped_17i` absent, or newly present naming a process the session ran. A new `stopped_17i` is
+   recorded at ingest and is not a check failure.
+5. **Replaced by the session's record, partly compared:** `inria`: every member's `sha1`, `crc32` and `bytes` equal;
+   `ogc_clone`: head `49ccae72` and tree `9feebced` when `ogc_source` is `url` or `dataset`; `gn.full`: `cache_key`,
+   `M_shape`, `n_views`, `total_pixels` and `bands` equal the old `gn.full`, and the one new entry of `gn_history` is
+   the old `gn.full` with `replaced_in_session` (the ingested session) and `reason` added; `note_ii.angles` equal.
+6. **Report only** (recorded at ingest, a difference is not a failure): `deadline`, `data_deleted`, `ogc_preflight`,
+   `ogc_source`, `c3dgs_build.path`, and `note_ii`'s `geometry`, `orbit_reference` and `coverage`. Neither
+   `bench/gn/e7.py` nor any module of the verdict path (`bench/gn/e5.py`, `bench/gn/e5_verdict.py`,
+   `kaggle/e7_scenes.py`, `paper/figs/e7_*.py`) reads `note_ii` (checked 2026-10-26).
+
+**d. Failure.** If any check of a, b or c fails, the bundle is not committed and the scene's half reruns in a later
+session, as for any failed ingest check.
+
+**e. What this replaces.** This note replaces only how notes 3 and 4's verification reads for a scene extended in the
+ingested session. The verdict rules (Amendment 20 f, h; `bench/gn/e7.py`) are unchanged, including the refusal of two
+different rows for one (scene, config) in one attempt.
+
+**Checked before this note on E7's dry run** (`bench/gn/dryrun/dryrun_gn_e7.py`, its bundles kept, on the CPU
+stand-in): room's seed-0 half in S1 extended by its seed-1 half in S10 meets every check of a-c, and counter, carried
+into S10, is byte-identical. The only difference first found, `c3dgs_build.path` (the dry run gives each session its own
+output directory; on Kaggle it is one constant path, equal in all 21 metas of S1-S6), is why `path` is report only. The
+dry run cannot exercise the INRIA fetch record, a real GN cache, a cuda -> cpu retry, a deadline cut, a 17 i stop, a
+carried process or a `derived` OGC source.
