@@ -8,14 +8,14 @@ The replication ran OGC's released \code{gram\_kmeans}, unedited, on this projec
 On train the estimate's total trace was 0.919 of the exact Gram's, for a reason the files do not settle, and no gate scene has a comparison with the exact Gram. % s16; A12, E4
 
 \paragraph{One host and one set of checkpoints.}
-Every comparison ran inside one host, C3DGS at commit \code{2a234af5} with its recorded build and run deviations, on INRIA's published checkpoints, on T4 GPUs with one software image per experiment. % s19; A1, E1; CLAIMS common E5 limits
-Whether OGC's lead carries over to other hosts, to checkpoints trained another way or to other GPUs is not tested. % CLAIMS common E5 limits
-The pre-registration's statement that no pixel, splat value, render or metric of the seven scenes had been read before the replication's code holds for INRIA's checkpoints of those scenes only: earlier experiments of this project had read five of them with its own gsplat checkpoints, as disclosed in advance. % Am17 erratum; Am15 d; CLAIMS common E5 limits
+Every comparison ran inside one host, C3DGS at commit \code{2a234af5} with its recorded build and run deviations, on INRIA's published checkpoints, on T4 GPUs with one software image per experiment. % s19; A1 (its limits column: the common limits block), E1
+Whether OGC's lead carries over to other hosts, to checkpoints trained another way or to other GPUs is not tested. % A1 (the common limits block: one host, INRIA's checkpoints, one image)
+The pre-registration's statement that no pixel, splat value, render or metric of the seven scenes had been read before the replication's code holds for INRIA's checkpoints of those scenes only: earlier experiments of this project had read five of them with its own gsplat checkpoints, as disclosed in advance. % Am17 erratum; Am15 d; A1 (the disclosure in its limits column)
 The comparison with OGC's paper is not like for like: its host results are nine Mip-NeRF 360 scenes in its own evaluation with one run each, against seven scenes here, four of them shared, under protocol~ii. % s19; A4; CLAIMS Gap 4
 OGC's paper does not say which C3DGS commit or which VQ ridge produced its tables, or how much they vary from run to run. % RELATED_WORK_OGC.md 2 g; CLAIMS Gap 12
 
 \paragraph{Seven scenes and three points per curve.}
-The gate is seven scenes: four from Mip-NeRF 360, one from Tanks and Temples and two from Deep Blending. % Am15 d; CLAIMS common E5 limits; A1
+The gate is seven scenes: four from Mip-NeRF 360, one from Tanks and Temples and two from Deep Blending. % Am15 d; A1 (the common limits block)
 The fine-tuning test reuses them, and its hypothesis was formed after the replication's results on them, so it is not a held-out claim. % Am19 c; CLAIMS group F limits; F1
 Each BD value is a parabola through three points, one seed-0 process per point, so each P rests on six measurements, and the seed noise is measured at $j = 0$ only, not at the level of the BD value. % s19; A2; CLAIMS Gap 8
 $\mathrm{SE}_{\mathrm{noise}}$ is seed noise, not scene spread, and its registered $\sqrt{2n}$ divisor is that of a two-seed mean; with $\mathrm{SD}_{\mathrm{pool}}/\sqrt{n}$ the criterion-3 margins of P1, P2 and P\_FT are 77.7, 790 and 3.45 standard errors, and every criterion still holds. % s25; A2, F1
@@ -33,7 +33,7 @@ Train's P\_FT is not interpreted: its fine-tuned rows moved by up to 0.19 dB bet
 
 \paragraph{Evaluation and reproducibility.}
 Protocol~ii and C3DGS's own evaluation differ by a scene-dependent amount, up to 0.429 dB on kitchen, for reasons the files do not show; the lead before fine-tuning is about the same under both. % s20; E14, A9
-Seeded C3DGS runs are not reproduced on the GPU, so every experiment's numbers come from its own processes and no row is reused across experiments. % s15; E2; CLAIMS group F limits
+Seeded C3DGS runs are not reproduced on the GPU, so every experiment's numbers come from its own processes and no row is reused across experiments. % s15; E2; F10 (the replication's rows not reused; geometry differs between runs)
 
 \paragraph{Why the lead shrinks.}
 Why OGC's lead shrinks with fine-tuning is the subject of a further pre-registered experiment (E7), whose results are not reported in this version. % Am20 a; CLAIMS Gap 3
