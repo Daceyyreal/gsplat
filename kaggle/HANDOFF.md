@@ -83,7 +83,9 @@ or metric" holds for INRIA's checkpoints, not the scenes); **CLAIMS A12** (the e
 three metric-caveat lines (`48dc283a`). **Section 4 (Dissection)** written (`e1557b28`); **E7's tables and figures**
 (`paper/figs/e7_*.py`: T4, T5, F6, F7, from `bench/gn/e7.py`'s verdict; run with `e7_make_all.py` after all eleven
 sessions; tested on stand-in bundles only, no output committed) in `366b7d5c`. CLAIMS E16-E18 from section 24 (71
-rows, `debbf41d`); Section 4 fixes citing them (`77905c3f`).
+rows, `debbf41d`); Section 4 fixes citing them (`77905c3f`). **Paper work 2026-10-26** (`ebca45d1`..`ff1f134d`): Related
+work and Limitations, verified bibliography (+15 entries), check_tex's explicit citation items, F2/F4 polish; see
+"Paper work (2026-10-26)" below. Paper: 16 pages, check_tex 137 numbers, check_figs 1023 checks, 0 failures.
 
 ## Context and rules
 
@@ -5310,6 +5312,48 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   the extended scenes follow note 5; a report-only difference and a new `stopped_17i` are written into the session's
   HANDOFF entry. The other checks (sha256 and size of the zip, the code-identity rule, the file list, mechanics) are
   unchanged.
+
+### Paper work (2026-10-26; paper tooling only, no run-path file)
+
+Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pushed; the run-path diff
+`17161955..HEAD` lists only `bench/gn/test_gn.py` throughout.
+
+- **`ebca45d1`:** `paper/tex/sec_related.tex` (Related work, new, input after Section 1 in `main.tex`) and
+  `sec6_limits.tex` (Limitations, from FINDINGS / CLAIMS IDs only).
+- **`d4e82382`:** CLAIMS B5 and Section 4.4 worded alike (Option B: "consistent with codebook use, not regularisation",
+  two development scenes).
+- **`7c345e1d`:** no correspondence in the paper: the email / patent sentence removed from Related work; Section 2's
+  licence sentence rests on the public `LICENSE` of OGC's repository at `49ccae72` (PolyForm Noncommercial License
+  1.0.0, read in the local clone, nothing copied) and cites the repository (bib entry `pietroszek2026ogccode`, checked by
+  `git ls-remote`). CLAIMS E12 unchanged.
+- **`a559a558`:** Related work's C3DGS description checked against its paper (arXiv 2401.02436, Secs. 4.1-4.3, Apps. E,
+  F) and its code at `2a234af5` (cloned to scratch): sensitivity is the gradient of the rendered images' energy, not
+  error, max over a Gaussian's parameters; zero-sensitivity pruning; shape as normalised covariance with a scale factor;
+  8 bits except positions (16-bit float); Morton order and DEFLATE; sources in each line's comment.
+- **`7fd3912b`:** 14 references added to `references.bib`, each with its sources in a comment (arXiv API for titles and
+  authors; Crossref DOI records or the venue's proceedings page for venue, year and pages; DBLP and OpenReview were
+  behind bot challenges): Bagdasarian (3DGS.zip), Lee (Compact 3DGS), Navaneet (CompGS), Girish (EAGLES), Chen (HAC),
+  Fan (LightGaussian), Papantonakis, LeCun (OBD), Hassibi-Stork (OBS), Choi, Dong (HAWQ), Frantar-Alistarh (OBC, the
+  venue's two authors), Frantar et al. (OPTQ, ICLR 2023's title for GPTQ), Nagel (AdaRound). Scaffold-GS dropped (HAC's
+  abstract does not name it as its base). No `\TODO{cite}` left.
+- **`a8ecdbbe`:** Limitations: every sentence cites a CLAIMS row or Gap (OGC's unstated commit and ridge: Gap 12; the E7
+  placeholder: Gap 3; seeded runs: E2, F10; the evaluation gap: E14, A9; the common limits block: A1).
+- **`0eeb1d12`:** Section 2's four "CLAIMS common E5 limits" comments (parsed as row E5) point to A1.
+- **`b8be2680`:** `paper/tex/check_tex.py` `cited_ids`: a CLAIMS row is cited only as its own `;`-separated item
+  (optionally one parenthetical); any other ID-shaped token in a comment fails as ambiguous. Comments reworded (Section
+  3's two "common E5 limits" to A1; Related work's prose mention of A4/A5). **Amendment items in comments are written
+  without a word boundary before the item, e.g. `Am17 Note2C7`** (`Note2-C7` would still parse as row C7). Test in
+  `test_gn.py`.
+- **`ff1f134d`:** F2 stacked (identity, trace, Gram on top) with P1's diamond and, on the mean, +-1 SE (SD_pool /
+  sqrt(n) = 0.004582 dB, equal to FINDINGS s25); the CSV adds each row's steps' sum and residual (|P1 - sum| 0.0011 to
+  0.0058 dB per scene, 0.0020 on the mean: each BD integrates over its own pair's shared byte range), which the caption
+  states. F4: panel (a) on fixed limits (0.003-0.010, 0.003-0.027) with y = x, 2x, 3x clipped and labelled inside,
+  titles "(a) AC grid scale" and "(b) .npz size change after fine-tuning (%)"; F4 added to Section 4.5 with its caption
+  (AC defined, one point one process). check_figs checks the new columns.
+- **Paper state at `ff1f134d`:** 16 pages (MiKTeX `latexmk -pdf`, no undefined citations); `check_tex.py` 252 lines, 65
+  result lines, 137 numbers, 0 failures; `check_figs.py` 1023 checks, 0 failures; pytest 228.
+- **Open paper items:** the abstract and the introduction, after E7; Section 5.2 (E7's results), after S11 and E7's
+  verdict; optional F4 nits (the y = x label sits near the C3DGS points; panel (b)'s y label repeats its title).
 
 ### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; E6 part (a), FINDINGS section 23; E6 closed; next: none queued)
 
