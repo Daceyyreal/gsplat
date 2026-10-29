@@ -7530,6 +7530,79 @@ def test_e7_ingest_check_note5_extension_and_carried_scenes(tmp_path):
     assert ck.check(str(d), str(committed), plan).failed
 
 
+def test_check_s26_fills_and_checks_on_stand_in_bundles_and_refuses_the_real_root(tmp_path, monkeypatch):
+    """bench/gn/check_s26.py (FINDINGS section 26, E7) on stand-in bundles only, never on kaggle/gn_e7's contents: the
+    skeleton kaggle/drafts/FINDINGS_s26_E7_DRAFT.md filled from synthetic bundles of all seven scenes passes, the tool and
+    the independent recompute reaching the same outcomes; a planted wrong digit, a planted wrong PREREG quote and the
+    unfilled skeleton each fail; the real root refuses (exit 2) before any bundle is read while fewer than eleven
+    sessions are committed, and so does a root with ten S#/gn7 folders. With the E7 dry run's kept bundles in
+    GN_E7_DRYRUN_BUNDLES (bench/gn/dryrun/dryrun_gn_e7.py with GN_DRYRUN_KEEP=1), the fill and the planted digit on those."""
+    import re
+
+    import check_s26 as c
+    import e7_scenes as es
+
+    skel = os.path.join(os.path.dirname(HERE), "..", "kaggle", "drafts", "FINDINGS_s26_E7_DRAFT.md")
+    skel_text = open(skel, encoding="utf-8").read().replace("\r\n", "\n")
+
+    def fill_and_check(root, name):
+        out, F = c.facts(root)
+        path = tmp_path / f"{name}_filled.md"
+        path.write_text(c.fill(skel_text, out), encoding="utf-8", newline="\n")
+        res = c.run(root, str(path))
+        assert res["fails"] == [] and res["n_numbers"] > 100
+        return path, F
+
+    def planted_digit(path):
+        txt = path.read_text(encoding="utf-8")
+        m = re.search(r"\| `Δ_bar` \(n = \d+\) \| -?\d+\.(\d{9})", txt)
+        i = m.end() - 1
+        bad = tmp_path / f"{path.stem}_digit.md"
+        bad.write_text(txt[:i] + str((int(txt[i]) + 1) % 10) + txt[i + 1:], encoding="utf-8", newline="\n")
+        return bad
+
+    rows = {}
+    for i, s in enumerate(es.SCENES):
+        deltas = {"R": 0.05, "G": 0.05 + 0.01 * (i - 3), "CG": 0.06 + 0.01 * (i - 3), "K": 0.08, "O": 0.07}
+        f, g = (1 + i % 3) * (-1) ** i, (1 + (i + 1) % 3) * (-1) ** (i + 1)
+        nz = {"R": 0.001 * (-1) ** i}
+        nz["G"] = nz["R"] + 0.002 * f
+        nz["CG"] = nz["G"] + 0.002 * g
+        rows[s] = _e7_rows(s, deltas, nz, 0.005 * (1 + i % 2))
+    root = _e7_bundles(str(tmp_path / "bundles"), rows)
+    path, F = fill_and_check(root, "synthetic")
+    assert F["V"]["outcomes"] == {"refit": "equivalent; not superior", "cb": "superior and equivalent"}
+    assert F["agree"]["outcomes"] and F["agree"]["robust"] and all(F["agree"]["bd"]) and all(F["p_consistent"])
+
+    fails = c.run(root, str(planted_digit(path)))["fails"]
+    assert any(x.startswith("number not in the text") for x in fails)
+    assert any(x.startswith("numeric token not recomputed") for x in fails)
+    bad = tmp_path / "quote.md"
+    bad.write_text(path.read_text(encoding="utf-8").replace("«**Δ_cb,s = BD_CG,s - BD_G,s:**»",
+                                                            "«**Δ_cb,s = BD_G,s - BD_CG,s:**»"), encoding="utf-8")
+    assert any("PREREG_GN.md:4042 does not hold the quote" in x for x in c.run(root, str(bad))["fails"])
+    assert any("no placeholder left" in x for x in c.run(root, skel)["fails"])
+
+    def no_read(*a, **k):
+        raise AssertionError("a bundle was read")
+
+    monkeypatch.setattr(c, "load", no_read)
+    monkeypatch.setattr(c, "tool", no_read)
+    if sum(os.path.isdir(os.path.join(c.REAL_ROOT, s, "gn7")) for s in c.SESSIONS) < len(c.SESSIONS):
+        assert c.main([]) == 2 and c.main(["--root", c.REAL_ROOT, "--print"]) == 2
+    fake = tmp_path / "fake_gn_e7"
+    for s in c.SESSIONS[:10]:
+        (fake / s / "gn7").mkdir(parents=True)
+    monkeypatch.setattr(c, "REAL_ROOT", str(fake))
+    assert "10 of 11" in c.refusal(str(fake)) and c.main(["--root", str(fake)]) == 2
+    monkeypatch.undo()
+
+    dry = os.environ.get("GN_E7_DRYRUN_BUNDLES")
+    if dry:
+        path, F = fill_and_check(dry, "dryrun")
+        assert c.run(dry, str(planted_digit(path)))["fails"]
+
+
 def test_e7_notebooks_rebuild_and_name_their_session():
     """kaggle/build_gn_e7_bench.py: the eleven committed notebooks equal the builder's output; titles "E7 OGC
     FT-dissection S1"-"S11" from kaggle/e7_sessions.json (Amendment 20 note 1); E7_bundle_S#.zip under gn7/; E7's job
