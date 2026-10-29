@@ -86,6 +86,10 @@ sessions; tested on stand-in bundles only, no output committed) in `366b7d5c`. C
 rows, `debbf41d`); Section 4 fixes citing them (`77905c3f`). **Paper work 2026-10-26** (`ebca45d1`..`ff1f134d`): Related
 work and Limitations, verified bibliography (+15 entries), check_tex's explicit citation items, F2/F4 polish; see
 "Paper work (2026-10-26)" below. Paper: 16 pages, check_tex 137 numbers, check_figs 1023 checks, 0 failures.
+**E7 write-up pre-built (2026-10-29, no E7 value read):** skeleton `kaggle/drafts/FINDINGS_s26_E7_DRAFT.md` (`c000fea8`),
+`bench/gn/check_s26.py` (`e887d162`; refuses `kaggle/gn_e7` until S1-S11 are committed), Section 5.2 design only
+(`01fcb946`; 17 pages, check_tex 139 numbers, 0 failures); after S11: e7.py `--out` outside the repo, fill, check_s26,
+move into FINDINGS (see "E7 write-up skeleton and check_s26 (2026-10-29; no E7 value read)").
 
 ## Context and rules
 
@@ -5354,6 +5358,107 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
   result lines, 137 numbers, 0 failures; `check_figs.py` 1023 checks, 0 failures; pytest 228.
 - **Open paper items:** the abstract and the introduction, after E7; Section 5.2 (E7's results), after S11 and E7's
   verdict; optional F4 nits (the y = x label sits near the C3DGS points; panel (b)'s y label repeats its title).
+
+### E7 write-up skeleton and check_s26 (2026-10-29; no E7 value read)
+
+- **Orientation:** the tree was clean and HEAD = `fork/bench/gn-vq` = `fc2218b2`. Dace reported no Kaggle session
+  running (S7 waits for quota).
+- **Nothing of E7 was read or printed:** no `per_scene_parts`, BD, P1, Delta or arm value. The real `kaggle/gn_e7` was
+  touched only by `check_s26.py`'s refusal, a folder-presence and `git ls-files` check that opens no file. Every fill
+  and check ran on stand-in bundles.
+- **The exemption, confirmed before writing the checker:** "The code-identity rule for E7's ingest" (in "Amendment 20
+  note 1 and E7's build") excludes `bench/gn/test_gn.py` and `bench/gn/check_s*.py` from the run-path files. Import
+  trace 2026-10-29: importing `gn_e7_scene`, `e7`, `e7_scenes`, `e7_estimate`, `build_gn_e7_bench`, `e7_hooks` and
+  `e4p_hooks` loads 1,702 modules, 86 from the repository, no `check_s*` and no `test_gn`. Only `test_gn.py` imports
+  `check_s26` (grep over `kaggle/` and `bench/`).
+- **Commits** (each gated: `.venv`, pipefail, kept log, `GN_OGC_SRC`, no dry run alongside; the checker and test were
+  stashed during the first gate so it ran on exactly the committed tree):
+
+  | Commit | What | Gate log | pytest |
+  |---|---|---|---|
+  | `c000fea8` | `kaggle/drafts/FINDINGS_s26_E7_DRAFT.md`, the skeleton, alone | `gate_20261029_193346_s26_skeleton.log` | 228 |
+  | `e887d162` | `bench/gn/check_s26.py` and its test | `gate_20261029_193706_s26_checker.log` | 229 |
+  | `01fcb946` | `paper/tex/sec5_finetuning.tex` Section 5.2 (design only); `kaggle/drafts/check_tex_prereg_items.diff` (proposed, not applied) | `gate_20261029_194658_s26_sec52.log` | 229 |
+
+- **The skeleton** (`kaggle/drafts/FINDINGS_s26_E7_DRAFT.md`, marked DRAFT): a summary paragraph, a Sources entry and
+  "## 26. E7: ...", with a placeholder (a name in angle brackets) for every number Amendment 20 f, h and notes 1-5 say
+  gets reported:
+  - both primaries per scene;
+  - the noise and `SE` = `SD_pool` / sqrt(n);
+  - superiority and the TOST at delta = 0.07 dB, each with Holm's order, criteria and critical values, plus
+    descriptive two-sided / TOST p-values with their Holm adjustment (a restatement of criterion 3 and of the margin
+    at the position tested; the checker asserts the two agree);
+  - the `SE_BD` reading and the fragile flag;
+  - section 25's corrected standard error beside E7's (20 b);
+  - secondaries g.1-g.8: the `*_own` rows in g.3 and g.7, the replicate in g.6;
+  - drops, 17 i reruns and stops;
+  - sessions, images, half and process timing against note 1 and Note 4 (a).
+
+  20 h's readings are read from PREREG's outcome table, not retyped. Each block quotes the PREREG lines it reports, as
+  `` `kaggle/PREREG_GN.md:N`: «...» ``, and the checker verifies every quote against that line. A placeholder index
+  (outside the three parts) lists each placeholder with its PREREG lines.
+- **`bench/gn/check_s26.py`**, built like `check_s21`/`check_s25`:
+  - **Modes:** `--fill SKELETON --out F`, check (default `kaggle/FINDINGS.md`, or `--findings F`) and `--print`;
+    `--root` defaults to `kaggle/gn_e7`.
+  - **Two computations:** the strings are `bench/gn/e7.py`'s (`verdict`, and `main`'s printed lines with `--out` in a
+    temporary directory). Beside it is an independent recompute that imports none of `e7.py`, `e5.py` or `g2.py`:
+    `numpy.polyfit` BD, the primaries, the noise, both Holm families, the outcomes, `SD_BD` and the fragile flag. Tool,
+    recompute and the sessions' `per_scene_parts` must agree below 1e-9, and the outcomes must be equal.
+  - **What it checks in the text:** every filled string present; every numeric token recomputed or a listed constant;
+    no placeholder or DRAFT marker left.
+  - **The refusal:** with the real root it exits 2 before reading unless all eleven `S#/gn7` folders exist and git
+    tracks each.
+- **Checker results on the stand-ins only:**
+  - **E7 dry run's kept bundles** (`F:\tmp_e7dry\gn7_dry_9t3e7m2m\gn_e7`, S1/S5/S10, from the 2026-10-26 note-5
+    validation; outside the repository):
+    - fill, then check: 209 recomputed strings, 174 numeric tokens, 0 failures;
+    - a planted digit (`Δ_bar` 0.019079527 -> ...528): 2 failures (string missing, token not recomputed);
+    - a planted PREREG quote (Δ_cb's arms swapped): 1 failure;
+    - the unfilled skeleton: 228 failures, placeholders left;
+    - the real root: "6 of 11 S#/gn7 folders present, 6 tracked by git", exit 2.
+
+    Both primaries are `incomplete` there (room and counter only), so the Holm rows are exercised only on the
+    synthetic bundles.
+  - **Synthetic seven-scene bundles** (test_gn's `_e7_rows`, as the figure test): pass. Delta_refit "equivalent; not
+    superior", Delta_cb "superior and equivalent"; the p-values agree with the criteria.
+  - **The test:** `test_check_s26_fills_and_checks_on_stand_in_bundles_and_refuses_the_real_root`. It covers the
+    synthetic fill, the planted digit, quote and skeleton, the real root (refused while < 11 sessions, with `load` and
+    `tool` patched to fail if called) and a ten-folder root. With `GN_E7_DRYRUN_BUNDLES` set to the kept dry run it also
+    runs the dry-run fill and planted digit; both variants passed.
+- **Section 5.2 (design only):**
+  - **Contents:** question, arms R/G/CG/K/O, the replicate, the `*_own` rows, the guard, both primaries,
+    superiority and the TOST at 0.07 dB, Holm, SE, the fragile reading, completeness, the outcomes' form, the
+    secondaries and the eleven sessions. No result, no prediction.
+  - **check_tex:** 274 lines, 66 result lines, 139 numbers, 0 failures (was 252 / 65 / 137); 17 pages, no undefined
+    reference.
+  - **The four `\TODO{verify}` lines** hold the PREREG-only numbers: delta 0.07 and the (7n + 9) // 10 count; Holm's
+    family-wise 0.05; the critical values 2.841, 2.365, 1.895; the margin's 22% and 80% power. 0.07 and 22% occur in
+    FINDINGS only by coincidence, so citing a section would not verify them.
+  - **The proposed extension** (`kaggle/drafts/check_tex_prereg_items.diff`, `git apply --check` clean, **not
+    applied**): a comment item `Am20 f` / `Am20 note 1` adds that PREREG item's text to the line's sources. An unknown
+    item fails. A line citing amendment items and no FINDINGS section, with no result word and every number and count
+    in those items, needs no CLAIMS row.
+  - **The extension, validated on scratch copies:** the current tex gives 274 / 65 / 139 / 0 failures; one line is
+    reclassified as design, `sec2_setup.tex:11`, whose "1.0" is in Am18 c and which still cites E12. With the four
+    markers removed: 278 / 65 / 147 / 0 failures. Three planted failures caught: 2.842, `Am20 z`, `Am20 g` on the
+    0.07 line. **Dace decides** whether to apply it; then drop the four markers.
+- **Run-path diff** `17161955..HEAD` over the rule's paths lists `bench/gn/test_gn.py` and `bench/gn/check_s26.py`.
+  The second is exempt as `bench/gn/check_s*.py`, so no run-path file is listed.
+- **After S11, the E7 write-up** (all from a clean tree at the ingest commit of S11):
+  1. Ingest S11 as usual (`bench/check_e7_ingest.py`, the code-identity rule).
+  2. Run `bench/gn/e7.py` with `--out` outside the repository and stdout redirected (it prints `Delta_bar` and `SE`):
+     `.venv/Scripts/python.exe bench/gn/e7.py kaggle/gn_e7 --out <scratch>/gn7_verdict.json > <scratch>/e7_stdout.txt`.
+  3. Fill the skeleton: `.venv/Scripts/python.exe bench/gn/check_s26.py --fill kaggle/drafts/FINDINGS_s26_E7_DRAFT.md
+     --out <scratch>/s26_filled.md`.
+  4. Check it: `.venv/Scripts/python.exe bench/gn/check_s26.py --findings <scratch>/s26_filled.md` must print 0
+     failures. Prose may be reworded around the values; every number stays a filled string. Rerun after each edit.
+  5. Move it into FINDINGS: the summary paragraph after section 25's, the Sources entry after "- Section 25:", the
+     section at the end. Then `check_s26.py` with no arguments must print 0 failures. Add
+     `test_findings_section_26_numbers_recheck_from_the_repo` beside s25's, `git rm` the draft, gate, commit.
+  6. Then the paper: Section 5.2's results from section 26 (CLAIMS rows first). Apply the check_tex diff if Dace
+     agrees, and drop the four `\TODO{verify}` markers. Also the deferred `e7.py` fixes (`--out` required, `open` with
+     `with`/`encoding`), which are run-path and allowed once no session remains.
+- **Next action: unchanged, create "E7 S6 bundle", then run E7 S7 on Kaggle** (see "E7 S6 (2026-10-26)").
 
 ### Open items (E0-E4q: closed; E4: withdrawn; GN-VQ retired; E5p: closed, FINDINGS section 18; E5s: both sources ok; Amendment 17 Notes 1-4 and E5's build: done; E5 S1-S3: done; E5 passed, FINDINGS sections 19-20; Amendment 19, note 1 and its erratum, E6's code and dry run: done; E6 S1-S3: done; E6 part (b) passed, FINDINGS sections 21-22; E6 part (a), FINDINGS section 23; E6 closed; next: none queued)
 
