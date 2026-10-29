@@ -4733,7 +4733,10 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   **must list no run-path file.** The run-path files are every file under those paths except `bench/gn/test_gn.py`
   and `bench/gn/check_s*.py`, which the run path does not import (checked 2026-10-21: importing the job, the verdict, the scenes, the estimate, the builder, the wrapper and the hooks loads 1,703 modules, 87 from the repository, none of them `check_s*` or `test_gn` (`F:\pytest_logs\importtrace_e7_runpath.log`; `python -X importtime` lists neither, `F:\pytest_logs\importtime_e7_runpath.log`); the run path's other mentions of those names are comments and the wrapper's `check_sample` / `check_seed`). If anything else is listed: STOP. A
   checker or test added before a session is listed, and its import trace is checked against this rule first, as for
-  E6 S4.
+  E6 S4. **From 2026-10-29 on (`e887d162`), the raw diff lists two files, `bench/gn/test_gn.py` and
+  `bench/gn/check_s26.py`, both exempt** (import trace re-checked that day: 1,702 modules, 86 from the repository, no
+  `check_s*`, no `test_gn`). Expect both at every later ingest. The rule is unchanged: no file outside the two
+  exemptions may be listed.
 - **E7 S1 on Kaggle:**
   1. Import `https://raw.githubusercontent.com/Daceyyreal/gsplat/bench/gn-vq/kaggle/gn_e7_bench_S1.ipynb`; title
      **"E7 OGC FT-dissection S1"**.
@@ -5229,7 +5232,9 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   4. S7 runs **truck's seed-0 half** (`j-1_p0`, `j0_p0` with the replicate pair, `j+1_p0`) on `cuda`: note 1's
      16,483-28,759 s, 10,421 s spare at the high end; **quota needed 8.11 h** (note 1's 4.70-8.11 session hours).
   5. Bring back `/kaggle/working/E7_bundle_S7.zip` (arcname `gn7/`).
-  - At S7's ingest: the code-identity rule on S7's gsplat commit; `bench/check_e7_ingest.py` on the unzipped `gn7/`
+  - At S7's ingest: the code-identity rule on S7's gsplat commit (the raw diff now lists `bench/gn/test_gn.py` and
+    `bench/gn/check_s26.py`, both exempt; see the rule in "Amendment 20 note 1 and E7's build");
+    `bench/check_e7_ingest.py` on the unzipped `gn7/`
     (room, kitchen, drjohnson, bonsai, counter and playroom carried, byte-identical to S1-S6; see "Amendment 20 note 5
     and the ingest checker (2026-10-26)").
 - **Next action: create "E7 S6 bundle", then run E7 S7 on Kaggle.**
@@ -5441,9 +5446,28 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
   - **The extension, validated on scratch copies:** the current tex gives 274 / 65 / 139 / 0 failures; one line is
     reclassified as design, `sec2_setup.tex:11`, whose "1.0" is in Am18 c and which still cites E12. With the four
     markers removed: 278 / 65 / 147 / 0 failures. Three planted failures caught: 2.842, `Am20 z`, `Am20 g` on the
-    0.07 line. **Dace decides** whether to apply it; then drop the four markers.
+    0.07 line. **Applied, with a guard, in `c8a7f70f`** (below).
 - **Run-path diff** `17161955..HEAD` over the rule's paths lists `bench/gn/test_gn.py` and `bench/gn/check_s26.py`.
   The second is exempt as `bench/gn/check_s*.py`, so no run-path file is listed.
+- **The check_tex extension, applied with a guard (`c8a7f70f`, Dace's decision; gate
+  `gate_20261029_203836_check_tex_am_items.log`, 230 passed; the draft diff removed in the same commit):**
+  - **The guard** (`paper/tex/check_tex.py`):
+    - `design` is set at `:195-196`;
+    - the item text is the only source on a design line, and every other line is checked as before, with items ignored
+      (`:208-216`);
+    - a result line citing only Am items fails with its own message (`:228-235`).
+  - **Only Amendment 20 is a design source** (`DESIGN_AMENDMENTS`, `:89`). The diff as proposed fell short in two
+    ways: it added item text to every line's sources, and it let `sec2_setup.tex:11` pass with E12 removed, since
+    Am18 c also holds "1.0".
+  - **Cites may name the exact PREREG lines,** `Am20 f (PREREG_GN.md:4064, 4066)`: the numbers must be on those
+    lines, and a line outside the item fails.
+  - **`sec2_setup.tex:11`, before and after:** a result line checked against E12, which it needs; with E12 removed
+    it fails "states a result without a CLAIMS row" in both versions.
+  - **Section 5.2's four markers are replaced** by `Am20 f` citations: 0.07 (`:4067`), the (7n + 9) // 10 count
+    (`:4063`), 0.05 and Holm's order (`:4057, 4060, 4065`), 2.841 / 2.365 / 1.895 (`:4064, 4066, 4071, 4073`), 22%
+    and 80% (`:4075, 4076, 4086`).
+  - **check_tex:** 278 lines, 66 result lines, 147 numbers, 0 failures, no `\TODO{verify}` left.
+  - **The test:** `test_paper_tex_amendment_items_verify_design_lines_only`.
 - **After S11, the E7 write-up** (all from a clean tree at the ingest commit of S11):
   1. Ingest S11 as usual (`bench/check_e7_ingest.py`, the code-identity rule).
   2. Run `bench/gn/e7.py` with `--out` outside the repository and stdout redirected (it prints `Delta_bar` and `SE`):
@@ -5455,8 +5479,8 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
   5. Move it into FINDINGS: the summary paragraph after section 25's, the Sources entry after "- Section 25:", the
      section at the end. Then `check_s26.py` with no arguments must print 0 failures. Add
      `test_findings_section_26_numbers_recheck_from_the_repo` beside s25's, `git rm` the draft, gate, commit.
-  6. Then the paper: Section 5.2's results from section 26 (CLAIMS rows first). Apply the check_tex diff if Dace
-     agrees, and drop the four `\TODO{verify}` markers. Also the deferred `e7.py` fixes (`--out` required, `open` with
+  6. Then the paper: Section 5.2's results from section 26 (CLAIMS rows first; a result line needs its CLAIMS row,
+     never an Am item). Also the deferred `e7.py` fixes (`--out` required, `open` with
      `with`/`encoding`), which are run-path and allowed once no session remains.
 - **Next action: unchanged, create "E7 S6 bundle", then run E7 S7 on Kaggle** (see "E7 S6 (2026-10-26)").
 
