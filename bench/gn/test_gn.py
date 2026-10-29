@@ -3277,6 +3277,67 @@ def test_paper_tex_claims_ids_are_explicit_citation_items(tmp_path):
     assert len(bad) == 1 and bad[0].startswith(f"sec2_setup.tex:{line}: 'E5'") and "ambiguous ID" in bad[0]
 
 
+def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
+    """check_tex's amendment items (rule 4): an Am20 item, with its exact PREREG lines, verifies a design line's numbers;
+    a wrong number against the item, an unknown item and a cited line outside the item fail; the guard: an item never
+    verifies a number on a result line, a result line citing only an Am item fails, and a line citing a CLAIMS row is
+    checked against that row only (an item's number does not pass there); a cite of another amendment (Am18 c) is no
+    source, so Section 2's licence line still needs E12; Section 5.2's design numbers verify, with no TODO left."""
+    import importlib.util
+    import shutil
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    tex = os.path.join(repo, "paper", "tex")
+    if not os.path.isfile(os.path.join(tex, "check_tex.py")):
+        pytest.skip("paper/tex/ not present")
+    spec = importlib.util.spec_from_file_location("check_tex", os.path.join(tex, "check_tex.py"))
+    ct = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ct)
+    items = ct.amendment_items()
+    assert "2.841 at n = 7" in items[("20", "f")][4064] and "0.07 dB" in items[("20", "f")][4067]
+    assert ct.cited_items(" Am20 f (PREREG_GN.md:4064, 4066); s25") == [("20", "f", [4064, 4066])]
+
+    def fails(line):
+        (tmp_path / "t.tex").write_text(line + "\n", encoding="utf-8")
+        return ct.run(str(tmp_path))["fails"]
+
+    # a design number verifies through its item and line; the whole item when no line is given
+    assert fails("At $n = 7$ the critical values are 2.841 and 2.365. % Am20 f (PREREG_GN.md:4064, 4066)") == []
+    assert fails("The margin is $\\delta = 0.07$ dB. % Am20 f") == []
+    # a wrong number against the item
+    bad = fails("At $n = 7$ the critical value is 2.842. % Am20 f (PREREG_GN.md:4064)")
+    assert len(bad) == 1 and "2.842 is not in its cited amendment items Am20 f (PREREG_GN.md:4064)" in bad[0]
+    # a real number of the item, but not on the cited line
+    assert any("2.365 is not in" in x for x in fails("The value is 2.365. % Am20 f (PREREG_GN.md:4064)"))
+    # an unknown item; a cited line outside the item
+    assert any("item 'z', which does not exist" in x for x in fails("The margin is 0.07 dB. % Am20 z"))
+    assert any("PREREG_GN.md:4200 is outside Amendment 20 item 'f'" in x
+               for x in fails("The margin is 0.07 dB. % Am20 f (PREREG_GN.md:4200)"))
+    # the guard: a result line citing only an Am item fails, and its number is checked against FINDINGS / CLAIMS, not
+    # the item (0.3131 is only in the pre-registration)
+    bad = fails("The lead fell by 0.3131 dB. % Am20 f (PREREG_GN.md:4075)")
+    assert any("states a result citing only amendment items (Am20 f (PREREG_GN.md:4075))" in x for x in bad)
+    assert any("0.3131 is not in FINDINGS or CLAIMS" in x for x in bad)
+    # a line with a CLAIMS row is a result line: an item's number does not pass there
+    bad = fails("The gap is 0.3131 dB. % Am20 f (PREREG_GN.md:4075); F1")
+    assert len(bad) == 1 and "0.3131 is not in its cited sources F1" in bad[0]
+    # another amendment's item is no source: Section 2's licence line (its "1.0" is also in Am18 c) needs E12
+    for name in os.listdir(tex):
+        if name.endswith(".tex"):
+            shutil.copy(os.path.join(tex, name), tmp_path / name)
+    (tmp_path / "t.tex").unlink()
+    sec2 = (tmp_path / "sec2_setup.tex").read_text(encoding="utf-8")
+    old = "; Am18 c; E12 (its licence statement only)\n"
+    assert sec2.count(old) == 1 and "1.0" in " ".join(items[("18", "c")].values())
+    assert ct.run(str(tmp_path))["fails"] == []
+    (tmp_path / "sec2_setup.tex").write_text(sec2.replace(old, "; Am18 c\n"), encoding="utf-8")
+    bad = ct.run(str(tmp_path))["fails"]
+    assert len(bad) == 1 and "states a result without a CLAIMS row" in bad[0]
+    # Section 5.2: no \TODO{verify}, and its design lines cite Am20 items with lines
+    sec5 = open(os.path.join(tex, "sec5_finetuning.tex"), encoding="utf-8").read()
+    assert "TODO{verify}" not in sec5 and sec5.count("% Am20 f (PREREG_GN.md:") >= 4
+
+
 # --------------------------------------------------------------------------------- E3r (Amendment 14)
 
 

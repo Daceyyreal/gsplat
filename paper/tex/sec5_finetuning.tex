@@ -71,8 +71,8 @@ The right panels of Figure~\ref{fig:f1} show the fine-tuned curves; each scene's
 \subsection{Why the lead shrinks (E7): design}
 \label{sec:ft-why}
 
-% Design only (Amendment 20 with notes 1-5): no E7 result and no prediction. Lines holding a number that only the
-% pre-registration states carry \TODO{verify} until check_tex can cite amendment items (kaggle/drafts/check_tex_prereg_items.diff).
+% Design only (Amendment 20 with notes 1-5): no E7 result and no prediction. A number only the pre-registration
+% states cites its amendment item and lines (Am20 f (PREREG_GN.md:N)); check_tex verifies it there, on design lines only.
 \paragraph{Question.}
 Before fine-tuning OGC's VQ leads C3DGS's own at equal rate by $\bar P = 0.3556$ dB (P1 replicated), and after it by $\bar P_{\mathrm{FT}} = 0.0425$ dB (Section~\ref{sec:ft-result}). % s21; F1, F2
 E7, registered after E6's verdict and before any E7 data, asks which of the factors that fine-tuning moves carries the shrink. % Am20 a; Am20 b
@@ -90,10 +90,10 @@ An inverted guard fails any fine-tuned row whose frozen tensors, row blocks or g
 For an arm X, $\mathrm{BD}_X$ is the BD-PSNR of OGC's fine-tuned row of that arm against C3DGS's, computed as P\_FT over the seed-0 curve at $j = -1, 0, +1$. % Am20 f
 The two primaries are, per scene, $\Delta_{\mathrm{refit}} = \mathrm{BD}_G - \mathrm{BD}_R$, what freezing the colour grids does to OGC's lead, and $\Delta_{\mathrm{cb}} = \mathrm{BD}_{CG} - \mathrm{BD}_G$, what freezing the codewords does to it under the fixed grid. % Am20 f
 Their noise is E5's, from the $j = 0$ seed pair of each primary's paired difference, and their standard error is $\mathrm{SE} = \mathrm{SD}_{\mathrm{pool}}/\sqrt{n}$, the one that matches one curve per scene. % Am20 b; Am20 f; s25
-Each primary is tested for superiority (two-sided, in E5's criteria form, with at least $\lfloor (7n + 9)/10 \rfloor$ scenes of the mean's sign) and for equivalence by two one-sided tests at a margin of $\delta = 0.07$~dB.\TODO{verify} % Am20 f
-Each test type is one family of the two primaries, Holm-corrected at a family-wise 0.05: the primary with the greater statistic is tested first, and the second only if the first succeeds.\TODO{verify} % Am20 f; Am20 note 2
-At $n = 7$ the critical values are 2.841 and 2.365 for superiority and 2.365 and 1.895 for equivalence.\TODO{verify} % Am20 f
-The margin is 22\% of the gap the shrink closed, the smallest round value with about 80\% power in Holm's first position under both the pessimistic and the scene-spread noise assumptions taken from E6.\TODO{verify} % Am20 f
+Each primary is tested for superiority (two-sided, in E5's criteria form, with at least $\lfloor (7n + 9)/10 \rfloor$ scenes of the mean's sign) and for equivalence by two one-sided tests at a margin of $\delta = 0.07$~dB. % Am20 f (PREREG_GN.md:4063, 4067)
+Each test type is one family of the two primaries, Holm-corrected at a family-wise 0.05: the primary with the greater statistic is tested first, and the second only if the first succeeds. % Am20 f (PREREG_GN.md:4057, 4060, 4065)
+At $n = 7$ the critical values are 2.841 and 2.365 for superiority and 2.365 and 1.895 for equivalence. % Am20 f (PREREG_GN.md:4064, 4066, 4071, 4073)
+The margin is 22\% of the gap the shrink closed, the smallest round value with about 80\% power in Holm's first position under both the pessimistic and the scene-spread noise assumptions taken from E6. % Am20 f (PREREG_GN.md:4075, 4076, 4086)
 A robustness reading recomputes both tests with a BD-level standard error from arm R's seed-0 and seed-1 curves, $\mathrm{SE}_{\mathrm{BD}} = \sqrt{2}\,\mathrm{SD}_{\mathrm{BD}}/\sqrt{n}$; a primary whose outcome differs under it is reported as fragile, and the outcome under SE remains the one of record. % Am20 f
 A primary is incomplete with fewer than five scenes after drops, or with one of its rows missing after one rerun of its process. % Am20 f
 The registered outcomes are superior (of either sign), equivalent, both or neither, each with a reading written before any data. % Am20 h

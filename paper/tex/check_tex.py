@@ -18,6 +18,14 @@ sections (``s19``, ``s21 secondary 1``) and its ``paper/CLAIMS.md`` rows (``A2``
    figure named in a comment as ``Fig.N`` is not a CLAIMS row and is ignored for the lookup. A row is cited only as its
    own item (``cited_ids``): a ``;``-separated segment whose ``,``-separated parts are all IDs, each optionally with
    one parenthetical. Any other ID-shaped token in a comment outside quotes and parentheses fails as ambiguous.
+4. **Amendment items (design lines only).** A comment may cite an item of an amendment in ``DESIGN_AMENDMENTS`` (E7's,
+   20) as ``Am20 f`` (item f) or ``Am20 note 1``, each as its own ``;``-separated item, optionally with the exact lines of
+   ``kaggle/PREREG_GN.md`` it quotes: ``Am20 f (PREREG_GN.md:4064, 4066)``. An item that does not exist, or a cited
+   line outside its item, fails. A **design line** cites amendment items and no FINDINGS section or CLAIMS row and has
+   none of ``RESULT_WORDS``: its numbers and counts must appear in the cited items' text (the cited lines when given,
+   else the whole item, from its heading to the next), and it needs no CLAIMS row. **Every other line is checked as
+   in 1-3, with amendment items ignored as sources:** an item never verifies a number on a result line, and a result
+   line whose only citations are amendment items fails.
 
 Lines holding a ``\\TODO`` placeholder are skipped. The tables and figures come from ``paper/figs/`` (checked by
 ``paper/figs/check_figs.py``) and are not read here. Other integers 0-10 (j, seeds, criteria, "8 bits") are allowed
@@ -35,6 +43,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 FINDINGS = os.path.join(REPO, "kaggle", "FINDINGS.md")
 CLAIMS = os.path.join(REPO, "paper", "CLAIMS.md")
+PREREG = os.path.join(REPO, "kaggle", "PREREG_GN.md")
 
 # structural constants: integers 0-10, the codebook size K, fine-tuning's iterations, OGC's iterations and chunk,
 # the metric's width, the decimals of the criteria, the year, the dataset name "Mip-NeRF 360"
@@ -74,6 +83,11 @@ def cited_ids(comment):
     return ids, ambiguous
 COUNT = re.compile(r"(?<![\w.,/])(\d+)(?:\s+of\s+(?:the\s+)?|/)(\d+)(?![\w.,/])")
 SECTION = re.compile(r"\bs(\d{1,2})\b")
+# amendments whose items may verify a design line's numbers (E7's design, Section 5.2); a cite of any other amendment
+# ("Am18 c", "Am19 c") stays an annotation, as before items were sources, so facts such as OGC's licence version still
+# need their CLAIMS row
+DESIGN_AMENDMENTS = {"20"}
+AM_ITEM = re.compile(r"^\s*Am(\d{1,2}) (note \d{1,2}|[a-z])(?:\s*\(PREREG_GN\.md:([\d, ]+)\))?\s*$")
 
 
 def read(path):
@@ -102,6 +116,39 @@ def sources():
     return f, sec_text, c, rows
 
 
+def amendment_items():
+    """``kaggle/PREREG_GN.md``'s items by (amendment, item): each ``### x.`` under ``## Amendment N`` and each ``###
+    Amendment N note K``, as its lines from its heading to the next heading, keyed by line number (1-based)."""
+    lines = read(PREREG).splitlines()
+    heads = [i for i, ln in enumerate(lines) if re.match(r"#{2,3} ", ln)]
+    out, amend = {}, None
+    for n, i in enumerate(heads):
+        line = lines[i]
+        end = heads[n + 1] if n + 1 < len(heads) else len(lines)
+        body = {j + 1: lines[j] for j in range(i, end)}
+        if line.startswith("## "):
+            m = re.match(r"## Amendment (\d+) \(", line)
+            amend = m.group(1) if m else None
+            continue
+        m = re.match(r"### Amendment (\d+) note (\d+) \(", line)
+        if m:
+            out[(m.group(1), f"note {m.group(2)}")] = body
+        elif amend and re.match(r"### [a-z]\. ", line):
+            out[(amend, line[4])] = body
+    return out
+
+
+def cited_items(comment):
+    """Amendment items cited by a trailing comment, each its own ';'-separated item ("Am20 f", "Am20 note 1",
+    "Am20 f (PREREG_GN.md:4064, 4066)"), as (amendment, item, [cited line numbers])."""
+    out = []
+    for seg in comment.split(";"):
+        m = AM_ITEM.match(seg)
+        if m:
+            out.append((m.group(1), m.group(2), [int(x) for x in re.findall(r"\d+", m.group(3) or "")]))
+    return out
+
+
 def counts(text):
     """The "k of n" / "k of the n" / "k/n" phrases of ``text`` as (k, n) pairs."""
     return COUNT.findall(text)
@@ -114,6 +161,7 @@ def tokens(text):
 
 def run(tex_dir=HERE):
     f_all, sec_text, c_all, rows = sources()
+    items = amendment_items()
     all_tokens = tokens(f_all) | tokens(c_all)
     fails, n_numbers, n_lines, n_result = [], 0, 0, 0
     for path in sorted(glob.glob(os.path.join(tex_dir, "*.tex"))):
@@ -130,6 +178,22 @@ def run(tex_dir=HERE):
                 fails.append(f"{name}:{i}: '{x}' in the comment is not a citation item; write it as its own "
                              f"';'-separated item, or reword (ambiguous ID)")
             secs = [int(s) for s in SECTION.findall(comment)]
+            ams = [x for x in cited_items(comment) if x[0] in DESIGN_AMENDMENTS]
+            am_text = []
+            for a, k, refs in ams:
+                body = items.get((a, k))
+                if body is None:
+                    fails.append(f"{name}:{i}: cites Amendment {a} item {k!r}, which does not exist")
+                    continue
+                for r in refs:
+                    if r not in body:
+                        fails.append(f"{name}:{i}: PREREG_GN.md:{r} is outside Amendment {a} item {k!r} (lines "
+                                     f"{min(body)}-{max(body)})")
+                am_text += [body[r] for r in refs if r in body] if refs else list(body.values())
+            am_names = ", ".join(f"Am{a} {k}" + (f" (PREREG_GN.md:{', '.join(map(str, refs))})" if refs else "")
+                                 for a, k, refs in ams)
+            # a design line: amendment items its only citations, no result word; only there may an item verify a number
+            design = bool(ams) and not secs and not ids and not RESULT_WORDS.search(text)
             for cid in ids:
                 if cid not in rows:
                     fails.append(f"{name}:{i}: cites CLAIMS row {cid}, which does not exist")
@@ -141,27 +205,32 @@ def run(tex_dir=HERE):
                 cited |= tokens(sec_text.get(s, ""))
             for cid in ids:
                 cited |= tokens(rows.get(cid, ""))
-            pool = cited if (secs or ids) else all_tokens
-            src = " ".join([sec_text.get(s, "") for s in secs] + [rows.get(c, "") for c in ids]) if (secs or ids) \
-                else f_all + " " + c_all
+            if design:
+                pool, src = tokens(" ".join(am_text)), " ".join(am_text)
+                where = f"its cited amendment items {am_names}"
+            else:  # amendment items are not sources here
+                pool = cited if (secs or ids) else all_tokens
+                src = " ".join([sec_text.get(s, "") for s in secs] + [rows.get(c, "") for c in ids]) if (secs or ids) \
+                    else f_all + " " + c_all
+                where = "its cited sources " + ", ".join([f"s{s}" for s in secs] + ids) if (secs or ids) else \
+                    "FINDINGS or CLAIMS"
             src_counts = set(counts(" ".join(src.split())))
             line_counts = counts(" ".join(text.split()))
             for k, n in line_counts:
                 n_numbers += 1
                 if (k, n) not in src_counts:
-                    where = "its cited sources " + ", ".join([f"s{s}" for s in secs] + ids) if (secs or ids) else \
-                        "FINDINGS or CLAIMS"
                     fails.append(f"{name}:{i}: the count {k} of {n} is not in {where}")
             checked = [x for x in numbers(text) if x not in ALLOW]
             for x in checked:
                 n_numbers += 1
                 if x not in pool:
-                    where = "its cited sources " + ", ".join([f"s{s}" for s in secs] + ids) if (secs or ids) else \
-                        "FINDINGS or CLAIMS"
                     fails.append(f"{name}:{i}: {x} is not in {where}")
-            if checked or line_counts or RESULT_WORDS.search(text):
+            if (checked or line_counts or RESULT_WORDS.search(text)) and not design:
                 n_result += 1
-                if not ids:
+                if not ids and ams and not secs:
+                    fails.append(f"{name}:{i}: states a result citing only amendment items ({am_names}); an amendment "
+                                 f"item verifies design lines only, a result needs a CLAIMS row: {text.strip()[:70]!r}")
+                elif not ids:
                     fails.append(f"{name}:{i}: states a result without a CLAIMS row in its trailing comment: "
                                  f"{text.strip()[:90]!r}")
     return {"fails": fails, "n_numbers": n_numbers, "n_lines": n_lines, "n_result_lines": n_result}
