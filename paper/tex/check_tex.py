@@ -18,9 +18,10 @@ sections (``s19``, ``s21 secondary 1``) and its ``paper/CLAIMS.md`` rows (``A2``
    figure named in a comment as ``Fig.N`` is not a CLAIMS row and is ignored for the lookup. A row is cited only as its
    own item (``cited_ids``): a ``;``-separated segment whose ``,``-separated parts are all IDs, each optionally with
    one parenthetical. Any other ID-shaped token in a comment outside quotes and parentheses fails as ambiguous.
-4. **Amendment items (design lines only).** A comment may cite an item of an amendment in ``DESIGN_AMENDMENTS`` (E7's,
-   20) as ``Am20 f`` (item f) or ``Am20 note 1``, each as its own ``;``-separated item, optionally with the exact lines of
-   ``kaggle/PREREG_GN.md`` it quotes: ``Am20 f (PREREG_GN.md:4064, 4066)``. An item that does not exist, or a cited
+4. **Amendment items (design lines only, in ``DESIGN_FILES`` only).** In Section 5.2's file (``sec5_finetuning.tex``;
+   in any other file an amendment item is an annotation only and the line is checked as in 1-3), a comment may cite an
+   item of an amendment in ``DESIGN_AMENDMENTS`` (E7's, 20) as ``Am20 f`` (item f) or ``Am20 note 1``, each as its
+   own ``;``-separated item, optionally with the exact lines of ``kaggle/PREREG_GN.md`` it quotes: ``Am20 f (PREREG_GN.md:4064, 4066)``. An item that does not exist, or a cited
    line outside its item, fails. A **design line** cites amendment items and no FINDINGS section or CLAIMS row and has
    none of ``RESULT_WORDS``: its numbers and counts must appear in the cited items' text (the cited lines when given,
    else the whole item, from its heading to the next), and it needs no CLAIMS row. **Every other line is checked as
@@ -87,6 +88,9 @@ SECTION = re.compile(r"\bs(\d{1,2})\b")
 # ("Am18 c", "Am19 c") stays an annotation, as before items were sources, so facts such as OGC's licence version still
 # need their CLAIMS row
 DESIGN_AMENDMENTS = {"20"}
+# the files whose lines may be design lines: Section 5.2 (E7's design) lives in sec5_finetuning.tex; in any other file
+# an amendment item is an annotation only and the line is checked as if items were never sources
+DESIGN_FILES = {"sec5_finetuning.tex"}
 AM_ITEM = re.compile(r"^\s*Am(\d{1,2}) (note \d{1,2}|[a-z])(?:\s*\(PREREG_GN\.md:([\d, ]+)\))?\s*$")
 
 
@@ -178,7 +182,7 @@ def run(tex_dir=HERE):
                 fails.append(f"{name}:{i}: '{x}' in the comment is not a citation item; write it as its own "
                              f"';'-separated item, or reword (ambiguous ID)")
             secs = [int(s) for s in SECTION.findall(comment)]
-            ams = [x for x in cited_items(comment) if x[0] in DESIGN_AMENDMENTS]
+            ams = [x for x in cited_items(comment) if x[0] in DESIGN_AMENDMENTS] if name in DESIGN_FILES else []
             am_text = []
             for a, k, refs in ams:
                 body = items.get((a, k))

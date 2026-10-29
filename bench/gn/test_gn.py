@@ -3278,7 +3278,8 @@ def test_paper_tex_claims_ids_are_explicit_citation_items(tmp_path):
 
 
 def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
-    """check_tex's amendment items (rule 4): an Am20 item, with its exact PREREG lines, verifies a design line's numbers;
+    """check_tex's amendment items (rule 4): an Am20 item, with its exact PREREG lines, verifies a design line's numbers
+    in Section 5.2's file only (the same line in another section's file is checked as without items);
     a wrong number against the item, an unknown item and a cited line outside the item fail; the guard: an item never
     verifies a number on a result line, a result line citing only an Am item fails, and a line citing a CLAIMS row is
     checked against that row only (an item's number does not pass there); a cite of another amendment (Am18 c) is no
@@ -3297,12 +3298,23 @@ def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     assert "2.841 at n = 7" in items[("20", "f")][4064] and "0.07 dB" in items[("20", "f")][4067]
     assert ct.cited_items(" Am20 f (PREREG_GN.md:4064, 4066); s25") == [("20", "f", [4064, 4066])]
 
-    def fails(line):
-        (tmp_path / "t.tex").write_text(line + "\n", encoding="utf-8")
+    def fails(line, name="sec5_finetuning.tex"):  # Section 5.2's file, the only one in DESIGN_FILES
+        for p in tmp_path.glob("*.tex"):
+            p.unlink()
+        (tmp_path / name).write_text(line + "\n", encoding="utf-8")
         return ct.run(str(tmp_path))["fails"]
 
+    assert ct.DESIGN_FILES == {"sec5_finetuning.tex"}
     # a design number verifies through its item and line; the whole item when no line is given
-    assert fails("At $n = 7$ the critical values are 2.841 and 2.365. % Am20 f (PREREG_GN.md:4064, 4066)") == []
+    design = "At $n = 7$ the critical values are 2.841 and 2.365. % Am20 f (PREREG_GN.md:4064, 4066)"
+    assert fails(design) == []
+    # the file restriction: the same line with the same Am20 citation in another section's file is checked as without
+    # the extension (2.841 and 2.365 are in neither FINDINGS nor CLAIMS, and the line has no CLAIMS row)
+    bad = fails(design, "sec2_setup.tex")
+    assert any("2.841 is not in FINDINGS or CLAIMS" in x for x in bad)
+    assert any("states a result without a CLAIMS row" in x for x in bad)
+    assert any("item 'z', which does not exist" in x for x in fails("The margin is 0.07 dB. % Am20 z"))
+    assert not any("item 'z'" in x for x in fails("The margin is 0.07 dB. % Am20 z", "sec4_dissection.tex"))
     assert fails("The margin is $\\delta = 0.07$ dB. % Am20 f") == []
     # a wrong number against the item
     bad = fails("At $n = 7$ the critical value is 2.842. % Am20 f (PREREG_GN.md:4064)")
@@ -3325,7 +3337,6 @@ def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     for name in os.listdir(tex):
         if name.endswith(".tex"):
             shutil.copy(os.path.join(tex, name), tmp_path / name)
-    (tmp_path / "t.tex").unlink()
     sec2 = (tmp_path / "sec2_setup.tex").read_text(encoding="utf-8")
     old = "; Am18 c; E12 (its licence statement only)\n"
     assert sec2.count(old) == 1 and "1.0" in " ".join(items[("18", "c")].values())
