@@ -3279,8 +3279,8 @@ def test_paper_tex_claims_ids_are_explicit_citation_items(tmp_path):
 
 def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     """check_tex's amendment items (rule 4): an Am20 item, with its exact PREREG lines, verifies a design line's numbers
-    in Section 5.2's file only (the same line in another section's file is checked as without items);
-    a wrong number against the item, an unknown item and a cited line outside the item fail; the guard: an item never
+    in Section 5.2's file, sec5_2_e7design.tex, only (the same line in 5.1's sec5_finetuning.tex or another section's
+    file is checked as without items, and failures name the file and its own line); a wrong number against the item, an unknown item and a cited line outside the item fail; the guard: an item never
     verifies a number on a result line, a result line citing only an Am item fails, and a line citing a CLAIMS row is
     checked against that row only (an item's number does not pass there); a cite of another amendment (Am18 c) is no
     source, so Section 2's licence line still needs E12; Section 5.2's design numbers verify, with no TODO left."""
@@ -3298,21 +3298,26 @@ def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     assert "2.841 at n = 7" in items[("20", "f")][4064] and "0.07 dB" in items[("20", "f")][4067]
     assert ct.cited_items(" Am20 f (PREREG_GN.md:4064, 4066); s25") == [("20", "f", [4064, 4066])]
 
-    def fails(line, name="sec5_finetuning.tex"):  # Section 5.2's file, the only one in DESIGN_FILES
+    def fails(line, name="sec5_2_e7design.tex", before=""):  # Section 5.2's file, the only one in DESIGN_FILES
         for p in tmp_path.glob("*.tex"):
             p.unlink()
-        (tmp_path / name).write_text(line + "\n", encoding="utf-8")
+        (tmp_path / name).write_text(before + line + "\n", encoding="utf-8")
         return ct.run(str(tmp_path))["fails"]
 
-    assert ct.DESIGN_FILES == {"sec5_finetuning.tex"}
+    assert ct.DESIGN_FILES == {"sec5_2_e7design.tex"}
     # a design number verifies through its item and line; the whole item when no line is given
     design = "At $n = 7$ the critical values are 2.841 and 2.365. % Am20 f (PREREG_GN.md:4064, 4066)"
     assert fails(design) == []
-    # the file restriction: the same line with the same Am20 citation in another section's file is checked as without
-    # the extension (2.841 and 2.365 are in neither FINDINGS nor CLAIMS, and the line has no CLAIMS row)
-    bad = fails(design, "sec2_setup.tex")
-    assert any("2.841 is not in FINDINGS or CLAIMS" in x for x in bad)
-    assert any("states a result without a CLAIMS row" in x for x in bad)
+    # the file restriction: the same line with the same Am20 citation in 5.1's file (sec5_finetuning.tex, which
+    # \inputs 5.2's) or in another section's file is checked as without the extension (2.841 and 2.365 are in neither
+    # FINDINGS nor CLAIMS, and the line has no CLAIMS row); a failure names that file and the line's own number
+    for other in ("sec5_finetuning.tex", "sec2_setup.tex"):
+        bad = fails(design, other, before="\\input{sec5_2_e7design}\n\n")
+        assert any(x.startswith(f"{other}:3: 2.841 is not in FINDINGS or CLAIMS") for x in bad)
+        assert any(x.startswith(f"{other}:3: states a result without a CLAIMS row") for x in bad)
+    # a failure inside the \input file names it and its own line
+    bad = fails("At $n = 7$ the critical value is 2.842. % Am20 f (PREREG_GN.md:4064)", before="%\n")
+    assert len(bad) == 1 and bad[0].startswith("sec5_2_e7design.tex:2: 2.842 is not in its cited amendment items")
     assert any("item 'z', which does not exist" in x for x in fails("The margin is 0.07 dB. % Am20 z"))
     assert not any("item 'z'" in x for x in fails("The margin is 0.07 dB. % Am20 z", "sec4_dissection.tex"))
     assert fails("The margin is $\\delta = 0.07$ dB. % Am20 f") == []
@@ -3345,8 +3350,13 @@ def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     bad = ct.run(str(tmp_path))["fails"]
     assert len(bad) == 1 and "states a result without a CLAIMS row" in bad[0]
     # Section 5.2: no \TODO{verify}, and its design lines cite Am20 items with lines
+    sec52 = open(os.path.join(tex, "sec5_2_e7design.tex"), encoding="utf-8").read()
+    assert "TODO{verify}" not in sec52 and sec52.count("% Am20 f (PREREG_GN.md:") >= 4
     sec5 = open(os.path.join(tex, "sec5_finetuning.tex"), encoding="utf-8").read()
-    assert "TODO{verify}" not in sec5 and sec5.count("% Am20 f (PREREG_GN.md:") >= 4
+    assert sec5.rstrip().endswith("\\input{sec5_2_e7design}") and "Am20 f (PREREG_GN.md:" not in sec5
+    # the real sources: the \input file is read under its own name
+    res = ct.run()
+    assert res["fails"] == [] and res["n_numbers"] == 147
 
 
 # --------------------------------------------------------------------------------- E3r (Amendment 14)
