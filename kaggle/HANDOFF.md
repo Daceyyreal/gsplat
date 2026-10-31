@@ -69,7 +69,9 @@ note 3, `f4cc49b2`); E7 S2 ingested (`d0d6df8a`, kitchen seed 0, mechanics clean
 "E7 S# bundle" datasets (note 4, `5bf93e0e`); E7 S3 ingested (`30431fc3`, drjohnson seed 0, mechanics clean);
 E7 S4 ingested (`04bdf4b6`, bonsai seed 0, mechanics clean; restore log: room from "E7 S1 bundle", kitchen and
 drjohnson from "E7 S3 bundle"; S2 attached as its output version, no data effect); E7 S5 ingested (`ddef31f4`, counter seed 0, mechanics
-clean); E7 S6 ingested (`75d0209b`, playroom seed 0, mechanics clean); next: E7 S7 on Kaggle (truck seed 0).** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
+clean); E7 S6 ingested (`75d0209b`, playroom seed 0, mechanics clean); E7 S7 ingested (`a35487ab`, truck seed 0,
+mechanics clean): all seven seed-0 halves are in; next: E7 S8 on Kaggle (kitchen and playroom seed 1; note 5 at its
+ingest).** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
 `4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b); F1's shared y-axis, round ticks and shaded
@@ -5237,7 +5239,80 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     `bench/check_e7_ingest.py` on the unzipped `gn7/`
     (room, kitchen, drjohnson, bonsai, counter and playroom carried, byte-identical to S1-S6; see "Amendment 20 note 5
     and the ingest checker (2026-10-26)").
-- **Next action: create "E7 S6 bundle", then run E7 S7 on Kaggle.**
+- **Next action: create "E7 S6 bundle", then run E7 S7 on Kaggle.** **Done:** see "E7 S7 (2026-11-01)".
+
+### E7 S7 (2026-11-01)
+
+- **Orientation:** the tree was clean and HEAD = `fork/bench/gn-vq` = `5e189d0d`. Dace reported no Kaggle session
+  running. Between S6's ingest and S7 only paper tooling, the E7 write-up pre-build and this file changed (see "E7
+  write-up skeleton and check_s26 (2026-10-29; no E7 value read)", below).
+- **S7 done and ingested:**
+  - **The bundle:** `E7_bundle_S7.zip` (sha256 `9cda99c89e60067778fb3d6efd89f0500dd2e3e4f9f86480cbb03a1e2adfcec2`,
+    1,555,336 bytes, from `~/Downloads`). Its 21 `gn7/` files (7 per-session files and seven scenes' meta and results)
+    are committed unchanged, data only, in `kaggle/gn_e7/S7/gn7/` (`a35487ab`; gate
+    `gate_20261101_000527_e7_s7_bundle.log`, 230 passed).
+  - **Unzipped outside the repository** (`F:\tmp_e7s7_unzip`): no `.npz`, `.ply`, `.pt` or `.py`, and no OGC file
+    (`gn5_ogc_preflight.json` is the preflight record).
+  - **Working copies** are byte-identical to the zip; each blob equals its file with CRs removed.
+- **Ingest checker:** `.venv/Scripts/python.exe -I bench/check_e7_ingest.py F:/tmp_e7s7_unzip/gn7`: **pass**, exit 0.
+  - Bonsai, counter, drjohnson, kitchen, playroom and room are carried: CSV and meta byte-identical to the bundles that
+    first committed them.
+  - Truck is new in this session. No scene was extended (no seed-1 half ran), so note 5 did not apply.
+- **Code identity:** S7 ran gsplat `5e189d0d` (every row, `gn5_env_S7.json` and the meta's session record).
+  - `5e189d0d` was the pushed head when S7 started: pushed 2026-10-29 at about 22:47 (+0600), nothing pushed after it,
+    and S7 started at 2026-10-31T10:42:50.
+  - `17161955..5e189d0d` over the rule's paths lists `bench/gn/test_gn.py` and `bench/gn/check_s26.py`, both exempt,
+    so no run-path file.
+- **Mechanics clean (truck, seed-0 half), each as in S1-S6:**
+  - **Processes:** `j-1_p0`, `j0_p0` and `j+1_p0` each settled on attempt 0 on `cuda`, phase `done`, OOM false, no
+    failed check or error.
+  - **Rows:** 45 in `rows_ok`, all `ok`; `missing_or_failed` is exactly the 22 seed-1-half rows (planned for S10).
+    `frozen_changed` is empty on all 32 fine-tuned rows; labels survived; no C3DGS evaluation error.
+  - **No deviation, deadline cut, unsettled process, failed or skipped step** (242 steps), no drop, no `stopped_17i`.
+    The meta's `done` is false (seed-1 half pending); the job log's exit code is 0, not skipped by the cutoff.
+  - **Sizes:** `cfg_args` `sh_degree` 3, `eval` True, `white_background` False. `loaded_size_check` ok: 979 x 546
+    (`images`, factor 1), 251 views, identical to truck's in E5 (`kaggle/gn_e5/S2/gn5/`).
+  - **OGC preflight:** url and dataset both ok at HEAD `49ccae72`, tree `9feebced`; `first_ok` url; every row from the
+    URL.
+  - **C3DGS build** ok at `2a234af5`; its 7 deviations (Amendment 13 b) are identical to S1-S6's.
+  - **Image string** (`py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04`) and **wheel key**
+    (`33734f894b0a-95f8de51-torch2.11.0_cu128-sm7.5`, restored) identical to S1-S6.
+- **Timing:**
+  - **Job** 16,305.3 s in the queue (`timings_s.job` 16,289.6). Note 1's truck seed-0 half is 16,483-28,759 s, so
+    **0.989 of the low end and 0.567 of the high** (S1 1.087 / 0.692, S2 1.373 / 0.855, S3 1.225 / 0.703, S4 0.984 /
+    0.634, S5 1.196 / 0.760, S6 1.188 / 0.694).
+  - **Processes** 4,741.1 / 5,276.8 / 4,384.1 s (note 1's high 8,734 / 10,551 / 8,734). Process GPU peaks
+    5,493,222,400-5,497,475,072 bytes allocated.
+  - **Setup** (preflight 30.2, restore 5.8, install 128.6, C3DGS build 216.9) 381.6 s.
+  - **Session** 16,686.9 s = **4.64 h**, 0.986 of note 1's low end and 0.572 of its high (4.70-8.11 session hours).
+    Dace's figures, 381.5 and 16,686.8 s, are the same sums truncated (381.557 and 16,686.868).
+- **Not read:** `per_scene_parts`; no BD, P1, Delta or arm comparison (20 f).
+- **All seven seed-0 halves are in** (S1 room, S2 kitchen, S3 drjohnson, S4 bonsai, S5 counter, S6 playroom, S7
+  truck). The seed-1 halves follow in S8-S11.
+- **E7 S8 on Kaggle:**
+  1. Import `https://raw.githubusercontent.com/Daceyyreal/gsplat/a35487ab94043a0aec8dff9ca478a209d1764a8a/kaggle/gn_e7_bench_S8.ipynb`
+     (pinned at the S7 bundle commit; unchanged since `318d50cc`, sha256
+     `1729e6046b67bee81fd8bc7f586af01e9c53a021f96e81bf94fcbe5d16e72398`, LF); title **"E7 OGC FT-dissection S8"**.
+  2. Attach exactly nine inputs, datasets and the pilot only:
+     - "E5p OGC dissection pilot" attempt 2's version, pinned (the wheel);
+     - the private dataset "E5p OGC source 49ccae72";
+     - the private datasets "E7 S1 bundle" to "E7 S7 bundle" ("E7 S7 bundle" created from
+       `~/Downloads/E7_bundle_S7.zip`, 1,555,336 bytes, sha256 `9cda99c8...`).
+
+     **No "E7 OGC FT-dissection S#" output version.**
+  3. Accelerator **GPU T4 x2**, Internet **on**. Save & Run All; the first output must be the `OGC PREFLIGHT` lines,
+     both ok.
+  4. **What S8 runs:** kitchen's seed-1 half (`j0_p1`, `j-1_p1`, `j+1_p1`), then playroom's, in one lane. Note 1:
+     playroom starts at 12,169-19,873 s, the lane ends at 21,869-36,825 s, 2,355 s spare at the high end (S8 is one of
+     the tight sessions). **Quota needed 10.35 h** (note 1's 6.19-10.35 session hours).
+  5. Bring back `/kaggle/working/E7_bundle_S8.zip` (arcname `gn7/`).
+  - **At S8's ingest:**
+    - the code-identity rule on S8's gsplat commit (expected raw diff: `test_gn.py` and `check_s26.py`, both exempt);
+    - `bench/check_e7_ingest.py` on the unzipped `gn7/`. **Note 5 applies for the first time:** kitchen and playroom
+      are extended scenes (the first bundle's CSV a byte prefix; the meta checked key by key; report-only differences
+      and any new `stopped_17i` written into the S8 entry). Room, drjohnson, bonsai, counter and truck must be
+      byte-identical to S1, S3, S4, S5 and S7.
+- **Next action: create "E7 S7 bundle", then run E7 S8 on Kaggle.**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
@@ -5451,12 +5526,12 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
   The second is exempt as `bench/gn/check_s*.py`, so no run-path file is listed.
 - **The check_tex extension, applied with a guard (`c8a7f70f`, Dace's decision; gate
   `gate_20261029_203836_check_tex_am_items.log`, 230 passed; the draft diff removed in the same commit):**
-  - **The guard** (`paper/tex/check_tex.py`):
-    - `design` is set at `:195-196`;
+  - **The guard** (`paper/tex/check_tex.py`, line numbers at `5e189d0d`):
+    - `design` is set at `:204`;
     - the item text is the only source on a design line, and every other line is checked as before, with items ignored
-      (`:208-216`);
-    - a result line citing only Am items fails with its own message (`:228-235`).
-  - **Only Amendment 20 is a design source** (`DESIGN_AMENDMENTS`, `:89`). The diff as proposed fell short in two
+      (`:216-224`);
+    - a result line citing only Am items fails with its own message (`:236-243`).
+  - **Only Amendment 20 is a design source** (`DESIGN_AMENDMENTS`, `:93`). The diff as proposed fell short in two
     ways: it added item text to every line's sources, and it let `sec2_setup.tex:11` pass with E12 removed, since
     Am18 c also holds "1.0".
   - **Cites may name the exact PREREG lines,** `Am20 f (PREREG_GN.md:4064, 4066)`: the numbers must be on those
@@ -5467,6 +5542,20 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
     (`:4063`), 0.05 and Holm's order (`:4057, 4060, 4065`), 2.841 / 2.365 / 1.895 (`:4064, 4066, 4071, 4073`), 22%
     and 80% (`:4075, 4076, 4086`).
   - **check_tex:** 278 lines, 66 result lines, 147 numbers, 0 failures, no `\TODO{verify}` left.
+- **Two later check_tex commits (2026-10-29; gates 230 passed each; paper tooling only):**
+  - **`1705cd58`:** amendment items verify design numbers only in Section 5.2's file (`DESIGN_FILES`). In any other
+    file an Am cite is an annotation only and the line is checked as without the extension. Gate
+    `gate_20261029_210355_check_tex_design_files.log`.
+  - **`5e189d0d`:** Section 5.2 moved verbatim into `paper/tex/sec5_2_e7design.tex` and `\input` at the same spot (the
+    end of `sec5_finetuning.tex`), so that 5.1's results are outside `DESIGN_FILES = {"sec5_2_e7design.tex"}`
+    (`check_tex.py:97`, applied at `:189`).
+    - Both parts of the move are byte-identical to before (`cmp`). The PDF is 17 pages and 476,315 bytes both times,
+      and `pdftotext -layout` gives identical output (836 lines, sha256 `422fd5e0...`).
+    - check_tex reads every `*.tex` as its own file; failures name the `\input` file and its own line.
+    - The test: the same Am20-cited design line passes in `sec5_2_e7design.tex` and fails in `sec5_finetuning.tex` and
+      `sec2_setup.tex`.
+    - check_tex 278 / 66 / 147 / 0 failures; gate `gate_20261029_224358_sec52_own_file.log`.
+    - S7 ran this commit; it was the pushed head when S7 started.
   - **The test:** `test_paper_tex_amendment_items_verify_design_lines_only`.
 - **After S11, the E7 write-up** (all from a clean tree at the ingest commit of S11):
   1. Ingest S11 as usual (`bench/check_e7_ingest.py`, the code-identity rule).
