@@ -72,7 +72,8 @@ drjohnson from "E7 S3 bundle"; S2 attached as its output version, no data effect
 clean); E7 S6 ingested (`75d0209b`, playroom seed 0, mechanics clean); E7 S7 ingested (`a35487ab`, truck seed 0,
 mechanics clean): all seven seed-0 halves are in; bundles stored EOL-exact from `c8ba01f3` (`kaggle/gn_*/** -text`:
 blobs equal the zip bytes on every clone); E7 S8 ingested (`64fd4494`, kitchen and playroom seed 1, the first note 5
-ingest, every check passing): kitchen and playroom complete (2 of 7); next: E7 S9 on Kaggle (bonsai and counter seed
+ingest, every check passing): kitchen and playroom complete (2 of 7); Amendment 20 note 6 (`9dbbe860`, checker
+`0a639a68`): ingests compare against each scene's latest committed copy; next: E7 S9 on Kaggle (bonsai and counter seed
 1).** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
@@ -5466,11 +5467,15 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   5. Bring back `/kaggle/working/E7_bundle_S9.zip` (arcname `gn7/`).
   - **At S9's ingest:**
     - the code-identity rule (expected raw diff: `test_gn.py` and `check_s26.py`, both exempt);
-    - `bench/check_e7_ingest.py`, with **bonsai and counter extended** under note 5 (against S4 and S5, where they
-      were first committed). Room, drjohnson and truck must be byte-identical to S1, S3 and S7;
+    - `bench/check_e7_ingest.py`, against each scene's reference copy (note 6: the latest committed bundle holding it,
+      S8 for all seven):
+      - **bonsai and counter extended** under note 5;
+      - **kitchen, playroom, room, drjohnson and truck carried**, byte-identical to their S8 copies (kitchen's and
+        playroom's are S8's extended copies);
     - every new blob must equal its zip entry.
-- **Open, blocks S9's ingest (Dace decides; nothing applied):** kitchen and playroom, extended in S8, are *carried* in
-  S9.
+- **Resolved 2026-11-02 (Dace's decision), was open and blocking S9's ingest:** Amendment 20 note 6 (`9dbbe860`) and the
+  checker change (`0a639a68`); see "Amendment 20 note 6 and the reference copy (2026-11-02)" below. The analysis as
+  first recorded: kitchen and playroom, extended in S8, are *carried* in S9.
   - **The checker:** it compares every carried scene against the **earliest** committed bundle holding it (`first`,
     `bench/check_e7_ingest.py:217-222`, read at `:235-236`), i.e. kitchen against S2 and playroom against S6, not
     their extended S8 copies. So an honest S9 bundle fails.
@@ -5488,8 +5493,49 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     2. The checker: `first` becomes the latest earlier bundle per scene, plus a test (a scene extended in one session
        and carried in the next passes; a planted byte change against the extended copy fails).
        `bench/check_e7_ingest.py` is outside the code-identity paths.
-- **Next action: create "E7 S8 bundle", then run E7 S9 on Kaggle; before S9's ingest, Dace's decision on note 6 and
-  the checker change.**
+- **Next action: create "E7 S8 bundle", then run E7 S9 on Kaggle** (note 6 and the checker change are in, so S9's
+  ingest can proceed as above).
+
+### Amendment 20 note 6 and the reference copy (2026-11-02; text and ingest tooling only, no run-path file)
+
+- **Orientation:** the tree was clean and HEAD = `fork/bench/gn-vq` = `f1886f6c`. Dace reported no Kaggle session
+  running; S9 starts after this push.
+- **Commits** (each gated: `.venv`, pipefail, kept log, `GN_OGC_SRC`):
+
+  | Commit | What | Gate log | pytest |
+  |---|---|---|---|
+  | `9dbbe860` | Amendment 20 note 6, alone (dated 2026-11-02, after S8's bundle `64fd4494`, before S9's run) | `gate_20261102_005037_a20_note6.log` | 230 |
+  | `0a639a68` | `bench/check_e7_ingest.py`: the reference copy is the latest committed bundle holding the scene; tests | `gate_20261102_005711_check_e7_ingest_note6.log` | 231 |
+
+- **Note 6:** at an ingest, a scene's reference copy is its meta and CSV in the latest committed E7 bundle that holds
+  it, latest by session number among the bundles before the ingested session.
+  - Notes 3-4's byte identity and note 5's extension check (b, c) compare against it, and note 5's "first bundle" reads
+    "reference copy".
+  - Why: a scene extended in session k is carried afterwards as session k left it. Every copy in the chain passed its
+    own ingest check, so the latest copy carries the whole chain. A scene never extended has every copy identical to
+    its first, so no earlier ingest reads differently.
+  - It changes no verdict rule, scene, process, row or session.
+- **The checker:**
+  - `ref` replaces `first` (`bench/check_e7_ingest.py`, in `check`), so the latest earlier bundle per scene wins.
+  - Each scene's line names its reference session ("carried (notes 3-4; reference copy S8, note 6)"); b.1 now reads
+    "the reference copy is a byte prefix".
+  - It stays standard library only and outside the code-identity paths.
+- **The tests** (`test_e7_ingest_check_note6_reference_copy_is_the_latest_bundle`, plus the existing note 5 test, now
+  sharing the room-extension builder `_e7_room_extension`):
+  - on copies of the real S1-S8 bundles (bytes only, no value read), S8's bundle relabeled as S9 passes, with kitchen
+    and playroom referenced to S8;
+  - kitchen's CSV changed by one byte, or carried stale from S2, fails with exactly `kitchen: byte-identical results
+    CSV: FAIL`;
+  - an S10 extension of room built on a later committed copy (a planted "S5" copy differing in one CSV byte and in
+    `reserve_s`) passes against it, and the same extension built on S1's copy fails b.1 and `c.1 equal: reserve_s`;
+  - the existing planted failures (CSV prefix byte, foreign config, changed `j0_p0`, shrunk sessions, carried byte
+    change) still fail.
+- **The real S2-S8 ingests, re-checked with the new checker**, each against the committed bundles before it: all pass
+  (exit 0, 0 FAIL lines).
+  - Every scene's reference is the previous session's bundle.
+  - S8 shows the same 6 report-only differences as at its ingest (kitchen and playroom: `deadline`, `ogc_preflight`,
+    `note_ii.coverage`).
+- **Run path:** `17161955..HEAD` still lists only `bench/gn/test_gn.py` and `bench/gn/check_s26.py`.
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
@@ -5571,8 +5617,10 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   kaggle/e7_sessions.json`); exit 0 is required before the bundle is committed. It prints check names with pass / FAIL
   / report-only, never a value. Carried scenes: byte identity (notes 3-4). From S8 to S11 (and for any carried process),
   the extended scenes follow note 5; a report-only difference and a new `stopped_17i` are written into the session's
-  HANDOFF entry. The other checks (sha256 and size of the zip, the code-identity rule, the file list, mechanics) are
-  unchanged.
+  HANDOFF entry. **From S9 on (note 6, `9dbbe860`; checker `0a639a68`), both compare against each scene's reference
+  copy, the latest committed bundle holding it, which each scene's line names.** Every new blob must equal its zip
+  entry (from `c8ba01f3`). The other checks (sha256 and size of the zip, the code-identity rule, the file list,
+  mechanics) are unchanged.
 
 ### Paper work (2026-10-26; paper tooling only, no run-path file)
 
