@@ -70,7 +70,8 @@ note 3, `f4cc49b2`); E7 S2 ingested (`d0d6df8a`, kitchen seed 0, mechanics clean
 E7 S4 ingested (`04bdf4b6`, bonsai seed 0, mechanics clean; restore log: room from "E7 S1 bundle", kitchen and
 drjohnson from "E7 S3 bundle"; S2 attached as its output version, no data effect); E7 S5 ingested (`ddef31f4`, counter seed 0, mechanics
 clean); E7 S6 ingested (`75d0209b`, playroom seed 0, mechanics clean); E7 S7 ingested (`a35487ab`, truck seed 0,
-mechanics clean): all seven seed-0 halves are in; next: E7 S8 on Kaggle (kitchen and playroom seed 1; note 5 at its
+mechanics clean): all seven seed-0 halves are in; bundles stored EOL-exact from `c8ba01f3` (`kaggle/gn_*/** -text`:
+blobs equal the zip bytes on every clone); next: E7 S8 on Kaggle (kitchen and playroom seed 1; note 5 at its
 ingest).** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
@@ -4761,8 +4762,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - **S1 done and ingested:** `E7_bundle_S1.zip` (sha256 `cd25fba9c666924520e5cd3c07f808dbebbd208c0b3d732f55f26ef57b37e729`,
   254,046 bytes): its 9 `gn7/` files committed unchanged, data only, in `kaggle/gn_e7/S1/gn7/` (`b592a57e`; gate
   `gate_20261022_200517_e7_s1_bundle.log`, 223 passed). The working copies are byte-identical to the zip; the CSV's
-  writer CRLF is normalized by `autocrlf` in the blob (the blob equals the file with CRs removed), as for every earlier
-  bundle.
+  writer CRLF was LF-normalized by `autocrlf` in the blob until `c8ba01f3`, as for every earlier
+  bundle; zip bytes from `c8ba01f3` on (see "EOL-exact bundle storage").
 - **Code identity (E7's rule):** S1 ran gsplat `f029da7a` (every row and `gn5_env_S1.json`); `17161955..f029da7a` over
   the rule's paths lists nothing.
 - **Contents:** no `.npz`, `.ply`, `.pt` or `.py`, no `ogc-3dgs` tree. OGC text: only the clone URL and the dataset's
@@ -4873,8 +4874,9 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 
 - **S2 done and ingested:** `E7_bundle_S2.zip` (sha256 `ce580220afa1abb9e14f67974a52cad4652c87b04b7423fb638e6dcc200d1a1e`,
   480,434 bytes): its 11 `gn7/` files committed unchanged, data only, in `kaggle/gn_e7/S2/gn7/` (`d0d6df8a`; gate
-  `gate_20261023_140442_e7_s2_bundle.log`, 224 passed). The working copies are byte-identical to the zip; each blob
-  equals its file with CRs removed. It ran with "E7 S1 bundle" attached (Amendment 20 note 3).
+  `gate_20261023_140442_e7_s2_bundle.log`, 224 passed). The working copies are byte-identical to the zip; its
+  CSV blobs were LF-normalized until `c8ba01f3`, zip bytes from it on (see "EOL-exact bundle storage"). It ran with
+  "E7 S1 bundle" attached (Amendment 20 note 3).
 - **Code identity:** S2 ran gsplat `5418fec3` (every row and `gn5_env_S2.json`); `17161955..5418fec3` over the rule's
   paths lists only `bench/gn/test_gn.py` (exempt).
 - **Note 3's verification:** room's carried `gn5_meta_room.json` and `gn5_results_room.csv` are byte-identical to
@@ -4963,8 +4965,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - **S3 done and ingested:** `E7_bundle_S3.zip` (sha256 `b134e19493b107f5b727d893950ac4dc36cce653071ec6b9813debe6c3fda761`,
   697,690 bytes): its 13 `gn7/` files committed unchanged, data only, in `kaggle/gn_e7/S3/gn7/` (`30431fc3`; gate
   `gate_20261024_215632_e7_s3_bundle.log`, 226 passed). Unzipped outside the repository; the working copies are
-  byte-identical to the zip, and each blob equals its file with CRs removed. It ran with "E7 S1 bundle" and "E7 S2
-  bundle" attached (note 4).
+  byte-identical to the zip, and its CSV blobs were LF-normalized until `c8ba01f3`, zip bytes from it on (see
+  "EOL-exact bundle storage"). It ran with "E7 S1 bundle" and "E7 S2 bundle" attached (note 4).
 - **Code identity:** S3 ran gsplat `2334728c` (every row and `gn5_env_S3.json`); `17161955..2334728c` over the rule's
   paths lists only `bench/gn/test_gn.py` (exempt).
 - **Notes 3-4 verification:** room's carried `gn5_meta_room.json` and `gn5_results_room.csv` are byte-identical to
@@ -5058,7 +5060,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - **S4 done and ingested:** `E7_bundle_S4.zip` (sha256 `1646f4acd318936e5303cf05b477d34917f41f781ecf2a8c7f48aabfa867fbd4`,
   930,946 bytes): its 15 `gn7/` files committed unchanged, data only, in `kaggle/gn_e7/S4/gn7/` (`04bdf4b6`; gate
   `gate_20261025_140358_e7_s4_bundle.log`, 226 passed). Unzipped outside the repository; no `.npz`, `.ply`, `.pt` or
-  `.py`, no `ogc-3dgs` tree. The working copies are byte-identical to the zip; each blob equals its file with CRs removed.
+  `.py`, no `ogc-3dgs` tree. The working copies are byte-identical to the zip; its CSV blobs were LF-normalized until
+  `c8ba01f3`, zip bytes from it on (see "EOL-exact bundle storage").
 - **Code identity:** S4 ran gsplat `43751390` (every row and `gn5_env_S4.json`); `17161955..43751390` over the rule's
   paths lists only `bench/gn/test_gn.py` (exempt). Each session runs the branch head at its start, so the commits
   differ by session (S1 `f029da7a`, S2 `5418fec3`, S3 `2334728c`, S4 `43751390`); the rule holds for each.
@@ -5145,8 +5148,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   1,136,984 bytes): its **17** `gn7/` files (7 per-session files and each of five scenes' meta and results; the request
   said 18, a miscount: S4 had 15 with four scenes) committed unchanged, data only, in `kaggle/gn_e7/S5/gn7/`
   (`ddef31f4`; gate `gate_20261025_223730_e7_s5_bundle.log`, 226 passed). Unzipped outside the repository; no `.npz`,
-  `.ply`, `.pt` or `.py`, no `ogc-3dgs` tree. Working copies byte-identical to the zip; each blob equals its file with
-  CRs removed.
+  `.ply`, `.pt` or `.py`, no `ogc-3dgs` tree. Working copies byte-identical to the zip; its CSV blobs were LF-normalized
+  until `c8ba01f3`, zip bytes from it on (see "EOL-exact bundle storage").
 - **Code identity:** S5 ran gsplat `444c79d3` (every row, `gn5_env_S5.json` and the meta's session record), the
   pushed head when it started; the held `ac8d0629` and `9551fa9e` are not ancestors of it. `17161955..444c79d3` over the
   rule's paths lists only `bench/gn/test_gn.py` (exempt).
@@ -5196,7 +5199,7 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   1,342,340 bytes): its 19 `gn7/` files (7 per-session files and six scenes' meta and results) committed unchanged,
   data only, in `kaggle/gn_e7/S6/gn7/` (`75d0209b`; gate `gate_20261026_122807_e7_s6_bundle.log`, 226 passed).
   Unzipped outside the repository; no `.npz`, `.ply`, `.pt` or `.py`, no `ogc-3dgs` tree. Working copies byte-identical
-  to the zip; each blob equals its file with CRs removed.
+  to the zip; its CSV blobs were LF-normalized until `c8ba01f3`, zip bytes from it on (see "EOL-exact bundle storage").
 - **Code identity:** S6 ran gsplat `33a4bdfd` (every row, `gn5_env_S6.json` and the meta's session record), the pushed
   head when it started; `17161955..33a4bdfd` over the rule's paths lists only `bench/gn/test_gn.py` (exempt).
 - **Carried scenes:** `gn5_meta_<scene>.json` and `gn5_results_<scene>.csv` byte-identical (sha256) to the bundle that
@@ -5253,7 +5256,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     `gate_20261101_000527_e7_s7_bundle.log`, 230 passed).
   - **Unzipped outside the repository** (`F:\tmp_e7s7_unzip`): no `.npz`, `.ply`, `.pt` or `.py`, and no OGC file
     (`gn5_ogc_preflight.json` is the preflight record).
-  - **Working copies** are byte-identical to the zip; each blob equals its file with CRs removed.
+  - **Working copies** are byte-identical to the zip; its CSV blobs were LF-normalized until `c8ba01f3`, zip bytes from
+    it on (see "EOL-exact bundle storage").
 - **Ingest checker:** `.venv/Scripts/python.exe -I bench/check_e7_ingest.py F:/tmp_e7s7_unzip/gn7`: **pass**, exit 0.
   - Bonsai, counter, drjohnson, kitchen, playroom and room are carried: CSV and meta byte-identical to the bundles that
     first committed them.
@@ -5313,6 +5317,64 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
       and any new `stopped_17i` written into the S8 entry). Room, drjohnson, bonsai, counter and truck must be
       byte-identical to S1, S3, S4, S5 and S7.
 - **Next action: create "E7 S7 bundle", then run E7 S8 on Kaggle.**
+
+### EOL-exact bundle storage (2026-11-01; data and git attributes only)
+
+- **What was wrong:** the system git config (`C:/Program Files/Git/etc/gitconfig`) sets `core.autocrlf=true`, and no
+  attribute covered `kaggle/`.
+  - So every bundle CSV (CRLF, Python's `csv` writer) was stored LF-normalized; the JSONs (LF) were stored as they
+    are.
+  - In E5-E7, 63 of 240 committed files had blob != zip bytes. All were CSVs, each blob the zip bytes with CRs removed,
+    none with mixed endings.
+  - The working copies in `F:\gsplat` equal the zips because they were copied in from them, and the checks read
+    working copies (`bench/check_e7_ingest.py:67-69`, `:235-236`).
+  - A fresh clone broke that equivalence:
+    - with `autocrlf=false` (as on Linux), CSVs are LF, so S2-S7's ingest checks failed on every carried scene's CSV,
+      note 5's byte prefix failed, and so did `test_gn.py:7610`;
+    - with `autocrlf=true` (a fresh Windows checkout), the JSONs become CRLF, so every carried meta's check failed.
+  - Value parsers were unaffected: `check_s19`-`s25`, and `e7.py` / `check_s26` on CRLF and LF stand-ins, give
+    identical results.
+- **The fix, `c8ba01f3`:**
+  - **What changed:** a repo-root `.gitattributes` with `kaggle/gn_*/** -text`, plus `git add --renormalize
+    kaggle/gn_*/`. 115 blobs now hold their working-tree bytes:
+    - 108 result CSVs: E0 8, E1 2, E2 11, E2b 4, E2c 5, E3p 2, E3q 2, E3r 2, E4p 2, E4q 6, E5 15, E5p 1, E6 20, E7 28;
+    - 7 local JSONs written with CRLF on Windows: `gn_e3r_memory` 1, `gn_e4_note_i` 3, `gn_e4q_note_i` 2,
+      `gn_e6_flowers` 1.
+  - **Gate:** `gate_20261101_130714_eol_exact_bundles.log`, 230 passed.
+- **Checked before committing:**
+  - each new blob equals its working-tree bytes, and with CRs removed equals its old blob exactly (115 of 115; only line
+    endings changed);
+  - all 240 E5-E7 blobs equal their zip entries in `~/Downloads` byte for byte;
+  - none of the 52 changed files outside E5-E7 was rewritten on disk after its one commit (mtime before it). Git's
+    `--follow` shows a copy for `gn_e6_flowers/header_read.json`, but `9f79e414` added it new (flowers' header read,
+    above);
+  - **no `.py` or `.ipynb` blob changed:** the six scripts inside `gn_*` directories (`gn_e4_note_i/cost7.py`,
+    `feas7.py`, `header_read.py`; `gn_e4q_note_i/feas.py`, `header_read.py`; `gn_e6_flowers/header_read.py`) are now
+    `-text`, but their blobs are unchanged.
+- **Acceptance at `c8ba01f3`**, in fresh scratch worktrees (removed afterwards):
+
+  | | `core.autocrlf=false` | `core.autocrlf=true` |
+  |---|---|---|
+  | E5-E7 working files equal to their zip | 240 / 240 | 240 / 240 |
+  | `check_e7_ingest.py`, S2-S7, each against its own zip | all pass | all pass |
+  | `check_s19`-`s25` | identical counts, 0 failures | identical counts, 0 failures |
+  | gate | 229 passed, 1 failed | 228 passed, 2 failed |
+  | `test_e7_ingest_check_note5...` (`:7610`) | passes (failed at `26ff3cfe`) | passes |
+
+  The gate's failures predate this change: the same tests fail in a fresh worktree at `26ff3cfe`.
+  - **`test_e5s_bundle_holds_no_ogc_file_and_no_commit_header`** (both settings) is a worktree artifact. The notebook's
+    step 1b clones the fork when `{SRC_DIR}/.git` is not a directory (`kaggle/build_gn_e5s_preflight.py:162-163`), and
+    in a git worktree `.git` is a file. A real clone has a directory.
+  - **`test_e5_notebooks_are_the_builders_output`** (`autocrlf=true` only) is an EOL artifact outside `kaggle/gn_*/`:
+    a fresh Windows checkout writes the committed notebooks as CRLF, and the builder writes LF.
+  - Gate logs: `gate_20261101_131152_eol_accept_autocrlf_false.log`, `gate_20261101_131446_eol_accept_autocrlf_true.log`.
+- **No PREREG note is needed.** Note 3's "compared as the zip's bytes" (`kaggle/PREREG_GN.md:4447-4449`) is unchanged.
+  Its "(the working copies)" now holds on every clone, since the blobs are the zip bytes.
+- **Run path:** `17161955..HEAD` over the rule's paths still lists only `bench/gn/test_gn.py` and
+  `bench/gn/check_s26.py`. Neither `.gitattributes` nor any file of `c8ba01f3` is under those pathspecs.
+- **From `c8ba01f3` on,** a bundle copied in unchanged is stored byte for byte. At each ingest, check that each new
+  blob equals its zip entry (`git cat-file blob HEAD:<path>` against the zip), which replaces "each blob equals its
+  file with CRs removed".
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
