@@ -7506,6 +7506,135 @@ def test_e7_secondaries_on_constructed_data():
     assert b["bd_rate_interpretable"] and b["bd_rate_percent"] < 0
 
 
+def _e7_room_extension(old, old_csv, session="S10"):
+    """room's seed-1 half run in ``session`` on top of the reference copy (``old`` meta, ``old_csv`` bytes), every
+    change one Amendment 20 note 5 allows: the meta and the CSV with the 22 seed-1 rows appended."""
+    import copy
+    import csv as _csv
+    import io
+
+    import e5
+    import e7_scenes as es
+
+    m = copy.deepcopy(old)
+    m["sessions"].append({**m["sessions"][0], "session": session, "halves": [1]})
+    m["ogc_sources"].append({"session": session, "ogc_source": "url"})
+    m["steps"].append({"name": "fetch_inria", "status": "ok"})
+    m["gn_history"] = [{**m["gn"]["full"], "replaced_in_session": session, "reason": "no cache in this session"}]
+    m["gn"]["full"] = {**m["gn"]["full"], "source": "computed", "time_s": 1.0}
+    m["deadline"] = m["deadline"] + 1.0
+    m["timings_s"]["job"] += 1.0
+    rows = []
+    for p in es.PROCESSES:
+        if p["half"] != 1:
+            continue
+        key = e5.process_key(p["j"], p["seed"])
+        names = es.process_rows("room", p)
+        m["processes"][key] = {"attempts": [{"attempt": 0, "session": session}], "settled": True, "j": p["j"],
+                               "seed": p["seed"], "rows": names}
+        m["runs"][f"{key}_a0"] = {"ok": True}
+        rows += [e5.config_name(p["j"], p["seed"], r) for r in names]
+    m["rows_ok"] = sorted(set(m["rows_ok"]) | set(rows))
+    m["missing_or_failed"] = []
+    m["done"] = True
+    header = next(_csv.reader(io.StringIO(old_csv.decode("utf-8"))))
+    buf = io.StringIO()
+    w = _csv.DictWriter(buf, fieldnames=header)
+    for c in rows:
+        w.writerow({"scene": "room", "config": c, "status": "ok", "session": session})
+    return m, old_csv + buf.getvalue().encode("utf-8")
+
+
+def _load_check_e7_ingest():
+    import importlib.util
+
+    path = os.path.join(os.path.dirname(os.path.dirname(HERE)), "bench", "check_e7_ingest.py")
+    spec = importlib.util.spec_from_file_location("check_e7_ingest", path)
+    ck = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ck)
+    return ck
+
+
+def test_e7_ingest_check_note6_reference_copy_is_the_latest_bundle(tmp_path):
+    """bench/check_e7_ingest.py with Amendment 20 note 6: each scene's reference copy is its copy in the latest
+    committed bundle holding it. On the real committed bundles S1-S8 (read only for their bytes, no value): S8's bundle
+    relabeled as S9 passes, kitchen and playroom carried against S8's extended copies; an S9 stand-in whose kitchen CSV
+    differs from S8's copy fails (one byte changed, or S2's stale seed-0 copy carried). An extension is checked against
+    the reference copy: with room committed in S1 and a later copy in S5 (one CSV byte and one c.1 key differ), an S10
+    extension built on S5's copy passes and the same extension built on S1's copy fails b.1 and c.1."""
+    import shutil
+
+    ck = _load_check_e7_ingest()
+    repo = os.path.dirname(os.path.dirname(HERE))
+    real = os.path.join(repo, "kaggle", "gn_e7")
+    plan = os.path.join(repo, "kaggle", "e7_sessions.json")
+    committed = tmp_path / "committed"
+    for s in ("S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"):
+        shutil.copytree(os.path.join(real, s, "gn7"), committed / s / "gn7")
+
+    def as_s9(name, edit=None):
+        d = tmp_path / name / "gn7"
+        shutil.copytree(committed / "S8" / "gn7", d)
+        (d / "gn5_attempt.json").write_text(json.dumps({"e7": True, "session": "S9", "attempt": 1}))
+        if edit:
+            edit(d)
+        rep = ck.check(str(d), str(committed), plan)
+        return rep, [ln for ln in rep.lines if "FAIL" in ln]
+
+    rep, bad = as_s9("s9_clean")
+    assert not rep.failed, bad
+    for scene in ("kitchen", "playroom"):
+        assert f"  {scene}: carried (notes 3-4; reference copy S8, note 6)" in rep.lines
+    assert "  room: carried (notes 3-4; reference copy S8, note 6)" in rep.lines
+
+    def one_byte(d):
+        p = d / "gn5_results_kitchen.csv"
+        b = p.read_bytes()
+        i = b.rindex(b"2026-")
+        p.write_bytes(b[:i] + b"2027-" + b[i + 5:])
+
+    def stale(d):
+        shutil.copy(committed / "S2" / "gn7" / "gn5_results_kitchen.csv", d / "gn5_results_kitchen.csv")
+
+    for name, edit in (("s9_byte", one_byte), ("s9_stale", stale)):
+        rep, bad = as_s9(name, edit)
+        assert rep.failed and bad == ["  kitchen: byte-identical results CSV: FAIL"], bad
+
+    # an extension against the reference copy: room in S1, and a later committed copy in S5 that differs
+    s1 = os.path.join(real, "S1", "gn7")
+    old_csv = open(os.path.join(s1, "gn5_results_room.csv"), "rb").read()
+    old = json.load(open(os.path.join(s1, "gn5_meta_room.json"), encoding="utf-8"))
+    chain = tmp_path / "chain"
+    shutil.copytree(s1, chain / "S1" / "gn7")
+    (chain / "S5" / "gn7").mkdir(parents=True)
+    (chain / "S5" / "gn7" / "gn5_attempt.json").write_text(json.dumps({"e7": True, "session": "S5", "attempt": 1}))
+    i = old_csv.index(b"2026-")
+    s5_csv = old_csv[:i] + b"2027-" + old_csv[i + 5:]
+    s5 = {**old, "reserve_s": old["reserve_s"] + 1}
+    (chain / "S5" / "gn7" / "gn5_results_room.csv").write_bytes(s5_csv)
+    (chain / "S5" / "gn7" / "gn5_meta_room.json").write_text(json.dumps(s5, indent=2), encoding="utf-8")
+
+    def extend(name, meta, csv_bytes):
+        d = tmp_path / name / "gn7"
+        d.mkdir(parents=True)
+        (d / "gn5_attempt.json").write_text(json.dumps({"e7": True, "session": "S10", "attempt": 1}))
+        m, c = _e7_room_extension(meta, csv_bytes)
+        (d / "gn5_meta_room.json").write_text(json.dumps(m, indent=2), encoding="utf-8")
+        (d / "gn5_results_room.csv").write_bytes(c)
+        rep = ck.check(str(d), str(chain), plan)
+        return rep, [ln for ln in rep.lines if "FAIL" in ln]
+
+    rep, bad = extend("ext_on_latest", s5, s5_csv)
+    assert not rep.failed, bad
+    assert "  room: extended (note 5; reference copy S5, note 6)" in rep.lines
+    assert "  room: b.1 CSV: the reference copy is a byte prefix: pass" in rep.lines
+    assert "  room: b.2 CSV: appended configs are this session's processes': pass" in rep.lines
+    rep, bad = extend("ext_on_first", old, old_csv)
+    assert rep.failed
+    assert "  room: b.1 CSV: the reference copy is a byte prefix: FAIL" in bad
+    assert "  room: c.1 equal: reserve_s: FAIL" in bad
+
+
 def test_e7_ingest_check_note5_extension_and_carried_scenes(tmp_path):
     """bench/check_e7_ingest.py (Amendment 20 notes 3-5) on S1's committed room files: a planted clean extension in
     S10 (room's seed-1 half: CSV rows appended, the meta changed only as note 5 c allows) passes; a byte change in the
@@ -7513,9 +7642,7 @@ def test_e7_ingest_check_note5_extension_and_carried_scenes(tmp_path):
     a carried scene must be byte-identical. The checker imports nothing from the repository."""
     import ast
     import copy
-    import csv as _csv
     import importlib.util
-    import io
     import shutil
 
     repo = os.path.dirname(os.path.dirname(HERE))
@@ -7541,36 +7668,6 @@ def test_e7_ingest_check_note5_extension_and_carried_scenes(tmp_path):
     old_csv = open(os.path.join(s1, "gn5_results_room.csv"), "rb").read()
     old = json.load(open(os.path.join(s1, "gn5_meta_room.json"), encoding="utf-8"))
 
-    def extension():
-        """room's seed-1 half run in S10, every change one note 5 allows."""
-        m = copy.deepcopy(old)
-        m["sessions"].append({**m["sessions"][0], "session": "S10", "halves": [1]})
-        m["ogc_sources"].append({"session": "S10", "ogc_source": "url"})
-        m["steps"].append({"name": "fetch_inria", "status": "ok"})
-        m["gn_history"] = [{**m["gn"]["full"], "replaced_in_session": "S10", "reason": "no cache in this session"}]
-        m["gn"]["full"] = {**m["gn"]["full"], "source": "computed", "time_s": 1.0}
-        m["deadline"] = m["deadline"] + 1.0
-        m["timings_s"]["job"] += 1.0
-        rows = []
-        for p in es.PROCESSES:
-            if p["half"] != 1:
-                continue
-            key = e5.process_key(p["j"], p["seed"])
-            names = es.process_rows("room", p)
-            m["processes"][key] = {"attempts": [{"attempt": 0, "session": "S10"}], "settled": True, "j": p["j"],
-                                   "seed": p["seed"], "rows": names}
-            m["runs"][f"{key}_a0"] = {"ok": True}
-            rows += [e5.config_name(p["j"], p["seed"], r) for r in names]
-        m["rows_ok"] = sorted(set(m["rows_ok"]) | set(rows))
-        m["missing_or_failed"] = []
-        m["done"] = True
-        header = next(_csv.reader(io.StringIO(old_csv.decode("utf-8"))))
-        buf = io.StringIO()
-        w = _csv.DictWriter(buf, fieldnames=header)
-        for c in rows:
-            w.writerow({"scene": "room", "config": c, "status": "ok", "session": "S10"})
-        return m, old_csv + buf.getvalue().encode("utf-8")
-
     def run(meta, csv_bytes, name):
         d = tmp_path / name / "gn7"
         d.mkdir(parents=True)
@@ -7580,7 +7677,7 @@ def test_e7_ingest_check_note5_extension_and_carried_scenes(tmp_path):
         rep = ck.check(str(d), str(committed), plan)
         return rep.failed, [ln for ln in rep.lines if ln.endswith("FAIL") or "FAIL (" in ln]
 
-    m, c = extension()
+    m, c = _e7_room_extension(old, old_csv)
     failed, bad = run(m, c, "clean")
     assert not failed, bad
     # a byte change in the CSV prefix

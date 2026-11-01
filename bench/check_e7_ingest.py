@@ -1,16 +1,16 @@
-"""E7's ingest check of carried scenes (kaggle/PREREG_GN.md Amendment 20 notes 3-5; note 5 is `200c6bcf`), one
-session's bundle against the committed ones.
+"""E7's ingest check of carried scenes (kaggle/PREREG_GN.md Amendment 20 notes 3-6; note 5 is `200c6bcf`, note 6
+`9dbbe860`), one session's bundle against the committed ones.
 
     python bench/check_e7_ingest.py <new gn7/ directory> [--committed kaggle/gn_e7] [--plan kaggle/e7_sessions.json]
 
-For each scene in the new bundle:
+Each scene's **reference copy** (note 6) is its ``gn5_results_<scene>.csv`` and ``gn5_meta_<scene>.json`` in the latest
+committed bundle that holds it, among the sessions before the new one. For each scene in the new bundle:
 
 - **new:** no committed bundle holds it (its first session); nothing to compare.
-- **carried** (notes 3-4): the session did not run it (its meta records no session entry of this session). Its
-  ``gn5_results_<scene>.csv`` and ``gn5_meta_<scene>.json`` must be byte-identical to the copies in the bundle that first
-  committed it.
+- **carried** (notes 3-4): the session did not run it (its meta records no session entry of this session). Its two
+  files must be byte-identical to the reference copy.
 - **extended** (note 5): the session ran it (a seed-1 half, or a process of it planned for an earlier session, note 2
-  c.7). The first bundle's CSV is a byte prefix of the new one, every appended row is one of this session's processes'
+  c.7). The reference copy's CSV is a byte prefix of the new one, every appended row is one of this session's processes'
   configs with this session's name, no (scene, config) twice; the meta as note 5 c classifies every key (exactly equal,
   grow only, set changes, scalar transitions, partly compared, report only). A key note 5 does not classify fails.
 
@@ -124,7 +124,7 @@ def check_extended(rep, scene, session, old_csv, new_csv, old, new, halves_ok):
     rep.check(scene, "processes run this session belong to halves planned by this session", not bad_half,
               f"{bad_half}")
     # b: the results file
-    rep.check(scene, "b.1 CSV: the first bundle's file is a byte prefix", new_csv.startswith(old_csv))
+    rep.check(scene, "b.1 CSV: the reference copy is a byte prefix", new_csv.startswith(old_csv))
     if new_csv.startswith(old_csv):
         old_rows, new_rows = csv_rows(old_csv), csv_rows(new_csv)
         appended = new_rows[len(old_rows):]
@@ -214,33 +214,35 @@ def check(new_dir, committed_root, plan_path):
         raise SystemExit(f"{new_dir} is not an E7 bundle (gn5_attempt.json)")
     halves = planned_halves(read_json(plan_path), session)
     earlier = [(s, d) for s, d in committed_dirs(committed_root) if session_number(s) < session_number(session)]
-    first = {}
+    # note 6: each scene's reference copy is the latest committed bundle holding it (earlier is in session order)
+    ref = {}
     for s, d in earlier:
         for n in os.listdir(d):
             m = re.fullmatch(r"gn5_meta_(.+)\.json", n)
-            if m and m.group(1) not in first:
-                first[m.group(1)] = d
+            if m:
+                ref[m.group(1)] = (s, d)
     scenes = sorted(re.fullmatch(r"gn5_meta_(.+)\.json", n).group(1) for n in os.listdir(new_dir)
                     if re.fullmatch(r"gn5_meta_(.+)\.json", n))
     rep.lines.append(f"{session}: {len(scenes)} scenes; committed sessions before it: {[s for s, _ in earlier]}")
-    for scene in sorted(first):
+    for scene in sorted(ref):
         rep.check(scene, "present in the new bundle (cumulative)", scene in scenes)
     for scene in scenes:
         new_meta_b = read_bytes(os.path.join(new_dir, f"gn5_meta_{scene}.json"))
         new_csv = read_bytes(os.path.join(new_dir, f"gn5_results_{scene}.csv"))
         new = json.loads(new_meta_b.decode("utf-8"))
-        if scene not in first:
+        if scene not in ref:
             rep.note(scene, "new in this session: nothing to compare")
             continue
-        old_meta_b = read_bytes(os.path.join(first[scene], f"gn5_meta_{scene}.json"))
-        old_csv = read_bytes(os.path.join(first[scene], f"gn5_results_{scene}.csv"))
+        ref_session, ref_dir = ref[scene]
+        old_meta_b = read_bytes(os.path.join(ref_dir, f"gn5_meta_{scene}.json"))
+        old_csv = read_bytes(os.path.join(ref_dir, f"gn5_results_{scene}.csv"))
         ran_here = any(s.get("session") == session for s in new.get("sessions") or [])
         if not ran_here:
-            rep.note(scene, "carried (notes 3-4)")
+            rep.note(scene, f"carried (notes 3-4; reference copy {ref_session}, note 6)")
             rep.check(scene, "byte-identical results CSV", new_csv == old_csv)
             rep.check(scene, "byte-identical meta", new_meta_b == old_meta_b)
         else:
-            rep.note(scene, "extended (note 5)")
+            rep.note(scene, f"extended (note 5; reference copy {ref_session}, note 6)")
             check_extended(rep, scene, session, old_csv, new_csv, json.loads(old_meta_b.decode("utf-8")), new,
                            halves.get(scene, set()))
     return rep
