@@ -7560,8 +7560,10 @@ def test_e7_ingest_check_note6_reference_copy_is_the_latest_bundle(tmp_path):
     committed bundle holding it. On the real committed bundles S1-S8 (read only for their bytes, no value): S8's bundle
     relabeled as S9 passes, kitchen and playroom carried against S8's extended copies; an S9 stand-in whose kitchen CSV
     differs from S8's copy fails (one byte changed, or S2's stale seed-0 copy carried). An extension is checked against
-    the reference copy: with room committed in S1 and a later copy in S5 (one CSV byte and one c.1 key differ), an S10
-    extension built on S5's copy passes and the same extension built on S1's copy fails b.1 and c.1."""
+    the reference copy: with room's real S1 copy and a planted later copy ("S5", synthetic: one CSV byte and one c.1
+    key differ; no real scene has two different committed copies before an extension, room being byte-identical in
+    S1-S8), an S10 extension built on the planted copy passes and the same extension built on S1's copy fails b.1 and
+    c.1."""
     import shutil
 
     ck = _load_check_e7_ingest()
@@ -7600,7 +7602,15 @@ def test_e7_ingest_check_note6_reference_copy_is_the_latest_bundle(tmp_path):
         rep, bad = as_s9(name, edit)
         assert rep.failed and bad == ["  kitchen: byte-identical results CSV: FAIL"], bad
 
-    # an extension against the reference copy: room in S1, and a later committed copy in S5 that differs
+    # an extension against the reference copy, with a planted later copy: no real scene has two different committed
+    # copies before an extension (room is byte-identical in S1-S8), so the test commits room's S1 copy and a synthetic
+    # "S5" copy that differs in one CSV byte (a timestamp) and in reserve_s
+    for name in ("gn5_results_room.csv", "gn5_meta_room.json"):
+        first, latest = (os.path.join(real, s, "gn7", name) for s in ("S1", "S8"))
+        with open(first, "rb") as f1, open(latest, "rb") as f8:
+            assert f1.read() == f8.read(), (
+                f"room's {name} differs between the committed S1 and S8 bundles: the real chain now has two different "
+                "copies, so the planted copy below is no longer the only way to tell the first copy from the latest")
     s1 = os.path.join(real, "S1", "gn7")
     old_csv = open(os.path.join(s1, "gn5_results_room.csv"), "rb").read()
     old = json.load(open(os.path.join(s1, "gn5_meta_room.json"), encoding="utf-8"))
