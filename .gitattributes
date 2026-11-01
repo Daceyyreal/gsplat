@@ -1,3 +1,5 @@
 # Kaggle bundles and local measurement outputs: stored byte for byte (no EOL conversion), so every clone holds
 # the zip bytes that Amendment 20 notes 3-5 compare (PREREG_GN.md; HANDOFF "EOL-exact bundle storage")
 kaggle/gn_*/** -text
+# the Kaggle notebooks: LF on every checkout, as kaggle/build_gn_*.py writes them (test_gn compares them byte for byte)
+kaggle/*.ipynb text eol=lf

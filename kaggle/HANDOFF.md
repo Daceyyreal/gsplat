@@ -5366,7 +5366,9 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     step 1b clones the fork when `{SRC_DIR}/.git` is not a directory (`kaggle/build_gn_e5s_preflight.py:162-163`), and
     in a git worktree `.git` is a file. A real clone has a directory.
   - **`test_e5_notebooks_are_the_builders_output`** (`autocrlf=true` only) is an EOL artifact outside `kaggle/gn_*/`:
-    a fresh Windows checkout writes the committed notebooks as CRLF, and the builder writes LF.
+    a fresh Windows checkout writes the committed notebooks as CRLF, and the builder writes LF. **Fixed** by
+    `kaggle/*.ipynb text eol=lf` in the root `.gitattributes` (the commit after `0581a17d`; no notebook blob changed):
+    in a fresh `autocrlf=true` worktree all 32 notebooks check out LF and the test passes.
   - Gate logs: `gate_20261101_131152_eol_accept_autocrlf_false.log`, `gate_20261101_131446_eol_accept_autocrlf_true.log`.
 - **No PREREG note is needed.** Note 3's "compared as the zip's bytes" (`kaggle/PREREG_GN.md:4447-4449`) is unchanged.
   Its "(the working copies)" now holds on every clone, since the blobs are the zip bytes.
