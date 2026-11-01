@@ -4553,3 +4553,29 @@ into S10, is byte-identical. The only difference first found, `c3dgs_build.path`
 output directory; on Kaggle it is one constant path, equal in all 21 metas of S1-S6), is why `path` is report only. The
 dry run cannot exercise the INRIA fetch record, a real GN cache, a cuda -> cpu retry, a deadline cut, a 17 i stop, a
 carried process or a `derived` OGC source.
+
+### Amendment 20 note 6 (2026-11-02, after E7 S8's bundle (`64fd4494`) and before E7 S9's run): the reference copy of a carried or extended scene
+
+This note changes which committed copy notes 3, 4 and 5 compare against. It changes no verdict rule, scene, process,
+row, arm, guard, primary, test, margin, outcome or session.
+
+**The reference copy.** At an ingest, the reference copy of a scene is its `gn5_meta_<scene>.json` and
+`gn5_results_<scene>.csv` in the latest committed E7 bundle that holds it, latest by session number among the bundles
+of sessions before the ingested one.
+- Notes 3 and 4's byte-identity check of a carried scene compares against the reference copy, in place of "the copies
+  in the bundle that first committed them".
+- Note 5's extension check (b, c) of an extended scene compares against the reference copy. Wherever note 5 says "the
+  first bundle" or "the first bundle's", read "the reference copy".
+- Everything else in notes 3-5 is unchanged: the comparison is of the zip's bytes, the scope of note 5 (a scene
+  extended in the ingested session) and every class of c.
+
+**Why.** A scene extended in session k (its seed-1 half, or a carried process) is carried in every later session, and
+its earliest copy, from its seed-0 half, is no longer what later bundles carry: kitchen and playroom, extended in S8,
+are carried from S9 on as S8 left them. Compared against the first bundle, an honest later bundle fails (shown on S8's
+bundle relabeled as S9: kitchen's and playroom's CSV and meta checks fail). Every copy in a scene's chain passed its own
+ingest check (byte identity, or note 5 for an extension), so the latest copy carries the whole verification chain. For
+a scene not yet extended, every committed copy is byte-identical to the first, so the reference copy is the first
+bundle's and no earlier ingest (S2-S8) reads differently.
+
+**Code.** `bench/check_e7_ingest.py` takes, per scene, the earliest bundle (`:217-222` at `8c1d6d16`); it takes the
+latest from the commit after this note, with a test. The checker is outside the code-identity paths.
