@@ -73,8 +73,8 @@ clean); E7 S6 ingested (`75d0209b`, playroom seed 0, mechanics clean); E7 S7 ing
 mechanics clean): all seven seed-0 halves are in; bundles stored EOL-exact from `c8ba01f3` (`kaggle/gn_*/** -text`:
 blobs equal the zip bytes on every clone); E7 S8 ingested (`64fd4494`, kitchen and playroom seed 1, the first note 5
 ingest, every check passing): kitchen and playroom complete (2 of 7); Amendment 20 note 6 (`9dbbe860`, checker
-`0a639a68`): ingests compare against each scene's latest committed copy; next: E7 S9 on Kaggle (bonsai and counter seed
-1).** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
+`0a639a68`): ingests compare against each scene's latest committed copy; E7 S9 ingested (`505c2305`, bonsai and counter
+seed 1, every check passing): 4 of 7 scenes complete; next: E7 S10 on Kaggle (room and truck seed 1).** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
 `4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b); F1's shared y-axis, round ticks and shaded
@@ -5494,7 +5494,7 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
        and carried in the next passes; a planted byte change against the extended copy fails).
        `bench/check_e7_ingest.py` is outside the code-identity paths.
 - **Next action: create "E7 S8 bundle", then run E7 S9 on Kaggle** (note 6 and the checker change are in, so S9's
-  ingest can proceed as above).
+  ingest can proceed as above). **Done:** see "E7 S9 (2026-11-02)".
 
 ### Amendment 20 note 6 and the reference copy (2026-11-02; text and ingest tooling only, no run-path file)
 
@@ -5536,6 +5536,87 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   - S8 shows the same 6 report-only differences as at its ingest (kitchen and playroom: `deadline`, `ogc_preflight`,
     `note_ii.coverage`).
 - **Run path:** `17161955..HEAD` still lists only `bench/gn/test_gn.py` and `bench/gn/check_s26.py`.
+- **A later wording fix, `25c35cc1`** (test only; gate `gate_20261102_032652_test_note6_wording.log`, 231 passed):
+  the test's comment and docstring now say its later room copy ("S5") is planted and synthetic, since no real scene has
+  two different committed copies before an extension, and it asserts that premise on the committed S1 and S8 bundles.
+  What the test checks is unchanged. Committed while S9 ran; held, and pushed before S9's ingest.
+
+### E7 S9 (2026-11-02)
+
+- **Orientation:** the tree was clean; HEAD `25c35cc1`, one commit ahead of `fork/bench/gn-vq` = `425dad52` (the held
+  wording fix). Dace reported no Kaggle session running, so `25c35cc1` was pushed first (`425dad52..25c35cc1`).
+- **S9 done and ingested:**
+  - **The bundle:** `E7_bundle_S9.zip` (sha256 `760a706278c32b1aaf471dc15500cb6d71dbcb010848642842c5d8a4f664d5d5`,
+    2,009,552 bytes). Its 22 `gn7/` files are committed unchanged, data only, in `kaggle/gn_e7/S9/gn7/` (`505c2305`; gate
+    `gate_20261102_153739_e7_s9_bundle.log`, 231 passed).
+  - **Unzipped outside the repository** (`F:\tmp_e7s9_unzip`): no `.npz`, `.ply`, `.pt` or `.py`, no OGC file.
+  - **All 22 new blobs** equal their zip entries byte for byte.
+- **Ingest checker (`bench/check_e7_ingest.py`): pass, exit 0.** The first ingest under note 6; every scene's reference
+  copy is **S8**, the latest committed bundle holding it.
+  - **Carried, byte-identical:** drjohnson, kitchen, playroom, room, truck (kitchen and playroom as S8 extended them).
+  - **Extended** (note 5): bonsai and counter. Every check passes: the session check, b.1-b.3 and c, c.1-c.5, as listed
+    in "E7 S8". S8's copies of both scenes are byte-identical to S4's and S5's, where they were first committed.
+  - **Report-only (c.6),** identical for both scenes and in the same fields as S8:
+    - `deadline` **differs**: each session's own;
+    - `ogc_preflight` **differs**, only in its three `time_s` fields;
+    - `note_ii.coverage` **differs**: the 8 statistics under `all` (`max`, `p10`, `p25`, `p50`, `p75`, `p90`,
+      `low_tercile.rank_max`, `low_tercile.trace_share`), recomputed by S9's own harness pass;
+    - equal: `c3dgs_build.path`, `data_deleted`, `ogc_source`, `note_ii.geometry`, `note_ii.orbit_reference`.
+  - No new `stopped_17i`.
+- **Dace's reading, confirmed independently of the checker:**
+  - **CSVs:** S8's copy is an exact byte prefix: bonsai 293,989 of 434,294 bytes, counter 287,727 of 424,950. 22 rows
+    appended, exactly the 22 p1 configs S8 listed as missing, all session S9, all `ok`, no duplicate config.
+  - **Metas:** the p0 records are equal; `j0_p1`, `j-1_p1` and `j+1_p1` each settled on attempt 0 on `cuda`, phase
+    `done`, OOM false; `sessions` are [S4, S9] and [S5, S9]; the changed keys are the same 16 as S8's.
+  - **Completeness:** `rows_ok` 67 and `missing_or_failed` empty for both; `done` false -> true.
+- **Code identity:** S9 ran gsplat `425dad52` (every appended row, `gn5_env_S9.json` and the meta's session record).
+  - It was the pushed head when S9 started: pushed 2026-11-02 at about 01:06 +0600, and S9 started at 2026-11-01T21:28:16
+    (03:28 +0600). `25c35cc1` was committed two minutes later and held.
+  - `17161955..425dad52` over the rule's paths lists only `bench/gn/test_gn.py` and `bench/gn/check_s26.py`, both
+    exempt.
+- **Mechanics clean (seed-1 halves):**
+  - **Rows:** `frozen_changed` empty on all 14 fine-tuned p1 rows of each scene; labels survived; no C3DGS evaluation
+    error.
+  - **No deviation, deadline cut, unsettled process, failed or skipped step;** both job logs exit 0, not skipped by the
+    cutoff.
+  - **OGC preflight:** url and dataset both ok at `49ccae72` / `9feebced`; `first_ok` url.
+  - **C3DGS build** ok at `2a234af5`, its 7 deviations identical to S1-S8's.
+  - **Image string and wheel key** (`33734f894b0a-95f8de51-torch2.11.0_cu128-sm7.5`, restored) identical to S1-S8.
+- **Timing** (all three figures below note 1's low end, which is an estimate):
+  - **Bonsai h1** 10,380.2 s against note 1's 12,231-18,760 s (0.849 of the low end, 0.553 of the high). Processes
+    `j0_p1` / `j-1_p1` / `j+1_p1` 5,949.1 / 1,573.9 / 1,517.2 s (note 1's high 12,030 / 3,015 / 3,015). GPU peaks
+    9,064,557,056-9,206,990,848 bytes allocated.
+  - **Counter h1** 11,175.2 s against 11,348-17,493 s (0.985 / 0.639). Processes 6,662.0 / 1,695.1 / 1,643.8 s (note 1's
+    high 11,295 / 2,757 / 2,757). GPU peaks 8,046,541,824-8,186,921,984 bytes.
+  - **Setup** (preflight 29.9, restore 8.3, install 127.8, C3DGS build 215.7) 381.8 s.
+  - **Session** 21,937.2 s = **6.09 h**, 0.914 of note 1's low end and 0.598 of its high (6.67-10.19 h).
+- **Not read:** `per_scene_parts`; no BD, P1, Delta or arm comparison (20 f).
+- **Scenes complete (all six processes): kitchen, playroom, bonsai, counter, 4 of 7.** Room and truck follow in S10,
+  drjohnson in S11.
+- **E7 S10 on Kaggle:**
+  1. Import `https://raw.githubusercontent.com/Daceyyreal/gsplat/505c230596955b8047d1a327a67678865ef62d0c/kaggle/gn_e7_bench_S10.ipynb`
+     (pinned at the S9 bundle commit; unchanged since `318d50cc`, sha256
+     `7219ad092e67ad0c88344a0770a13f78a0e445dba81fc15140f846cd2d7e2fdb`, LF); title **"E7 OGC FT-dissection S10"**.
+  2. Attach exactly eleven inputs, datasets and the pilot only:
+     - "E5p OGC dissection pilot" attempt 2's version, pinned (the wheel);
+     - the private dataset "E5p OGC source 49ccae72";
+     - the private datasets "E7 S1 bundle" to "E7 S9 bundle" ("E7 S9 bundle" created from
+       `~/Downloads/E7_bundle_S9.zip`, 2,009,552 bytes, sha256 `760a7062...`).
+
+     **No "E7 OGC FT-dissection S#" output version.**
+  3. Accelerator **GPU T4 x2**, Internet **on**. Save & Run All; the first output must be the `OGC PREFLIGHT` lines,
+     both ok.
+  4. **What S10 runs:** room's seed-1 half (`j0_p1`, `j-1_p1`, `j+1_p1`), then truck's, in one lane. Note 1: truck starts
+     at 12,571-19,937 s, the lane ends at 20,627-33,967 s, 5,213 s spare at the high end. **Quota needed 9.55 h** (note
+     1's 5.85-9.55 session hours).
+  5. Bring back `/kaggle/working/E7_bundle_S10.zip` (arcname `gn7/`).
+  - **At S10's ingest:**
+    - the code-identity rule (expected raw diff: `test_gn.py` and `check_s26.py`, both exempt);
+    - `bench/check_e7_ingest.py`, against each scene's reference copy, which is **S9** for all seven under note 6:
+      **room and truck extended** under note 5 (room was first committed in S1, truck in S7; their S9 copies are
+      byte-identical to those), and bonsai, counter, drjohnson, kitchen and playroom carried byte-identical to S9;
+    - every new blob must equal its zip entry.
+- **Next action: create "E7 S9 bundle", then run E7 S10 on Kaggle.**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
