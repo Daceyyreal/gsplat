@@ -75,8 +75,10 @@ blobs equal the zip bytes on every clone); E7 S8 ingested (`64fd4494`, kitchen a
 ingest, every check passing): kitchen and playroom complete (2 of 7); Amendment 20 note 6 (`9dbbe860`, checker
 `0a639a68`): ingests compare against each scene's latest committed copy; E7 S9 ingested (`505c2305`, bonsai and counter
 seed 1, every check passing): 4 of 7 scenes complete; E7 S10 ingested (`ccb7a4f9`, room and truck seed 1, every check
-passing; an input departure from 20 l, no data effect): 6 of 7 scenes complete; next: E7 S11 on Kaggle (drjohnson seed
-1).** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
+passing; an input departure from 20 l, no data effect): 6 of 7 scenes complete; E7 S11 ingested (`32758a0e`, drjohnson
+seed 1, every check passing; a new Kaggle image, so drjohnson's j = 0 pair spans images, Note 2 C6): all 7 scenes
+complete, all eleven sessions in; **E7 still blind: nothing runs `e7.py` or `check_s26.py` until Dace lifts the rule**
+(see "E7 S11"); next: Dace's decision, then the write-up.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
 `4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b); F1's shared y-axis, round ticks and shaded
@@ -5738,6 +5740,208 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     - then "After S11, the E7 write-up", in "E7 write-up skeleton and check_s26".
 - **Next action: create "E7 S10 bundle", then run E7 S11 on Kaggle with all ten bundles attached from the start.**
 
+### E7 S11 (2026-11-03): the last session; all seven scenes complete; the blind rule still in force
+
+- **Orientation:** the tree was clean and HEAD = `fork/bench/gn-vq` = `82725251`. Dace reported no Kaggle session
+  running.
+- **THE BLIND RULE IS STILL IN FORCE, pending Dace's decision.** No `per_scene_parts`, BD, P1, Delta, arm value,
+  `d_s` / `SD_pool` or verdict has been read, printed or written, and neither `e7.py` nor `check_s26.py` has run on the
+  real root.
+  - **Nothing in the tooling enforces this any more.** From `32758a0e` all eleven `S#/gn7` folders are tracked, so
+    `check_s26.py`'s refusal (`refusal`, `bench/gn/check_s26.py:87-98`) no longer fires. `e7.py` never had one. Until Dace
+    decides, do not run either on `kaggle/gn_e7`, not even with `--print`.
+  - **The gate stays blind:** with eleven folders present, the test skips its real-root calls
+    (`bench/gn/test_gn.py:7780`), with `load` and `tool` patched to fail in any case (`:7778-7779`), and the refusal is
+    still exercised on a ten-folder fake root (`:7782-7786`). The other tests that touch `kaggle/gn_e7` copy bytes or use
+    stand-ins.
+  - **The log tail was read with digits masked;** S11's other reads took named mechanics fields only.
+- **S11 done and ingested:**
+  - **The bundle:** `E7_bundle_S11.zip` (sha256 `42c068bc5a5c8fc500025416a5ee76101ca6f6d07f17c7ad3c24754b38b4a850`,
+    2,354,475 bytes). Its 21 `gn7/` files are committed unchanged, data only, in `kaggle/gn_e7/S11/gn7/` (`32758a0e`; gate
+    `gate_20261103_191159_e7_s11_bundle.log`, 231 passed).
+  - **Unzipped outside the repository** (`F:\tmp_e7s11_unzip`): only `gn7/*.json` and `gn7/*.csv`.
+  - **All 21 new blobs** equal their zip entries byte for byte (checked in the index and at the commit).
+- **Ingest checker (`bench/check_e7_ingest.py`): pass, exit 0, no FAIL line.** Every scene's reference copy is **S10**
+  (note 6).
+  - **Carried, byte-identical:** bonsai, counter, kitchen, playroom, room, truck.
+  - **Extended** (note 5): drjohnson. Every check passes: the session check, b.1-b.3 and c, c.1-c.5, as listed in "E7
+    S8". S10's copy is byte-identical to S3's, where it was first committed.
+  - **Report-only (c.6),** in the same fields as S8-S10:
+    - `deadline` **differs**: the session's own;
+    - `ogc_preflight` **differs**, only in its three `time_s` fields;
+    - `note_ii.coverage` **differs** in the 8 statistics under `all`, recomputed by S11's own harness pass;
+    - equal: `c3dgs_build.path`, `data_deleted`, `ogc_source`, `note_ii.geometry`, `note_ii.orbit_reference`.
+  - No new `stopped_17i`.
+  - **The checker does not compare images:** `image` is in no class of note 5 c, and a session's `env` sits inside the
+    grow-only `sessions`. So exit 0 says nothing about the change below.
+- **Dace's reading, confirmed independently of the checker:**
+  - **CSV:** S10's copy is an exact byte prefix, 289,733 of 427,851 bytes. 22 rows appended, exactly the 22 p1 configs
+    S10 listed as missing, all session S11, all `ok`, no duplicate config.
+  - **Meta:** the p0 records are equal; `j0_p1`, `j-1_p1` and `j+1_p1` each settled on attempt 0 on `cpu`, phase `done`,
+    OOM false; `sessions` are [S3, S11]; the changed keys are the same 16 as S8-S10's.
+  - **Completeness:** `rows_ok` 67 and `missing_or_failed` empty; `done` false -> true; job log exit 0.
+- **Code identity:** S11 ran gsplat `82725251` (every appended row, `gn5_env_S11.json` and the meta's session record).
+  - It was the pushed head when S11 started: pushed 2026-11-03 at 00:42:52 +0600 (18:42:52 UTC on 11-02). The notebook
+    started at about 18:46:40 UTC (the meta's `deadline` less `DEADLINE_S`, 11.5 h; the job's start 20:01:13 less
+    setup agrees to about 10 s). Nothing was pushed after it until this ingest.
+  - `17161955..82725251` over the rule's paths lists only `bench/gn/test_gn.py` and `bench/gn/check_s26.py`, both
+    exempt. `7fb734a7..82725251` is S10's data and this file.
+- **Mechanics clean (seed-1 half):**
+  - **Rows:** `frozen_changed` empty on all 14 fine-tuned p1 rows; labels survived; no C3DGS evaluation error.
+  - **No deviation, deadline cut, unsettled process, failed or skipped step** (130 new steps, none failed); the job log
+    exit 0, not skipped by the cutoff.
+  - **OGC preflight:** url and dataset both ok at `49ccae72` / `9feebced`; `first_ok` url.
+  - **C3DGS build** ok at `2a234af5`, with `<cstdint>`'s retry as before; 7 deviations, differing from S10's only in the
+    torch / CUDA line.
+- **Timing:**
+  - **Drjohnson h1** 13,440.3 s against note 1's 10,855-20,028 s (1.238 of the low end, 0.671 of the high). Processes
+    `j0_p1` / `j-1_p1` / `j+1_p1` 7,542.2 / 2,010.9 / 1,934.4 s (note 1's high 13,713 / 2,739 / 2,739). GPU peak
+    4,690,517,504 bytes allocated, 12.5-13.2 GB host RSS.
+  - **Setup** (preflight 48.5, restore 22.2, install 4,166.9 with the wheel build's 4,034.8 inside it, C3DGS build 226.7)
+    4,464.3 s, against note 1's assumed 420 s; a rebuild is the case Note 4 and note 1 name (`kaggle/PREREG_GN.md:3388-3391`,
+    `:4345`).
+  - **Session** 17,904.6 s = **4.97 h**, 1.589 of note 1's low end and 0.876 of its high (3.13-5.68 h).
+- **Not verified:** S11's own `discover` dump and restore lines were not given at this ingest, and the bundle holds no
+  input list. That all ten bundles were attached rests on Dace's account. The checker confirms the data: every scene is
+  byte-identical to, or a note 5 extension of, its S10 copy.
+- **The image change (S1-S10 -> S11).** Every S1-S10 row has one image string, every S11 row the other:
+  `py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04` ->
+  `py3.13.16|torch2.11.0+cu130|cuda13.0|cudnn92700|driver580.178.04`.
+
+  | Field | S10 | S11 |
+  |---|---|---|
+  | Python | 3.13.15 | 3.13.16 |
+  | torch | 2.11.0+cu128 | 2.11.0+cu130 |
+  | torch's CUDA | 12.8 | 13.0 |
+  | cuDNN | 91900 | 92700 |
+  | nvcc | `Build cuda_12.8.r12.8/compiler.35583870_0` | `Build cuda_13.0.r13.0/compiler.36424714_0` |
+  | `cupy-cuda12x` | 14.0.1 | absent |
+  | gsplat wheel key | `33734f894b0a-95f8de51-torch2.11.0_cu128-sm7.5` | `33734f894b0a-95f8de51-torch2.11.0_cu130-sm7.5` |
+  | `wheel_restored` | true | false (built, 4,034.8 s) |
+  | torchvision | 0.26.0+cu128 | 0.26.0+cu130 |
+  | torch_scatter | 2.1.2+pt211cu128 (wheel 10.9 MB) | 2.1.2+pt211cu130 (wheel 8.3 MB) |
+  | `diff_gaussian_rasterization` wheel | 697,538 B, `de8a9d04...` | 575,096 B, `5d576f49...` |
+  | `weighted_distance` wheel | 3,079,454 B, `ad026429...` | 3,080,733 B, `26900d28...` |
+
+  - **Unchanged:** the driver 580.178.04; two Tesla T4s (capability 7.5, 15,636,037,632 B); gsplat 1.6.0 (version
+    string); torchpq and PLAS absent; torchmetrics 1.8.2; numpy 2.1.3; pycolmap 4.2.1; remotezip 0.12.6.
+  - **Host RAM:** 33,658,159,104 B total, 159,744 B under Note 2 C11's figure. C11 changes nothing with one scene in one
+    lane.
+- **The image rules: what PREREG says** (quotes from `kaggle/PREREG_GN.md`). `image_key` and `spans_images` are code
+  names and appear nowhere in PREREG; the rule is Amendment 17 Note 2 C6, which E7 inherits (20 i).
+  - `:3183-3185` (C6): "Each process records the Kaggle image it ran on (Python, torch, CUDA, cuDNN, driver). Any BD curve
+    (one process per point) or j = 0 pair (two processes) whose processes ran on different images is reported as spanning
+    images; nothing else changes (18 b)."
+  - `:2783-2785` (18 b): "**No primary compares across images:** E5's P1 and P2 and their `SE_noise` compare rows inside
+    one forked process (Amendment 17 b, d). Every session records its image (`*_env.json`), and any comparison across
+    sessions or with E4p or E4q is reported with both images named."
+  - `:2781-2782` (18 b, C3DGS's `<cstdint>` retry): "This is recorded as a deviation for every run on this image."
+  - `:3595-3596` (19, part (b)): "each process records its Kaggle image, and any curve or j = 0 pair spanning images is
+    reported so (18 b)."
+  - `:4164-4165` (20 i): the protocol includes "Note 2 C6, C9, C11 and C12".
+  - `:4188-4192` (20 j): the first session's seed-0 processes run "so that every arm's curve comes from one session and
+    one image"; "The j = 0 seed pair and the seed-1 curve then span two sessions, which Note 2 C6 reports if the images
+    differ."
+  - `:4249-4250` (20 m, limits): "a split scene's seed pair can span two images (j)."
+  - `:4318-4320` (note 1): "each scene's j = 0 seed pair (`p0` against `p1`) spans two sessions, and its seed-1 curve and
+    arm R's seed-1 points come from one session. Note 2 C6 reports a pair that spans two Kaggle images."
+  - `:4411-4412` (note 2 c.11): "each primary's per-scene part reports whether its seed-0 curve or its j = 0 seed pair
+    spans Kaggle images".
+  - `:3387-3388` (Note 4, the wheel): "If the image's key changed, the wheel is rebuilt."
+  - **20 f and 20 h, and the fragile reading (`:4100-4101`),** name no image. Notes 3-6 name no Kaggle image in this sense.
+  - **The code** (at `82725251`):
+    - each row carries the job's image string (`kaggle/gn_e7_scene.py:213`, `e5.image_key`, `bench/gn/e5.py:478-484`);
+    - `e7.scene_data` keeps it by (j, seed) (`bench/gn/e7.py:100-101`);
+    - `e5.spans_images` (`bench/gn/e5.py:275-280`) returns two booleans: more than one image among the seed-0 curve's
+      processes, and between the j = 0 seed-0 and seed-1 processes. It ignores its arm arguments, so all arms read alike;
+    - `e7.py` calls it once, to put the result in the primary's per-scene part (`bench/gn/e7.py:175`), and lists each
+      scene's sessions and images under `where` (`:435-436`);
+    - nothing else reads either. `noise_n` (`:159-164`), `sd_bd` (`:259-268`), `run_tests` (`:248`) and `verdict_e7`
+      (`:272`) take no image;
+    - `check_s26.py` prints the two booleans and a count (`:371-373`, `:667-672`).
+  - **a. Is a seed pair spanning two images allowed? Yes.** `:4191-4192` and `:4249-4250` foresee it. **It changes no
+    computation:** C6 says "nothing else changes", and in the code it is a reported flag. It enters no noise estimate,
+    SE, exclusion or fragile reading.
+  - **b. Does anything require a re-run when the image changes? No line does.** Reruns are for failures (`:3590-3591`,
+    `:4105`, 17 i), and no S11 process failed. The one image-driven action named is the wheel rebuild (`:3388`).
+  - **c. Which scenes span images? Drjohnson only,** its j = 0 pair only: seed-0 curve one image (S3), j = 0 pair two
+    (S3, S11), seed-1 curve one (S11). The other six ran both halves on the first image. What that touches, as defined:
+    - **not touched:** drjohnson's BD values from the seed-0 curve, so its `Δ_s` (`:4051`), and g.6's replicate (`p0`);
+    - **computed from both images:** drjohnson's `d_sp` pair, so its `d_s` and `v_s`, and through `v_s` the pooled
+      `SD_pool` and `SE` (`:4048-4051`) of both primaries, so their statistics, margins and Holm order;
+    - **also:** drjohnson's seed-0 against seed-1 `BD_R` difference, so the pooled `SD_BD` and `SE_BD` (`:4093`) and the
+      fragile reading; and the secondaries using the j = 0 pair or the seed-1 curve (g.1, g.3 and g.4's noise, g.5).
+    - `spans_images` does not test the seed-1 curve; in E7 each of those runs in one session.
+- **cupy** (git grep over the repository; C3DGS's 51 text files read at `2a234af5` from GitHub, in memory; OGC's 77 at
+  `49ccae72` from `F:\ogc_restore\ogc-3dgs`):
+  - **No code imports cupy:** no `import cupy` or `from cupy` in our tracked Python, in C3DGS or in OGC. C3DGS and OGC
+    have no mention of it at all.
+  - **Every mention in our repository:**
+    - `kaggle/gn_e3p_scene.py:250`: the one on S11's run path. It records `cupy-cuda12x`'s installed version in the env
+      report and imports nothing. It names only that package, so "absent" does not show that no other cupy
+      distribution was installed;
+    - `setup.py:61-126`, `:187`: the `dev` extra; the wheel is built and installed without it (`pip wheel --no-deps`,
+      `kaggle/build_gn_e5_bench.py:408`, and `{PIP} {wheel}`, `:412`; the build record shows no extras asked);
+    - `gsplat/compression/png_compression.py:51`, `:636`: a docstring, and the error text raised if TorchPQ is missing.
+      That `try` (`:632-637`) raises, it does not fall back. E3p's `PngCompression` call (`kaggle/gn_e3p_scene.py:304`) is
+      `kmeans_backend="builtin"`, which needs neither;
+    - `kaggle/build_gn_bench.py:346`, `build_gn_e2_bench.py:420`, `build_gn_e3p_bench.py:322`, `build_tilequant_bench.py:480`:
+      earlier experiments' installs. E7's notebooks and builders (`build_gn_e5_bench.py`, `build_gn_e7_bench.py`) never
+      name it, so in S1-S10 it came with Kaggle's image and sat unused. TorchPQ, the one library that would load it, was
+      absent from all eleven sessions.
+  - **Guarded imports, none of them cupy.** C3DGS: none. OGC: `make_figs.py:112`, `make_tables.py:639`, both off the run
+    path. Ours, in code the run path can reach: `psutil` (`bench/gn/e4p.py:429`, `:448`; `kaggle/gn_e7_scene.py:423`),
+    `resource` (`kaggle/gn_e3p_scene.py:157`), `plas` (`gsplat/compression/sort.py:37`), `fused_ssim`
+    (`gsplat/losses.py:182`), `nvtx` (`gsplat/trace.py:51`).
+  - **The one alternative-kernel path in reach is unrelated to cupy:** `gsplat/cuda/_backend.py:31` tries the compiled
+    `csrc` and otherwise JIT-builds it. S11 shows no sign of that: its log has no such line, and the GN pass took 22.7 s at
+    4.82 GB allocated, where S3's took 22.0 s at about the same peak. The GN pass is the part E7 uses gsplat's kernels for.
+  - **S11's records:** the 71-line log tail (all lines kept), 130 new steps and the deviations hold no mention of cupy or
+    torchpq, no ImportError, no fallback, no warning. The build record's only `cupy` is the env key.
+  - **Not read:** third-party packages at Kaggle's versions. Locally, torch and numpy have no cupy import. scipy's has only
+    its array-API adapters, for cupy arrays; on the run path scipy is used only by `e7.py` and `e5.py`'s `scipy.stats`, which
+    run locally. The local import trace (`F:\pytest_logs\importtrace_e7_runpath.log`, `importtime_e7_runpath.log`) has no
+    cupy module, but cupy is not installed locally, so that trace could not show a failed guarded attempt.
+- **The wheel:**
+  - **No file in the bundle names the wheel's commit.** `gsplat_build.log` stays in the work directory. The chain, from the
+    code: the notebook checks out the branch head (`kaggle/build_gn_e5_bench.py:386-387`), records that `COMMIT` (`:388`),
+    builds the wheel from that checkout (`:408`) with nothing in between that changes it, installs it (`:411-412`) and
+    passes `COMMIT[:12]` to the job (`:497`, `kaggle/gn_e7_scene.py:226`).
+  - **The key pins the source:** it is `HEAD:gsplat`'s tree and `HEAD:setup.py`'s blob (`:400`). `git rev-parse` at
+    `82725251` gives `33734f894b0a...` and `95f8de51...`, as in `gn5_env_S11.json`. The glm submodule's gitlink is inside
+    that tree.
+  - **So S11's wheel has the same `gsplat/` source and `setup.py` as S1-S10's** (same two hashes at `17161955`, `7fb734a7`,
+    `82725251`), compiled by CUDA 13.0 against torch 2.11.0+cu130 where theirs was by 12.8 against cu128. No run-path file
+    changed (above).
+- **The after-S11 procedure, once Dace lifts the blind rule** (replaces steps 2-6 of "After S11, the E7 write-up"; from a
+  clean tree):
+  1. `.venv/Scripts/python.exe bench/gn/e7.py kaggle/gn_e7 --out <outside the repo>/gn7_verdict.json > <outside the
+     repo>/e7_stdout.txt`. `--out` always (its default writes into `kaggle/gn_e7`), stdout always redirected (it prints
+     `Delta_bar` and `SE`, `bench/gn/e7.py:450-455`).
+  2. Fill the skeleton: `check_s26.py --fill kaggle/drafts/FINDINGS_s26_E7_DRAFT.md --out <outside the repo>/s26_filled.md`.
+  3. `check_s26.py --findings <outside the repo>/s26_filled.md` must print 0 failures; rerun after each edit.
+  4. Move it into FINDINGS section 26 (summary paragraph after section 25's, Sources entry, the section at the end);
+     `check_s26.py` with no arguments must print 0 failures; add `test_findings_section_26_numbers_recheck_from_the_repo`;
+     `git rm` the draft; gate; commit.
+  5. **FINDINGS section 26 carries one sentence on S10's late input attachment** ("E7 S10", the departure from 20 l) **and
+     one on S11's image change.**
+  6. **E7's results go in their own paper section, NOT in `paper/tex/sec5_2_e7design.tex`.** That file stays design only: it
+     is the one `DESIGN_FILES` entry (`paper/tex/check_tex.py`), where Am20 items verify numbers. Result lines need CLAIMS
+     rows first.
+  7. Then the deferred `e7.py` fixes (`--out` required, `open` with `with` / `encoding`), allowed now that no session remains.
+- **Open before step 2, flagged and not changed (no value involved):**
+  1. **`check_s26.py:656` double-counts the wheel build in S11's setup.** `setup` sums every non-job timing, and
+     `install_s` already contains `gsplat_wheel_build_s` (`kaggle/build_gn_e5_bench.py:386`, `:409`, `:419`), so S11's row
+     would read 8,499.1 s, not 4,464.3 s. The tool and the text would agree, so the check would not catch it. S1-S10 have
+     no such key. `check_s*.py` is exempt from the code-identity rule.
+  2. **18 b asks for both images named** (`:2784-2785`) in any comparison across sessions. The skeleton gives only counts
+     (`:279-305`; `check_s26.py:658`, `:667-672`). The S11 sentence should name both image strings.
+  3. **The two new sentences must pass the numeric-token check** (`check_s26.py:818-820`: every token a filled string or
+     listed constant). Image strings hold tokens outside `CONSTANTS`, so they need a filled string from the rows.
+- **Scenes complete (all six processes): all 7.** No process was deferred, no added session is needed, and every
+  `missing_or_failed` is empty.
+- **Next action: Dace's decision on the blind rule.** Nothing runs `e7.py` or `check_s26.py` on the real root before it.
+
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
 - **What ran:** `bench/gn/e7.py` (through its own `main`) and `paper/figs/e7_t4_primaries.py`, `e7_t5_secondaries.py`,
@@ -5983,7 +6187,9 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
     - check_tex 278 / 66 / 147 / 0 failures; gate `gate_20261029_224358_sec52_own_file.log`.
     - S7 ran this commit; it was the pushed head when S7 started.
   - **The test:** `test_paper_tex_amendment_items_verify_design_lines_only`.
-- **After S11, the E7 write-up** (all from a clean tree at the ingest commit of S11):
+- **After S11, the E7 write-up** (all from a clean tree at the ingest commit of S11). **Steps 2-6 are replaced by the
+  procedure in "E7 S11": E7's results go in their own paper section, not Section 5.2's design file, and nothing runs until
+  Dace lifts the blind rule.**
   1. Ingest S11 as usual (`bench/check_e7_ingest.py`, the code-identity rule).
   2. Run `bench/gn/e7.py` with `--out` outside the repository and stdout redirected (it prints `Delta_bar` and `SE`):
      `.venv/Scripts/python.exe bench/gn/e7.py kaggle/gn_e7 --out <scratch>/gn7_verdict.json > <scratch>/e7_stdout.txt`.
