@@ -24,7 +24,7 @@ the checker verifies each quote against that line.
   `bench/gn/e7.py`; the exceptions are E5's and E6's values quoted beside E7's (secondary 4 and section 25's standard
   error) from their own bundles, and the quoted lines of `kaggle/PREREG_GN.md`. `bench/gn/check_s26.py` recomputes every
   number in the section from those files, with its own BD fit and tests beside the tool's and the sessions' summaries,
-  and checks each against the text.
+  and checks each against the text. The commit beside each bundle is its ingest; after ingest: ⟨sources_later⟩.
 
 ## 26. E7: a within-process dissection of why OGC's lead shrinks with fine-tuning (pre-registered) — ⟨headline⟩
 
@@ -40,8 +40,9 @@ the checker verifies each quote against that line.
   `kaggle/PREREG_GN.md:3994`: «| **R, replicate** (`p0` only) | `c3dgs_ft_r2`, `ogc_gram_ft_r2` | as R | as R |»
 - **Disclosure:** `kaggle/PREREG_GN.md:3936`: «E7's primaries test interventions within each scene; **E7 makes no»
   held-out claim.
-- **The sources:** ⟨sources_bundles⟩. A split scene's seed-0 half and seed-1 half come from two sessions; later bundles
-  carry each scene unchanged (notes 3-5).
+- **The sources,** each with its ingest commit: ⟨sources_bundles⟩. A split scene's seed-0 half and seed-1 half come from
+  two sessions; later bundles carry each scene unchanged (notes 3-5). After ingest: ⟨sources_later⟩; only line endings
+  changed, and the numbers here are read from those exact bytes.
 
 ### The verdict (Amendment 20 f, h)
 
@@ -295,6 +296,26 @@ Per fine-tuned row, `row_time_s` (s) and `row_cuda_peak_allocated` (GiB), min to
 |---|---|---|
 ⟨block:g8_time_rows⟩
 
+### Post-hoc observations (not pre-registered; apart from the results above)
+
+**⟨ph_label⟩.** Each was chosen after the results were read. None enters the verdict and none is a test of record;
+`bench/gn/check_s26.py` recomputes each in a block of its own.
+
+- **The shrink against the margin:** ⟨ph_shrink⟩. Read the sign of Δ_refit's mean with the next item.
+- **One scene and Δ_refit's mean:** ⟨ph_scene⟩.
+- **Two other standard errors,** beside `SE` and `SE_BD`, the tests otherwise as in f, each family in its own Holm order.
+  Scene spread: the SD of Δ_s over the scenes, over sqrt(n); it is 20 m's stated limit of `SE`. Replicate: g.6's pair SD, over
+  sqrt(n), for both primaries. Here ⟨ph_spread_note⟩.
+
+| Standard error | Primary | `SE` | Degrees of freedom | abs(r(`Δ_bar`)) / r(`SE`) | Criterion 3 | m | TOST position | Critical t | Equivalent | Outcome it would give |
+|---|---|---|---|---|---|---|---|---|---|---|
+⟨block:ph_se_rows⟩
+
+- **g.5's sign:** ⟨ph_g5⟩. `SD_BD` is computed around 0, so it includes any such shift. Its cause was not looked into.
+- **g.6 against `SD_pool`:** ⟨ph_g6⟩.
+- **Arms K and CG against P1:** ⟨ph_arms⟩. Secondary 8's table reads C3DGS's evaluation; this line reads protocol ii. Both are
+  at one point and at unequal bytes.
+
 ### Drops, missing rows and reruns (17 d, 17 i)
 
 `kaggle/PREREG_GN.md:4164`: «E5's harness phase per scene; the data, start devices, drop rules,»
@@ -351,7 +372,16 @@ seed pair spans images. Across E7: ⟨images⟩.
 
 - **Settled, as pre-registered:** Δ_refit ⟨outcome_refit⟩ (⟨fragile_refit⟩): ⟨reading_refit⟩. Δ_cb ⟨outcome_cb⟩
   (⟨fragile_cb⟩): ⟨reading_cb⟩.
-- **Not settled, or limits** (20 m, stated before any data):
+- **Report only, no bar (20 h's reading of both equivalent; secondary 1):** what neither primary holds fixed is `_opacity`,
+  `_scaling`, `_rotation`, `_scaling_factor` and the kept splats' colours (section 24 item 4; positions have learning rate 0).
+  K freezes all of them and trains only the codewords, and most of the lead stays; CG trains all of them and freezes the
+  codewords, and most of it goes (see "Post-hoc observations").
+- **Section 24's open question, as far as E7 goes:** Δ_refit holds the AC and DC grids together and measures the lead at
+  equal rate. So E7 answers for the two grids' re-fit, in the mean over scenes, and does not separate AC from DC. The re-fit's
+  documented effect on bytes stands (secondary 8, R against G).
+- **Not settled by E7:** which of the parameters above carries the shrink, since no arm separates them; why kitchen's Δ_refit
+  stands apart; why P1's seed-0 curve reads below its seed-1 curve (see "Post-hoc observations").
+- **Limits** (20 m, stated before any data):
   - E7 is not a held-out test: its hypotheses came from E5's, E6's and section 24's results on these scenes;
   - in CG, opacity, the geometry tables and the kept colours still train and can make up for frozen codewords;
   - under a fixed grid OGC's codewords outside it stay clamped; O and the `*_own` rows remove the clamping but change
@@ -392,4 +422,5 @@ seed pair spans images. Across E7: ⟨images⟩.
 | `block:image_rows`, `images` | images per scene and spans (Note 2 C6) | 4411-4412 |
 | `image_S1_S10`, `image_S11`, `image_change`, `image_span` | both images named, from the rows' strings against each session's env file; the spans from the rows against the tool | 2785; 3183-3185 |
 | `exp_label`, `exp_crit`, `exp_sup_order`, `exp_eq_order`, `block:exp_stats`, `block:exp_sup_rows`, `block:exp_eq_rows`, `block:exp_outcome_rows` | the exploratory sensitivity, not pre-registered, beside the tests | none: `bench/gn/check_s26.py`, `kaggle/HANDOFF.md` |
-| `sources_bundles` | the bundles and their commits | 4226-4231 (20 l); notes 3-5 |
+| `sources_bundles`, `sources_later` | the bundles, their ingest commits, and any later commit touching them | 4226-4231 (20 l); notes 3-5 |
+| `ph_label`, `ph_shrink`, `ph_scene`, `ph_spread_note`, `block:ph_se_rows`, `ph_g5`, `ph_g6`, `ph_arms` | the post-hoc block, undeclared, apart from the results | none: `bench/gn/check_s26.py` |

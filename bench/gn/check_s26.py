@@ -28,6 +28,9 @@ Two things are this checker's alone. **18 b's two images** come from the rows' `
 session's env file and the tool. **An exploratory sensitivity** (``exploratory``), declared before unblinding and not
 pre-registered: drjohnson's j = 0 seed pair out of the noise pooling. It is reported only beside the pre-registered tests,
 changes no verdict, and ``bench/gn/e7.py`` does not compute it.
+
+**A post-hoc block** (``post_hoc``), chosen after unblinding and undeclared: kitchen's share of Delta_refit, two other standard
+errors, g.5's sign, g.6's ratio, the shrink against the margin, and arms K and CG against P1. It feeds nothing above it.
 """
 
 import argparse
@@ -76,6 +79,9 @@ SENTENCES = ("**S10's inputs, a departure from 20 l with no data effect:**", "**
 # The exploratory sensitivity, declared before unblinding, not pre-registered and not in bench/gn/e7.py: the one scene
 # whose j = 0 seed pair spans Kaggle's two images is left out of the noise pooling. Its first commit is the declaration.
 EXPLORATORY_LEFT_OUT = "drjohnson"
+# The post-hoc block (post_hoc): observations chosen after unblinding, undeclared, apart from every pre-registered value.
+POST_HOC_LABEL = "post-hoc, computed after unblinding, undeclared"
+POST_HOC_SCENE = "kitchen"
 
 
 def r9(x):
@@ -347,6 +353,129 @@ def exploratory(V, ind, outcome):
     return {"noise": noise, "prim": prim, "tests": tests, "agree": agree, "reproduces_tool": same,
             "outcomes": {k: outcome(tests["superiority"]["results"].get(k), tests["equivalence"]["results"].get(k))
                          for k in ORDER}}
+
+
+# ------------------------------------------------------------------------------ the post-hoc block
+def post_hoc(V, ind, rows, outcome):
+    """Observations chosen after reading E7's results: none was declared, none is a test of record, and nothing here feeds
+    the verdict, the exploratory sensitivity or any other value of this file. ``V`` is only read. Each value is computed from
+    the tool's verdict; ``agree`` holds the same values from the independent recompute."""
+    n, P, g = V["n"], V["primaries"], V["secondaries"]
+    scenes = V["scenes"]
+
+    def mean(vals):
+        return sum(0.0 if v is None else v for v in vals) / n
+
+    p1 = mean(g["g3_P1_own_grid"]["P1"]["P"][s] for s in scenes)
+    pft = mean(P["refit"]["per_scene"][s]["BD_R"] for s in scenes)
+    shrink = p1 - pft
+    out = {"p1": p1, "pft": pft, "shrink": shrink, "delta_over_shrink": DELTA / shrink if shrink else None,
+           "bar_over_shrink": {k: abs(P[k]["delta_bar"]) / shrink if shrink else None for k in ORDER}}
+
+    d = {s: P["refit"]["per_scene"][s]["delta"] for s in scenes}
+    total = sum(d.values())
+    out["scene"] = {"name": POST_HOC_SCENE, "value": d[POST_HOC_SCENE], "share": d[POST_HOC_SCENE] / total if total else None,
+                    "others_mean": (total - d[POST_HOC_SCENE]) / (n - 1), "largest": max(d.values()),
+                    "n_positive": sum(1 for v in d.values() if v > 0),
+                    "beyond": {k: [s for s in scenes if abs(P[k]["per_scene"][s]["delta"]) > DELTA] for k in ORDER}}
+
+    def alternative(se):
+        prim = {k: {"bar": r9(P[k]["delta_bar"]), "se": r9(se[k]), "df": n - 1,
+                    "deltas": {s: r9(v["delta"]) for s, v in P[k]["per_scene"].items()}}
+                for k in ORDER if V["outcomes"][k] != "incomplete"}
+        tests = df_tests(prim, n)
+        return {"se": se, "tests": tests,
+                "outcomes": {k: outcome(tests["superiority"]["results"].get(k), tests["equivalence"]["results"].get(k))
+                             for k in ORDER}}
+
+    spread = {}
+    for k in ORDER:
+        vals = [P[k]["per_scene"][s]["delta"] for s in scenes]
+        m = sum(vals) / n
+        spread[k] = math.sqrt(sum((x - m) ** 2 for x in vals) / (n - 1) / n)
+    out["scene_spread"] = alternative(spread)
+    rep_sd = g["g6_replicate"]["sd_across_scenes"]["pair_replicate_minus_R"]
+    out["replicate_sd"] = rep_sd
+    out["replicate"] = alternative({k: (rep_sd or 0.0) / math.sqrt(n) for k in ORDER})
+    out["g6_ratio"] = {k: rep_sd / P[k]["noise"]["SD_pool"] if rep_sd and P[k]["noise"]["SD_pool"] else None for k in ORDER}
+
+    out["g5"] = {}
+    for name in ("P1", "P_FT"):
+        dif = [v["difference"] for v in g["g5_bd_noise"][name]["per_scene"].values() if v["difference"] is not None]
+        out["g5"][name] = {"n_negative": sum(1 for v in dif if v < 0), "n": len(dif),
+                           "mean": sum(dif) / len(dif) if dif else None}
+
+    bd_k = mean(g["g1_codebook_alone"]["K_minus_R"]["per_scene"][s]["BD_K"] for s in scenes)
+    bd_cg = mean(P["cb"]["per_scene"][s]["BD_CG"] for s in scenes)
+
+    def lost(x):
+        return (p1 - x) / shrink if shrink else None
+
+    def same_j(arm):
+        dif = []
+        for s in scenes:
+            x, y = rows.get(s, {}).get(cfg(0, 0, ft("ogc_gram", arm))), rows.get(s, {}).get(cfg(0, 0, ft("c3dgs", arm)))
+            if ok(x) and ok(y):
+                dif.append(float(x["PSNR_ii"]) - float(y["PSNR_ii"]))
+        return sum(dif) / len(dif) if dif else None
+
+    out["arms"] = {"K": bd_k, "CG": bd_cg, "K_lost": lost(bd_k), "CG_lost": lost(bd_cg), "same_j_R": same_j("R"),
+                   "same_j_K": same_j("K")}
+
+    ip1, ipft = (sum(0.0 if ind["BD"][s][a] is None else ind["BD"][s][a] for s in scenes) / n for a in ("P1", "R"))
+    ik, icg = (sum(0.0 if ind["BD"][s][a] is None else ind["BD"][s][a] for s in scenes) / n for a in ("K", "CG"))
+    idelta = ind["delta"]["refit"]
+    out["agree"] = [abs(a - b) < 1e-9 for a, b in ((p1, ip1), (pft, ipft), (bd_k, ik), (bd_cg, icg))] + [
+        abs(d[s] - idelta[s]) < 1e-9 for s in scenes]
+    return out
+
+
+def post_hoc_strings(ph, sym, n):
+    """The block's filled strings, with ``ph_`` keys, counted apart from the rest."""
+    def pct(x):
+        return na(None if x is None else 100 * x, ".1f") + "%"
+
+    out = {"ph_label": POST_HOC_LABEL}
+    bs = ph["bar_over_shrink"]
+    out["ph_shrink"] = (f"P1 {ph['p1']:.4f} minus P_FT {ph['pft']:.4f} = {ph['shrink']:.4f} dB; abs(`Δ_bar`) over that: "
+                        f"Δ_refit {pct(bs['refit'])}, Δ_cb {pct(bs['cb'])}; δ over that: {pct(ph['delta_over_shrink'])}")
+    c = ph["scene"]
+    out["ph_scene"] = (f"{c['name']}'s Δ_refit {c['value']:+.6f} is {pct(c['share'])} of the seven scenes' sum; the other "
+                       f"{n - 1} average {c['others_mean']:+.6f}; Δ_refit is positive on {c['n_positive']} of {n}, at most "
+                       f"{c['largest']:+.6f}; beyond ±δ: Δ_refit {', '.join(c['beyond']['refit']) or 'no scene'}, Δ_cb "
+                       f"{', '.join(c['beyond']['cb']) or 'no scene'}")
+    rows_ = []
+    for name, key in (("scene spread", "scene_spread"), ("replicate", "replicate")):
+        a = ph[key]
+        sup, eqv = a["tests"]["superiority"]["results"], a["tests"]["equivalence"]["results"]
+        for k in ORDER:
+            if k not in sup:
+                continue
+            s_, e_ = sup[k], eqv[k]
+            rows_.append(f"| {name} | {sym[k]} | {f9(a['se'][k])} | {n - 1} | {s_['statistic']:.3f} | {hf(s_['c3_above'])} | "
+                         f"{e_['m']:.3f} | {e_['position']} | {e_['critical_t']:.3f} | {yn(e_['equivalent'])} | "
+                         f"{a['outcomes'][k]} |")
+    out["block:ph_se_rows"] = rows_
+    sq = ph["scene_spread"]["tests"]["equivalence"]
+    if "refit" in sq["results"]:
+        first = tq(1 - ALPHA / 2, n - 1)
+        r = sq["results"]["refit"]
+        out["ph_spread_note"] = (f"under the scene-spread `SE` the TOST's order is {', then '.join(sym[k] for k in sq['order'])}: "
+                                 f"Δ_refit's m {r['m']:.3f} against the first position's {first:.3f} and the second's "
+                                 f"{tq(1 - ALPHA, n - 1):.3f}, and it is tested at position {r['position']}")
+    else:
+        out["ph_spread_note"] = "n/a"
+    g5 = ph["g5"]
+    out["ph_g5"] = (f"seed 0 minus seed 1: P1 negative on {g5['P1']['n_negative']} of {g5['P1']['n']}, mean "
+                    f"{na(g5['P1']['mean'], '+.6f')}; P_FT negative on {g5['P_FT']['n_negative']} of {g5['P_FT']['n']}, mean "
+                    f"{na(g5['P_FT']['mean'], '+.6f')}")
+    out["ph_g6"] = (f"the replicate pair's across-scene SD {na(ph['replicate_sd'], '.6f')} is "
+                    f"{na(ph['g6_ratio']['refit'], '.3f')} x Δ_refit's `SD_pool` and {na(ph['g6_ratio']['cb'], '.3f')} x Δ_cb's")
+    a = ph["arms"]
+    out["ph_arms"] = (f"mean BD_K {a['K']:.4f} and mean BD_CG {a['CG']:.4f} against P1 {ph['p1']:.4f}: of the shrink, K "
+                      f"loses {pct(a['K_lost'])} and CG {pct(a['CG_lost'])}; in protocol ii at `j0_p0`, OGC's row minus "
+                      f"C3DGS's averages {na(a['same_j_K'], '+.4f')} in K and {na(a['same_j_R'], '+.4f')} in R")
+    return out
 
 
 def declaration_commit():
@@ -691,10 +820,15 @@ def facts(root):
     out.update(im)
     F["declared"] = declared_after_the_bundles(out["exp_commit"]) if real else True
 
+    # the post-hoc block, apart from everything above
+    F["post_hoc"] = post_hoc(V, ind, rows, e7.outcome)
+    out.update(post_hoc_strings(F["post_hoc"], sym, n))
+
     # the summary and sources
     out["summary_bdbar"] = (f"Δ_refit `Δ_bar` {f9(P['refit']['delta_bar'])} dB, Δ_cb `Δ_bar` {f9(P['cb']['delta_bar'])} dB "
                             f"({out['n']}; `SE` {f9(P['refit']['noise']['SE'])} and {f9(P['cb']['noise']['SE'])})")
     out["sources_bundles"] = sources_bundles(root)
+    out["sources_later"] = sources_later(root)
 
     # the claims beside the strings
     F["agree"] = agree(V, ind, B)
@@ -892,15 +1026,28 @@ def mechanics(rows, B, V):
     return out
 
 
+def bundle_commits(b):
+    """Every commit touching a session's bundle folder, oldest first: its ingest commit, then any later one."""
+    return subprocess.run(["git", "-C", REPO, "log", "--reverse", "--format=%h", "--abbrev=8", "--", f"kaggle/gn_e7/{b}/gn7"],
+                          capture_output=True, text=True).stdout.split()
+
+
 def sources_bundles(root):
     if os.path.realpath(root) != os.path.realpath(REAL_ROOT):
         return f"stand-in bundles {', '.join(bundles(root))} (not committed)"
-    parts = []
+    return ", ".join(f"`kaggle/gn_e7/{b}/gn7/` (`{bundle_commits(b)[0]}`)" for b in bundles(root))
+
+
+def sources_later(root):
+    """The commits after a bundle's ingest, each with the bundles it touched; on the real root only line endings."""
+    if os.path.realpath(root) != os.path.realpath(REAL_ROOT):
+        return "no later commit (stand-in bundles)"
+    later = {}
     for b in bundles(root):
-        h = subprocess.run(["git", "-C", REPO, "log", "-1", "--format=%h", "--abbrev=8", "--", f"kaggle/gn_e7/{b}/gn7"],
-                           capture_output=True, text=True).stdout.strip()
-        parts.append(f"`kaggle/gn_e7/{b}/gn7/` (`{h}`)")
-    return ", ".join(parts)
+        for h in bundle_commits(b)[1:]:
+            later.setdefault(h, []).append(b)
+    return "; ".join(f"`{h}` re-stored {', '.join(v)} with their line endings as in the zips" for h, v in later.items()) or (
+        "no later commit")
 
 
 def agree(V, ind, B):
@@ -1025,6 +1172,11 @@ def run(root, findings):
     check(all(ex["agree"]), "the exploratory noise: the tool's v_s and the recompute's agree")
     check(ex["reproduces_tool"], "the exploratory tests with the full noise reproduce the tool's")
     check(F["declared"], "the exploratory sensitivity's declaration commit follows S11's ingest")
+    check(all(F["post_hoc"]["agree"]), "the post-hoc block: the tool's values and the recompute's agree")
+    check(POST_HOC_LABEL in text, "the post-hoc block carries its label")
+    if os.path.realpath(root) == os.path.realpath(REAL_ROOT):
+        arms = F["post_hoc"]["arms"]
+        check(arms["K_lost"] < 0.5 < arms["CG_lost"], "K keeps most of the lead and CG loses most of it, as the text says")
     for k in ORDER:
         check(F["V"]["fragile"][k] == (F["V"]["outcomes"][k] != "incomplete" and
                                         F["V"]["outcomes"][k] != F["V"]["robustness"]["outcomes"][k]),
@@ -1032,7 +1184,9 @@ def run(root, findings):
     tokens = set(NUM.findall(text))
     unmatched = sorted(t for t in tokens if t not in CONSTANTS and not any(t in s for s in exp))
     fails += [f"numeric token not recomputed: {t!r}" for t in unmatched]
-    return {"n_numbers": len(exp), "n_tokens": len(tokens), "fails": fails}
+    n_post_hoc = len({s for k, v in out.items() if k.startswith(("ph_", "block:ph_"))
+                      for s in (v if isinstance(v, (list, tuple)) else [v])})
+    return {"n_numbers": len(exp), "n_post_hoc": n_post_hoc, "n_tokens": len(tokens), "fails": fails}
 
 
 def main(argv=None) -> int:
@@ -1067,8 +1221,8 @@ def main(argv=None) -> int:
     res = run(a.root, a.findings)
     for x in res["fails"]:
         print("FAIL", x)
-    print(f"FINDINGS section 26: {res['n_numbers']} recomputed numbers, {res['n_tokens']} numeric tokens checked, "
-          f"{len(res['fails'])} failures")
+    print(f"FINDINGS section 26: {res['n_numbers']} recomputed numbers ({res['n_numbers'] - res['n_post_hoc']} pre-registered "
+          f"and reported, {res['n_post_hoc']} post hoc), {res['n_tokens']} numeric tokens checked, {len(res['fails'])} failures")
     return 1 if res["fails"] else 0
 
 

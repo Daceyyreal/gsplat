@@ -8000,6 +8000,88 @@ def test_check_s26_exploratory_sensitivity_on_synthetic_seven_scenes(tmp_path):
     assert "exp_" not in out["block:primary_stats"][0]
 
 
+def test_check_s26_post_hoc_block_on_synthetic_seven_scenes(tmp_path):
+    """The post-hoc block on synthetic bundles of all seven scenes, by hand: the shrink and its ratios, kitchen's share, the
+    other six's mean, the scene-spread SE with its own Holm order at n - 1 degrees of freedom, the replicate-based SE, g.5's
+    sign count and mean, g.6's ratio, K and CG against P1. It changes no pre-registered value; its strings are labelled,
+    checked and counted apart; a planted digit is caught; each bundle's source commit is its ingest, on git's record only."""
+    import copy
+
+    from scipy.stats import t
+
+    import check_s26 as c
+    import e7
+    import e7_scenes as es
+
+    def delta(i):
+        return {"R": 0.05, "G": 0.05 + 0.01 * (i - 3), "CG": 0.06 + 0.01 * (i - 3), "K": 0.08 + 0.01 * i, "O": 0.07}
+
+    root = _s26_two_image_root(str(tmp_path / "bundles"), deltas=delta)
+    out, F = c.facts(root)
+    V, ph = F["V"], F["post_hoc"]
+    assert all(ph["agree"])
+    P = V["primaries"]
+    p1 = sum(V["secondaries"]["g3_P1_own_grid"]["P1"]["P"][s] for s in es.SCENES) / 7
+    assert ph["p1"] == pytest.approx(p1) and ph["pft"] == pytest.approx(0.05) and ph["shrink"] == pytest.approx(p1 - 0.05)
+    assert ph["delta_over_shrink"] == pytest.approx(0.07 / (p1 - 0.05))
+    for k in c.ORDER:
+        assert ph["bar_over_shrink"][k] == pytest.approx(abs(P[k]["delta_bar"]) / (p1 - 0.05))
+
+    d = {s: P["refit"]["per_scene"][s]["delta"] for s in es.SCENES}
+    total = sum(d.values())
+    assert ph["scene"]["value"] == d["kitchen"] and ph["scene"]["share"] == pytest.approx(d["kitchen"] / total)
+    assert ph["scene"]["others_mean"] == pytest.approx((total - d["kitchen"]) / 6)
+    assert ph["scene"]["beyond"]["refit"] == [s for s in V["scenes"] if abs(d[s]) > 0.07]
+
+    for k in c.ORDER:
+        vals = [P[k]["per_scene"][s]["delta"] for s in es.SCENES]
+        m = sum(vals) / 7
+        se = (sum((x - m) ** 2 for x in vals) / 6) ** 0.5 / 7 ** 0.5
+        a = ph["scene_spread"]
+        assert a["se"][k] == pytest.approx(se)
+        pos = a["tests"]["equivalence"]["results"][k]["position"]
+        assert a["tests"]["equivalence"]["results"][k]["critical_t"] == pytest.approx(t.ppf((0.975, 0.95)[pos - 1], 6))
+    order = ph["scene_spread"]["tests"]["equivalence"]["order"]
+    mm = {k: ph["scene_spread"]["tests"]["equivalence"]["results"][k]["m"] for k in c.ORDER}
+    assert order == sorted(c.ORDER, key=lambda k: -mm[k])
+
+    g5 = V["secondaries"]["g5_bd_noise"]["P1"]["per_scene"]
+    assert ph["g5"]["P1"]["n_negative"] == sum(1 for v in g5.values() if v["difference"] < 0) and ph["g5"]["P1"]["n"] == 7
+
+    # A replicate SD set by hand: SE = SD / sqrt(7) for both primaries, the ratio to each SD_pool, the outcomes re-derived
+    rows, _, _ = c.load(root)
+    V2 = copy.deepcopy(V)
+    V2["secondaries"]["g6_replicate"]["sd_across_scenes"]["pair_replicate_minus_R"] = 0.034
+    ph2 = c.post_hoc(V2, F["ind"], rows, e7.outcome)
+    assert ph2["replicate"]["se"] == {k: pytest.approx(0.034 / 7 ** 0.5) for k in c.ORDER}
+    for k in c.ORDER:
+        assert ph2["g6_ratio"][k] == pytest.approx(0.034 / P[k]["noise"]["SD_pool"])
+    assert V2["outcomes"] == V["outcomes"]
+    # K and CG against P1, from the means of their own BDs
+    bd_k = sum(V["secondaries"]["g1_codebook_alone"]["K_minus_R"]["per_scene"][s]["BD_K"] for s in es.SCENES) / 7
+    assert ph["arms"]["K"] == pytest.approx(bd_k) and ph["arms"]["K_lost"] == pytest.approx((p1 - bd_k) / (p1 - 0.05))
+
+    # Filled, checked and counted apart; the pre-registered text does not move; a planted digit is caught
+    filled = c.fill(_s26_skeleton(), out)
+    path = tmp_path / "filled.md"
+    path.write_text(filled, encoding="utf-8", newline="\n")
+    res = c.run(root, str(path))
+    assert res["fails"] == [] and 0 < res["n_post_hoc"] < res["n_numbers"]
+    assert c.POST_HOC_LABEL == "post-hoc, computed after unblinding, undeclared" and f"**{c.POST_HOC_LABEL}.**" in filled
+    summary = filled[filled.index("## Summary paragraph"):filled.index("## Sources entry")]
+    assert "post-hoc" not in summary.lower() and out["ph_scene"] not in summary
+    verdict = filled[filled.index("### The verdict"):filled.index("### The primaries per scene")]
+    assert "post-hoc" not in verdict.lower()
+    s = out["ph_shrink"]
+    bad = tmp_path / "digit.md"
+    bad.write_text(filled.replace(s, s.replace("minus P_FT 0.", "minus P_FT 1.")), encoding="utf-8", newline="\n")
+    assert any("ph_shrink" in x for x in c.run(root, str(bad))["fails"])
+
+    # Source commits: git's record only, no bundle is opened
+    assert c.bundle_commits("S1")[0] == "b592a57e" and c.bundle_commits("S7")[0] == "a35487ab"
+    assert c.bundle_commits("S11") == ["32758a0e"] and c.bundle_commits("S1")[1:] == ["c8ba01f3"]
+
+
 def test_e7_notebooks_rebuild_and_name_their_session():
     """kaggle/build_gn_e7_bench.py: the eleven committed notebooks equal the builder's output; titles "E7 OGC
     FT-dissection S1"-"S11" from kaggle/e7_sessions.json (Amendment 20 note 1); E7_bundle_S#.zip under gn7/; E7's job
