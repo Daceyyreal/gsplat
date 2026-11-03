@@ -3177,6 +3177,14 @@ def test_findings_section_25_numbers_recheck_from_the_repo():
     assert res["fails"] == [] and res["n_numbers"] >= 10
 
 
+def test_findings_section_26_numbers_recheck_from_the_repo():
+    import check_s26
+
+    res = check_s26.run(check_s26.REAL_ROOT, check_s26.FINDINGS)
+    assert res["fails"] == [] and res["n_numbers"] >= 200 and res["n_post_hoc"] >= 8
+    assert check_s26.declaration_commit() == "c95c369f"
+
+
 def test_paper_figs_recheck_from_the_repo():
     """paper/figs/check_figs.py: every table cell and plotted value in paper/figs/out/ recomputed independently from
     the committed bundles and matched against the FINDINGS values it mirrors. The outputs are committed after the
@@ -3308,12 +3316,14 @@ def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     # a design number verifies through its item and line; the whole item when no line is given
     design = "At $n = 7$ the critical values are 2.841 and 2.365. % Am20 f (PREREG_GN.md:4064, 4066)"
     assert fails(design) == []
-    # the file restriction: the same line with the same Am20 citation in 5.1's file (sec5_finetuning.tex, which
-    # \inputs 5.2's) or in another section's file is checked as without the extension (2.841 and 2.365 are in neither
-    # FINDINGS nor CLAIMS, and the line has no CLAIMS row); a failure names that file and the line's own number
+    # the file restriction: a design line with its Am20 citation in 5.1's file (sec5_finetuning.tex, which \inputs 5.2's)
+    # or in another section's file is checked as without the extension (1.415 is only in the pre-registration, while
+    # section 26 quotes 2.841 and 2.365, and the line has no CLAIMS row); a failure names that file and the line's number
+    only_prereg = "The power factor at $n = 7$ is 1.415. % Am20 f (PREREG_GN.md:4077)"
+    assert fails(only_prereg) == []
     for other in ("sec5_finetuning.tex", "sec2_setup.tex"):
-        bad = fails(design, other, before="\\input{sec5_2_e7design}\n\n")
-        assert any(x.startswith(f"{other}:3: 2.841 is not in FINDINGS or CLAIMS") for x in bad)
+        bad = fails(only_prereg, other, before="\\input{sec5_2_e7design}\n\n")
+        assert any(x.startswith(f"{other}:3: 1.415 is not in FINDINGS or CLAIMS") for x in bad)
         assert any(x.startswith(f"{other}:3: states a result without a CLAIMS row") for x in bad)
     # a failure inside the \input file names it and its own line
     bad = fails("At $n = 7$ the critical value is 2.842. % Am20 f (PREREG_GN.md:4064)", before="%\n")
@@ -3331,10 +3341,10 @@ def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     assert any("PREREG_GN.md:4200 is outside Amendment 20 item 'f'" in x
                for x in fails("The margin is 0.07 dB. % Am20 f (PREREG_GN.md:4200)"))
     # the guard: a result line citing only an Am item fails, and its number is checked against FINDINGS / CLAIMS, not
-    # the item (0.3131 is only in the pre-registration)
-    bad = fails("The lead fell by 0.3131 dB. % Am20 f (PREREG_GN.md:4075)")
-    assert any("states a result citing only amendment items (Am20 f (PREREG_GN.md:4075))" in x for x in bad)
-    assert any("0.3131 is not in FINDINGS or CLAIMS" in x for x in bad)
+    # the item (0.066 is only in the pre-registration)
+    bad = fails("The lead fell by 0.066 dB. % Am20 f (PREREG_GN.md:4081)")
+    assert any("states a result citing only amendment items (Am20 f (PREREG_GN.md:4081))" in x for x in bad)
+    assert any("0.066 is not in FINDINGS or CLAIMS" in x for x in bad)
     # a line with a CLAIMS row is a result line: an item's number does not pass there
     bad = fails("The gap is 0.3131 dB. % Am20 f (PREREG_GN.md:4075); F1")
     assert len(bad) == 1 and "0.3131 is not in its cited sources F1" in bad[0]

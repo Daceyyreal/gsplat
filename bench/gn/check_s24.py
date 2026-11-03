@@ -34,7 +34,7 @@ SCENES = c21.SCENES
 cfg = c21.cfg
 PROCS = ((-1, 0), (0, 0), (0, 1), (1, 0))
 # plain counts and labels used in the text
-CONSTANTS = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "16", "18", "20", "21", "22", "23", "24", "28", "-1", "+1",
+CONSTANTS = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "16", "18", "20", "21", "22", "23", "24", "26", "28", "-1", "+1",
              "5,000", "4,096", "2026", "0.01"}
 # code reading, not checked: line numbers in C3DGS at 2a234af5, in torch 2.11 and in this repository, and C3DGS's
 # learning rates and defaults as its source states them
