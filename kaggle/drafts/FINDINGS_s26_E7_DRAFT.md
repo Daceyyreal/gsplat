@@ -153,6 +153,41 @@ BD_R per scene from the two curves (dB):
 |---|---|---|---|
 ⟨block:fragile_rows⟩
 
+### Exploratory sensitivity, not pre-registered: drjohnson's j = 0 seed pair out of the noise pooling
+
+**⟨exp_label⟩.**
+- **Why:** drjohnson's j = 0 seed pair is the one comparison inside `SD_pool` that spans Kaggle's two images (see "How the
+  sessions ran").
+- **What changes:** `SD_pool` = sqrt(mean `v_s` over the other scenes), with one degree of freedom per pooled scene, and
+  each primary's `SE` from it, still `SD_pool` / sqrt(n) with ⟨n⟩, the scenes `Δ_bar` averages.
+- **What does not:** every per-scene Δ, `Δ_bar`, criterion 2's count and the robustness reading's `SD_BD`.
+- **Where:** `bench/gn/check_s26.py` computes it; `bench/gn/e7.py` does not. Holm's order is each test's own under this
+  `SE`.
+
+Beside the pre-registered values:
+
+| | Δ_refit, pre-registered | Δ_refit, exploratory | Δ_cb, pre-registered | Δ_cb, exploratory |
+|---|---|---|---|---|
+⟨block:exp_stats⟩
+
+Critical values, exploratory: ⟨exp_crit⟩. Superiority's order: ⟨exp_sup_order⟩; equivalence's: ⟨exp_eq_order⟩.
+
+Superiority, exploratory (p and Holm-adjusted p as above, at these degrees of freedom):
+
+| Primary | Holm position | Tested | abs(r(`Δ_bar`)) / r(`SE`) | Critical t | Sign | Scenes of that sign | Criteria 1 / 2 / 3 | Superior | p | Holm-adjusted p |
+|---|---|---|---|---|---|---|---|---|---|---|
+⟨block:exp_sup_rows⟩
+
+Equivalence, exploratory:
+
+| Primary | Holm position | Tested | m | Critical t | Interval (dB) | Equivalent | p | Holm-adjusted p |
+|---|---|---|---|---|---|---|---|---|
+⟨block:exp_eq_rows⟩
+
+| Primary | Outcome of record (pre-registered) | Under this exploratory reading | Differs |
+|---|---|---|---|
+⟨block:exp_outcome_rows⟩
+
 ### How the numbers are computed, and three sources that agree
 
 - **The tool** (`bench/gn/e7.py`): each BD through `bench/gn/e5.py`'s `bd` (Amendment 9 a's fit, degree 2 through the
@@ -276,8 +311,16 @@ Primary rows missing after the rerun: ⟨missing_primary⟩.
 `kaggle/PREREG_GN.md:4447`: «**Verification at ingest.**»
 `kaggle/PREREG_GN.md:4502`: «**a. Scope.** This note applies to a scene extended in the ingested session»
 
-Per session: gsplat commit, the halves it ran, Kaggle images, setup (s; preflight, restore, install, C3DGS build) and
-setup plus jobs (s):
+- **The image, named as 18 b requires:** ⟨image_change⟩: S1-S10 ran on `⟨image_S1_S10⟩`, S11 on `⟨image_S11⟩`. ⟨image_span⟩;
+  nothing else changes. `kaggle/PREREG_GN.md:2785`: «E4p or E4q is reported with both images named.»
+  `kaggle/PREREG_GN.md:3184`: «(one process per point) or j = 0 pair (two processes) whose processes ran on different images is reported as»
+  `kaggle/PREREG_GN.md:3185`: «spanning images; nothing else changes (18 b).»
+- **S10's inputs, a departure from 20 l with no data effect:** S10's restore read only the S2, S3, S5, S7 and S9 bundle
+  datasets; S1, S4, S6 and S8 were attached after it had run. S9's copy of every scene was among those it read, and
+  every copy it restored is byte-identical to its S9 reference copy. `kaggle/PREREG_GN.md:4230`: «Each session attaches every earlier E7 session's output»
+
+Per session: gsplat commit, the halves it ran, Kaggle images, setup (s; preflight, restore, install, C3DGS build; a wheel
+built in the session counts once, inside install) and setup plus jobs (s):
 
 | Session | gsplat commit | Halves | Images | Setup | Setup and jobs |
 |---|---|---|---|---|---|
@@ -347,4 +390,6 @@ seed pair spans images. Across E7: ⟨images⟩.
 | `block:drop_rows` | drops, 17 i reruns and stops, deviations, cuts, failed guards | 4103-4107, 4164 |
 | `block:session_rows`, `block:half_time_rows`, `block:process_rows` | sessions, setup, jobs and process walls against note 1 and Note 4 (a) | 4262-4352 (note 1) |
 | `block:image_rows`, `images` | images per scene and spans (Note 2 C6) | 4411-4412 |
+| `image_S1_S10`, `image_S11`, `image_change`, `image_span` | both images named, from the rows' strings against each session's env file; the spans from the rows against the tool | 2785; 3183-3185 |
+| `exp_label`, `exp_crit`, `exp_sup_order`, `exp_eq_order`, `block:exp_stats`, `block:exp_sup_rows`, `block:exp_eq_rows`, `block:exp_outcome_rows` | the exploratory sensitivity, not pre-registered, beside the tests | none: `bench/gn/check_s26.py`, `kaggle/HANDOFF.md` |
 | `sources_bundles` | the bundles and their commits | 4226-4231 (20 l); notes 3-5 |

@@ -23,6 +23,11 @@ otherwise. Built like ``check_s21.py`` to ``check_s25.py``.
 
 The Holm-adjusted p-values are a restatement of criterion 3 (superiority) and of the TOST margin at the position
 ``e7.py`` tests each primary (20 f; note 2 a); the outcome is ``e7.py``'s, which also needs the count and Holm's order.
+
+Two things are this checker's alone. **18 b's two images** come from the rows' ``image`` strings, checked against each
+session's env file and the tool. **An exploratory sensitivity** (``exploratory``), declared before unblinding and not
+pre-registered: drjohnson's j = 0 seed pair out of the noise pooling. It is reported only beside the pre-registered tests,
+changes no verdict, and ``bench/gn/e7.py`` does not compute it.
 """
 
 import argparse
@@ -63,8 +68,14 @@ PROC_KEY = {(-1, 0): "j-1_p0", (0, 0): "j0_p0", (1, 0): "j+1_p0", (0, 1): "j0_p1
 SMALL_OVERLAP = 0.1
 CONSTANTS = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "16", "17", "18", "19", "20",
              "21", "22", "23", "24", "25", "26", "-1", "+1", "0.07", "0.5", "5,000", "4,096", "2026", "0.1", "0.05", "1e-9"}
-PLACEHOLDER = re.compile(r"⟨([a-z0-9_:]+)⟩")
+PLACEHOLDER = re.compile(r"⟨([A-Za-z0-9_:]+)⟩")
 CITE = re.compile(r"`kaggle/PREREG_GN\.md:(\d+)`: «([^»]+)»")
+WHEEL_IN_INSTALL = "gsplat_wheel_build_s"  # inside install_s (kaggle/build_gn_e5_bench.py:385, :409, :422)
+FIRST_IMAGE_SESSIONS, LAST_IMAGE_SESSION = SESSIONS[:10], SESSIONS[10]
+SENTENCES = ("**S10's inputs, a departure from 20 l with no data effect:**", "**The image, named as 18 b requires:**")
+# The exploratory sensitivity, declared before unblinding, not pre-registered and not in bench/gn/e7.py: the one scene
+# whose j = 0 seed pair spans Kaggle's two images is left out of the noise pooling. Its first commit is the declaration.
+EXPLORATORY_LEFT_OUT = "drjohnson"
 
 
 def r9(x):
@@ -110,7 +121,7 @@ def load(root):
     rows, carried, B = {}, [], {}
     for b in bundles(root):
         d = os.path.join(root, b, "gn7")
-        rec = {"metas": {}, "summary": None, "timings": {}, "rows": {}}
+        rec = {"metas": {}, "summary": None, "timings": {}, "rows": {}, "env": {}}
         for n in sorted(os.listdir(d)):
             p = os.path.join(d, n)
             if n.startswith("gn5_results_") and n.endswith(".csv"):
@@ -131,6 +142,9 @@ def load(root):
             elif n.startswith("timings_") and n.endswith(".json"):
                 with open(p, encoding="utf-8") as f:
                     rec["timings"] = json.load(f)
+            elif n.startswith("gn5_env_") and n.endswith(".json"):
+                with open(p, encoding="utf-8") as f:
+                    rec["env"][n[len("gn5_env_"):-len(".json")]] = json.load(f)
         B[b] = rec
     return rows, carried, B
 
@@ -268,6 +282,151 @@ def independent(rows, dropped):
     return out
 
 
+# ------------------------------------------------------------------------------ the exploratory sensitivity
+def df_tests(prim, n):
+    """20 f's two Holm families with each primary's t quantiles at its own ``prim[k]["df"]``; the count (criterion 2) stays
+    over the n scenes in ``Delta_bar``. In ``e7.superiority`` and ``e7.equivalence``'s form, which tie n to the degrees of
+    freedom; with df = n it reproduces them (``exploratory`` checks that)."""
+    def stat(k):
+        b, s = prim[k]["bar"], prim[k]["se"]
+        return abs(b) / s if s > 0 else (math.inf if b != 0 else 0.0)
+
+    def marg(k):
+        b, s = prim[k]["bar"], prim[k]["se"]
+        return (DELTA - abs(b)) / s if s > 0 else (math.inf if abs(b) < DELTA else -math.inf)
+
+    def sgn(x):
+        return (x > 0) - (x < 0)
+
+    need = (7 * n + 9) // 10
+    sup, go = {}, True
+    order_s = sorted(prim, key=lambda k: (-stat(k), ORDER.index(k)))
+    for pos, k in enumerate(order_s):
+        c = tq(1 - ALPHA / 2, prim[k]["df"]) if pos == 1 else tq(1 - ALPHA / 4, prim[k]["df"])
+        b, s, sig = prim[k]["bar"], prim[k]["se"], sgn(prim[k]["bar"])
+        cnt = sum(1 for v in prim[k]["deltas"].values() if sig != 0 and sgn(v) == sig)
+        c1, c2, c3 = b != 0, cnt >= need, abs(b) > c * s
+        res = bool(go and c1 and c2 and c3)
+        sup[k] = {"position": pos + 1, "tested": go, "critical_t": c, "statistic": stat(k), "sign": sig, "n_sign": cnt,
+                  "needed": need, "c1_nonzero": c1, "c2_count": c2, "c3_above": c3, "superior": res}
+        go = res
+    eqv, go = {}, True
+    order_e = sorted(prim, key=lambda k: (-marg(k), ORDER.index(k)))
+    for pos, k in enumerate(order_e):
+        c = tq(1 - ALPHA, prim[k]["df"]) if pos == 1 else tq(1 - ALPHA / 2, prim[k]["df"])
+        m = marg(k)
+        res = bool(go and m > c)
+        eqv[k] = {"position": pos + 1, "tested": go, "critical_t": c, "m": m, "equivalent": res,
+                  "interval": [prim[k]["bar"] - c * prim[k]["se"], prim[k]["bar"] + c * prim[k]["se"]]}
+        go = res
+    return {"superiority": {"order": order_s, "results": sup}, "equivalence": {"order": order_e, "results": eqv}}
+
+
+def exploratory(V, ind, outcome):
+    """Both primaries with ``EXPLORATORY_LEFT_OUT``'s j = 0 seed pair out of the noise pooling. ``SD_pool`` = sqrt(mean
+    ``v_s`` over the other scenes), with one degree of freedom per pooled scene; ``SE`` = that ``SD_pool`` / sqrt(n), n still
+    the scenes ``Delta_bar`` averages; every per-scene Delta, ``Delta_bar`` and the count unchanged. Holm's order is each
+    test's own under this ``SE``. It changes no verdict: ``V`` is only read."""
+    n, P = V["n"], V["primaries"]
+    noise, agree = {}, []
+    for k in ORDER:
+        vs = {s: p["v_s"] for s, p in P[k]["noise"]["per_scene"].items()
+              if p["v_s"] is not None and s != EXPLORATORY_LEFT_OUT}
+        vi = {s: v for s, v in ind["noise"][k]["v_s"].items() if s != EXPLORATORY_LEFT_OUT}
+        sd = math.sqrt(sum(vs.values()) / len(vs)) if vs else None
+        si = math.sqrt(sum(vi.values()) / len(vi)) if vi else None
+        agree.append(len(vs) == len(vi) and (sd is None or abs(sd - si) < 1e-12))
+        noise[k] = {"n_noise": len(vs), "SD_pool": sd, "SE": sd / math.sqrt(n) if sd is not None else None}
+    prim = {k: {"bar": r9(P[k]["delta_bar"]), "se": r9(noise[k]["SE"]), "df": noise[k]["n_noise"],
+                "deltas": {s: r9(v["delta"]) for s, v in P[k]["per_scene"].items()}}
+            for k in ORDER if V["outcomes"][k] != "incomplete" and noise[k]["SE"] is not None}
+    tests = df_tests(prim, n)
+    full = df_tests({k: {**v, "df": n} for k, v in V["tests"]["inputs"].items()}, n)
+    same = all(full[x]["order"] == V["tests"][x]["order"] and full[x]["results"] == V["tests"][x]["results"]
+               for x in ("superiority", "equivalence"))
+    return {"noise": noise, "prim": prim, "tests": tests, "agree": agree, "reproduces_tool": same,
+            "outcomes": {k: outcome(tests["superiority"]["results"].get(k), tests["equivalence"]["results"].get(k))
+                         for k in ORDER}}
+
+
+def declaration_commit():
+    """The commit that introduced ``EXPLORATORY_LEFT_OUT``, from git's history (a commit cannot name itself)."""
+    h = subprocess.run(["git", "-C", REPO, "log", "--reverse", "--format=%h", "--abbrev=8", "-S", "EXPLORATORY_LEFT_OUT",
+                        "--", "bench/gn/check_s26.py"], capture_output=True, text=True).stdout.split()
+    return h[0] if h else "(not committed)"
+
+
+# ------------------------------------------------------------------------------ the images
+def env_image(env):
+    """The image string of a session's env file, as a row's ``image`` is written from the job's (``e5.image_key``)."""
+    smi = env.get("nvidia_smi") or ""
+    driver = smi.split(",")[1].strip() if smi.count(",") >= 2 else ""
+    return (f"py{env.get('python', '?')}|torch{env.get('torch', '?')}|cuda{env.get('torch_cuda', '?')}"
+            f"|cudnn{env.get('cudnn', '?')}|driver{driver or '?'}")
+
+
+def process_image(R, j, seed):
+    r = R.get(cfg(j, seed, "c3dgs"))
+    return r.get("image") or None if ok(r) else None
+
+
+def image_facts(rows, B, V, strict=False):
+    """18 b's two images from the rows' strings, against each session's env file and the tool's ``where``; Note 2 C6's
+    spans from the rows, against the tool's flags. ``problems`` lists what fails; ``strict`` (the real root) also needs all
+    eleven sessions, one image before S11, another in S11, and only ``EXPLORATORY_LEFT_OUT``'s j = 0 pair spanning."""
+    per = {}
+    for rec in B.values():
+        for R in rec["rows"].values():
+            for r in R:
+                if r.get("session") and r.get("image"):
+                    per.setdefault(r["session"], set()).add(r["image"])
+    first = set().union(*(per.get(s, set()) for s in FIRST_IMAGE_SESSIONS))
+    last = per.get(LAST_IMAGE_SESSION, set())
+    problems = [f"{s}'s rows hold {len(v)} image strings" for s, v in sorted(per.items()) if len(v) != 1]
+    for rec in B.values():
+        for s, env in rec["env"].items():
+            if s in per and per[s] != {env_image(env)}:
+                problems.append(f"{s}'s rows do not hold its env file's image")
+    tool_images = {i for s in V["scenes"] for i in V["where"][s]["images"]}
+    if not tool_images <= set().union(set(), *per.values()):
+        problems.append("the tool's images are not the rows'")
+    pair, c0, c1 = [], [], []
+    for s in V["scenes"]:
+        R = rows.get(s, {})
+        i0, i1 = ({process_image(R, j, seed) for j in POINTS} - {None} for seed in (0, 1))
+        ip = {process_image(R, 0, seed) for seed in (0, 1)} - {None}
+        if len(ip) > 1:
+            pair.append(s)
+        if len(i0) > 1:
+            c0.append(s)
+        if len(i1) > 1:
+            c1.append(s)
+        for k in ORDER:
+            sp = V["primaries"][k]["per_scene"][s]["spans_images"]
+            if sp != {"curves": len(i0) > 1, "j0_pair": len(ip) > 1}:
+                problems.append(f"{s}: the tool's image spans ({k}) differ from the rows'")
+    if strict:
+        if set(per) != set(SESSIONS):
+            problems.append(f"sessions with an image: {sorted(per)}, not all eleven")
+        if len(first) != 1 or len(last) != 1 or first == last:
+            problems.append("not one image in S1-S10 and another in S11")
+        if pair != [EXPLORATORY_LEFT_OUT] or c0 or c1:
+            problems.append(f"spans other than {EXPLORATORY_LEFT_OUT}'s j = 0 pair")
+
+    def named(v):
+        return ", ".join(sorted(v)) or "n/a"
+
+    def scenes(v):
+        return ", ".join(v) or "no scene"
+
+    out = {"image_S1_S10": named(first), "image_S11": named(last),
+           "image_change": ("Kaggle's image changed between S10 and S11" if first and last and first != last else
+                            "no change of Kaggle's image between S10 and S11"),
+           "image_span": (f"Spanning images (Note 2 C6): the j = 0 seed pair of {scenes(pair)}; the seed-0 curve of "
+                          f"{scenes(c0)}; the seed-1 curve of {scenes(c1)}")}
+    return out, problems
+
+
 # ------------------------------------------------------------------------------ the tool (bench/gn/e7.py)
 def tool(root):
     sys.path[:0] = [HERE, os.path.join(REPO, "kaggle")]
@@ -398,10 +557,11 @@ def facts(root):
     # the tests, with descriptive Holm-adjusted p-values
     from scipy.stats import t as tdist
 
-    def test_rows(tests, prefix=""):
+    def test_rows(tests, prefix="", df=None):
         sup, eqv = tests["superiority"], tests["equivalence"]
-        p_sup = {k: 2 * float(tdist.sf(sup["results"][k]["statistic"], n)) for k in sup["order"]}
-        p_eq = {k: float(tdist.sf(eqv["results"][k]["m"], n)) for k in eqv["order"]}
+        df = df or {k: n for k in ORDER}
+        p_sup = {k: 2 * float(tdist.sf(sup["results"][k]["statistic"], df[k])) for k in sup["order"]}
+        p_eq = {k: float(tdist.sf(eqv["results"][k]["m"], df[k])) for k in eqv["order"]}
         h_sup, h_eq = holm_p(sup["order"], p_sup), holm_p(eqv["order"], p_eq)
         srows, erows = [], []
         for k in ORDER:
@@ -439,6 +599,34 @@ def facts(root):
                     f"`SD_BD` / sqrt(n) = {f9(Rb['SE_BD'])}")
     out["block:fragile_rows"] = [f"| {sym[k]} | {V['outcomes'][k]} | {Rb['outcomes'][k]} | {yn(V['fragile'][k])} |"
                                  for k in ORDER]
+
+    # the exploratory sensitivity, beside the pre-registered tests and never in place of them
+    ex = exploratory(V, ind, e7.outcome)
+    F["exploratory"] = ex
+    out["exp_commit"] = declaration_commit()
+    out["exp_label"] = (f"exploratory, declared at `{out['exp_commit']}` before unblinding; the verdict is the "
+                        "pre-registered computation")
+    en = ex["noise"]
+    er = {k: stat(k, en[k]["SE"]) for k in ORDER}
+
+    def beside(name, reg, expl):
+        return f"| {name} | {reg('refit')} | {expl('refit')} | {reg('cb')} | {expl('cb')} |"
+
+    out["block:exp_stats"] = [
+        beside(f"`Δ_bar` ({out['n']})", lambda k: f9(st[k]["bar"]), lambda k: f9(st[k]["bar"])),
+        beside("`SD_pool`", lambda k: f9(st[k]["nz"]["SD_pool"]), lambda k: f9(en[k]["SD_pool"])),
+        beside("scenes pooled for the noise, and the t's degrees of freedom", lambda k: st[k]["nz"]["n"],
+               lambda k: en[k]["n_noise"]),
+        beside(f"`SE` = `SD_pool` / sqrt(n), {out['n']}", lambda k: f9(st[k]["nz"]["SE"]), lambda k: f9(en[k]["SE"])),
+        beside("r(`Δ_bar`) / r(`SE`)", lambda k: na(sr[k][0], ".3f"), lambda k: na(er[k][0], ".3f")),
+        beside("m = (δ - abs(r(`Δ_bar`))) / r(`SE`)", lambda k: na(sr[k][1], ".3f"), lambda k: na(er[k][1], ".3f"))]
+    test_rows(ex["tests"], "exp_", {k: en[k]["n_noise"] for k in ORDER})
+    out["exp_crit"] = "; ".join(
+        f"c_sup,1 = {tq(1 - ALPHA / 4, d):.3f}, c_sup,2 = {tq(1 - ALPHA / 2, d):.3f}, c_eq,1 = {tq(1 - ALPHA / 2, d):.3f}, "
+        f"c_eq,2 = {tq(1 - ALPHA, d):.3f} at {d} degrees of freedom"
+        for d in sorted({en[k]["n_noise"] for k in ORDER if en[k]["n_noise"]})) or "n/a"
+    out["block:exp_outcome_rows"] = [f"| {sym[k]} | {V['outcomes'][k]} | {ex['outcomes'][k]} | "
+                                     f"{yn(V['outcomes'][k] != ex['outcomes'][k])} |" for k in ORDER]
 
     # the SE convention beside E5's and E6's (20 b; section 25)
     import check_s25 as c25
@@ -498,6 +686,10 @@ def facts(root):
 
     # drops, 17 i, sessions, images, timing
     out.update(mechanics(rows, B, V))
+    real = os.path.realpath(root) == os.path.realpath(REAL_ROOT)
+    im, F["image_problems"] = image_facts(rows, B, V, strict=real)
+    out.update(im)
+    F["declared"] = declared_after_the_bundles(out["exp_commit"]) if real else True
 
     # the summary and sources
     out["summary_bdbar"] = (f"Δ_refit `Δ_bar` {f9(P['refit']['delta_bar'])} dB, Δ_cb `Δ_bar` {f9(P['cb']['delta_bar'])} dB "
@@ -508,6 +700,14 @@ def facts(root):
     F["agree"] = agree(V, ind, B)
     F["tool_sessions_scenes"] = sorted(V["scenes"])
     return out, F
+
+
+def declared_after_the_bundles(commit):
+    """The declaration is a commit with S11's ingest among its ancestors."""
+    s11 = subprocess.run(["git", "-C", REPO, "log", "-1", "--format=%H", "--", f"kaggle/gn_e7/{LAST_IMAGE_SESSION}/gn7"],
+                         capture_output=True, text=True).stdout.strip()
+    return bool(s11) and subprocess.run(["git", "-C", REPO, "merge-base", "--is-ancestor", s11, commit],
+                                        capture_output=True).returncode == 0
 
 
 def _e5_rows():
@@ -623,6 +823,13 @@ def latest_meta(B, scene):
     return best
 
 
+def session_seconds(T):
+    """(setup, jobs) of a session's timings: the jobs are ``gn_e7_<scene>_h<half>_s``; setup is every other timing, with
+    a built wheel's time counted once, inside ``install_s``."""
+    jobs = {k: v for k, v in T.items() if re.fullmatch(r"gn_e7_.+_h\d_s", k)}
+    return sum(v for k, v in T.items() if k not in jobs and k != WHEEL_IN_INSTALL), sum(jobs.values())
+
+
 def mechanics(rows, B, V):
     import e7_estimate as ee
 
@@ -652,11 +859,10 @@ def mechanics(rows, B, V):
         images = sorted({r.get("image", "") for r in sess_rows})
         halves = sorted({(r["scene"], int(r["process_seed"])) for r in sess_rows})
         T = rec["timings"]
-        jobs = {k: v for k, v in T.items() if re.fullmatch(r"gn_e7_.+_h\d_s", k)}
-        setup = sum(v for k, v in T.items() if k not in jobs)
+        setup, jobs = session_seconds(T)
         srows.append(f"| {b} | {', '.join(f'`{c}`' for c in commits) or '-'} | "
                      f"{', '.join(f'{s} seed {h}' for s, h in halves) or '-'} | {len(images)} | "
-                     f"{setup:,.1f} | {sum(jobs.values()) + setup:,.1f} |")
+                     f"{setup:,.1f} | {jobs + setup:,.1f} |")
         for s, h in halves:
             j = T.get(f"gn_e7_{s}_h{h}_s")
             lo, hi = ee.half_s(s, h, 0), ee.half_s(s, h, 1)
@@ -811,6 +1017,14 @@ def run(root, findings):
     check(all(F.get("p_consistent", [True])), "the Holm-adjusted p-values agree with criterion 3 and the TOST margins")
     check(F["s25_holds"], "section 25: criterion 3 holds under both standard errors")
     check(all(F["why_matches"]), "the incomplete reasons as written match the tool's")
+    for x in F["image_problems"]:
+        check(False, f"the images: {x}")
+    for s in SENTENCES:
+        check(re.sub(r"\s+", " ", s) in text, f"the sentence {s!r} is in the section")
+    ex = F["exploratory"]
+    check(all(ex["agree"]), "the exploratory noise: the tool's v_s and the recompute's agree")
+    check(ex["reproduces_tool"], "the exploratory tests with the full noise reproduce the tool's")
+    check(F["declared"], "the exploratory sensitivity's declaration commit follows S11's ingest")
     for k in ORDER:
         check(F["V"]["fragile"][k] == (F["V"]["outcomes"][k] != "incomplete" and
                                         F["V"]["outcomes"][k] != F["V"]["robustness"]["outcomes"][k]),

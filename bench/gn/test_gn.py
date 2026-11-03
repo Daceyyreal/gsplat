@@ -7792,6 +7792,214 @@ def test_check_s26_fills_and_checks_on_stand_in_bundles_and_refuses_the_real_roo
         assert c.run(dry, str(planted_digit(path)))["fails"]
 
 
+S26_IMAGE_A = "py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04"
+S26_IMAGE_B = "py3.13.16|torch2.11.0+cu130|cuda13.0|cudnn92700|driver580.178.04"
+S26_TIMINGS_S10 = {"ogc_preflight_s": 31.79293417930603, "restore_s": 8.115931749343872, "install_s": 125.90117955207825,
+                   "c3dgs_build_s": 218.1305854320526, "gn_e7_room_h1_s": 13020.249284744263,
+                   "gn_e7_truck_h1_s": 8430.161714553833}
+S26_TIMINGS_S11 = {"ogc_preflight_s": 48.48928737640381, "restore_s": 22.22728157043457,
+                   "gsplat_wheel_build_s": 4034.7761240005493, "install_s": 4166.903070449829,
+                   "c3dgs_build_s": 226.65504908561707, "gn_e7_drjohnson_h1_s": 13440.281975984573}
+
+
+def _s26_env(image, session):
+    py, torch_, cuda, cudnn, driver = image.split("|")
+    return {"python": py[2:], "torch": torch_[5:], "torch_cuda": cuda[4:], "cudnn": int(cudnn[5:]), "session": session,
+            "nvidia_smi": f"Tesla T4, {driver[6:]}, 15360 MiB\nTesla T4, {driver[6:]}, 15360 MiB"}
+
+
+def _s26_two_image_root(root, noise=None, deltas=None):
+    """Stand-in bundles shaped like E7's end: session S10 ran every half on one image but drjohnson's seed-1 half, and S11
+    (cumulative) ran that half on another image and built the wheel. ``noise(i, scene)`` gives a scene's seed-pair noise."""
+    import e5
+    import e7_scenes as es
+
+    def row_session(scene, row, p):
+        late = scene == "drjohnson" and p["seed"] == 1
+        return {**row, "session": "S11" if late else "S10", "image": S26_IMAGE_B if late else S26_IMAGE_A,
+                "j": str(p["j"]), "process_seed": str(p["seed"])}
+
+    early, full = {}, {}
+    for i, s in enumerate(es.SCENES):
+        d = deltas(i) if deltas else {"R": 0.05, "G": 0.05 + 0.01 * (i - 3), "CG": 0.06 + 0.01 * (i - 3), "K": 0.08, "O": 0.07}
+        if noise:
+            nz = noise(i, s)
+        else:
+            f, g = (1 + i % 3) * (-1) ** i, (1 + (i + 1) % 3) * (-1) ** (i + 1)
+            nz = {"R": 0.001 * (-1) ** i}
+            nz["G"] = nz["R"] + 0.002 * f
+            nz["CG"] = nz["G"] + 0.002 * g
+        where = {e5.config_name(p["j"], p["seed"], r): p for p in es.processes(s) for r in es.process_rows(s, p)}
+        rows = [row_session(s, r, where[r["config"]]) for r in _e7_rows(s, d, nz, 0.005 * (1 + i % 2))]
+        full[s] = rows
+        early[s] = [r for r in rows if r["session"] == "S10"]
+    _e7_bundles(root, early, "S10")
+    _e7_bundles(root, full, "S11")
+    for sess, image, tim in (("S10", S26_IMAGE_A, S26_TIMINGS_S10), ("S11", S26_IMAGE_B, S26_TIMINGS_S11)):
+        d = os.path.join(root, sess, "gn7")
+        with open(os.path.join(d, f"gn5_env_{sess}.json"), "w") as f:
+            json.dump(_s26_env(image, sess), f)
+        with open(os.path.join(d, f"timings_{sess}.json"), "w") as f:
+            json.dump(tim, f)
+    return root
+
+
+def _s26_skeleton():
+    return open(os.path.join(os.path.dirname(HERE), "..", "kaggle", "drafts", "FINDINGS_s26_E7_DRAFT.md"),
+                encoding="utf-8").read().replace("\r\n", "\n")
+
+
+def test_check_s26_counts_a_built_wheel_once_in_setup(tmp_path):
+    """install_s already holds gsplat_wheel_build_s (kaggle/build_gn_e5_bench.py:385, :409, :422): a session that built the
+    wheel (S11's timings) and one that restored it (S10's) each count preflight, restore, install and the C3DGS build, and
+    the session rows check_s26 fills say so."""
+    import check_s26 as c
+
+    assert c.session_seconds(S26_TIMINGS_S10) == (pytest.approx(383.9406, abs=1e-3), pytest.approx(21450.4110, abs=1e-3))
+    s11 = S26_TIMINGS_S11
+    setup, jobs = c.session_seconds(s11)
+    assert setup == pytest.approx(s11["ogc_preflight_s"] + s11["restore_s"] + s11["install_s"] + s11["c3dgs_build_s"])
+    assert setup == pytest.approx(4464.2747, abs=1e-3) and jobs == s11["gn_e7_drjohnson_h1_s"]
+    assert "gsplat_wheel_build_s" not in S26_TIMINGS_S10
+
+    out, _ = c.facts(_s26_two_image_root(str(tmp_path / "bundles")))
+    rows = {r.split(" | ")[0][2:]: r for r in out["block:session_rows"]}
+    assert rows["S11"].endswith("| 4,464.3 | 17,904.6 |") and "8,499.1" not in rows["S11"]
+    assert rows["S10"].endswith("| 383.9 | 21,834.4 |")
+
+
+def test_check_s26_names_both_images_and_the_two_sentences(tmp_path):
+    """18 b and Note 2 C6 in FINDINGS section 26: both image strings are filled from the rows, match each session's env
+    file and pass the numeric-token check; the spans come from the rows and match the tool (drjohnson's j = 0 pair only);
+    a wrong image, a session with two images, an env file disagreeing or a missing sentence each fail; on the real root the
+    expected shape is required, tested here on hand-made facts without reading a bundle."""
+    import csv as _csv
+
+    import check_s26 as c
+
+    root = _s26_two_image_root(str(tmp_path / "bundles"))
+    out, F = c.facts(root)
+    assert out["image_S1_S10"] == S26_IMAGE_A and out["image_S11"] == S26_IMAGE_B
+    assert out["image_change"] == "Kaggle's image changed between S10 and S11"
+    assert out["image_span"] == ("Spanning images (Note 2 C6): the j = 0 seed pair of drjohnson; the seed-0 curve of no "
+                                 "scene; the seed-1 curve of no scene")
+    assert F["image_problems"] == []
+    V = F["V"]
+    assert [s for s in V["scenes"] if V["primaries"]["refit"]["per_scene"][s]["spans_images"]["j0_pair"]] == ["drjohnson"]
+
+    path = tmp_path / "filled.md"
+    filled = c.fill(_s26_skeleton(), out)
+    path.write_text(filled, encoding="utf-8", newline="\n")
+    assert c.run(root, str(path))["fails"] == []
+    assert f"S1-S10 ran on `{S26_IMAGE_A}`, S11 on `{S26_IMAGE_B}`" in filled
+
+    def fails_with(text, name):
+        p = tmp_path / name
+        p.write_text(text, encoding="utf-8", newline="\n")
+        return c.run(root, str(p))["fails"]
+
+    bad = fails_with(filled.replace(S26_IMAGE_B, S26_IMAGE_B.replace("92700", "92701"), 1), "image.md")
+    assert any("number not in the text" in x and "92700" in x for x in bad)
+    assert fails_with(filled, "same.md") == []
+    for s in c.SENTENCES:
+        assert any("is in the section" in x for x in fails_with(filled.replace(s, "**Removed:**"), "sentence.md")), s
+
+    env = tmp_path / "bundles" / "S11" / "gn7" / "gn5_env_S11.json"
+    keep = env.read_text()
+    env.write_text(json.dumps(_s26_env(S26_IMAGE_A, "S11")))
+    assert any("env file" in x for x in c.facts(root)[1]["image_problems"])
+    env.write_text(keep)
+
+    csv_path = tmp_path / "bundles" / "S11" / "gn7" / "gn5_results_room.csv"
+    keep = csv_path.read_bytes()
+    with open(csv_path, newline="") as f:
+        rows = list(_csv.DictReader(f))
+    rows[-1]["image"] = S26_IMAGE_B
+    with open(csv_path, "w", newline="") as f:
+        w = _csv.DictWriter(f, list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+    try:
+        problems = c.facts(root)[1]["image_problems"]
+    except Exception as e:  # the carried row differs from S10's: the tool's combiner refuses, which also stops the check
+        assert "hold different rows" in str(e)
+    else:
+        assert any("2 image strings" in x for x in problems)
+    csv_path.write_bytes(keep)
+
+    V = c.facts(root)[1]["V"]
+    rows_, _, B = c.load(root)
+    assert c.image_facts(rows_, B, V)[1] == []
+    assert any("not all eleven" in x for x in c.image_facts(rows_, B, V, strict=True)[1])
+
+
+def test_check_s26_exploratory_sensitivity_on_synthetic_seven_scenes(tmp_path):
+    """The exploratory sensitivity declared before E7's unblinding (kaggle/HANDOFF.md), on synthetic bundles of all seven
+    scenes: drjohnson's v_s leaves SD_pool, whose degrees of freedom drop by one; SE = SD_pool / sqrt(7), Delta_bar still
+    over seven scenes; the t's at six degrees of freedom; every per-scene Delta and the tool's verdict unchanged; the label
+    in the text; a planted digit caught; with the full noise the function reproduces the tool's tests; a drjohnson noise that
+    dominates can flip the reading, and the outcome of record stays the pre-registered one. bench/gn/e7.py has none of it."""
+    from scipy.stats import t
+
+    import check_s26 as c
+    import e7_scenes as es
+
+    root = _s26_two_image_root(str(tmp_path / "bundles"))
+    out, F = c.facts(root)
+    V, ex = F["V"], F["exploratory"]
+    assert ex["reproduces_tool"] and all(ex["agree"])
+    for k in c.ORDER:
+        per = V["primaries"][k]["noise"]["per_scene"]
+        vs = [per[s]["v_s"] for s in es.SCENES if s != "drjohnson"]
+        sd = (sum(vs) / 6) ** 0.5
+        assert len(vs) == 6 and ex["noise"][k]["n_noise"] == 6
+        assert ex["noise"][k]["SD_pool"] == pytest.approx(sd) and ex["noise"][k]["SE"] == pytest.approx(sd / 7 ** 0.5)
+        assert ex["prim"][k]["bar"] == V["tests"]["inputs"][k]["bar"]
+        assert ex["prim"][k]["deltas"] == V["tests"]["inputs"][k]["deltas"]
+        assert ex["prim"][k]["df"] == 6
+        sup, eqv = ex["tests"]["superiority"], ex["tests"]["equivalence"]
+        qs, qe = (0.9875, 0.975)[sup["results"][k]["position"] - 1], (0.975, 0.95)[eqv["results"][k]["position"] - 1]
+        assert sup["results"][k]["critical_t"] == pytest.approx(t.ppf(qs, 6))
+        assert eqv["results"][k]["critical_t"] == pytest.approx(t.ppf(qe, 6))
+        assert sup["results"][k]["needed"] == 5
+    assert V["primaries"]["refit"]["noise"]["n"] == 7 and V["n"] == 7
+
+    label = out["exp_label"]
+    assert label.startswith("exploratory, declared at `") and label.endswith(
+        "before unblinding; the verdict is the pre-registered computation")
+    filled = c.fill(_s26_skeleton(), out)
+    assert f"**{label}.**" in filled and "6 degrees of freedom" in filled
+    path = tmp_path / "filled.md"
+    path.write_text(filled, encoding="utf-8", newline="\n")
+    assert c.run(root, str(path))["fails"] == []
+    summary = filled[filled.index("## Summary paragraph"):filled.index("## Sources entry")]
+    assert "exploratory" not in summary.lower()
+    row = next(ln for ln in filled.splitlines() if ln.startswith("| `SD_pool` | ") and ln.count("|") == 6)
+    i = row.rindex(".") + 3
+    bad = tmp_path / "digit.md"
+    bad.write_text(filled.replace(row, row[:i] + str((int(row[i]) + 1) % 10) + row[i + 1:]), encoding="utf-8", newline="\n")
+    assert any("number not in the text" in x for x in c.run(root, str(bad))["fails"])
+
+    # Only drjohnson's pair is noisy: the pre-registered tests see it, this reading does not, and the record does not move
+    def noisy(i, s):
+        v = 1.0 if s == "drjohnson" else 0.001 * (-1) ** i
+        return {"R": 0.0, "G": v, "CG": v + 0.001 * (-1) ** i}
+
+    root2 = _s26_two_image_root(str(tmp_path / "noisy"), noise=noisy,
+                                deltas=lambda i: {"R": 0.05, "G": 0.25, "CG": 0.26, "K": 0.08, "O": 0.07})
+    out2, F2 = c.facts(root2)
+    assert F2["exploratory"]["reproduces_tool"]
+    assert F2["V"]["outcomes"]["refit"] == "neither"
+    assert F2["exploratory"]["outcomes"]["refit"] == "superior, positive; not equivalent"
+    assert any(r.startswith("| Δ_refit | neither | superior, positive; not equivalent | yes |")
+               for r in out2["block:exp_outcome_rows"])
+    assert out2["outcome_refit"] == "neither"
+
+    src = open(os.path.join(HERE, "e7.py"), encoding="utf-8").read()
+    assert "EXPLORATORY" not in src and "exploratory" not in src
+    assert "exp_" not in out["block:primary_stats"][0]
+
+
 def test_e7_notebooks_rebuild_and_name_their_session():
     """kaggle/build_gn_e7_bench.py: the eleven committed notebooks equal the builder's output; titles "E7 OGC
     FT-dissection S1"-"S11" from kaggle/e7_sessions.json (Amendment 20 note 1); E7_bundle_S#.zip under gn7/; E7's job
