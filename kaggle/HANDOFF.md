@@ -77,8 +77,10 @@ ingest, every check passing): kitchen and playroom complete (2 of 7); Amendment 
 seed 1, every check passing): 4 of 7 scenes complete; E7 S10 ingested (`ccb7a4f9`, room and truck seed 1, every check
 passing; an input departure from 20 l, no data effect): 6 of 7 scenes complete; E7 S11 ingested (`32758a0e`, drjohnson
 seed 1, every check passing; a new Kaggle image, so drjohnson's j = 0 pair spans images, Note 2 C6): all 7 scenes
-complete, all eleven sessions in; pre-unblinding fixes and the exploratory declaration `c95c369f` (see "Pre-unblinding
-fixes"); next: Dace's Phase B, the unblinding, then the write-up after Dace has read it.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
+complete, all eleven sessions in; pre-unblinding fixes and the exploratory declaration `c95c369f`; **E7 is closed: both
+primaries "equivalent; not superior", neither fragile (FINDINGS section 26, `3ca275bb`, `check_s26.py` `4171a88a`; CLAIMS group H,
+`f7f5c035`; see "E7 closed"); next: the paper's E7 results section in its own file, then the abstract and introduction, then
+the deferred `e7.py` fixes.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
 `4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b); F1's shared y-axis, round ticks and shaded
@@ -5975,8 +5977,49 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     unblinding; the verdict is the pre-registered computation". It is in no summary or headline, and changes no outcome,
     fragile flag or reading.
 - **Still not verified:** S11's `discover` dump (see "E7 S11").
-- **Next action: Phase B of Dace's prompt:** `e7.py` with `--out` outside the repository, the filled copy in `kaggle/drafts/`,
-  `check_s26.py` on it, the report to Dace. Nothing goes into FINDINGS, CLAIMS or the paper until Dace has read it.
+- **Phase B followed** (`12200d17`, the filled draft): see "E7 closed".
+
+### E7 closed (2026-11-03): FINDINGS section 26, CLAIMS group H, Gap 3
+
+- **The verdict (Amendment 20 f, h), n = 7, no scene dropped: Δ_refit and Δ_cb are both "equivalent; not superior" at
+  δ = 0.07 dB, neither fragile.** Δ_refit `Δ_bar` -0.020086807 (`SE` 0.005561656, interval [-0.033238, -0.006936]); Δ_cb
+  +0.008438079 (`SE` 0.011134979, [-0.012658, +0.029534]). The declared sensitivity (`c95c369f`) gives the same outcomes.
+- **Commits:** `4171a88a` (post-hoc block in `check_s26.py`, skeleton, source commits), `3ca275bb` (FINDINGS section 26; section
+  24's pointer), `f7f5c035` (CLAIMS group H, H1-H13; Gap 3; `check_tex.py` reads `[A-H]`). `check_s26.py` on `FINDINGS.md`: 272
+  recomputed numbers (261 pre-registered and reported, 11 post hoc), 897 numeric tokens, 0 failures. Pytest 237.
+- **Dace's reading (R1-R5), as checked; the docs use the corrected forms:**
+  - **R1 confirmed.**
+  - **R2 confirmed on size, corrected on sign.** P1 0.3540 minus P_FT 0.0467 = 0.3073 dB; 6.5%, 2.7%, δ 22.8%. Δ_refit's mean is
+    negative, but it is positive on 4 of 7 scenes and the other six average +0.001579 without kitchen, and under `SE_BD` its
+    interval holds 0. So the docs claim the size and not the sign.
+  - **R3 corrected.** What K freezes and neither primary holds fixed includes the **kept splats' colours**, so it is not "the
+    non-colour parameters" (`kaggle/PREREG_GN.md:4154`; `:4005-4007`). No arm separates them. K's +0.438 dB is C3DGS's evaluation
+    at one point and unequal bytes; protocol ii reads +0.4360. CG is the other half of the reading: K loses 17.2% of the shrink,
+    CG 103.8%.
+  - **R4 confirmed but one.** Under the scene-spread `SE` Δ_refit's m 2.201 misses the first position's 2.447, but the TOST's
+    own order puts Δ_cb first (m 4.965), so Δ_refit is tested second, at 1.943, and passes. The block reports both. All
+    the others hold as stated (kitchen; `SE_BD`; replicate 0.012846400; the sensitivity; g.5's 7 of 7; g.6's 2.310).
+  - **R5 holds narrowed.** Δ_refit freezes the AC and DC grids together, so E7 speaks for the two grids' re-fit, not AC alone. It
+    is the lead at equal rate in the mean, not PSNR alone. The byte effect stands (E5, E13, F9; g.8, R against G). Gap 3 is closed for
+    what E7 tested, and what stays open is stated there. E16 needs no change; E17 and E18 are rescoped, with E5, E13, F9 and
+    headline 2.
+- **The arms:** `kaggle/PREREG_GN.md:3987-3994`, `:3996-4007`; `kaggle/e7_scenes.py:59-68`; `kaggle/e7_hooks.py:229-242`.
+- **What C3DGS's fine-tuning trains,** at `2a234af5`: seven Adam groups, `scene/gaussian_model.py:228-266`, built by
+  `finetune.py:24`; learning rates `arguments/__init__.py:102`, `:106-109`. `_features_dc` 0.0025 (`:235-237`), `_features_rest`
+  0.000125 (`:240-242`), `_opacity` 0.05 (`:245-247`), `_scaling` 0.005 (`:250-252`), `_scaling_factor` 0.005 (`:255-257`),
+  `_rotation` 0.001 (`:260-262`), `_xyz` 0 (`:230-232`; `spatial_lr_scale` 0 at `:69`). Indices do not train (`:797`, `:805`).
+  The colour table is the K codewords followed by the kept rows. Read, not run.
+- **Changed from the older procedure:** the skeleton `kaggle/drafts/FINDINGS_s26_E7_DRAFT.md` stays, as the fixture of
+  `check_s26.py`'s tests; only the filled copy was removed. `test_paper_tex_amendment_items_verify_design_lines_only` now uses
+  `1.415` and `0.066`, since section 26 quotes `2.841` and `0.3131`.
+- **Stale paper lines, left for the paper step:** `paper/tex/sec4_dissection.tex:68-69`, `sec6_limits.tex:25-27`, `:39` say the re-fit's
+  effect is untested or that E7's results are not reported. The paper's prose says H1 and H2 for its hypotheses, which are not
+  CLAIMS rows H1 and H2; `check_tex` still passes.
+- **Left open, Dace's call:** CLAIMS Gap 8 (H9 bears on it; its status was not changed); section 25's "E7 (planned)" (true when
+  written; no pointer added); S11's `discover` dump, not checked; why P1's seed-0 curve reads below seed-1 on all seven scenes.
+- **Next action: the paper's results section for E7, in its own file, not `sec5_2_e7design.tex` (that file stays the one
+  `DESIGN_FILES` entry); then the abstract and introduction; then the deferred `e7.py` fixes (`--out` required, `open` with
+  `with` / `encoding`).**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
