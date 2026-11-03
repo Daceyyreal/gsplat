@@ -5881,7 +5881,7 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
       report and imports nothing. It names only that package, so "absent" does not show that no other cupy
       distribution was installed;
     - `setup.py:61-126`, `:187`: the `dev` extra; the wheel is built and installed without it (`pip wheel --no-deps`,
-      `kaggle/build_gn_e5_bench.py:408`, and `{PIP} {wheel}`, `:412`; the build record shows no extras asked);
+      `kaggle/build_gn_e5_bench.py:408`, and `{PIP} {wheel}`, `:412`, neither asks for an extra);
     - `gsplat/compression/png_compression.py:51`, `:636`: a docstring, and the error text raised if TorchPQ is missing.
       That `try` (`:632-637`) raises, it does not fall back. E3p's `PngCompression` call (`kaggle/gn_e3p_scene.py:304`) is
       `kmeans_backend="builtin"`, which needs neither;
@@ -5898,9 +5898,8 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
     4.82 GB allocated, where S3's took 22.0 s at about the same peak. The GN pass is the part E7 uses gsplat's kernels for.
   - **S11's records:** the 71-line log tail (all lines kept), 130 new steps and the deviations hold no mention of cupy or
     torchpq, no ImportError, no fallback, no warning. The build record's only `cupy` is the env key.
-  - **Not read:** third-party packages at Kaggle's versions. Locally, torch and numpy have no cupy import. scipy's has only
-    its array-API adapters, for cupy arrays; on the run path scipy is used only by `e7.py` and `e5.py`'s `scipy.stats`, which
-    run locally. The local import trace (`F:\pytest_logs\importtrace_e7_runpath.log`, `importtime_e7_runpath.log`) has no
+  - **Not read:** third-party packages at Kaggle's versions. Locally, torch, numpy and pandas have no cupy import. scipy's
+    has only its array-API adapters, for cupy arrays, and no code of ours creates one. The local import trace (`F:\pytest_logs\importtrace_e7_runpath.log`, `importtime_e7_runpath.log`) has no
     cupy module, but cupy is not installed locally, so that trace could not show a failed guarded attempt.
 - **The wheel:**
   - **No file in the bundle names the wheel's commit.** `gsplat_build.log` stays in the work directory. The chain, from the
@@ -5931,7 +5930,7 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   7. Then the deferred `e7.py` fixes (`--out` required, `open` with `with` / `encoding`), allowed now that no session remains.
 - **Open before step 2, flagged and not changed (no value involved):**
   1. **`check_s26.py:656` double-counts the wheel build in S11's setup.** `setup` sums every non-job timing, and
-     `install_s` already contains `gsplat_wheel_build_s` (`kaggle/build_gn_e5_bench.py:386`, `:409`, `:419`), so S11's row
+     `install_s` already contains `gsplat_wheel_build_s` (`kaggle/build_gn_e5_bench.py:385`, `:409`, `:422`), so S11's row
      would read 8,499.1 s, not 4,464.3 s. The tool and the text would agree, so the check would not catch it. S1-S10 have
      no such key. `check_s*.py` is exempt from the code-identity rule.
   2. **18 b asks for both images named** (`:2784-2785`) in any comparison across sessions. The skeleton gives only counts
