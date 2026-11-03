@@ -77,8 +77,8 @@ ingest, every check passing): kitchen and playroom complete (2 of 7); Amendment 
 seed 1, every check passing): 4 of 7 scenes complete; E7 S10 ingested (`ccb7a4f9`, room and truck seed 1, every check
 passing; an input departure from 20 l, no data effect): 6 of 7 scenes complete; E7 S11 ingested (`32758a0e`, drjohnson
 seed 1, every check passing; a new Kaggle image, so drjohnson's j = 0 pair spans images, Note 2 C6): all 7 scenes
-complete, all eleven sessions in; **E7 still blind: nothing runs `e7.py` or `check_s26.py` until Dace lifts the rule**
-(see "E7 S11"); next: Dace's decision, then the write-up.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
+complete, all eleven sessions in; pre-unblinding fixes and the exploratory declaration `c95c369f` (see "Pre-unblinding
+fixes"); next: Dace's Phase B, the unblinding, then the write-up after Dace has read it.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
 `4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b); F1's shared y-axis, round ticks and shaded
@@ -5940,6 +5940,43 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - **Scenes complete (all six processes): all 7.** No process was deferred, no added session is needed, and every
   `missing_or_failed` is empty.
 - **Next action: Dace's decision on the blind rule.** Nothing runs `e7.py` or `check_s26.py` on the real root before it.
+
+### Pre-unblinding fixes and the exploratory declaration (2026-11-03; `c95c369f`; no E7 value read)
+
+- **Dace's decision:** these fixes first, pushed; then the unblinding. The three items open under "E7 S11" are closed by
+  `c95c369f` (gate `gate_20261103_215625_e7_s26_preunblind.log`, 234 passed). `bench/gn/e7.py` and every other run-path
+  file are untouched; only `check_s26.py`, the skeleton and `test_gn.py` changed.
+- **1. Setup counts a built wheel once** (`session_seconds`, `bench/gn/check_s26.py`). S11's row now reads 4,464.3 s and
+  17,904.6 s. Tested with S11's and S10's timing shapes.
+- **2. Both images named (18 b):**
+  - `⟨image_S1_S10⟩` and `⟨image_S11⟩` are filled from the rows' `image` strings. `image_facts` checks one image per
+    session, each session's env file against its rows, and the tool's `where` and spans against the rows. On the real root it
+    also requires all eleven sessions, one image before S11 and another in S11, and only drjohnson's j = 0 pair spanning.
+  - The placeholder pattern now allows capitals. The strings pass the numeric-token check as filled strings.
+  - The skeleton's "How the sessions ran" holds the S11 image sentence (`⟨image_change⟩`, `⟨image_span⟩`) and S10's
+    late-attachment sentence. `SENTENCES` makes `check_s26.py` fail if either is removed.
+  - Blind check of the strings (only the `session`, `image` and `kind` columns and the env files): every S1-S10 row holds
+    the first image and every S11 row the second, each matching its session's env file.
+- **3. THE DECLARATION: an exploratory sensitivity, declared at `c95c369f`, before unblinding.** It is not pre-registered.
+  - **What:** both primaries with drjohnson's j = 0 seed pair left out of the noise pooling. Why: it is the one comparison
+    inside `SD_pool` that spans Kaggle's two images.
+  - **`SD_pool`** = sqrt(mean `v_s` over the other six scenes), with **six degrees of freedom** in the t quantiles and
+    p-values.
+  - **`SE` = that `SD_pool` / sqrt(7).** Dace's wording: "n for the noise drops by one; the per-scene Delta parts unchanged".
+    `Δ_bar` still averages seven values, so the divisor stays 7, as `:4051` defines `SE` ("a mean of n single-process
+    values"). Dividing by sqrt(6) instead would make `SE` 1.080 times larger; that is **not** the declared computation. This
+    reading was Claude's, made blind, and is flagged to Dace.
+  - **Unchanged:** every per-scene Δ, `Δ_bar`, criterion 2's count (5 of 7), `SD_BD` and the fragile reading. Holm's order is
+    each test's own under this `SE`.
+  - **Where:** `exploratory` and `df_tests` in `check_s26.py` only. With the full noise `df_tests` must reproduce `e7.py`'s
+    tests exactly, and that is a check. The label's commit comes from git (`declaration_commit`, the first commit with
+    `EXPLORATORY_LEFT_OUT`), and on the real root must follow S11's ingest.
+  - **Reported only beside the pre-registered result,** with the label "exploratory, declared at `c95c369f` before
+    unblinding; the verdict is the pre-registered computation". It is in no summary or headline, and changes no outcome,
+    fragile flag or reading.
+- **Still not verified:** S11's `discover` dump (see "E7 S11").
+- **Next action: Phase B of Dace's prompt:** `e7.py` with `--out` outside the repository, the filled copy in `kaggle/drafts/`,
+  `check_s26.py` on it, the report to Dace. Nothing goes into FINDINGS, CLAIMS or the paper until Dace has read it.
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
