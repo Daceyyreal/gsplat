@@ -60,10 +60,10 @@ STRIP = [
                r"bibliography|bibliographystyle|setlength)(?:\[[^\]]*\])?\{[^}]*\}(?:\{[^}]*\})?"),
     re.compile(r"\d+(?:\.\d+)?\s*(?:\\linewidth|\\textwidth|\\columnwidth|pt|em|cm|mm|in)\b"),
 ]
-CLAIM_ID = re.compile(r"\b([A-G]\d{1,2})\b")
+CLAIM_ID = re.compile(r"\b([A-H]\d{1,2})\b")
 FIG = re.compile(r"\bFig\.\s*\d+")
 QUOTED = re.compile(r'"[^"]*"')
-ITEM_ID = re.compile(r"^([A-G]\d{1,2})(?:\s*\([^()]*\))?$")
+ITEM_ID = re.compile(r"^([A-H]\d{1,2})(?:\s*\([^()]*\))?$")
 
 
 def cited_ids(comment):
@@ -120,7 +120,7 @@ def sources():
     starts = sorted(secs.items(), key=lambda x: x[1])
     sec_text = {n: f[s:(starts[i + 1][1] if i + 1 < len(starts) else len(f))] for i, (n, s) in enumerate(starts)}
     c = read(CLAIMS)
-    rows = {m.group(1): m.group(0) for m in re.finditer(r"^\| ([A-G]\d{1,2}) \|.*$", c, re.M)}
+    rows = {m.group(1): m.group(0) for m in re.finditer(r"^\| ([A-H]\d{1,2}) \|.*$", c, re.M)}
     return f, sec_text, c, rows
 
 

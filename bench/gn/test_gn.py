@@ -3185,6 +3185,39 @@ def test_findings_section_26_numbers_recheck_from_the_repo():
     assert check_s26.declaration_commit() == "c95c369f"
 
 
+def test_claims_group_h_restates_section_26():
+    """paper/CLAIMS.md group H (E7): every number in a row's claim and limits is in FINDINGS section 26 (the two the limits
+    quote from Amendment 20 f are there or in section 22), each row's check is check_s26.py, the post-hoc rows are labelled
+    so, Gap 3 points to them, and paper/tex/check_tex.py reads H rows as citations."""
+    import importlib.util
+    import re
+
+    import check_s26 as c
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    claims = open(os.path.join(repo, "paper", "CLAIMS.md"), encoding="utf-8").read()
+    txt = open(c.FINDINGS, encoding="utf-8").read()
+    sec = txt[txt.index("## 26. E7"):]
+    rows = re.findall(r"^\| (H\d+) \|(.*)$", claims, re.M)
+    assert [r[0] for r in rows] == [f"H{i}" for i in range(1, 14)]
+    for rid, body in rows:
+        cells = [x.strip() for x in body.split(" | ")]
+        assert cells[3] == "`check_s26.py`", rid
+        for tok in c.NUM.findall(cells[0] + " " + cells[5]):
+            assert tok.lstrip("+-") in sec or tok in txt, (rid, tok)
+    status = {rid: body.split(" | ")[1] for rid, body in rows}
+    assert status["H1"].startswith("confirmatory") and status["H2"].startswith("confirmatory")
+    for rid in ("H4", "H5", "H7", "H8", "H9", "H10"):
+        assert c.POST_HOC_LABEL in status[rid], rid
+    assert "declared at `c95c369f` before unblinding" in status["H6"]
+    assert "~~**Amendment 18 note 2's quantizer records, and why OGC's lead shrinks with fine-tuning.**~~" in claims
+
+    spec = importlib.util.spec_from_file_location("check_tex", os.path.join(repo, "paper", "tex", "check_tex.py"))
+    ct = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ct)
+    assert ct.cited_ids(" s26; H1, H5") == (["H1", "H5"], [])
+
+
 def test_paper_figs_recheck_from_the_repo():
     """paper/figs/check_figs.py: every table cell and plotted value in paper/figs/out/ recomputed independently from
     the committed bundles and matched against the FINDINGS values it mirrors. The outputs are committed after the
