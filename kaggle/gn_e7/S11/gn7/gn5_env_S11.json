@@ -1,0 +1,30 @@
+{
+  "python": "3.13.16",
+  "torch": "2.11.0+cu130",
+  "torch_cuda": "13.0",
+  "cudnn": 92700,
+  "packages": {
+    "gsplat": "1.6.0",
+    "torchpq": null,
+    "cupy-cuda12x": null,
+    "plas": null,
+    "torchmetrics": "1.8.2",
+    "numpy": "2.1.3",
+    "pycolmap": "4.2.1",
+    "remotezip": "0.12.6"
+  },
+  "gpu": {
+    "name": "Tesla T4",
+    "capability": "7.5",
+    "total_memory": 15636037632,
+    "count": 2
+  },
+  "nvidia_smi": "Tesla T4, 580.178.04, 15360 MiB\nTesla T4, 580.178.04, 15360 MiB",
+  "nvcc": [
+    "Build cuda_13.0.r13.0/compiler.36424714_0"
+  ],
+  "session": "S11",
+  "gsplat_commit": "827252515711ba0d1ac5e936ea63a708ce13a5e0",
+  "wheel_key": "33734f894b0a-95f8de51-torch2.11.0_cu130-sm7.5",
+  "wheel_restored": false
+}
