@@ -80,8 +80,9 @@ seed 1, every check passing; a new Kaggle image, so drjohnson's j = 0 pair spans
 complete, all eleven sessions in; pre-unblinding fixes and the exploratory declaration `c95c369f`; **E7 is closed: both
 primaries "equivalent; not superior", neither fragile (FINDINGS section 26, `3ca275bb`, `check_s26.py` `4171a88a`; CLAIMS group H,
 `f7f5c035`; see "E7 closed"); the paper's E7 results are in `sec5_3_e7results.tex` (`b277b38a`, see "Paper step 1"); the abstract
-and introduction are drafted (see "Paper step 2"); next: Dace's reading of them, then the title, authors and appendix, then the
-deferred `e7.py` fixes.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
+and introduction are drafted (see "Paper step 2"); `.claude/commands/` holds `/wrapup` and `/catchup` (`934a0366`); next: Dace's step 3
+edits to the abstract, the Q2 sentence, Q3, the title, the authors and the appendix, then the deferred `e7.py` fixes (see "Wrap-up").**
+Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
 `4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b); F1's shared y-axis, round ticks and shaded
@@ -6065,8 +6066,34 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - **Q1 and Q2:** defined in the introduction, tagged in `sec3_replication.tex` and `sec5_finetuning.tex`. **Q3 was proposed to Dace and
   not added:** E7's question stays in words until Dace decides.
 - **Still `\TODO`:** the title, the authors and the appendix.
-- **Next action: Dace's reading of the abstract, the introduction and Q3; then the title, the authors and the appendix; then the
-  deferred `e7.py` fixes (`--out` required, `open` with `with` / `encoding`).**
+- **Next action (superseded by "Wrap-up"): Dace's reading of the abstract, the introduction and Q3.**
+
+### Wrap-up of the E7 session, and the session commands (2026-11-05)
+
+- **`.claude/commands/` (`934a0366`):** `/wrapup` flushes a session's state here before `/clear`, and `/catchup` reads the state after
+  `/clear` and changes nothing. They may not load until a restart. They are outside the code-identity pathspecs.
+- **The raw run-path diff `17161955..HEAD` lists three files:** `bench/gn/test_gn.py`, `bench/gn/check_s26.py` and, since `3ca275bb`,
+  `bench/gn/check_s24.py` (one constant, for section 24's forward pointer). All three are exempt, and no run-path file is listed.
+- **Paper step 2, by commit:**
+  - `b51a317b`: `check_tex` accepts a rounded number on a cited line, with the ambiguity rule and its tests;
+  - `b6a2e5cf`: section 5.3 at about 3 significant digits, the reference test, the `sec2_setup.tex` image line;
+  - `fcacde41`: F1 on one page, `placeins`, `\FloatBarrier` before the references;
+  - `26321f6b`, `6e458b01`: `abstract.tex` and the introduction, Q1 and Q2 defined and tagged, CLAIMS H14 and FINDINGS section 26's blind-rule
+    sentence;
+  - `1ce7ee28`: this file.
+- **Standing rules, as Dace states them in `/catchup`:** no OGC files committed, pushed or bundled; the OGC dataset stays private; the
+  author's email is paraphrased, never quoted; every amendment or note is committed alone before its code; no run-path code changes between
+  sessions unless a bug forces one; the gate before each commit; ancestor check and fast-forward push only; no push while a Kaggle
+  session runs; Dace's readings are confirmed before they go into docs.
+- **Open, not started:**
+  - **Dace's step 3 edits are pending:** the abstract, the Q2 sentence, Q3 (proposed: what carries the shrink between Q1's and Q2's answers;
+    not added), the title, the authors and the appendix. The last three are still `\TODO`, and nothing here has been edited since Dace read them.
+  - The deferred `e7.py` fixes (`--out` required, `open` with `with` / `encoding`).
+  - CLAIMS Gap 8 is unchanged, as Dace asked; H9 bears on it. S11's `discover` dump was never checked. Why P1's seed-0 curve reads below seed-1
+    on all seven scenes was not looked into.
+- **The heads:** the fork head is the commit holding this entry, whose parent is `934a0366`.
+- **Next action: Dace's step 3 edits to the abstract, the Q2 sentence, Q3, the title, the authors and the appendix; then the deferred
+  `e7.py` fixes.**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
