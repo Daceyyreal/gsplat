@@ -3,9 +3,9 @@
 \section{Introduction}
 \label{sec:intro}
 
-3D Gaussian Splatting stores most of each Gaussian's floats as spherical-harmonic colour, so colour is where compression has most to gain \citep{kerbl2023gaussian}.
+3D Gaussian Splatting stores most of each Gaussian's floats as spherical-harmonic colour \citep{kerbl2023gaussian}.
 C3DGS clusters that colour into a codebook with a sensitivity-weighted $k$-means and then fine-tunes the model with the quantisation in the loop \citep{niedermayr2024compressed}.
-OGC replaces that clustering with a Lloyd vector quantiser (VQ) under a per-Gaussian metric built from what the training cameras saw, and hosted in C3DGS it reports a gain of +0.49~dB before C3DGS's fine-tuning and +0.09~dB after it, in its own evaluation \citep{pietroszek2026only}. % s19 "Secondaries"; A4, A5
+OGC replaces that clustering with a Lloyd vector quantiser (VQ) under a per-Gaussian metric built from what the training cameras saw, and hosted in C3DGS it reports a paired PSNR gain of +0.49~dB before C3DGS's fine-tuning and +0.09~dB after it, in its own evaluation \citep{pietroszek2026only}. % s19 "Secondaries"; A4, A5
 This paper tests that gain independently and at equal rate, and then asks why most of it goes. % s19; s21; A1, F1
 
 \paragraph{Questions.}
@@ -27,7 +27,7 @@ E7 does not separate those parameters, the kept splats' colours, opacity, scalin
 \begin{itemize}
 \item An independent, pre-registered replication of OGC's colour VQ inside C3DGS, with OGC's released code unedited (Section~\ref{sec:replication}). % s19; A1, A12
 \item A dissection of OGC's lead across the metric, the Lloyd algorithm around it and the codewords it uses, mostly descriptive and labelled so (Section~\ref{sec:dissection}). % s19; s20; B2, B8
-\item The first equal-rate comparison here after fine-tuning, from curves of fine-tuned rows over the three colour thresholds (Section~\ref{sec:ft-result}). % s21; F1
+\item An equal-rate comparison after fine-tuning, from curves of fine-tuned rows over the three colour thresholds (Section~\ref{sec:ft-result}). % s21; F1
 \item Interventions within each process that hold the colour grids and the codewords fixed in turn, with pre-registered superiority and equivalence tests (Sections~\ref{sec:ft-why} and~\ref{sec:ft-why-results}). % s26; H1, H2
 \item Session bundles and checkers: the results of all three experiments are recomputed by committed scripts from the committed bundles. % s19; s21; s26; A1, F1, H1
 \end{itemize}
