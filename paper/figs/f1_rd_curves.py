@@ -61,7 +61,7 @@ def scene_ticks(P, s):
     return round_ticks(min(b), max(b))
 
 
-def draw(ax, pts, title, xt):
+def draw(ax, pts, title, xt, legend=True):
     band = overlap(pts)
     if band:
         ax.axvspan(band[0] / 1e6, band[1] / 1e6, color="0.5", alpha=0.12, lw=0, zorder=0)
@@ -85,7 +85,8 @@ def draw(ax, pts, title, xt):
     ax.set_xticklabels([f"{t:g}" for t in xt])
     if band:
         ax.fill_between([], [], color="0.5", alpha=0.12, lw=0, label="shared byte range (BD)")
-    ax.legend(frameon=False, loc="lower right", handlelength=2.6)
+    if legend:
+        ax.legend(frameon=False, loc="lower right", handlelength=2.6)
     return band
 
 
@@ -105,12 +106,20 @@ def main():
         fd.save(fig, f"f1_rd_{s}")
         plt.close(fig)
     fd.write_csv("f1_rd_overlap.csv", ["scene", "panel", "lo_bytes", "hi_bytes"], bands)
-    fig, axes = plt.subplots(len(fd.GATE), 2, figsize=(7.0, 2.3 * len(fd.GATE)), sharey="row")
+    # the all-scenes figure fits one page with its caption: one legend per column above it, x and y labels once
+    fig, axes = plt.subplots(len(fd.GATE), 2, figsize=(7.0, 8.3), sharey="row")
     for i, s in enumerate(fd.GATE):
         for ax, (title, _, rows) in zip(axes[i], PANELS):
-            draw(ax, [p for p in P if p[0] == s and p[2] in rows], f"{s}: {title}", scene_ticks(P, s))
+            draw(ax, [p for p in P if p[0] == s and p[2] in rows], f"{s}: {title}", scene_ticks(P, s), legend=False)
+            ax.set_ylabel("PSNR (dB)")
+            if i < len(fd.GATE) - 1:
+                ax.set_xlabel("")
         axes[i][1].tick_params(labelleft=True)
-    fig.tight_layout()
+    for ax in axes[0]:
+        h, lab = ax.get_legend_handles_labels()
+        ax.legend(h, lab, frameon=False, loc="lower center", bbox_to_anchor=(0.5, 1.22), ncol=2, handlelength=2.6,
+                  columnspacing=1.0, fontsize=7)
+    fig.tight_layout(h_pad=0.4)
     fd.save(fig, "f1_rd_all")
     plt.close(fig)
 
