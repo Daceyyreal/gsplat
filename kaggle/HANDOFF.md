@@ -6169,7 +6169,7 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - **No Apache-2.0 claim names it:** no SPDX or Apache line in the file; `setup.py`, `pyproject.toml` and `pytest.ini` have SPDX lines for themselves only; `README.md` states no licence;
   `bench/` is no package (no `__init__.py`, `find_packages` lists only `gsplat`) and `MANIFEST.in` omits it, so it ships in no wheel or sdist. The root `LICENSE` is Apache-2.0
   with no carve-out and does not name it. There is no NOTICE file, so none was added. Not changed; for Dace.
-- **History:** the derived code entered on 2026-10-02 inside `e4q.py` (`8293223f`) and `test_gn.py` (`9db4cf8b`). Amendment 15 had said OGC's code "is never copied or vendored". The notice and
+- **History:** the derived code entered on 2026-10-02 inside `e4q.py` (`8293223f`) and `test_gn.py` (`9db4cf8b`). Neither carried a notice then. Amendment 17 (2026-10-06, `PREREG_GN.md:2569`), written after that, says OGC's code "is never copied or vendored". The notice and
   the file itself came with `459f7318` (2026-10-09), `gram_kmeans_ours` with `8b486e3d`. PREREG first names the file in Amendment 18 (`f13193cb`, committed after `459f7318`), item c on the
   notice and item d on the row. History was not rewritten.
 - **Open for Dace:** the appendix says "OGC's code is not redistributed", while the file's header says "these parts are distributed" under the licence. No file of OGC's is in the repository,
@@ -6177,7 +6177,7 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   request's derived branch did not ask for it.
 - **`.claude/commands/catchup.md` (`1b934e97`):** the run-path rule removed and "code-identity rule retired with E7 (HANDOFF)" added, every other rule kept. `wrapup.md` never stated the rule, so it is unchanged.
 - **The PDF:** `F:\gsplat_paper_draft.pdf`, outside the repository, built from this head's sources.
-- **The heads:** the fork head is the commit holding this entry, whose parent is `1b934e97`.
+- **The heads:** this entry was first committed as `ba93a49d` (parent `1b934e97`); the fork head is the commit correcting its Amendment 17 line, whose parent is `ba93a49d`.
 - **Next action: Dace's read of the paper.**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
