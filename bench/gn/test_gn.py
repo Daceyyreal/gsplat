@@ -3376,6 +3376,20 @@ def test_check_tex_accepts_a_rounded_number_only_when_unambiguous(tmp_path, monk
     assert ct.run()["fails"] == []
 
 
+def test_paper_tex_references_use_ref():
+    """No prose line of paper/tex names a section, table or figure by a hard-coded number; each goes through \\ref."""
+    import glob
+    import re
+
+    tex = os.path.join(os.path.dirname(os.path.dirname(HERE)), "paper", "tex")
+    hard = re.compile(r"\b(?:Sections?|Sec\.|Tables?|Figures?|Figs?\.|Appendix)[~ ]*[A-Z]?\d")
+    for path in glob.glob(os.path.join(tex, "*.tex")):
+        for i, line in enumerate(open(path, encoding="utf-8").read().splitlines(), 1):
+            text = re.split(r"(?<!\\)%", line)[0]
+            if "\\TODO" not in text:
+                assert not hard.search(text), f"{os.path.basename(path)}:{i}"
+
+
 def test_paper_tex_h_tokens_are_only_claims_rows():
     """The paper's hypotheses are Q1 and Q2, so an "H#" in paper/tex can only be a CLAIMS row: none in the prose or in a
     whole-line comment, and in a trailing comment only as a citation item check_tex resolves to an existing row."""
