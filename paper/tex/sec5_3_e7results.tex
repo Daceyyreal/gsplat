@@ -1,0 +1,79 @@
+\subsection{Why the lead shrinks (E7): results}
+\label{sec:ft-why-results}
+
+% E7's results, from FINDINGS section 26 and CLAIMS group H only. Pre-registered, report-only, post-hoc and declared
+% exploratory values each say which they are, as their rows do.
+\paragraph{The pre-registered outcomes.}
+Both primaries were equivalent to zero and not superior at $\delta = 0.07$~dB, over all seven scenes with none dropped (Tables~\ref{tab:t4} and~\ref{tab:t4b}, Fig.~\ref{fig:f6}). % s26 "The verdict"; H1, H2
+For $\Delta_{\mathrm{refit}}$, $\bar\Delta = -0.020086807$~dB with $\mathrm{SE} = 0.005561656$, and the equivalence interval $[-0.033238, -0.006936]$~dB lies inside $\pm\delta$. % s26 "Equivalence"; H1
+Its superiority test failed on the count alone: 3 of 7 scenes had the mean's sign against the 5 required, while its statistic, 3.612, exceeded the critical value of 2.841. % s26 "Superiority"; H1
+For $\Delta_{\mathrm{cb}}$, $\bar\Delta = +0.008438079$~dB with $\mathrm{SE} = 0.011134979$, and the interval $[-0.012658, +0.029534]$~dB also lies inside $\pm\delta$; Holm's order left its superiority test unrun after $\Delta_{\mathrm{refit}}$'s failure, and its statistic was 0.758 against 2.365. % s26 "Superiority"; H2
+The registered reading of these outcomes is that the re-fit does not explain the shrink beyond $\pm\delta$ and that codebook training does not explain the shrink beyond $\pm\delta$. % s26 "The verdict"; H1, H2
+Neither primary is fragile: both keep their outcome under the registered BD-level standard error, $\mathrm{SE}_{\mathrm{BD}} = 0.012947010$. % s26 "The robustness reading and the fragile flag"; H3
+
+\paragraph{What the outcomes bound.}
+In E7's own rows the shrink is P1's 0.3540~dB minus P\_FT's 0.0467~dB, which is 0.3073~dB, and $\delta$ is 22.8\% of it (post hoc). % s26 "Post-hoc observations"; H4
+So the colour grids' re-fit, AC and DC together, and codebook training each explain at most about a quarter of the shrink, at equal rate and in the mean over scenes. % s26 "What section 26 settles"; H1, H2, H4
+The two means are 6.5\% and 2.7\% of the shrink (post hoc). % s26 "Post-hoc observations"; H4
+The claim is this size and not a sign: $\bar\Delta$ is negative for $\Delta_{\mathrm{refit}}$, but $\Delta_{\mathrm{refit}}$ is positive on 4 of 7 scenes and the mean's sign rests on kitchen. % s26 "Post-hoc observations"; H4, H7
+The re-fit's effect on the bytes stands (Section~\ref{sec:ac-grid}). % s26 "What section 26 settles"; H1, F9
+
+\paragraph{What neither primary holds fixed (report only and post hoc).}
+Neither primary holds fixed the kept splats' colours, opacity, scaling, the scaling factor or rotation; positions have a learning rate of 0 and do not train. % s24 item 4; s26 "What section 26 settles"; H5
+Report only: $\mathrm{BD}_K - \mathrm{BD}_R$ has mean 0.254563023~dB and $\mathrm{BD}_K - \mathrm{BD}_{CG}$ mean 0.266211750~dB, each positive on all seven scenes (Table~\ref{tab:t5}). % s26 "Secondaries"; H5
+Post hoc, measured from P1: freezing everything but the codewords (arm K) leaves 17.2\% of the shrink, and freezing the grids and the codewords while the rest trains (arm CG) leaves 103.8\% of it (per-arm curves on two scenes in Fig.~\ref{fig:f7}). % s26 "Post-hoc observations"; H5
+So the shrink is carried mostly by fine-tuning the parameters outside the grids and the codebook, the case the registered reading of two equivalent primaries describes. % s26 "The verdict"; H5
+These are interventions and not an additive split, and E7 has no arm that separates those parameters from one another, so it does not say which of them carries the shrink. % s26 "What section 26 settles"; H5
+
+\paragraph{Robustness.}
+Beyond $\mathrm{SE}_{\mathrm{BD}}$, two post-hoc, undeclared standard errors at 6 degrees of freedom give the same outcomes, and neither replaces the registered SE. % s26 "Post-hoc observations"; H8
+With the replicate pair's spread across scenes, $\mathrm{SE} = 0.012846400$ for both primaries and the equivalence margins are $m = 3.885$ for $\Delta_{\mathrm{refit}}$ and $m = 4.792$ for $\Delta_{\mathrm{cb}}$. % s26 "Post-hoc observations"; H8
+With the scene spread of $\Delta_s$, $\mathrm{SE} = 0.022674865$ and 0.012398299, and Holm's order for equivalence puts $\Delta_{\mathrm{cb}}$ first ($m = 4.965$ against 2.447) and $\Delta_{\mathrm{refit}}$ second ($m = 2.201$ against 1.943), so $\Delta_{\mathrm{refit}}$ passes at the second position and would miss the first position's value. % s26 "Post-hoc observations"; H8
+Exploratory and declared before unblinding, leaving drjohnson's $j = 0$ seed pair out of the noise pooling ($\mathrm{SE} = 0.005983597$ and 0.011780822, six degrees of freedom) changes neither outcome; the verdict is the pre-registered computation. % s26 "Exploratory sensitivity"; H6
+Kitchen is the only scene beyond $\pm\delta$, at $\Delta_{\mathrm{refit}} = -0.150079$~dB, and the other 6 scenes average $+0.001579$~dB (post hoc); why it stands apart is not settled. % s26 "Post-hoc observations"; H7
+
+\begin{sloppypar}
+\paragraph{Two session facts.}
+Drjohnson's $j = 0$ seed pair spans two Kaggle images, \code{py3.13.15|\allowbreak torch2.11.0+cu128|\allowbreak cuda12.8|\allowbreak cudnn91900|\allowbreak driver580.178.04} in S3 and \code{py3.13.16|\allowbreak torch2.11.0+cu130|\allowbreak cuda13.0|\allowbreak cudnn92700|\allowbreak driver580.178.04} in S11, and is reported as spanning under Note~2 C6. % s26 "How the sessions ran"; H13
+S10's restore ran before four of its bundle datasets were attached, with no data effect: every copy it restored is byte-identical to its S9 reference copy. % s26 "How the sessions ran"; H13
+\end{sloppypar}
+
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{E7 per scene (BD-PSNR, dB, 6 decimals): each arm's BD from its seed-0 curve and the two pre-registered primaries, with $\bar\Delta$, $\mathrm{SD}_{\mathrm{pool}}$ and SE in the footer. Generated from the committed bundles.} % s26 "The primaries per scene"; H1, H2
+\label{tab:t4}
+\input{../figs/out/e7_t4_primaries.tex}
+\end{table}
+
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{E7's tests, Holm-corrected per test type: the position, the statistic ($|\bar\Delta| / \mathrm{SE}$ for superiority, the margin $m$ for equivalence), the critical $t$ and the result; then each primary's outcome under SE, the one of record, and under $\mathrm{SE}_{\mathrm{BD}}$. Generated from the committed bundles.} % s26 "Superiority", "Equivalence"; H1, H2, H3
+\label{tab:t4b}
+\input{../figs/out/e7_t4_tests.tex}
+\end{table}
+
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{E7's secondaries per scene (dB; report only, no bars): the arm differences, P1 with each method's own grid against P1, P\_FT and P1 from the seed-0 (s0) and seed-1 (s1) curves, and the replicate pair at $j = 0$. Generated from the committed bundles.} % s26 "Secondaries"; H5, H9, H10, H11
+\label{tab:t5}
+\input{../figs/out/e7_t5_secondaries.tex}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{e7_f6_deltas.pdf}
+\caption{E7's primaries per scene. Each circle is a scene's $\Delta_s$. The square is $\bar\Delta$ with a bar of $\pm$SE, and the lighter bar is $\pm$ the critical $t$ of its Holm position times SE. The shaded band is $\pm\delta$, and each title carries the registered outcome.} % s26 "The primaries per scene"; H1, H2, H7
+\label{fig:f6}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{e7_f7_arm_curves_room.pdf}
+\includegraphics[width=\linewidth]{e7_f7_arm_curves_kitchen.pdf}
+\caption{Each arm's fine-tuned curve for each method on room (top) and on kitchen (bottom), the one scene beyond $\pm\delta$, with the unfine-tuned row for reference: protocol~ii PSNR against \code{.npz} size, seed 0, one process per point. On each scene the two panels share the PSNR axis.} % s26 "Secondaries"; H5, H7
+\label{fig:f7}
+\end{figure}

@@ -32,5 +32,3 @@ Secondary measures, reported without bars, read codebook training alone (K again
 \paragraph{Sessions.}
 Each of the seven scenes is split into a seed-0 half, the three seed-0 processes, so that every arm's curve comes from one session and one Kaggle image, and a seed-1 half; the halves run in eleven Kaggle sessions on two T4 GPUs, seven seed-0 sessions with one scene each and then four seed-1 sessions. % Am20 j; Am20 note 1
 The split rests on an estimate from E5's time model, not on a measurement, and each later session restores the earlier sessions' result files from their committed bundles, checked at ingest. % Am20 note 1; Am20 note 3; Am20 note 4; Am20 note 5
-
-\TODO{E7's results: after all eleven sessions, from FINDINGS section 26 (checked by \code{bench/gn/check\_s26.py}); no result or prediction is stated before then.}

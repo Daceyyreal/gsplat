@@ -3423,10 +3423,14 @@ def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     sec52 = open(os.path.join(tex, "sec5_2_e7design.tex"), encoding="utf-8").read()
     assert "TODO{verify}" not in sec52 and sec52.count("% Am20 f (PREREG_GN.md:") >= 4
     sec5 = open(os.path.join(tex, "sec5_finetuning.tex"), encoding="utf-8").read()
-    assert sec5.rstrip().endswith("\\input{sec5_2_e7design}") and "Am20 f (PREREG_GN.md:" not in sec5
+    assert sec5.rstrip().endswith("\\input{sec5_2_e7design}\n\n\\input{sec5_3_e7results}") and (
+        "Am20 f (PREREG_GN.md:" not in sec5)
+    # Section 5.3 (E7's results) is no design file and cites no amendment item
+    sec53 = open(os.path.join(tex, "sec5_3_e7results.tex"), encoding="utf-8").read()
+    assert "Am20" not in sec53 and "sec5_3_e7results.tex" not in ct.DESIGN_FILES
     # the real sources: the \input file is read under its own name
     res = ct.run()
-    assert res["fails"] == [] and res["n_numbers"] == 147
+    assert res["fails"] == [] and res["n_numbers"] == 186
 
 
 # --------------------------------------------------------------------------------- E3r (Amendment 14)
