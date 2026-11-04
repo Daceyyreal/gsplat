@@ -3318,6 +3318,33 @@ def test_paper_tex_claims_ids_are_explicit_citation_items(tmp_path):
     assert len(bad) == 1 and bad[0].startswith(f"sec2_setup.tex:{line}: 'E5'") and "ambiguous ID" in bad[0]
 
 
+def test_paper_tex_h_tokens_are_only_claims_rows():
+    """The paper's hypotheses are Q1 and Q2, so an "H#" in paper/tex can only be a CLAIMS row: none in the prose or in a
+    whole-line comment, and in a trailing comment only as a citation item check_tex resolves to an existing row."""
+    import glob
+    import importlib.util
+    import re
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    tex = os.path.join(repo, "paper", "tex")
+    spec = importlib.util.spec_from_file_location("check_tex", os.path.join(tex, "check_tex.py"))
+    ct = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ct)
+    rows = ct.sources()[3]
+    h = re.compile(r"\bH\d{1,2}\b")
+    for path in glob.glob(os.path.join(tex, "*.tex")):
+        for i, line in enumerate(open(path, encoding="utf-8").read().splitlines(), 1):
+            text, comment = ct.split_comment(line)
+            where = f"{os.path.basename(path)}:{i}"
+            assert not h.search(text), where
+            if not text.strip():
+                assert not h.search(comment), where
+                continue
+            ids, ambiguous = ct.cited_ids(comment)
+            assert not [x for x in ambiguous if x.startswith("H")], where
+            assert all(x in rows for x in ids if x.startswith("H")), where
+
+
 def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     """check_tex's amendment items (rule 4): an Am20 item, with its exact PREREG lines, verifies a design line's numbers
     in Section 5.2's file, sec5_2_e7design.tex, only (the same line in 5.1's sec5_finetuning.tex or another section's
