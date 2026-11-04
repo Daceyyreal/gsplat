@@ -79,8 +79,8 @@ passing; an input departure from 20 l, no data effect): 6 of 7 scenes complete; 
 seed 1, every check passing; a new Kaggle image, so drjohnson's j = 0 pair spans images, Note 2 C6): all 7 scenes
 complete, all eleven sessions in; pre-unblinding fixes and the exploratory declaration `c95c369f`; **E7 is closed: both
 primaries "equivalent; not superior", neither fragile (FINDINGS section 26, `3ca275bb`, `check_s26.py` `4171a88a`; CLAIMS group H,
-`f7f5c035`; see "E7 closed"); next: the paper's E7 results section in its own file, then the abstract and introduction, then
-the deferred `e7.py` fixes.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
+`f7f5c035`; see "E7 closed"); the paper's E7 results are in `sec5_3_e7results.tex` (`b277b38a`, see "Paper step 1"); next: the
+abstract and introduction, then the deferred `e7.py` fixes.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
 `4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b); F1's shared y-axis, round ticks and shaded
@@ -6017,9 +6017,35 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   CLAIMS rows H1 and H2; `check_tex` still passes.
 - **Left open, Dace's call:** CLAIMS Gap 8 (H9 bears on it; its status was not changed); section 25's "E7 (planned)" (true when
   written; no pointer added); S11's `discover` dump, not checked; why P1's seed-0 curve reads below seed-1 on all seven scenes.
-- **Next action: the paper's results section for E7, in its own file, not `sec5_2_e7design.tex` (that file stays the one
-  `DESIGN_FILES` entry); then the abstract and introduction; then the deferred `e7.py` fixes (`--out` required, `open` with
-  `with` / `encoding`).**
+- **Next action (done, see below): the paper's results section for E7, in its own file, not `sec5_2_e7design.tex` (that file
+  stays the one `DESIGN_FILES` entry).**
+
+### Paper step 1: E7's results (2026-11-04)
+
+- **Commits:** `85c212f8` (hypotheses renamed), `38fe8856` (figures, `check_figs`), `b277b38a` (`sec5_3_e7results.tex`), `be7cda63`
+  (stale lines). `check_tex`: 334 lines, 82 result lines, 189 numbers, 0 failures. `check_figs`: 1482 checks, 0 failures. Pytest 238.
+- **The build:** 20 pages, no undefined reference or citation, no overfull line (`latexmk -pdf -g`, `BIBINPUTS` set, `-outdir`
+  outside the repository). The PDF numbers Section 5.3 as 6.3, because Related work is numbered.
+- **The rename:** the paper had only H1 and H2, in `sec3_replication.tex` (`:1`, `:61`) and `sec5_finetuning.tex:1`; **no H3**, and no
+  label or ref. They are now Q1 and Q2. `test_paper_tex_h_tokens_are_only_claims_rows` holds it. Neither Q is defined in prose yet;
+  the introduction should do that.
+- **The figures:** `paper/figs/out/e7_t4_primaries.{tex,csv}`, `e7_t4_tests.tex`, `e7_t5_secondaries.{tex,csv}`,
+  `e7_f6_deltas.{pdf,png,csv}`, `e7_f7_arm_curves_{room,kitchen}.{pdf,png,csv}`. `e7_make_all.py` draws F7 for both scenes.
+  F7's ticks now span each panel's range (they were cut at six from the left).
+- **`check_figs` had not covered E7:** it now checks these outputs against `check_s26.py`'s independent recompute (`load`,
+  `independent`, `df_tests`; no `e7.py`) and section 26. Planted errors in a CSV and a `.tex` each failed.
+- **Choices in 5.3:**
+  - `check_tex` needs a number at its source's rounding, so the shrink reads 0.3073 dB and δ 22.8%, not "about 0.31".
+  - "Carried mostly by", as 20 h and H5 say, not "comes from".
+  - The parameter list includes the scaling factor, as H5 does.
+- **Also fixed:** `sec6_limits.tex:11` said one image per experiment, no longer true of E7 (H13). The `sec6_limits.tex` paragraph is
+  retitled "The colour grids' re-fit."; `sec4_dissection.tex`'s subsection title "The AC colour grid: bytes only" stays.
+- **Open for the paper:**
+  - **Figures land after the references:** F1 (`fig:f1`, `sec3_replication.tex:57`) is 500 pt too tall for a page ("Float too large"),
+    and float order then holds every later figure, F6 and F7 included, to the end. It predates this step.
+  - Gap 8 is unchanged, as Dace asked.
+- **Next action: the abstract and introduction (defining Q1 and Q2); then the deferred `e7.py` fixes (`--out` required, `open`
+  with `with` / `encoding`).**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
