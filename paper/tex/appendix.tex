@@ -1,5 +1,68 @@
-% Appendix: stub (audit outline item 7).
-\section{Appendix}
+% Appendix: the registration history, the session records, the checkers and how to rerun them. The three tables are generated
+% by paper/figs/appendix_tables.py, and bench/gn/test_gn.py recomputes every cell; none is typed by hand.
+\section{Registration, sessions and reruns}
 \label{sec:appendix}
+\begingroup\sloppy
 
-\TODO{Appendix: the full amendment history, the session records, per-scene F1 panels, the checkers and how to rerun them.}
+Every path below is relative to branch \code{bench/gn-vq} of \code{github.com/Daceyyreal/gsplat}.
+
+\subsection{Pre-registration history}
+\label{sec:app-prereg}
+
+The registration is \code{kaggle/PREREG\_GN.md}, twenty amendments with their dated notes and errata; the amendment registering each of this paper's three experiments was committed before that experiment's first bundle. % s19; s21; s26; A1, F1, H1
+Table~\ref{tab:app-prereg} lists every item of Amendments 17--20, and its last column says what existed when each was written. % s19; s21; s26; A1, F1, H1
+
+\paragraph{Amendments 1--16.}
+These registered the project's earlier experiments one at a time: E0 to E2c on a Gauss--Newton metric and a VQ built on it (GN-VQ), then the exploratory pilots E3p, E3q and E3r on INRIA's checkpoints and the C3DGS host. % C3, C5, C8, D4
+Amendment 15 registered E4, a gate for GN-VQ inside C3DGS, with its pilot E4p. % s16; D5
+Amendment 16 withdrew E4 before any gate-scene data, after the pilot on train found the cross-validated floor worth +0.0007~dB and compared GN-VQ with OGC on unequal effective codebooks at unequal bytes, and it registered the exploratory E4q instead. % s16; D5
+Amendment 17 then retired GN-VQ from any gate. % s17; D6
+Earlier exploratory work on a different codec, gsplat's PNG codec (FINDINGS sections 1--10), exists and is not covered here.
+
+\input{../figs/out/app_prereg.tex}
+
+\subsection{Session records}
+\label{sec:app-sessions}
+
+Table~\ref{tab:app-sessions} lists E5's three, E6's five and E7's eleven sessions. % s19; s21; s26; A1, F1, H1
+Each session's bundle is committed unchanged under \code{kaggle/gn\_e5/}, \code{kaggle/gn\_e6/} or \code{kaggle/gn\_e7/}, and E7's later bundles also carry the earlier scenes unchanged, so the table names only the scenes a session ran. % s26 "How the sessions ran"; H13
+After ingest, \code{c8ba01f3} re-stored E7's first seven bundles with their line endings as in the session zips; only line endings changed. % s26 "How the sessions ran"; H13
+Kaggle's image changed between S10 and S11, so drjohnson's seed-0 half (S3) and seed-1 half (S11) ran on different images; its $j = 0$ seed pair is the only one that spans them and is reported as spanning under Note~2 C6. % s26 "How the sessions ran"; H13
+S10's restore ran before four of its bundle datasets were attached, with no data effect: every copy it restored is byte-identical to its S9 reference copy. % s26 "How the sessions ran"; H13
+
+\input{../figs/out/app_sessions.tex}
+
+\subsection{Checkers and reruns}
+\label{sec:app-checkers}
+
+\paragraph{The map.}
+Table~\ref{tab:app-checkers} maps each section checker to the FINDINGS section it re-checks. % s19; s21; s26; A1, F1, H1
+\code{bench/gn/e7.py} computes E7's verdict from the bundles, and \code{check\_s26.py} runs that tool and recomputes its numbers independently of it. % s26; H1
+\code{paper/figs/check\_figs.py} recomputes every generated table cell and plotted value of the results, and \code{paper/tex/check\_tex.py} checks every number in this paper's prose against the FINDINGS section and \code{paper/CLAIMS.md} row its source line cites. % s26; H1
+\code{bench/gn/test\_gn.py} runs all of these and recomputes every cell of this appendix's tables.
+
+\input{../figs/out/app_checkers.tex}
+
+\paragraph{What runs locally.}
+These commands read only the committed bundles and text, and they run on a CPU without OGC's code:
+
+\begin{verbatim}
+python bench/gn/check_s26.py        (and each other check_s##.py)
+python bench/gn/e7.py kaggle/gn_e7 --out verdict.json
+python paper/figs/check_figs.py
+python paper/tex/check_tex.py
+python paper/figs/appendix_tables.py
+python paper/figs/make_all.py
+python paper/figs/e7_make_all.py
+\end{verbatim}
+
+\code{python -m pytest bench/gn/test\_gn.py} runs the tests; those that compare against OGC's released code need a local copy named by \code{GN\_OGC\_SRC} and are skipped without one.
+
+\paragraph{What needs Kaggle.}
+Rerunning a session needs Kaggle, with two T4 GPUs and that session's notebook (\code{kaggle/gn\_e5\_bench\_S\#.ipynb}, and likewise for E6 and E7); the scenes, INRIA's checkpoints and OGC's code are fetched in the session, and an E7 notebook also needs the earlier sessions' bundles attached as datasets. % s26 "How the sessions ran"; H13
+A rerun would produce new measurements and not these bytes: seeded C3DGS runs are not reproduced on the GPU, and Kaggle's image changes. % s15; D4, H13
+
+\paragraph{OGC's code.}
+OGC's code is not redistributed: none of its files is in the repository or any bundle, so a rerun needs its repository at commit \code{49ccae72}, under its own PolyForm Noncommercial licence. % Am18 c; E12 (its licence statement only)
+\code{bench/gn/ogc\_derived.py} is this project's own code derived from it, distributed under the same licence with its notices, for the report-only row \code{ogc\_gram\_ours}. % s19; A6
+\par\endgroup
