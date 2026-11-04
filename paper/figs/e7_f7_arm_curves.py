@@ -43,8 +43,9 @@ def main(root, out, scene="room"):
         xs = [r[5] / 1e6 for r in rows if r[1] == m]
         if xs:
             lo, hi = min(xs), max(xs)
-            step = max(10 ** math.floor(math.log10(max(hi - lo, 1e-9))) / 2, 1e-6)
-            t = [round(i * step, 6) for i in range(math.ceil(lo / step), math.floor(hi / step) + 1)][:6]
+            mag = 10 ** math.floor(math.log10(max(hi - lo, 1e-9)))
+            step = next(s * mag for s in (0.1, 0.2, 0.5, 1, 2, 5, 10) if (hi - lo) / (s * mag) <= 5)  # at most six ticks
+            t = [round(i * step, 6) for i in range(math.ceil(lo / step), math.floor(hi / step) + 1)]
             if t:
                 ax.set_xticks(t)
                 ax.set_xticklabels([f"{x:g}" for x in t])

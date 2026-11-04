@@ -1,8 +1,8 @@
 """Regenerate E7's tables and figures from E7's bundles (after all eleven sessions are committed):
 
-    .venv/Scripts/python.exe paper/figs/e7_make_all.py [--root kaggle/gn_e7] [--out paper/figs/out] [--scene room]
+    .venv/Scripts/python.exe paper/figs/e7_make_all.py [--root kaggle/gn_e7] [--out paper/figs/out] [--scene room kitchen]
 
-Runs ``e7_t4_primaries``, ``e7_t5_secondaries``, ``e7_f6_deltas`` and ``e7_f7_arm_curves`` (one scene). Outputs go to
+Runs ``e7_t4_primaries``, ``e7_t5_secondaries``, ``e7_f6_deltas`` and ``e7_f7_arm_curves`` (per scene: room, and kitchen, the outlier of Delta_refit). Outputs go to
 ``paper/figs/out/`` only from the committed bundles (``kaggle/gn_e7``); any other root needs its own ``--out``.
 """
 
@@ -19,13 +19,14 @@ def run(root, out, scene="room"):
     ed.check_out(root, out)
     for m in (e7_t4_primaries, e7_t5_secondaries, e7_f6_deltas):
         m.main(root, out)
-    e7_f7_arm_curves.main(root, out, scene)
+    for s in [scene] if isinstance(scene, str) else scene:
+        e7_f7_arm_curves.main(root, out, s)
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--root", default=ed.E7_ROOT)
     ap.add_argument("--out", default=ed.PAPER_OUT)
-    ap.add_argument("--scene", default="room")
+    ap.add_argument("--scene", nargs="+", default=["room", "kitchen"])
     a = ap.parse_args()
     run(a.root, a.out, a.scene)

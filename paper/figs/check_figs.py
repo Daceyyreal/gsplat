@@ -3,15 +3,16 @@ bundles and against the FINDINGS values they mirror.
 
     .venv/Scripts/python.exe paper/figs/check_figs.py
 
-Independent of what it checks: it imports neither ``bench/gn/e5.py``, ``e6.py`` or ``g2.py`` nor the figure scripts
-or ``figdata.py``. It reads the bundles itself (each scene from the session that ran it), fits its own BD (the
+Independent of what it checks: it imports neither ``bench/gn/e5.py``, ``e6.py``, ``e7.py`` or ``g2.py`` nor the figure
+scripts or ``figdata.py``. E7's values come from ``bench/gn/check_s26.py``'s independent recompute, which imports none of
+those either, and its ``e7.py`` call (``tool``) is not used here. It reads the bundles itself (each scene from the session that ran it), fits its own BD (the
 parabola through the three seed-0 points with ``numpy.polyfit``, integrated over the shared range of log10 bytes),
 computes E5's criteria itself, and then asserts:
 
 1. every generated ``.csv`` value equals the recompute (floats within 1e-9, integers and labels exactly);
 2. every ``.tex`` cell, formatted at FINDINGS' rounding, appears in the ``.tex``;
 3. every mirrored FINDINGS value appears in its section as FINDINGS prints it: T1 in section 19, T2 in sections 21 and
-   22 a, T3 in section 23, F2 in section 19, F4 in section 22 e, F5 in section 20;
+   22 a, T3 in section 23, F2 in section 19, F4 in section 22 e, F5 in section 20, and E7's T4, T5 and F6 in section 26;
 4. every figure's ``.pdf`` and ``.png`` exists.
 
 It prints each failure and exits 1 if there is any, 0 otherwise.
@@ -30,6 +31,8 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 OUT = os.path.join(HERE, "out")
+E7_ROOT = os.path.join(REPO, "kaggle", "gn_e7")
+E7_F7_SCENES = ("room", "kitchen")
 FINDINGS = os.path.join(REPO, "kaggle", "FINDINGS.md")
 GATE = ("bonsai", "counter", "kitchen", "room", "truck", "drjohnson", "playroom")
 PART_A = ("flowers", "treehill", "train")
@@ -326,12 +329,137 @@ def run():
     C.ok(all(int(R5[s][p + m]["codebook_distinct"]) == 4096 for s in GATE for p, _, _ in PROC for m in meths[1:]),
          "F5 OGC's rows use 4,096 codewords")
 
+    check_e7(C, txt, tex, f9)
+
     # ---- the figure files
     stems = [f"f1_rd_{s}" for s in GATE] + ["f1_rd_all", "f2_p1_decomposition", "f4_ac_refit", "f5_codewords"]
+    stems += ["e7_f6_deltas"] + [f"e7_f7_arm_curves_{s}" for s in E7_F7_SCENES]
     for stem in stems:
         for ext in ("pdf", "png"):
             C.ok(os.path.getsize(os.path.join(OUT, f"{stem}.{ext}")) > 1000, f"figure {stem}.{ext}")
     return {"fails": C.fails, "n_checks": C.n}
+
+
+def check_e7(C, txt, tex, f9):
+    """E7's T4, T5, F6 and F7 against the independent recompute of ``bench/gn/check_s26.py`` and section 26."""
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    bench = os.path.join(REPO, "bench", "gn")
+    if bench not in sys.path:
+        sys.path.insert(0, bench)
+    import check_s26 as c26
+
+    rows, _, _ = c26.load(E7_ROOT)
+    ind = c26.independent(rows, {})
+    n, BD, BD1 = ind["n"], ind["BD"], ind["BD1"]
+    s26 = section(txt, 26)
+    C.ok(n == 7, "E7 n")
+
+    # ---- T4: the primaries and the tests (section 26)
+    t4 = read_csv("e7_t4_primaries.csv")
+    T = tex("e7_t4_primaries.tex")
+    per = {r["key"]: r for r in t4 if r["kind"] == "scene"}
+    for s in GATE:
+        vals = [BD[s]["R"], BD[s]["G"], BD[s]["CG"], ind["delta"]["refit"][s], ind["delta"]["cb"][s]]
+        for col, v in zip("abcde", vals):
+            C.num(per[s][col], v, f"T4 {s} {col}")
+        C.has(T, f"{s} & " + " & ".join(f"{v:+.6f}" for v in vals) + r" \\", f"T4 tex {s}")
+        C.has(s26, f"| {s} | " + " | ".join(f9(v) for v in vals) + " |", f"T4 FINDINGS s26 {s}")
+    bar = {k: sum(ind["delta"][k].values()) / n for k in c26.ORDER}
+    stat = {r["key"]: r for r in t4 if r["kind"] == "stat"}
+    for key, f, fmt in (("$\\bar\\Delta$", lambda k: bar[k], "+.6f"), ("SD_pool", lambda k: ind["noise"][k]["SD_pool"], ".6f"),
+                        ("SE = SD_pool / $\\sqrt{n}$", lambda k: ind["noise"][k]["SE"], ".6f")):
+        C.num(stat[key]["d"], f("refit"), f"T4 {key} refit")
+        C.num(stat[key]["e"], f("cb"), f"T4 {key} cb")
+        C.has(T, f"{f('refit'):{fmt}} & {f('cb'):{fmt}} " + r"\\", f"T4 tex {key}")
+    C.has(s26, f"| `Δ_bar` (n = 7) | {f9(bar['refit'])} | {f9(bar['cb'])} |", "T4 FINDINGS s26 Δ_bar")
+    C.has(s26, f"| `SE` = `SD_pool` / sqrt(n) | {f9(ind['noise']['refit']['SE'])} | {f9(ind['noise']['cb']['SE'])} |",
+          "T4 FINDINGS s26 SE")
+    prim = {k: {"bar": c26.r9(bar[k]), "se": c26.r9(ind["noise"][k]["SE"]), "df": n,
+                "deltas": {s: c26.r9(v) for s, v in ind["delta"][k].items()}} for k in c26.ORDER}
+    tests = c26.df_tests(prim, n)
+    sup, eqv = tests["superiority"], tests["equivalence"]
+    T2 = tex("e7_t4_tests.tex")
+    got = {(r["key"], r["a"]): r for r in t4 if r["kind"] == "test"}
+    for k in c26.ORDER:
+        a, b = sup["results"][k], eqv["results"][k]
+        for name, res, st_, ok_ in (("superiority", a, a["statistic"], a["superior"]), ("equivalence", b, b["m"], b["equivalent"])):
+            g = got[(k, name)]
+            C.ok(int(g["b"]) == res["position"], f"T4 {k} {name} position")
+            C.num(g["c"], st_, f"T4 {k} {name} statistic")
+            C.num(g["d"], res["critical_t"], f"T4 {k} {name} critical t")
+            C.ok(g["e"] == str(ok_), f"T4 {k} {name} result")
+            C.has(T2, f"{k} & {name} & {res['position']} & {st_:.3f} & {res['critical_t']:.3f} & ", f"T4 tex {k} {name}")
+    out_ = {r["key"]: r for r in t4 if r["kind"] == "outcome"}
+    for k in c26.ORDER:
+        C.ok(out_[k]["a"] == ind["record"]["outcomes"][k], f"T4 outcome {k}")
+        C.ok(out_[k]["b"] == ind["robust"]["outcomes"][k], f"T4 outcome under SE_BD {k}")
+        C.ok(out_[k]["c"] == str(ind["record"]["outcomes"][k] != ind["robust"]["outcomes"][k]), f"T4 fragile {k}")
+        C.has(T2, f"{k} & outcome (SE) &  &  &  & {ind['record']['outcomes'][k]}", f"T4 tex outcome {k}")
+    order = {r["key"]: r["a"] for r in t4 if r["kind"] == "order"}
+    C.ok(order["superiority"] == " > ".join(ind["record"]["sup_order"]), "T4 superiority order")
+    C.ok(order["equivalence"] == " > ".join(ind["record"]["eq_order"]), "T4 equivalence order")
+    rob = next(r for r in t4 if r["kind"] == "robustness")
+    C.num(rob["a"], ind["SE_BD"], "T4 SE_BD")
+    C.num(rob["b"], ind["SD_BD"], "T4 SD_BD")
+
+    # ---- T5: the secondaries (section 26)
+    t5 = {r["scene"]: r for r in read_csv("e7_t5_secondaries.csv")}
+    T = tex("e7_t5_secondaries.tex")
+    ft = c26.ft
+
+    def arm_noise(a, b):
+        diffs = {}
+        for s in GATE:
+            R = rows[s]
+            da, db = c26.ind_j0(R, ft("ogc_gram", a), ft("c3dgs", a)), c26.ind_j0(R, ft("ogc_gram", b), ft("c3dgs", b))
+            diffs[s] = [x - y for x, y in zip(da, db)]
+        return c26.ind_noise(diffs)
+
+    rep_pair, parts = {}, {"K_minus_CG": ("K", "CG"), "K_minus_R": ("K", "R"), "O_minus_G": ("O", "G")}
+    for s in GATE:
+        R = rows[s]
+        q = {r: float(R[c26.cfg(0, 0, r)]["PSNR_ii"]) for r in ("c3dgs_ft", "ogc_gram_ft", "c3dgs_ft_r2", "ogc_gram_ft_r2")}
+        rep_pair[s] = (q["ogc_gram_ft_r2"] - q["c3dgs_ft_r2"]) - (q["ogc_gram_ft"] - q["c3dgs_ft"])
+        vals = [BD[s]["K"] - BD[s]["CG"], BD[s]["K"] - BD[s]["R"], BD[s]["O"] - BD[s]["G"], BD[s]["P1_own"] - BD[s]["P1"],
+                BD[s]["R"], BD1[s]["R"], BD[s]["P1"], BD1[s]["P1"], rep_pair[s]]
+        names = list(parts) + ["P1_own_minus_P1", "P_FT_seed0", "P_FT_seed1", "P1_seed0", "P1_seed1", "replicate_pair_minus_R"]
+        for name, v in zip(names, vals):
+            C.num(t5[s][name], v, f"T5 {s} {name}")
+        C.has(T, f"{s} & " + " & ".join(f"{v:+.4f}" for v in vals) + r" \\", f"T5 tex {s}")
+        C.has(s26, f"| {s} | {f9(vals[0])} | {f9(vals[1])} |", f"T5 FINDINGS s26 g.1 {s}")
+        C.has(s26, f"| {s} | {f9(vals[2])} |", f"T5 FINDINGS s26 g.2 {s}")
+        C.has(s26, f"| {s} | {f9(vals[6])} | {f9(vals[7])} | ", f"T5 FINDINGS s26 g.5 P1 {s}")
+        C.has(s26, f"| {s} | {rep_pair[s]:+.6f} | ", f"T5 FINDINGS s26 g.6 {s}")
+    for name, (a, b) in parts.items():
+        C.num(t5["stat:mean"][name], sum(BD[s][a] - BD[s][b] for s in GATE) / n, f"T5 mean {name}")
+        C.num(t5["stat:SE"][name], arm_noise(a, b)["SE"], f"T5 SE {name}")
+    C.num(t5["stat:mean"]["P1_own_minus_P1"], sum(BD[s]["P1_own"] - BD[s]["P1"] for s in GATE) / n, "T5 mean P1_own - P1")
+    C.num(t5["stat:SD_BD"]["P_FT_seed0"], ind["SD_BD"], "T5 SD_BD P_FT")
+    C.num(t5["stat:SD_BD"]["P1_seed0"], math.sqrt(sum((BD[s]["P1"] - BD1[s]["P1"]) ** 2 for s in GATE) / n / 2), "T5 SD_BD P1")
+    C.num(t5["stat:replicate_sd"]["replicate_pair_minus_R"], st.stdev(rep_pair.values()), "T5 replicate SD")
+
+    # ---- F6: each plotted point
+    f6 = {(r["primary"], r["scene"]): r for r in read_csv("e7_f6_deltas.csv")}
+    for k in c26.ORDER:
+        for s in GATE:
+            C.num(f6[(k, s)]["delta"], ind["delta"][k][s], f"F6 {k} {s}")
+            C.ok(f6[(k, s)]["missing_BD"] == "0", f"F6 {k} {s} no missing BD")
+        m = f6[(k, "mean")]
+        C.num(m["delta"], bar[k], f"F6 {k} mean")
+        C.num(m["SE"], ind["noise"][k]["SE"], f"F6 {k} SE")
+        C.num(m["critical_t_eq"], eqv["results"][k]["critical_t"], f"F6 {k} critical t")
+
+    # ---- F7: each plotted point against the committed rows
+    for s in E7_F7_SCENES:
+        f7 = read_csv(f"e7_f7_arm_curves_{s}.csv")
+        C.ok(len(f7) == 2 * 6 * 3, f"F7 {s}: 2 methods x 6 series x 3 points")
+        for r in f7:
+            row = c26.ft(r["method"], r["arm"]) if r["arm"] != "unfine-tuned" else r["method"]
+            C.ok(r["row"] == row and r["scene"] == s, f"F7 {s} {r['arm']} row name")
+            src = rows[s][c26.cfg(int(r["j"]), 0, row)]
+            C.num(r["PSNR_ii"], float(src["PSNR_ii"]), f"F7 {s} {row} j={r['j']} PSNR")
+            C.num(r["npz_bytes"], float(src["npz_bytes"]), f"F7 {s} {row} j={r['j']} bytes")
 
 
 def main():
