@@ -79,8 +79,9 @@ passing; an input departure from 20 l, no data effect): 6 of 7 scenes complete; 
 seed 1, every check passing; a new Kaggle image, so drjohnson's j = 0 pair spans images, Note 2 C6): all 7 scenes
 complete, all eleven sessions in; pre-unblinding fixes and the exploratory declaration `c95c369f`; **E7 is closed: both
 primaries "equivalent; not superior", neither fragile (FINDINGS section 26, `3ca275bb`, `check_s26.py` `4171a88a`; CLAIMS group H,
-`f7f5c035`; see "E7 closed"); the paper's E7 results are in `sec5_3_e7results.tex` (`b277b38a`, see "Paper step 1"); next: the
-abstract and introduction, then the deferred `e7.py` fixes.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
+`f7f5c035`; see "E7 closed"); the paper's E7 results are in `sec5_3_e7results.tex` (`b277b38a`, see "Paper step 1"); the abstract
+and introduction are drafted (see "Paper step 2"); next: Dace's reading of them, then the title, authors and appendix, then the
+deferred `e7.py` fixes.** Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
 `4075ca17`, outputs `ffe069f8`; F1's two panels now both from E6 part (b); F1's shared y-axis, round ticks and shaded
@@ -6044,8 +6045,28 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   - **Figures land after the references:** F1 (`fig:f1`, `sec3_replication.tex:57`) is 500 pt too tall for a page ("Float too large"),
     and float order then holds every later figure, F6 and F7 included, to the end. It predates this step.
   - Gap 8 is unchanged, as Dace asked.
-- **Next action: the abstract and introduction (defining Q1 and Q2); then the deferred `e7.py` fixes (`--out` required, `open`
-  with `with` / `encoding`).**
+- **Next action (done, see below): the abstract and introduction.**
+
+### Paper step 2: readability, layout, abstract and introduction (2026-11-04)
+
+- **Counts at the end:** `check_tex` 370 lines, 92 result lines, 208 numbers (27 by rounding), 0 failures. `check_figs` 1482 checks, 0
+  failures. `check_s26` 272 numbers, 0 failures. Pytest 240. **22 pages,** no undefined reference, no overfull line, no oversized float.
+- **`check_tex` rounding** (`rounded_match`): a prose number on a cited line may equal a more precise cited number rounded to its own
+  decimals, with at least 2 significant digits, the cited rows looked at before the cited sections; two different numbers rounding to
+  it fail as ambiguous, unless one is a rounding of the other. Uncited lines, design lines and counts stay exact, and tables are not read.
+- **Section 5.3:** about 3 significant digits in the prose. Critical values stay at 3 decimals (2.841, 2.365, 1.943, 2.447), as in 5.2. The
+  source already used `\ref` for every section; `test_paper_tex_references_use_ref` now holds that.
+- **Layout:** F1 at 8.3 in, one legend per column, labels once (`paper/figs/f1_rd_curves.py`; the per-scene panels are unchanged).
+  `placeins` with its `section` option, and `\FloatBarrier` before the references. Pages: Figures 1-6 on 8, 10, 11, 12, 17, 18; Tables 1-7 on 6,
+  13, 13, 14, 16, 16, 17; the appendix on 20; the references after it.
+- **The blind rule had no source in FINDINGS or CLAIMS,** and it is not in PREREG. FINDINGS section 26 now says what it was, a working
+  rule recorded here, not part of Amendment 20, and enforced by `check_s26.py`'s refusal only until S11; CLAIMS H14 restates it. It covers
+  E7 only.
+- **Q1 and Q2:** defined in the introduction, tagged in `sec3_replication.tex` and `sec5_finetuning.tex`. **Q3 was proposed to Dace and
+  not added:** E7's question stays in words until Dace decides.
+- **Still `\TODO`:** the title, the authors and the appendix.
+- **Next action: Dace's reading of the abstract, the introduction and Q3; then the title, the authors and the appendix; then the
+  deferred `e7.py` fixes (`--out` required, `open` with `with` / `encoding`).**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
