@@ -172,7 +172,7 @@ OGC.** Inside C3DGS, OGC is ahead of GN-VQ on development scenes (D5, D6).
   seed-1 curve. `SE` = `SD_pool` / sqrt(n) takes the j = 0 point's noise for the BD's and leaves out scene-to-scene spread.
 - **The arms:** a frozen grid keeps OGC's codewords outside it clamped; the geometry quantizers re-fit in every arm (20 m).
 - **Evaluation and hardware:** protocol ii; 2x T4; two Kaggle images (H13).
-- **IDs:** H1 to H13 are rows of this ledger. The paper names its hypotheses Q1 and Q2, so that the two cannot be confused.
+- **IDs:** H1 to H14 are rows of this ledger. The paper names its hypotheses Q1 and Q2, so that the two cannot be confused.
 
 | ID | Claim | Status | Evidence | Check | Data | Scope limits that travel with it | Corr. |
 |---|---|---|---|---|---|---|---|
@@ -189,6 +189,7 @@ OGC.** Inside C3DGS, OGC is ahead of GN-VQ on development scenes (D5, D6).
 | H11 | The own grid, report only: mean P1_own 0.403636745 against P1 0.353970019, higher on all seven scenes; BD_O - BD_G mean 0.014588398, positive on 4 of 7. | descriptive: Amendment 20 g.2, g.3, no bar | s26 "Secondaries" 2 and 3 | `check_s26.py` | `kaggle/gn_e7/S1/gn7/` to `S11/gn7/` | each measures the removed clamping and the changed step together, so neither says how much the clamping costs (20 m) | no |
 | H12 | P1 and P_FT replicated: `P_bar` 0.353970019, 7 of 7, and 0.046706107, 6 of 7, beside E5's 0.3558 and E6's 0.0425; E5's criteria hold as a description under both standard errors. | descriptive: Amendment 20 g.4; re-judges nothing | s26 "Secondaries" 4 | `check_s26.py` | `kaggle/gn_e7/S1/gn7/` to `S11/gn7/` | E7's own rows; not a new verdict on E5 or E6 | no |
 | H13 | Mechanics: all seven scenes complete, none dropped, no missing row, rerun, OOM, deadline cut or failed guard. Kaggle's image changed between S10 and S11, and only drjohnson's j = 0 seed pair spans the two images. S10's restore ran before four bundle datasets were attached, with no data effect. | descriptive: Note 2 C6, 18 b; 20 l | s26 "How the sessions ran", "Drops, missing rows and reruns" | `check_s26.py` | `kaggle/gn_e7/S1/gn7/` to `S11/gn7/` | both images are named in s26; S11's own `discover` dump was not checked (`kaggle/HANDOFF.md`, "E7 S11") | no |
+| H14 | No E7 result value was read until all eleven bundles were committed: each ingest read the mechanics only, one structural dry run showed nothing numeric, and the values were first read after S11's ingest and after H6's declaration. | descriptive: a working rule, not part of Amendment 20 | s26 "How the sessions ran" | `check_s26.py` (the sentence's presence only) | `kaggle/HANDOFF.md`, each session's "Not read" entry | **a record, not an enforcement:** `check_s26.py`'s refusal stopped at S11's commit and `bench/gn/e7.py` never had one; E7 only, not a claim about E5 or E6 | no |
 
 ## Gaps
 

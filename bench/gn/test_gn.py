@@ -3199,10 +3199,10 @@ def test_claims_group_h_restates_section_26():
     txt = open(c.FINDINGS, encoding="utf-8").read()
     sec = txt[txt.index("## 26. E7"):]
     rows = re.findall(r"^\| (H\d+) \|(.*)$", claims, re.M)
-    assert [r[0] for r in rows] == [f"H{i}" for i in range(1, 14)]
+    assert [r[0] for r in rows] == [f"H{i}" for i in range(1, 15)]
     for rid, body in rows:
         cells = [x.strip() for x in body.split(" | ")]
-        assert cells[3] == "`check_s26.py`", rid
+        assert cells[3].startswith("`check_s26.py`"), rid
         for tok in c.NUM.findall(cells[0] + " " + cells[5]):
             assert tok.lstrip("+-") in sec or tok in txt, (rid, tok)
     status = {rid: body.split(" | ")[1] for rid, body in rows}
@@ -3502,7 +3502,7 @@ def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     assert "Am20" not in sec53 and "sec5_3_e7results.tex" not in ct.DESIGN_FILES
     # the real sources: the \input file is read under its own name
     res = ct.run()
-    assert res["fails"] == [] and res["n_numbers"] == 189
+    assert res["fails"] == [] and res["n_numbers"] == 208
 
 
 # --------------------------------------------------------------------------------- E3r (Amendment 14)

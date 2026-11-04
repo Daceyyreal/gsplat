@@ -1,5 +1,38 @@
-% Section 1: stub (audit outline item 1).
+% Section 1: introduction. Drafted from FINDINGS and paper/CLAIMS.md only; each result sentence names its section and row, and
+% no claim is stronger than its row. Q1 and Q2 are the paper's questions (never CLAIMS rows); E7's question is in words.
 \section{Introduction}
 \label{sec:intro}
 
-\TODO{Introduction: the question (does a matrix-weighted colour VQ beat C3DGS's own at equal rate, and does the lead survive fine-tuning), the pre-registered design, the contributions. Written after Sections 4 and 5.2.}
+3D Gaussian Splatting stores most of each Gaussian's floats as spherical-harmonic colour, so colour is where compression has most to gain \citep{kerbl2023gaussian}.
+C3DGS clusters that colour into a codebook with a sensitivity-weighted $k$-means and then fine-tunes the model with the quantisation in the loop \citep{niedermayr2024compressed}.
+OGC replaces that clustering with a Lloyd vector quantiser (VQ) under a per-Gaussian metric built from what the training cameras saw, and hosted in C3DGS it reports a gain of +0.49~dB before C3DGS's fine-tuning and +0.09~dB after it, in its own evaluation \citep{pietroszek2026only}. % s19 "Secondaries"; A4, A5
+This paper tests that gain independently and at equal rate, and then asks why most of it goes. % s19; s21; A1, F1
+
+\paragraph{Questions.}
+Two questions were pre-registered as tests with criteria.
+\textbf{Q1} (E5): inside C3DGS and before its fine-tuning, at equal rate over three colour thresholds, does OGC's Gram-metric VQ beat C3DGS's own colour VQ (P1), and does it beat the same Lloyd with the metric's trace (P2)? % s19; A1
+\textbf{Q2} (E6 part (b)): after C3DGS's 5,000-iteration fine-tuning, does OGC's VQ still beat C3DGS's own at equal rate (P\_FT)? % s21; F1
+A further pre-registered experiment, E7, asks what carries the shrink between those two answers: the colour grids' re-fit, codebook training, or neither. % s26; H1, H2
+
+\paragraph{Findings.}
+Q1: yes. On all seven gate scenes OGC's VQ beat C3DGS's own at equal rate, with a mean BD-PSNR of 0.3558~dB, and the Gram metric beat its trace by 0.1874~dB, both passing their pre-registered criteria before fine-tuning. % s19 "The verdict"; A1, A2, B1
+This replicates OGC's VQ given this project's 16-probe estimate of OGC's metric, not OGC's own Gram computation. % s16; A12
+Q2: yes, by a small margin. After fine-tuning OGC's VQ led at equal rate by 0.0425~dB, positive on 6 of 7 scenes, and passed its criteria; under the standard error that matches one curve per scene its margin is 3.45 standard errors against the registered 4.9. % s21 "The verdict"; s25; F1
+E7: at $\delta = 0.07$~dB both pre-registered primaries were equivalent to zero and not superior, with $\bar\Delta = -0.0201$~dB for the colour grids' re-fit and $+0.00844$~dB for codebook training, and neither is fragile. % s26 "The verdict"; H1, H2, H3
+So each explains at most about a quarter of the 0.307~dB shrink, at equal rate and in the mean over scenes. % s26 "Post-hoc observations"; H1, H2, H4
+Report only and post hoc: under the arm that trains only the codewords the lead shrinks by only 17.2\% of the full shrink, and under the arm that trains everything but the codewords by 103.8\% of it, so the shrink is carried mostly by fine-tuning the parameters outside the grids and the codebook. % s26 "Post-hoc observations"; H5
+E7 does not separate those parameters, the kept splats' colours, opacity, scaling and rotation, from one another. % s26 "What section 26 settles"; H5
+
+\paragraph{Contributions.}
+\begin{itemize}
+\item An independent, pre-registered replication of OGC's colour VQ inside C3DGS, with OGC's released code unedited (Section~\ref{sec:replication}). % s19; A1, A12
+\item A dissection of OGC's lead across the metric, the Lloyd algorithm around it and the codewords it uses, mostly descriptive and labelled so (Section~\ref{sec:dissection}). % s19; s20; B2, B8
+\item The first equal-rate comparison here after fine-tuning, from curves of fine-tuned rows over the three colour thresholds (Section~\ref{sec:ft-result}). % s21; F1
+\item Interventions within each process that hold the colour grids and the codewords fixed in turn, with pre-registered superiority and equivalence tests (Sections~\ref{sec:ft-why} and~\ref{sec:ft-why-results}). % s26; H1, H2
+\item Session bundles and checkers: the results of all three experiments are recomputed by committed scripts from the committed bundles. % s19; s21; s26; A1, F1, H1
+\end{itemize}
+
+\paragraph{Protocol and limits.}
+Each experiment was registered before its data, and its verdict is the pre-registered computation; anything chosen later is labelled exploratory or post hoc. % s19; s21; s26; A1, F1, H1
+E7's results were not read until all eleven of its sessions were committed, a working rule of this project and not part of the registration. % s26 "How the sessions ran"; H14
+Q2 and E7 reuse the gate scenes, so neither is a held-out test, and every result rests on seven scenes, INRIA's checkpoints and one host (Section~\ref{sec:limits}). % s21; s26; A1, F1, H1

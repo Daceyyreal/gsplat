@@ -75,7 +75,8 @@ PLACEHOLDER = re.compile(r"⟨([A-Za-z0-9_:]+)⟩")
 CITE = re.compile(r"`kaggle/PREREG_GN\.md:(\d+)`: «([^»]+)»")
 WHEEL_IN_INSTALL = "gsplat_wheel_build_s"  # inside install_s (kaggle/build_gn_e5_bench.py:385, :409, :422)
 FIRST_IMAGE_SESSIONS, LAST_IMAGE_SESSION = SESSIONS[:10], SESSIONS[10]
-SENTENCES = ("**S10's inputs, a departure from 20 l with no data effect:**", "**The image, named as 18 b requires:**")
+SENTENCES = ("**S10's inputs, a departure from 20 l with no data effect:**", "**The image, named as 18 b requires:**",
+             "**Read blind until the last session:**")
 # The exploratory sensitivity, declared before unblinding, not pre-registered and not in bench/gn/e7.py: the one scene
 # whose j = 0 seed pair spans Kaggle's two images is left out of the noise pooling. Its first commit is the declaration.
 EXPLORATORY_LEFT_OUT = "drjohnson"

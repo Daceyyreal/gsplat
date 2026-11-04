@@ -5560,6 +5560,10 @@ Primary rows missing after the rerun: no primary row missing.
 - **S10's inputs, a departure from 20 l with no data effect:** S10's restore read only the S2, S3, S5, S7 and S9 bundle
   datasets; S1, S4, S6 and S8 were attached after it had run. S9's copy of every scene was among those it read, and
   every copy it restored is byte-identical to its S9 reference copy. `kaggle/PREREG_GN.md:4230`: «Each session attaches every earlier E7 session's output»
+- **Read blind until the last session:** at each session's ingest only the mechanics were read, with no `per_scene_parts`, BD or arm comparison, and the one
+  structural dry run on real bundles showed nothing numeric; `bench/gn/e7.py`'s values were first read after S11's ingest and after the exploratory
+  sensitivity was declared. This was a working rule recorded in `kaggle/HANDOFF.md`, not part of Amendment 20. `bench/gn/check_s26.py`'s refusal
+  enforced it only until S11 was committed, so it rests on that record.
 
 Per session: gsplat commit, the halves it ran, Kaggle images, setup (s; preflight, restore, install, C3DGS build; a wheel
 built in the session counts once, inside install) and setup plus jobs (s):
