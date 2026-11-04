@@ -5,6 +5,7 @@
 Then ``paper/figs/check_figs.py`` re-checks every table cell independently.
 """
 
+import appendix_tables
 import f1_rd_curves
 import f2_p1_decomposition
 import f4_ac_refit
@@ -13,6 +14,7 @@ import t1_e5_primaries
 import t2_e6_pft
 import t3_e6_part_a
 
-for m in (t1_e5_primaries, t2_e6_pft, t3_e6_part_a, f1_rd_curves, f2_p1_decomposition, f4_ac_refit, f5_codewords):
+for m in (t1_e5_primaries, t2_e6_pft, t3_e6_part_a, f1_rd_curves, f2_p1_decomposition, f4_ac_refit, f5_codewords,
+          appendix_tables):
     m.main()
     print("done", m.__name__)

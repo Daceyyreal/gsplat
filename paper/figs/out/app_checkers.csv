@@ -1,0 +1,17 @@
+checker,section,title,cited_by_paper
+bench/gn/check_s11.py,11,E2b: an isotropic floor on the GN metric,no
+bench/gn/check_s12.py,12,E2c: GN-VQ with a cross-validated floor on the last five unused scenes,no
+bench/gn/check_s13.py,13,E3p: the pipeline on INRIA's 30k checkpoints of bicycle and train,yes
+bench/gn/check_s14.py,14,E3q: the C3DGS host on INRIA's train model,yes
+bench/gn/check_s15.py,15,E3r: the C3DGS host pilot on train and bicycle,yes
+bench/gn/check_s16.py,16,E4p: the C3DGS fork pilot on train,yes
+bench/gn/check_s17.py,17,E4q: the C3DGS dissection on train and treehill,yes
+bench/gn/check_s18.py,18,E5p: the OGC replication pilot inside C3DGS on train,yes
+bench/gn/check_s19.py,19,E5: the OGC replication gate inside C3DGS on the seven gate scenes,yes
+bench/gn/check_s20.py,20,E5's secondaries and report-only measures,yes
+bench/gn/check_s21.py,21,E6 part (b): fine-tuning curves on E5's seven scenes,yes
+bench/gn/check_s22.py,22,"E6 part (b), descriptive",yes
+bench/gn/check_s23.py,23,"E6 part (a), descriptive",yes
+bench/gn/check_s24.py,24,Fine-tuning and the int8 colour grids,yes
+bench/gn/check_s25.py,25,The SE convention in E5's and E6's criterion 3,yes
+bench/gn/check_s26.py,26,E7: a within-process dissection of why OGC's lead shrinks with fine-tuning,yes

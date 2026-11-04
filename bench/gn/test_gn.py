@@ -3437,6 +3437,167 @@ def test_paper_tex_q_tokens_are_only_the_three_questions():
     assert "Nothing in this paragraph is part of Q3's answer." in text["sec5_3_e7results.tex"].split("What neither primary holds fixed")[1]
 
 
+def _appendix_failures(out):
+    """Recompute every cell of the appendix's tables (paper/figs/out/app_*.csv) by a different route from the generator:
+    session, image and seed from the result CSVs' rows rather than the log tails and env files; a commit by what it holds
+    (present at it, absent at its parent) rather than a log search."""
+    import csv as _csv
+    import glob
+    import re
+    import subprocess
+    from datetime import date
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+
+    def git(*a):
+        return subprocess.run(["git", *a], cwd=repo, capture_output=True, text=True, encoding="utf-8", errors="replace")
+
+    def table(name):
+        with open(os.path.join(out, f"{name}.csv"), encoding="utf-8", newline="") as f:
+            return list(_csv.DictReader(f))
+
+    def text(rel):
+        with open(os.path.join(repo, rel), encoding="utf-8") as f:
+            return f.read()
+
+    bad, handoff, prereg = [], text("kaggle/HANDOFF.md"), text("kaggle/PREREG_GN.md")
+    lines = prereg.split("\n")
+    # ------------------------------------------------------------------- the registration history
+    rows = table("app_prereg")
+    want = [s for s in lines if re.match(r"#{2,3} Amendment (17|18|19|20)\b", s)]
+    if len(rows) != len(want):
+        bad.append(f"app_prereg: {len(rows)} rows, {len(want)} headings")
+    for r in rows:
+        tag = f"app_prereg {r['item']}"
+        hits = [i for i, s in enumerate(lines) if re.match(r"#{2,3} ", s) and s.split(" ", 1)[1].startswith(r["item"] + " (")]
+        if len(hits) != 1:
+            bad.append(f"{tag}: {len(hits)} headings")
+            continue
+        head = lines[hits[0]]
+        if not head.split(" (", 1)[1].startswith(r["date"]):
+            bad.append(f"{tag}: date {r['date']}")
+        if f"({r['date']}, {r['state']})" not in head and f"({r['date']})" not in head:
+            bad.append(f"{tag}: state {r['state']!r}")
+        end = next((j for j in range(hits[0] + 1, len(lines)) if lines[j].startswith("## ") or lines[j].startswith("### Amendment")),
+                   len(lines))
+        if r["what_changed"] not in " ".join(" ".join(lines[hits[0]:end]).split()):
+            bad.append(f"{tag}: what_changed is not in its section")
+        prefix = f"{head.split(' (')[0]} ({r['date']}"
+        at, before = git("show", f"{r['commit']}:kaggle/PREREG_GN.md"), git("show", f"{r['commit']}^:kaggle/PREREG_GN.md")
+        if at.returncode or prefix not in at.stdout or prefix in before.stdout:
+            bad.append(f"{tag}: commit {r['commit']} did not add the heading")
+        if r["commit"] not in handoff and r["commit"] not in prereg:
+            bad.append(f"{tag}: commit {r['commit']} is in neither HANDOFF nor PREREG")
+        when = git("log", "-1", "--format=%ad", "--date=short", r["commit"]).stdout.strip()
+        if when and abs((date.fromisoformat(when) - date.fromisoformat(r["date"])).days) > 1:
+            bad.append(f"{tag}: dated {r['date']}, committed {when}")
+    registered = {r["item"]: r["commit"] for r in rows}
+    # ------------------------------------------------------------------- the sessions
+    rows = table("app_sessions")
+    # the amendment registering each experiment is an ancestor of that experiment's first bundle
+    for item, exp in (("Amendment 17", "E5"), ("Amendment 19", "E6"), ("Amendment 20", "E7")):
+        first = next(r["bundle_commit"] for r in rows if r["experiment"].startswith(exp) and r["session"] == "S1")
+        if git("merge-base", "--is-ancestor", registered.get(item, "HEAD"), first).returncode:
+            bad.append(f"app_prereg {item}: not committed before {exp}'s first bundle {first}")
+    if [r["experiment"][:2] for r in rows] != ["E5"] * 3 + ["E6"] * 5 + ["E7"] * 11:
+        bad.append("app_sessions: not E5's 3, E6's 5 and E7's 11")
+    labels = {}
+    for r in rows:
+        exp, tag = r["experiment"][:2], f"app_sessions {r['experiment']} {r['session']}"
+        d = f"kaggle/gn_e{exp[1]}/{r['session']}/gn{exp[1]}"
+        scenes, images, seeds = set(), set(), set()
+        for p in glob.glob(os.path.join(repo, d, "gn5_results_*.csv")):
+            with open(p, encoding="utf-8", newline="") as f:
+                for row in _csv.DictReader(f):
+                    if row["session"] != r["session"]:
+                        continue
+                    scenes.add(row["scene"])
+                    images.add(row["image"])
+                    m = re.match(r"(?:j[+-]1_)?p(\d)_", row["config"])
+                    if m:
+                        seeds.add(m.group(1))
+        if ", ".join(sorted(scenes)) != r["scenes"]:
+            bad.append(f"{tag}: scenes {r['scenes']!r}, rows say {sorted(scenes)}")
+        if images != {r["image"]}:
+            bad.append(f"{tag}: image {r['image']!r}, rows say {sorted(images)}")
+        if labels.setdefault(r["image"], "ABCDEFGH"[len(labels)]) != r["image_label"]:
+            bad.append(f"{tag}: image label {r['image_label']}")
+        seed = f"seed {seeds.copy().pop()} half" if exp == "E7" and len(seeds) == 1 else "seeds 0 and 1"
+        if seed != r["seed_or_half"] or (exp != "E7" and seeds != {"0", "1"}):
+            bad.append(f"{tag}: {r['seed_or_half']!r}, rows say {sorted(seeds)}")
+        with open(os.path.join(repo, d, "gn5_attempt.json"), encoding="utf-8") as f:
+            part = json.load(f).get("part")
+        if r["experiment"] != (f"{exp} ({part})" if part else exp):
+            bad.append(f"{tag}: part {part}")
+        attempt = f"{d}/gn5_attempt.json"
+        c = r["bundle_commit"]
+        if git("cat-file", "-e", f"{c}:{attempt}").returncode or not git("cat-file", "-e", f"{c}^:{attempt}").returncode:
+            bad.append(f"{tag}: commit {c} did not add the bundle")
+        if c not in handoff:
+            bad.append(f"{tag}: commit {c} is not in HANDOFF")
+    # ------------------------------------------------------------------- the checkers
+    rows = table("app_checkers")
+    found = {os.path.basename(p) for p in glob.glob(os.path.join(repo, "bench", "gn", "check_s*.py"))}
+    if {os.path.basename(r["checker"]) for r in rows} != found:
+        bad.append("app_checkers: not the checkers in bench/gn")
+    findings = text("kaggle/FINDINGS.md").split("\n")
+    papers = "".join(text(os.path.relpath(p, repo)) for p in glob.glob(os.path.join(repo, "paper", "tex", "*.tex"))
+                     if os.path.basename(p) != "appendix.tex")
+    for r in rows:
+        tag = f"app_checkers {r['checker']}"
+        if not os.path.isfile(os.path.join(repo, r["checker"])) or f"check_s{r['section']}.py" not in r["checker"]:
+            bad.append(f"{tag}: section {r['section']}")
+        if not any(s.startswith(f"## {r['section']}. {r['title']}") for s in findings):
+            bad.append(f"{tag}: title {r['title']!r}")
+        if ("yes" if re.search(rf"\bs{r['section']}\b", papers) else "no") != r["cited_by_paper"]:
+            bad.append(f"{tag}: cited_by_paper {r['cited_by_paper']}")
+    return bad
+
+
+def test_paper_appendix_tables_recompute_every_cell(tmp_path):
+    """Every cell of the appendix's generated tables is recomputed, a planted error in each table is caught, and a fresh
+    run of the generator equals the committed outputs; drjohnson's two halves are on the two images."""
+    import importlib.util
+    import shutil
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    if shutil.which("git") is None or not os.path.exists(os.path.join(repo, ".git")):
+        pytest.skip("needs the repository's history")
+    out = os.path.join(repo, "paper", "figs", "out")
+    assert _appendix_failures(out) == []
+    # a fresh run equals the committed outputs (line endings aside: a checkout may hold CRLF)
+    spec = importlib.util.spec_from_file_location("appendix_tables", os.path.join(repo, "paper", "figs", "appendix_tables.py"))
+    at = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(at)
+    fresh = tmp_path / "fresh"
+    prereg, sessions, checkers = at.main(str(fresh))
+    assert (len(sessions), len(checkers)) == (19, 16)
+    for name in os.listdir(fresh):
+        a, b = (fresh / name).read_bytes(), open(os.path.join(out, name), "rb").read()
+        assert a.replace(b"\r\n", b"\n") == b.replace(b"\r\n", b"\n"), name
+    # Amendment 20's six notes are all there, and each file's cells reach the printed table
+    items = [r["item"] for r in prereg]
+    assert [f"Amendment 20 note {i}" for i in range(1, 7)] == [x for x in items if x.startswith("Amendment 20 note")]
+    printed = open(os.path.join(out, "app_sessions.tex"), encoding="utf-8").read()
+    assert all(r["bundle_commit"] in printed for r in sessions)
+    # drjohnson: seed 0 on the first image (S3), seed 1 on the second (S11); nothing else in E7 spans
+    by = {(r["experiment"], r["session"]): r for r in sessions}
+    assert (by[("E7", "S3")]["scenes"], by[("E7", "S3")]["image_label"]) == ("drjohnson", "A")
+    assert (by[("E7", "S11")]["scenes"], by[("E7", "S11")]["image_label"]) == ("drjohnson", "B")
+    assert [r["session"] for r in sessions if r["image_label"] == "B"] == ["S11"]
+    # planted errors: one cell in each table is caught
+    for name, old, new in (("app_prereg", "53dde708", "2d8056ec"), ("app_prereg", "2026-11-02", "2026-11-03"),
+                           ("app_sessions", "b592a57e", "d0d6df8a"), ("app_sessions", "seed 0 half", "seed 1 half"),
+                           ("app_checkers", "check_s26.py,26", "check_s26.py,25")):
+        planted = tmp_path / f"planted_{name}_{new}"
+        shutil.copytree(fresh, planted)
+        path = planted / f"{name}.csv"
+        body = path.read_text(encoding="utf-8")
+        assert old in body, old
+        path.write_text(body.replace(old, new, 1), encoding="utf-8", newline="")
+        assert _appendix_failures(str(planted)), (name, old)
+
+
 def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     """check_tex's amendment items (rule 4): an Am20 item, with its exact PREREG lines, verifies a design line's numbers
     in Section 5.2's file, sec5_2_e7design.tex, only (the same line in 5.1's sec5_finetuning.tex or another section's

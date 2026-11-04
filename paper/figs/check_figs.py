@@ -1,5 +1,6 @@
 """Re-check every table cell and every plotted value in ``paper/figs/out/`` independently, against the committed
-bundles and against the FINDINGS values they mirror.
+bundles and against the FINDINGS values they mirror. The appendix's ``app_*`` tables hold no result values; their cells
+are recomputed in ``bench/gn/test_gn.py`` (``test_paper_appendix_tables_recompute_every_cell``).
 
     .venv/Scripts/python.exe paper/figs/check_figs.py
 

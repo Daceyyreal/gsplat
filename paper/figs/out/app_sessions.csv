@@ -1,0 +1,20 @@
+experiment,session,scenes,seed_or_half,bundle_commit,image_label,image
+E5,S1,"counter, kitchen, room",seeds 0 and 1,9a90dabb,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E5,S2,"drjohnson, truck",seeds 0 and 1,1710cc8a,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E5,S3,"bonsai, playroom",seeds 0 and 1,88b5ebed,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E6 (b),S1,"counter, playroom, truck",seeds 0 and 1,87cc6a59,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E6 (b),S2,"drjohnson, room",seeds 0 and 1,94551278,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E6 (b),S3,"bonsai, kitchen",seeds 0 and 1,13a95aa1,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E6 (a),S4,"flowers, train",seeds 0 and 1,9ce9b36e,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E6 (a),S5,treehill,seeds 0 and 1,6ff4877e,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E7,S1,room,seed 0 half,b592a57e,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E7,S2,kitchen,seed 0 half,d0d6df8a,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E7,S3,drjohnson,seed 0 half,30431fc3,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E7,S4,bonsai,seed 0 half,04bdf4b6,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E7,S5,counter,seed 0 half,ddef31f4,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E7,S6,playroom,seed 0 half,75d0209b,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E7,S7,truck,seed 0 half,a35487ab,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E7,S8,"kitchen, playroom",seed 1 half,64fd4494,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E7,S9,"bonsai, counter",seed 1 half,505c2305,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E7,S10,"room, truck",seed 1 half,ccb7a4f9,A,py3.13.15|torch2.11.0+cu128|cuda12.8|cudnn91900|driver580.178.04
+E7,S11,drjohnson,seed 1 half,32758a0e,B,py3.13.16|torch2.11.0+cu130|cuda13.0|cudnn92700|driver580.178.04
