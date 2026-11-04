@@ -3318,6 +3318,64 @@ def test_paper_tex_claims_ids_are_explicit_citation_items(tmp_path):
     assert len(bad) == 1 and bad[0].startswith(f"sec2_setup.tex:{line}: 'E5'") and "ambiguous ID" in bad[0]
 
 
+def test_check_tex_accepts_a_rounded_number_only_when_unambiguous(tmp_path, monkeypatch):
+    """paper/tex/check_tex.py's rounding, on hand-made FINDINGS and CLAIMS: a prose number rounded from a more precise cited
+    number passes; a wrong digit, too few significant digits and two different numbers rounding to it each fail; one
+    quantity printed at two precisions is not ambiguous; rows decide before sections; uncited lines stay exact; a number
+    more precise than its source fails; a count stays exact."""
+    import importlib.util
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    spec = importlib.util.spec_from_file_location("check_tex", os.path.join(repo, "paper", "tex", "check_tex.py"))
+    ct = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ct)
+    claims, findings = tmp_path / "CLAIMS.md", tmp_path / "FINDINGS.md"
+    claims.write_text("| H1 | mean -0.020086807, SE 0.005561656, 2.365, and 0.01231 and 0.01234; twice 0.254563023 and 0.2546 |\n"
+                      "| H2 | 1,117.42 and 3 of 7 |\n| H3 | 0.0208 |\n", encoding="utf-8")
+    findings.write_text("## 26. E7\nvalues 7.77777, and 0.020086111 only here\n", encoding="utf-8")
+    monkeypatch.setattr(ct, "CLAIMS", str(claims))
+    monkeypatch.setattr(ct, "FINDINGS", str(findings))
+    tex = tmp_path / "tex"
+    tex.mkdir()
+
+    def res(line):
+        (tex / "a.tex").write_text(line + "\n", encoding="utf-8")
+        return ct.run(str(tex))
+
+    # a rounded number passes, and is counted as rounded; an exact one is not
+    r = res("The mean was $-0.0201$ dB. % H1")
+    assert r["fails"] == [] and r["n_rounded"] == 1
+    assert res("The mean was $-0.020086807$ dB. % H1")["n_rounded"] == 0
+    assert res("The SE was 0.00556. % H1")["fails"] == []
+    # a wrong digit fails
+    assert res("The mean was 0.0202 dB. % H1")["fails"][0].endswith("0.0202 is not in its cited sources H1")
+    assert res("The SE was 0.00557. % H1")["fails"]
+    # too few significant digits fails
+    bad = res("The mean was 0.02 dB. % H1")["fails"]
+    assert len(bad) == 1 and "too few significant digits" in bad[0]
+    assert ct.significant("0.020") == 2 and ct.significant("0.02") == 1 and ct.significant("790") == 2
+    # two different numbers round to it: ambiguous, and the report names both
+    bad = res("The value was 0.0123. % H1")["fails"]
+    assert len(bad) == 1 and "is ambiguous" in bad[0] and "0.01231" in bad[0] and "0.01234" in bad[0]
+    # but each is exact, and one quantity printed at two precisions is one number
+    assert res("The value was 0.01231. % H1")["fails"] == []
+    assert res("The value was 0.255. % H1")["fails"] == []
+    # ties may round either way, and thousands separators are read
+    assert res("A value of 2.37, and 2.36. % H1")["fails"] == []
+    assert res("A value of 1,117. % H2")["fails"] == []
+    # a cited row decides before a cited section: the section's other number makes no ambiguity
+    assert res("The mean was 0.0201 dB. % s26; H1")["fails"] == []
+    assert res("A value of 7.78. % s26; H1")["fails"] == []
+    assert res("A value of 7.78. % H1")["fails"]
+    # an uncited line stays exact; more precise than its source fails; a count stays exact
+    assert any("is not in FINDINGS or CLAIMS" in x for x in res("It read 7.78.")["fails"])
+    assert res("A value of 0.02080. % H3")["fails"]
+    assert res("On 3 of 8 scenes. % H2")["fails"]
+    # the real sources: no line changes its verdict
+    monkeypatch.undo()
+    assert ct.run()["fails"] == []
+
+
 def test_paper_tex_h_tokens_are_only_claims_rows():
     """The paper's hypotheses are Q1 and Q2, so an "H#" in paper/tex can only be a CLAIMS row: none in the prose or in a
     whole-line comment, and in a trailing comment only as a citation item check_tex resolves to an existing row."""

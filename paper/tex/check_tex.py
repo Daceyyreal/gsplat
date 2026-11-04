@@ -10,6 +10,11 @@ sections (``s19``, ``s21 secondary 1``) and its ``paper/CLAIMS.md`` rows (``A2``
    ``\\includegraphics`` arguments and lengths removed; a leading sign ignored; thousands separators kept, as FINDINGS
    prints them) must be in ``ALLOW`` or appear, at the same rounding, as a number in the line's cited sources: the
    cited FINDINGS sections and CLAIMS rows. A line that cites neither is checked against all of FINDINGS and CLAIMS.
+   **Or by rounding, on a line that cites a source** (``rounded_match``): the number equals a more precise cited number
+   rounded to the prose number's own decimals, has at least 2 significant digits, and is not ambiguous. The cited
+   CLAIMS rows are looked at first, then the cited sections. Two different numbers rounding to it fail as ambiguous,
+   unless one is itself a rounding of the other (one quantity printed twice). An uncited line and a design line (4) stay
+   exact, and so does every count.
 2. **Counts.** Every "k of n" (also "k of the n") and "k/n" in the line's text must appear as written in its cited
    sources (or, with no citation, in FINDINGS or CLAIMS), in either form: so a count is checked even where k and n are
    integers that ``ALLOW`` lets pass as numbers.
@@ -38,6 +43,7 @@ criteria, "8 bits") are allowed without a source.
 It prints each failure and exits 1 if there is any, 0 otherwise.
 """
 
+import decimal
 import glob
 import os
 import re
@@ -107,6 +113,46 @@ def numbers(text):
     return NUM.findall(text)
 
 
+def _dec(x):
+    return decimal.Decimal(x.replace(",", ""))
+
+
+def _decimals(x):
+    return len(x.split(".")[1]) if "." in x else 0
+
+
+def significant(x):
+    """Significant digits as printed: leading zeros never count, an integer's trailing zeros do not either."""
+    s = x.replace(",", "")
+    return len(s.replace(".", "").lstrip("0")) if "." in s else len(s.strip("0"))
+
+
+def rounds_to(src, x):
+    """``src`` (more decimals than ``x``) rounded to ``x``'s decimals equals ``x``; an exact tie may go either way."""
+    d = _decimals(x)
+    if _decimals(src) <= d:
+        return False
+    q = decimal.Decimal(1).scaleb(-d)
+    return _dec(x) in (_dec(src).quantize(q, decimal.ROUND_HALF_UP), _dec(src).quantize(q, decimal.ROUND_HALF_EVEN))
+
+
+def rounded_match(x, tiers):
+    """Match ``x`` by rounding against ``tiers`` (token sets, the cited rows first, then the cited sections): the first
+    tier holding a candidate decides. Returns ("ok", [source]), ("ambiguous", [sources]), ("few", []) or (None, [])."""
+    for tier in tiers:
+        found = sorted((s for s in tier if rounds_to(s, x)), key=_decimals, reverse=True)
+        if not found:
+            continue
+        if significant(x) < 2:
+            return "few", found
+        distinct = []
+        for s in found:  # a coarser print of a number already kept is the same quantity
+            if not any(rounds_to(k, s) for k in distinct):
+                distinct.append(s)
+        return ("ok", distinct) if len(distinct) == 1 else ("ambiguous", distinct)
+    return (None, [])
+
+
 def split_comment(line):
     m = re.search(r"(?<!\\)%", line)
     return (line[:m.start()], line[m.start() + 1:]) if m else (line, "")
@@ -171,7 +217,7 @@ def run(tex_dir=HERE):
     f_all, sec_text, c_all, rows = sources()
     items = amendment_items()
     all_tokens = tokens(f_all) | tokens(c_all)
-    fails, n_numbers, n_lines, n_result = [], 0, 0, 0
+    fails, n_numbers, n_lines, n_result, n_rounded = [], 0, 0, 0, 0
     for path in sorted(glob.glob(os.path.join(tex_dir, "*.tex"))):
         name = os.path.basename(path)
         for i, line in enumerate(read(path).splitlines(), 1):
@@ -229,9 +275,21 @@ def run(tex_dir=HERE):
                 if (k, n) not in src_counts:
                     fails.append(f"{name}:{i}: the count {k} of {n} is not in {where}")
             checked = [x for x in numbers(text) if x not in ALLOW]
+            tiers = [] if design else [t for t in (set().union(*[tokens(rows.get(c, "")) for c in ids], set()),
+                                                   set().union(*[tokens(sec_text.get(s, "")) for s in secs], set())) if t]
             for x in checked:
                 n_numbers += 1
-                if x not in pool:
+                if x in pool:
+                    continue
+                status, src_nums = rounded_match(x, tiers)
+                if status == "ok":
+                    n_rounded += 1
+                elif status == "ambiguous":
+                    fails.append(f"{name}:{i}: {x} is ambiguous: {', '.join(src_nums)} in {where} all round to it")
+                elif status == "few":
+                    fails.append(f"{name}:{i}: {x} is not in {where}, and has too few significant digits to match "
+                                 f"{src_nums[0]} by rounding")
+                else:
                     fails.append(f"{name}:{i}: {x} is not in {where}")
             if (checked or line_counts or RESULT_WORDS.search(text)) and not design:
                 n_result += 1
@@ -241,15 +299,15 @@ def run(tex_dir=HERE):
                 elif not ids:
                     fails.append(f"{name}:{i}: states a result without a CLAIMS row in its trailing comment: "
                                  f"{text.strip()[:90]!r}")
-    return {"fails": fails, "n_numbers": n_numbers, "n_lines": n_lines, "n_result_lines": n_result}
+    return {"fails": fails, "n_numbers": n_numbers, "n_rounded": n_rounded, "n_lines": n_lines, "n_result_lines": n_result}
 
 
 def main():
     res = run()
     for f in res["fails"]:
         print("FAIL:", f)
-    print(f"paper/tex: {res['n_lines']} lines, {res['n_result_lines']} result lines, {res['n_numbers']} numbers checked, "
-          f"{len(res['fails'])} failures")
+    print(f"paper/tex: {res['n_lines']} lines, {res['n_result_lines']} result lines, {res['n_numbers']} numbers checked "
+          f"({res['n_rounded']} by rounding), {len(res['fails'])} failures")
     return 1 if res["fails"] else 0
 
 
