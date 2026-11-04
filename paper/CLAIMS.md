@@ -172,7 +172,7 @@ OGC.** Inside C3DGS, OGC is ahead of GN-VQ on development scenes (D5, D6).
   seed-1 curve. `SE` = `SD_pool` / sqrt(n) takes the j = 0 point's noise for the BD's and leaves out scene-to-scene spread.
 - **The arms:** a frozen grid keeps OGC's codewords outside it clamped; the geometry quantizers re-fit in every arm (20 m).
 - **Evaluation and hardware:** protocol ii; 2x T4; two Kaggle images (H13).
-- **IDs:** H1 to H14 are rows of this ledger. The paper names its hypotheses Q1 and Q2, so that the two cannot be confused.
+- **IDs:** H1 to H14 are rows of this ledger. The paper names its questions Q1, Q2 and Q3, so that the two cannot be confused.
 
 | ID | Claim | Status | Evidence | Check | Data | Scope limits that travel with it | Corr. |
 |---|---|---|---|---|---|---|---|

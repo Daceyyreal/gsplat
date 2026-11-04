@@ -3391,7 +3391,7 @@ def test_paper_tex_references_use_ref():
 
 
 def test_paper_tex_h_tokens_are_only_claims_rows():
-    """The paper's hypotheses are Q1 and Q2, so an "H#" in paper/tex can only be a CLAIMS row: none in the prose or in a
+    """The paper's questions are Q1, Q2 and Q3, so an "H#" in paper/tex can only be a CLAIMS row: none in the prose or in a
     whole-line comment, and in a trailing comment only as a citation item check_tex resolves to an existing row."""
     import glob
     import importlib.util
@@ -3415,6 +3415,26 @@ def test_paper_tex_h_tokens_are_only_claims_rows():
             ids, ambiguous = ct.cited_ids(comment)
             assert not [x for x in ambiguous if x.startswith("H")], where
             assert all(x in rows for x in ids if x.startswith("H")), where
+
+
+def test_paper_tex_q_tokens_are_only_the_three_questions():
+    """Q1, Q2 and Q3 are the only "Q#" tokens in paper/tex, prose or comment. Each is defined once, in the introduction's
+    Questions paragraph; Q3 is tagged in the four places that ask or answer it; and the arms' "what carries it" reading
+    stays outside Q3's answer, in the introduction and in Section 5.3."""
+    import glob
+    import re
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    tex = os.path.join(repo, "paper", "tex")
+    text = {os.path.basename(p): open(p, encoding="utf-8").read() for p in glob.glob(os.path.join(tex, "*.tex"))}
+    assert {t for body in text.values() for t in re.findall(r"\bQ\d+\b", body)} == {"Q1", "Q2", "Q3"}
+    for q in ("Q1", "Q2", "Q3"):
+        assert sum(body.count(f"\\textbf{{{q}}}") for body in text.values()) == 1, q
+        assert f"\\textbf{{{q}}}" in text["sec1_introduction.tex"], q
+    for name in ("sec1_introduction.tex", "sec5_2_e7design.tex", "sec5_3_e7results.tex", "sec5_finetuning.tex"):
+        assert "Q3" in text[name], name
+    assert "Outside Q3's answer, report only and post hoc:" in text["sec1_introduction.tex"]
+    assert "Nothing in this paragraph is part of Q3's answer." in text["sec5_3_e7results.tex"].split("What neither primary holds fixed")[1]
 
 
 def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
@@ -3502,7 +3522,7 @@ def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     assert "Am20" not in sec53 and "sec5_3_e7results.tex" not in ct.DESIGN_FILES
     # the real sources: the \input file is read under its own name
     res = ct.run()
-    assert res["fails"] == [] and res["n_numbers"] == 210
+    assert res["fails"] == [] and res["n_numbers"] == 211
 
 
 # --------------------------------------------------------------------------------- E3r (Amendment 14)
