@@ -1,7 +1,7 @@
 """E7 (kaggle/PREREG_GN.md Amendment 20 f-h, with its note 1): the verdict, computed locally over every session's
 committed bundle (a session's own summary holds per-scene parts only, Note 2 C5).
 
-    python bench/gn/e7.py kaggle/gn_e7 [--out kaggle/gn_e7/gn7_verdict.json]
+    python bench/gn/e7.py kaggle/gn_e7 --out <a path outside the bundles>/gn7_verdict.json
 
 Every BD and noise piece is ``bench/gn/e5.py``'s, by import, with no copy and no edit: ``bd`` (Amendment 9 a's
 domain-scaled fit, degree 2 through the three points, over the overlap of the two curves' byte ranges), ``r9``,
@@ -389,13 +389,18 @@ def bundle_dirs(root: str) -> List[str]:
     return sorted(os.path.join(root, d, ARC) for d in os.listdir(root) if os.path.isdir(os.path.join(root, d, ARC)))
 
 
+def _read_json(path: str):
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
 def load(root: str) -> Dict:
     """Every E7 bundle under ``root``: the merged rows per scene (E5's combiner: the same row kept once, a different one
     in two bundles of one attempt refused, a higher attempt replacing a lower one's), the metas, the sessions."""
     bundles = []
     for d in bundle_dirs(root):
         ap = os.path.join(d, "gn5_attempt.json")
-        att = json.load(open(ap)) if os.path.exists(ap) else {}
+        att = _read_json(ap) if os.path.exists(ap) else {}
         if not isinstance(att, dict) or not att.get("e7"):
             raise ValueError(f"{d} is not an E7 bundle (its gn5_attempt.json has no \"e7\": true)")
         bundles.append({"dir": d, "name": os.path.basename(os.path.dirname(d)), "session": att.get("session"),
@@ -406,16 +411,17 @@ def load(root: str) -> Dict:
         for n in sorted(os.listdir(b["dir"])):
             path = os.path.join(b["dir"], n)
             if n.startswith("gn5_results_") and n.endswith(".csv"):
-                for row in csv.DictReader(open(path, newline="")):
-                    key = (row["scene"], row["config"])
-                    old = merged.get(key)
-                    if old is None or old[0] < b["attempt"]:
-                        merged[key] = (b["attempt"], b["name"], row)
-                    elif old[0] == b["attempt"] and old[2] != row:
-                        raise BundleConflict(f"{key}: {old[1]} and {b['name']} (attempt {b['attempt']}) hold different "
-                                             "rows")
+                with open(path, newline="", encoding="utf-8") as f:
+                    for row in csv.DictReader(f):
+                        key = (row["scene"], row["config"])
+                        old = merged.get(key)
+                        if old is None or old[0] < b["attempt"]:
+                            merged[key] = (b["attempt"], b["name"], row)
+                        elif old[0] == b["attempt"] and old[2] != row:
+                            raise BundleConflict(f"{key}: {old[1]} and {b['name']} (attempt {b['attempt']}) hold "
+                                                 "different rows")
             elif n.startswith("gn5_meta_") and n.endswith(".json"):
-                m = json.load(open(path))
+                m = _read_json(path)
                 metas.setdefault(m["scene"], []).append({**m, "_bundle": b["name"], "_attempt": b["attempt"]})
     rows: Dict[str, List[Dict]] = {}
     for (scene, _c), (_a, _b, row) in merged.items():
@@ -442,11 +448,12 @@ def verdict(root: str) -> Dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("root")
-    ap.add_argument("--out", default=None)
+    ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
     v = verdict(a.root)
-    out = a.out or os.path.join(a.root, "gn7_verdict.json")
-    json.dump(v, open(out, "w"), indent=1, default=str)
+    out = a.out
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(v, f, indent=1, default=str)
     print(f"E7 (n = {v['n']}; dropped {v['dropped'] or '-'})")
     for k in ORDER:
         t = v["tests"]["inputs"].get(k) or {}

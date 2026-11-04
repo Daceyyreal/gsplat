@@ -7882,6 +7882,24 @@ def _load_check_e7_ingest():
     return ck
 
 
+def test_e7_out_is_required_and_every_open_names_its_encoding():
+    """bench/gn/e7.py never writes into the bundles by default: --out is required. Each open() is in a with statement
+    and names its encoding."""
+    import ast
+
+    import e7 as ev
+
+    with pytest.raises(SystemExit) as e:
+        ev.main([os.path.join(HERE, "no_such_root")])
+    assert e.value.code == 2
+    with open(os.path.join(HERE, "e7.py"), encoding="utf-8") as f:
+        tree = ast.parse(f.read())
+    calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and getattr(n.func, "id", "") == "open"]
+    managed = [i.context_expr for n in ast.walk(tree) if isinstance(n, ast.With) for i in n.items]
+    assert len(calls) == 3 and all(c in managed for c in calls)
+    assert all(any(k.arg == "encoding" and k.value.value == "utf-8" for k in c.keywords) for c in calls)
+
+
 def test_e7_ingest_check_note6_reference_copy_is_the_latest_bundle(tmp_path):
     """bench/check_e7_ingest.py with Amendment 20 note 6: each scene's reference copy is its copy in the latest
     committed bundle holding it. On the real committed bundles S1-S8 (read only for their bytes, no value): S8's bundle
