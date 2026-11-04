@@ -8,7 +8,7 @@ The replication ran OGC's released \code{gram\_kmeans}, unedited, on this projec
 On train the estimate's total trace was 0.919 of the exact Gram's, for a reason the files do not settle, and no gate scene has a comparison with the exact Gram. % s16; A12, E4
 
 \paragraph{One host and one set of checkpoints.}
-Every comparison ran inside one host, C3DGS at commit \code{2a234af5} with its recorded build and run deviations, on INRIA's published checkpoints, on T4 GPUs with one software image per experiment. % s19; A1 (its limits column: the common limits block), E1
+Every comparison ran inside one host, C3DGS at commit \code{2a234af5} with its recorded build and run deviations, on INRIA's published checkpoints, on T4 GPUs with one software image per experiment, except that E7's last session ran on a second image. % s19; s26 "How the sessions ran"; A1 (its limits column: the common limits block), E1, H13
 Whether OGC's lead carries over to other hosts, to checkpoints trained another way or to other GPUs is not tested. % A1 (the common limits block: one host, INRIA's checkpoints, one image)
 The pre-registration's statement that no pixel, splat value, render or metric of the seven scenes had been read before the replication's code holds for INRIA's checkpoints of those scenes only: earlier experiments of this project had read five of them with its own gsplat checkpoints, as disclosed in advance. % Am17 erratum; Am15 d; A1 (the disclosure in its limits column)
 The comparison with OGC's paper is not like for like: its host results are nine Mip-NeRF 360 scenes in its own evaluation with one run each, against seven scenes here, four of them shared, under protocol~ii. % s19; A4; CLAIMS Gap 4
@@ -21,10 +21,10 @@ Each BD value is a parabola through three points, one seed-0 process per point, 
 $\mathrm{SE}_{\mathrm{noise}}$ is seed noise, not scene spread, and its registered $\sqrt{2n}$ divisor is that of a two-seed mean; with $\mathrm{SD}_{\mathrm{pool}}/\sqrt{n}$ the criterion-3 margins of P1, P2 and P\_FT are 77.7, 790 and 3.45 standard errors, and every criterion still holds. % s25; A2, F1
 With $n = 7$ the count criterion is the tight one: in six of the seven leave-one-out cases P\_FT met it with exactly five scenes. % s22 a; F5
 
-\paragraph{The AC grid's re-fit: bytes only.}
-Fine-tuning re-fits C3DGS's int8 AC colour grid, widening it for OGC's codebook, and the records show what that does to the bytes; its effect on the PSNR lead is untested. % s24; E13, F9
-The exploratory correlations across scenes and processes run against the re-fit as the cause of the shrinking lead, and none of them is a test. % s24 item 6; E18
-Before fine-tuning OGC's AC codebook was clamped at the save in every process, so P1 itself was measured with a clamped codebook, and the clamping's effect on PSNR is also untested. % s24 item 2; E17
+\paragraph{The colour grids' re-fit.}
+Fine-tuning re-fits C3DGS's int8 AC colour grid, widening it for OGC's codebook, and the records show what that does to the bytes; E7 tested the effect on the lead by freezing both colour grids, so it speaks for the AC and DC re-fit together and not for AC alone, at equal rate and in the mean over scenes. % s24; s26 "What section 26 settles"; E13, F9, H1
+The earlier exploratory correlations across scenes and processes run against the re-fit as the cause of the shrinking lead, and none of them is a test. % s24 item 6; E18
+Before fine-tuning OGC's AC codebook was clamped at the save in every process, so P1 itself was measured with a clamped codebook; E7's own-grid rows remove the clamping and change the step together, so the clamping's effect on PSNR alone is still not separated. % s24 item 2; s26 "Secondaries"; E17, H11
 
 \paragraph{The development scenes are descriptive.}
 E6 part (a), on flowers, treehill and train, has no criterion: its three predictions were checked, not judged, and none of its values is pooled with the gate scenes' results. % Am19 b; s23; G1
@@ -36,4 +36,6 @@ Protocol~ii and C3DGS's own evaluation differ by a scene-dependent amount, up to
 Seeded C3DGS runs are not reproduced on the GPU, so every experiment's numbers come from its own processes and no row is reused across experiments. % s15; E2; F10 (the replication's rows not reused; geometry differs between runs)
 
 \paragraph{Why the lead shrinks.}
-Why OGC's lead shrinks with fine-tuning is the subject of a further pre-registered experiment (E7), whose results are not reported in this version. % Am20 a; CLAIMS Gap 3
+E7 is not a held-out test, and it cannot separate the kept splats' colours from opacity, scaling and rotation in the shrink, because no arm holds them fixed apart from one another. % s26 "What section 26 settles"; H5
+Its scene-spread standard error, computed post hoc, leaves $\Delta_{\mathrm{refit}}$ equivalent only at Holm's second position, and kitchen stands apart for a reason not settled. % s26 "Post-hoc observations"; H7, H8
+One observation is left uninterpreted: P1's seed-0 BD reads below its seed-1 BD on 7 of 7 scenes (post hoc; mean difference $-0.011685$~dB), and the cause was not looked into. % s26 "Post-hoc observations"; H9
