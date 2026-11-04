@@ -81,7 +81,7 @@ complete, all eleven sessions in; pre-unblinding fixes and the exploratory decla
 primaries "equivalent; not superior", neither fragile (FINDINGS section 26, `3ca275bb`, `check_s26.py` `4171a88a`; CLAIMS group H,
 `f7f5c035`; see "E7 closed"); the paper's E7 results are in `sec5_3_e7results.tex` (`b277b38a`, see "Paper step 1"); the abstract
 and introduction are drafted (see "Paper step 2"); `.claude/commands/` holds `/wrapup` and `/catchup` (`934a0366`); paper step 3 is done (see "Paper step 3"), and so are the shrink wording, the appendix, the email and the `e7.py` fixes, with the code-identity
-rule retired (see "Paper step 4"); next: none queued, Dace's reading of the whole paper.**
+rule retired (see "Paper step 4"); the email, `ogc_derived.py`'s licence check and `catchup.md` are recorded in "After paper step 4"; next: Dace's read of the paper.**
 Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
@@ -6153,7 +6153,32 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - **Still open:** CLAIMS Gap 8 is unchanged, as Dace asked; S11's `discover` dump was never checked; why P1's seed-0 curve reads below seed-1 on all
   seven scenes was not looked into.
 - **The heads:** the fork head is the commit holding this entry, whose parent is `6a871193`.
-- **Next action: none queued; Dace's reading of the whole paper.**
+- **Next action (superseded by "After paper step 4"): none queued; Dace's reading of the whole paper.**
+
+### After paper step 4: the email, `ogc_derived.py`'s licence check and `catchup.md` (2026-11-05)
+
+- **The email:** `81689d8e` put `taifurrahman0606@gmail.com` at `paper/tex/main.tex:27`. Dace's request carried the decision line with its
+  template unfilled, so the file is unchanged and no commit was made; Dace's earlier instruction was that this address stays.
+- **`bench/gn/ogc_derived.py` is derived, not independent** (compared with `vq.py` at `49ccae72`, `F:\ogc_restore\ogc-3dgs`). Ours to theirs:
+  `ogc_init_probs` :40-48 to :30, 32; `ogc_init` :51-60 to :21, 33-36; `make_reseed` :63-82 to :74-84; `metric_matrices` :128-137 to :22-29;
+  `ogc_arith` :89-122 to :39, 42-53, 59-62, 69-73, 79-82; `gram_kmeans_ours` :140-209 to `gram_kmeans` :17-88 (for example :168-170 equal
+  :37-39 token for token). `ogc_layout` :85-86 has no counterpart. `test_gram_kmeans_ours_reproduces_their_gram_kmeans` and CLAIMS A6 hold the result identical.
+- **Its header already does what the licence asks, and is unchanged:** the terms' URL and both `Required Notice:` lines, verbatim. The licence asks for copies of
+  those lines, so the licensor's "Copyright (c) 2026 Krzysztof Pietroszek" stays rather than a shortened form. The notice is also beside the derived parts in
+  `diagnostics.py` and `gn_vq.py`.
+- **No Apache-2.0 claim names it:** no SPDX or Apache line in the file; `setup.py`, `pyproject.toml` and `pytest.ini` have SPDX lines for themselves only; `README.md` states no licence;
+  `bench/` is no package (no `__init__.py`, `find_packages` lists only `gsplat`) and `MANIFEST.in` omits it, so it ships in no wheel or sdist. The root `LICENSE` is Apache-2.0
+  with no carve-out and does not name it. There is no NOTICE file, so none was added. Not changed; for Dace.
+- **History:** the derived code entered on 2026-10-02 inside `e4q.py` (`8293223f`) and `test_gn.py` (`9db4cf8b`). Amendment 15 had said OGC's code "is never copied or vendored". The notice and
+  the file itself came with `459f7318` (2026-10-09), `gram_kmeans_ours` with `8b486e3d`. PREREG first names the file in Amendment 18 (`f13193cb`, committed after `459f7318`), item c on the
+  notice and item d on the row. History was not rewritten.
+- **Open for Dace:** the appendix says "OGC's code is not redistributed", while the file's header says "these parts are distributed" under the licence. No file of OGC's is in the repository,
+  but adapted lines are. The appendix's "own code" and "for the report-only row" are also narrower than the header's uses (E4q's ladder, the tests, the unused fallback). Not reworded: the
+  request's derived branch did not ask for it.
+- **`.claude/commands/catchup.md` (`1b934e97`):** the run-path rule removed and "code-identity rule retired with E7 (HANDOFF)" added, every other rule kept. `wrapup.md` never stated the rule, so it is unchanged.
+- **The PDF:** `F:\gsplat_paper_draft.pdf`, outside the repository, built from this head's sources.
+- **The heads:** the fork head is the commit holding this entry, whose parent is `1b934e97`.
+- **Next action: Dace's read of the paper.**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
