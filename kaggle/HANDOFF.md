@@ -80,8 +80,8 @@ seed 1, every check passing; a new Kaggle image, so drjohnson's j = 0 pair spans
 complete, all eleven sessions in; pre-unblinding fixes and the exploratory declaration `c95c369f`; **E7 is closed: both
 primaries "equivalent; not superior", neither fragile (FINDINGS section 26, `3ca275bb`, `check_s26.py` `4171a88a`; CLAIMS group H,
 `f7f5c035`; see "E7 closed"); the paper's E7 results are in `sec5_3_e7results.tex` (`b277b38a`, see "Paper step 1"); the abstract
-and introduction are drafted (see "Paper step 2"); `.claude/commands/` holds `/wrapup` and `/catchup` (`934a0366`); paper step 3 is done except the appendix and the email (see "Paper step 3");
-next: Dace's decision on the appendix's contents and on the email, then the deferred `e7.py` fixes.**
+and introduction are drafted (see "Paper step 2"); `.claude/commands/` holds `/wrapup` and `/catchup` (`934a0366`); paper step 3 is done (see "Paper step 3"), and so are the shrink wording, the appendix, the email and the `e7.py` fixes, with the code-identity
+rule retired (see "Paper step 4"); next: none queued, Dace's reading of the whole paper.**
 Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
@@ -6118,7 +6118,42 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - **Not changed, for Dace:** the abstract's 0.307 dB is E7's own rows (H4, post hoc), and the same abstract's 0.3558 and 0.0425 subtract to 0.3133.
 - **Build note:** with `-outdir`, `BIBINPUTS` must be the folder's absolute path; `.` leaves every citation undefined while latexmk exits 0.
 - **The heads:** the fork head is the commit holding this entry, whose parent is `6d1dd5d1`.
-- **Next action: Dace's decision on the appendix's contents and on the email; then the deferred `e7.py` fixes.**
+- **Next action (done, see "Paper step 4"): Dace's decision on the appendix's contents and on the email; then the deferred `e7.py` fixes.**
+
+### Paper step 4: the shrink wording, the appendix, the email and the `e7.py` fixes (2026-11-05)
+
+- **Counts at the end:** `check_tex` 423 lines, 98 result lines, 215 numbers (28 by rounding), 0 failures. `check_figs` 1482 checks, 0
+  failures. `check_s26` 272 numbers, 0 failures. Pytest 243. **25 pages,** no undefined reference, no overfull line. The appendix is on
+  pages 20-23. No `\TODO` is left in the paper's text.
+- **Commits:**
+  - `10550619`: the shrink. The abstract is Dace's sentence, with "(E7)" added after "A third experiment" so that the name is defined. The
+    introduction's Q3 answer is in dB, followed by a separate labelled sentence, with `H4` in the citation because no H token may be in the prose
+    (`test_paper_tex_h_tokens_are_only_claims_rows`). "Neither is fragile" stays in the answer. In 5.3 "about a quarter" followed from the
+    outcomes inside "What the outcomes bound"; it now has its own paragraph, "Against the shrink (post hoc; not an additive split)".
+  - `ca5b722f`: `paper/figs/appendix_tables.py` and `test_paper_appendix_tables_recompute_every_cell`. The history table has every heading of
+    Amendments 17-20, so 22 rows: Amendment 20's notes 1-6 and also the notes and errata of 17, 18 and 19. A third generated table, the checker
+    map, keeps that table's cells untyped too.
+  - `81689d8e`: `paper/tex/appendix.tex`, with `array` and `longtable` in `main.tex`, and Dace's email in place of its `\TODO`.
+  - `6a871193`: the `e7.py` fixes.
+- **Written narrower than first drafted, for what is checkable:** "each amendment before the data it governs" is false for the Amendment 17 erratum,
+  dated after E5 ran, so the appendix says each experiment's registering amendment came before its first bundle, and the test checks that
+  (git ancestry, for 17, 19 and 20). `check_s26.py` does import `e7.py` as its tool of record, so it "runs that tool and recomputes independently".
+- **OGC's code, as the appendix states it:** not redistributed, no file in the repository or any bundle (E12); all 110 scene records across
+  E5, E6 and E7 name `url` as their source, so the private dataset is not mentioned. `bench/gn/ogc_derived.py` is named as derived code under
+  the same licence.
+- **The appendix's commands were run without `GN_OGC_SRC`:** all 16 section checkers exit 0, as do `e7.py`, `check_figs` and `check_tex`.
+  `make_all.py` and `e7_make_all.py` were not rerun here (they rewrite committed PDFs); no script in `paper/figs/` names OGC.
+- **The `e7.py` fixes:** `--out` required, each `open()` in a `with` with `encoding="utf-8"` (`newline=""` for the CSVs). The JSON write keeps
+  text mode, so its bytes do not change on Windows. Over `kaggle/gn_e7`, before and after: the verdict is byte-identical (sha256
+  `8e8ed21389883bdd0172ce1fb0843c7b4b15ee3ae8a6a1e7a86d89bdc126cbe6`, 1,760,088 bytes) and `check_s26`'s output is identical.
+- **The code-identity rule is retired, E7 being closed:** no session is left to protect, so run-path files may change under the gate alone, and the
+  raw run-path diff need no longer be checked. It stands as the record of how sessions S1-S11 ran. `.claude/commands/catchup.md` still lists "no run-path code
+  changes between sessions" among the standing rules; it was not edited, Dace's to decide.
+- **Build note:** latexmk stops with exit 12 on a LaTeX error and then reports every reference as undefined, so read the first `^! ` in the log.
+- **Still open:** CLAIMS Gap 8 is unchanged, as Dace asked; S11's `discover` dump was never checked; why P1's seed-0 curve reads below seed-1 on all
+  seven scenes was not looked into.
+- **The heads:** the fork head is the commit holding this entry, whose parent is `6a871193`.
+- **Next action: none queued; Dace's reading of the whole paper.**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
