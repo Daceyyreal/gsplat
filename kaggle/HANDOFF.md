@@ -80,8 +80,8 @@ seed 1, every check passing; a new Kaggle image, so drjohnson's j = 0 pair spans
 complete, all eleven sessions in; pre-unblinding fixes and the exploratory declaration `c95c369f`; **E7 is closed: both
 primaries "equivalent; not superior", neither fragile (FINDINGS section 26, `3ca275bb`, `check_s26.py` `4171a88a`; CLAIMS group H,
 `f7f5c035`; see "E7 closed"); the paper's E7 results are in `sec5_3_e7results.tex` (`b277b38a`, see "Paper step 1"); the abstract
-and introduction are drafted (see "Paper step 2"); `.claude/commands/` holds `/wrapup` and `/catchup` (`934a0366`); next: Dace's step 3
-edits to the abstract, the Q2 sentence, Q3, the title, the authors and the appendix, then the deferred `e7.py` fixes (see "Wrap-up").**
+and introduction are drafted (see "Paper step 2"); `.claude/commands/` holds `/wrapup` and `/catchup` (`934a0366`); paper step 3 is done except the appendix and the email (see "Paper step 3");
+next: Dace's decision on the appendix's contents and on the email, then the deferred `e7.py` fixes.**
 Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
@@ -6092,8 +6092,33 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   - CLAIMS Gap 8 is unchanged, as Dace asked; H9 bears on it. S11's `discover` dump was never checked. Why P1's seed-0 curve reads below seed-1
     on all seven scenes was not looked into.
 - **The heads:** the fork head is the commit holding this entry, whose parent is `934a0366`.
-- **Next action: Dace's step 3 edits to the abstract, the Q2 sentence, Q3, the title, the authors and the appendix; then the deferred
-  `e7.py` fixes.**
+- **Next action (superseded by "Paper step 3"): Dace's step 3 edits to the abstract, the Q2 sentence, Q3, the title, the authors and the
+  appendix; then the deferred `e7.py` fixes.**
+
+### Paper step 3: Dace's edits, Q3, title and author (2026-11-05)
+
+- **Counts at the end:** `check_tex` 377 lines, 94 result lines, 211 numbers (28 by rounding), 0 failures. `check_figs` 1482 checks, 0
+  failures. `check_s26` 272 numbers, 0 failures. Pytest 241. **22 pages,** no undefined reference, no overfull line.
+- **Commits:**
+  - `db4bd3ea`: Dace's abstract sentence on E7 (lead-in joined with ", and" so that the sentence has one colon); the introduction's Q2 margin
+    sentence, with F1's threshold (2 x `SE_noise`, 0.0174 dB). The matching SE's threshold, 0.0246 dB, is in FINDINGS section 25 and not in
+    F1, so it is not quoted.
+  - `3a12dadc`: Q3, E7's pre-registered part only; its wording follows Amendment 20 h's reading. Defined in the introduction's Questions
+    paragraph (plus one sentence defining the shrink and delta), tagged in 5.2's Question paragraph, the `sec5_finetuning.tex` header comment and
+    5.3's first paragraph. "Outside Q3's answer" in the introduction and a sentence opening 5.3's report-only paragraph keep the K and CG
+    reading out of it. `test_paper_tex_q_tokens_are_only_the_three_questions` holds the tokens, the tags and those sentences. CLAIMS' naming line
+    now says Q1, Q2 and Q3.
+  - `6d1dd5d1`: title, author, affiliation. The email stays `\TODO`, Dace's to decide; "independent" stays in the contributions.
+- **The count pin:** `test_paper_tex_amendment_items_verify_design_lines_only` pins `check_tex`'s number count, so a prose edit that adds a
+  number fails the gate until the pin follows (208 to 210 to 211 here).
+- **What the appendix's `\TODO` was meant to hold, two sources that differ:** the stub's text (`c7d80e37`) says the full amendment history, the
+  session records, per-scene F1 panels, the checkers and how to rerun them. The stub's comment points at the paper-readiness audit's outline
+  (2026-10-20, in that session's transcript only, session `0f7c2801`), whose item 7 is C1-C8 and D1-D3, the PNG-codec work, without
+  checkers for FINDINGS sections 1-10. The per-scene F1 panels are already in the body's Figure on all seven scenes. **Not written; Dace decides.**
+- **Not changed, for Dace:** the abstract's 0.307 dB is E7's own rows (H4, post hoc), and the same abstract's 0.3558 and 0.0425 subtract to 0.3133.
+- **Build note:** with `-outdir`, `BIBINPUTS` must be the folder's absolute path; `.` leaves every citation undefined while latexmk exits 0.
+- **The heads:** the fork head is the commit holding this entry, whose parent is `6d1dd5d1`.
+- **Next action: Dace's decision on the appendix's contents and on the email; then the deferred `e7.py` fixes.**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
