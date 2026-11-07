@@ -43,6 +43,11 @@ With OGC's bytes set to C3DGS's at each $j$, a counterfactual and not equal rate
 As a ratio of means P\_FT was 0.1195 of P1 replicated, with per-scene ratios from $-0.017$ to $+0.331$; the two measures average over different byte ranges, so the ratio is not the share of the earlier lead that survives at any one rate. % s22 b; F6
 E5's own $j = 0$ comparison after fine-tuning, $+0.0604$ dB at unequal bytes, measures a different quantity on separate runs; neither value replaces the other. % s19 secondaries; A5; CLAIMS conflict 3
 
+\paragraph{Against OGC's reported gains (descriptive).}
+OGC reports its gains as paired PSNR differences at one operating point over nine Mip-NeRF 360 scenes: $+0.09$~dB after fine-tuning with its 4,096-entry codebook, whose files are larger than C3DGS's, and, with a 512-entry codebook whose files match C3DGS's in size, $+0.32$~dB before fine-tuning and $+0.01$~dB after it \citep[Table~1]{pietroszek2026only}. % quoted pietroszek2026only (Table 1); A5
+$\bar P_{\mathrm{FT}}$ is a different quantity: a BD-PSNR at equal rate, averaged over the byte range shared by two curves of three points each, on seven scenes of which four are among OGC's nine, under protocol~ii. % s21; A4, F1
+So neither of OGC's numbers after fine-tuning is comparable to $\bar P_{\mathrm{FT}} = 0.0425$~dB; the closest analogue in this paper to OGC's $+0.09$~dB is E5's own $j = 0$ difference after fine-tuning, $+0.0604$~dB at unequal bytes. % s19 secondaries; s21; A5, F1
+
 \paragraph{Where along the curve (descriptive, not pre-registered).}
 On all seven gate scenes the fine-tuned rows' PSNR difference at the same $j$ rose from $j = -1$ to $j = +1$: from $-0.119$ to $+0.023$ dB at $j = -1$, $+0.024$ to $+0.112$ dB at $j = 0$, and $+0.061$ to $+0.379$ dB at $j = +1$. % s22 d; F8
 These points are not rate-matched: at $j = +1$ OGC's row had 3.5\% to 7.9\% more bytes, and at $j = -1$ 0.3\% to 7.9\% fewer. % s22 d; s21 secondary 2; F8

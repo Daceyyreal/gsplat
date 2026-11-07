@@ -21,6 +21,10 @@ Each BD value is a parabola through three points, one seed-0 process per point, 
 $\mathrm{SE}_{\mathrm{noise}}$ is seed noise, not scene spread, and its registered $\sqrt{2n}$ divisor is that of a two-seed mean; with $\mathrm{SD}_{\mathrm{pool}}/\sqrt{n}$ the criterion-3 margins of P1, P2 and P\_FT are 77.7, 790 and 3.45 standard errors, and every criterion still holds. % s25; A2, F1
 With $n = 7$ the count criterion is the tight one: in six of the seven leave-one-out cases P\_FT met it with exactly five scenes. % s22 a; F5
 
+\paragraph{Rate range.}
+Every experiment ran at C3DGS's codebook size, $K$~=~4,096, and at three colour thresholds around its default, so its results hold for that rate range only. % Am17 d
+Whether C3DGS's fine-tuning also erases OGC's lead at much lower rates or with much smaller codebooks is not tested; in neural-network quantisation the starting point still matters after fine-tuning at 2 bits \citep{chen2025efficientqat,li2024loftq,liao2024apiq}, and E7's outcome may not carry over to that regime (Section~\ref{sec:ft-why-results}). % s26 "The verdict"; H1, H2
+
 \paragraph{The colour grids' re-fit.}
 Fine-tuning re-fits C3DGS's int8 AC colour grid, widening it for OGC's codebook, and the records show what that does to the bytes; E7 tested the effect on the lead by freezing both colour grids, so it speaks for the AC and DC re-fit together and not for AC alone, at equal rate and in the mean over scenes. % s24; s26 "What section 26 settles"; E13, F9, H1
 The earlier exploratory correlations across scenes and processes run against the re-fit as the cause of the shrinking lead, and none of them is a test. % s24 item 6; E18
