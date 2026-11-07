@@ -81,7 +81,8 @@ complete, all eleven sessions in; pre-unblinding fixes and the exploratory decla
 primaries "equivalent; not superior", neither fragile (FINDINGS section 26, `3ca275bb`, `check_s26.py` `4171a88a`; CLAIMS group H,
 `f7f5c035`; see "E7 closed"); the paper's E7 results are in `sec5_3_e7results.tex` (`b277b38a`, see "Paper step 1"); the abstract
 and introduction are drafted (see "Paper step 2"); `.claude/commands/` holds `/wrapup` and `/catchup` (`934a0366`); paper step 3 is done (see "Paper step 3"), and so are the shrink wording, the appendix, the email and the `e7.py` fixes, with the code-identity
-rule retired (see "Paper step 4"); the email, `ogc_derived.py`'s licence check and `catchup.md` are recorded in "After paper step 4"; next: Dace's read of the paper.**
+rule retired (see "Paper step 4"); the email, `ogc_derived.py`'s licence check and `catchup.md` are recorded in "After paper step 4", and the licence cleanup
+(NOTICE, headers, the appendix's wording) in "Licence cleanup"; next: Dace's read of the paper.**
 Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
@@ -6178,6 +6179,45 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - **`.claude/commands/catchup.md` (`1b934e97`):** the run-path rule removed and "code-identity rule retired with E7 (HANDOFF)" added, every other rule kept. `wrapup.md` never stated the rule, so it is unchanged.
 - **The PDF:** `F:\gsplat_paper_draft.pdf`, outside the repository, built from this head's sources.
 - **The heads:** this entry was first committed as `ba93a49d` (parent `1b934e97`); the fork head is the commit correcting its Amendment 17 line, whose parent is `ba93a49d`.
+- **Next action (superseded by "Licence cleanup"): Dace's read of the paper.**
+
+### Licence cleanup: the appendix's wording, NOTICE and the derived-code headers (2026-11-07)
+
+- **The email:** Dace kept `taifurrahman0606@gmail.com` (`paper/tex/main.tex:27`); no commit.
+- **`93086e21`, the appendix:** Dace's wording replaces "not redistributed". No file of OGC's is in the repository or any bundle;
+  `bench/gn/ogc_derived.py` holds code adapted from it, used for `ogc_gram_ours`, E4q's ladder and the tests. The sentence names that file
+  only; NOTICE lists the other parts.
+- **`3d07de3a`, comment headers only.** Each edited file's AST is identical to HEAD's, and `ogc_derived.py`'s differs only in its module
+  docstring. It also adds NOTICE (new) and a License section in README naming NOTICE. The derived parts, ours (lines after the commit) to OGC's
+  `vq.py` at `49ccae72`:
+  - `bench/gn/ogc_derived.py`, the whole file: `ogc_init_probs` :39-47 to :30, 32; `ogc_init` :50-59 to :21, 33-36; `make_reseed` :62-81 to
+    :74-84; `ogc_arith` :88-121 to :39, 42-53, 59-62, 69-73, 79-82; `metric_matrices` :127-136 to :22-29; `gram_kmeans_ours` :139-208 to
+    `gram_kmeans` :17-88. `ogc_layout` :84-85 is ours, and the file is listed whole.
+  - `bench/gn/diagnostics.py`: the `"ridge_mean"` branches of `update_centroids` (:577-579, :588-590, :600-602, and the docstring line :564)
+    to :69-73 (the members' mean, the ridge, the solve). Adapted into the existing update; no line is near-verbatim. Our ridge is `eps * tr / d`,
+    without OGC's `1e-20`.
+  - `bench/gn/gn_vq.py`: the `final_float_assignment` step (:281-284; the option :173, its docstring :200-202) to :87, one more assignment
+    against the returned float codebook.
+  - `bench/gn/test_gn.py`: `_FAKE_OGC_VQ`'s `gram_kmeans` signature (:4057, verbatim :17; the body is a stand-in of ours) and the metric
+    matrices in `test_e5_ogc_metric_modes_are_their_whole_algorithm` (:4915-4917 to :26-29). Listed to be safe: an interface and a two-line formula.
+  - **Not listed:** `kaggle/E4_DESIGN.md:30` quotes the signature in prose. `kaggle/e4p_ogc.py`, `bench/gn/e4q.py`, `kaggle/e4q_hooks.py` and
+    `kaggle/e5_hooks.py` call or import OGC's code or `ogc_derived` at run time and hold no derived logic.
+  - **How the search ran:** every tracked `.py`/`.md`/`.tex`/`.sh` outside `gsplat/`, `tests/`, `examples/`, `docs/`, `third_party/` and
+    `profiling/` (524 files), token-normalized lines of 24+ characters against `vq.py`'s, with a ratio of 0.86 or more. The same
+    distinctive tokens were grepped in the notebooks and in those folders. A rewrite in other words would not show.
+- **The patent sentence is removed** from `ogc_derived.py`'s header and from the inline notices in `diagnostics.py` and `gn_vq.py`. None of
+  OGC's public sources states it: not README.md (at `49ccae72` and live on GitHub, 2026-11-05: only the licence paragraph), not LICENSE
+  (PolyForm's generic "Patent License" and "Patent Defense" clauses only), not docs/paper.pdf at `49ccae72`, not arXiv 2609.28997v1 (HTML full
+  text: no "patent", no "commercial"). Its only source is the author's email. The removed text stays in the history.
+- **Other mentions of the patent or the email's content, not changed (Dace's to decide):** `kaggle/PREREG_GN.md:2811-2812` (Amendment 18 c);
+  `paper/CLAIMS.md:109` (E12) and :24 (the correspondence column); `kaggle/RELATED_WORK_OGC.md:27-28`; `kaggle/build_gn_e5p_bench.py:56` and
+  `kaggle/gn_e5p_bench.ipynb` (generated from it, compared byte for byte by a test); `kaggle/build_gn_e5s_preflight.py:49` and
+  `kaggle/gn_e5s_preflight.ipynb`; this file at its Amendment 18 entry, the standing rule on upstream proposals and the "OGC" conventions.
+  The paper's text has none (`7c345e1d`).
+- **Checks:** `check_tex` 215 numbers (28 by rounding), 0 failures; `check_figs` 1482, 0 failures; 25 pages, no undefined reference, no
+  overfull line; pytest 243 before each commit.
+- **The PDF:** `F:\gsplat_paper_draft.pdf` was rebuilt at `3d07de3a` and replaced, after checking it was still the copy made on 2026-11-05.
+- **The heads:** the fork head is the commit holding this entry, whose parent is `3d07de3a`.
 - **Next action: Dace's read of the paper.**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
