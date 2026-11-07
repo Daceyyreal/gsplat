@@ -105,6 +105,12 @@ work and Limitations, verified bibliography (+15 entries), check_tex's explicit 
 `bench/gn/check_s26.py` (`e887d162`; refuses `kaggle/gn_e7` until S1-S11 are committed), Section 5.2 design only
 (`01fcb946`; 17 pages, check_tex 139 numbers, 0 failures); after S11: e7.py `--out` outside the repo, fill, check_s26,
 move into FINDINGS (see "E7 write-up skeleton and check_s26 (2026-10-29; no E7 value read)").
+**Broadening the paper (2026-11-08):** fallback tag `paper-v1-analysis` on `5bf08604`; Part 0 (`e149bf6e` OGC's equal-size
++0.01 dB as P_FT's closest analogue, `d84720a8` s24 erratum, `0877a6d3` BD monotonicity: 36 of 86 BD values bend, post hoc);
+Part A, perceptual secondaries (declaration `cf26643f`, pushed before computing; `88c3e9b2` check_s27, `c72a96e5` FINDINGS
+section 27 + CLAIMS A13/F12/H15, `259cbd2e` paper Section 5.4): every mean agrees in sign with PSNR; Part B drafts in
+`kaggle/drafts/` (E8, E9, second host, method), nothing in PREREG. 30 pp, check_tex 269 numbers, pytest 245. **Next action:
+Dace picks the path: E8 / E9 / second host / method** (see "Broadening the paper toward a top venue (2026-11-08)").
 
 ## Context and rules
 
@@ -6311,6 +6317,72 @@ Part 0 (follow-ups from the literature review), Part A (perceptual metrics, no r
   differences per arm (section 26, g.8); nothing perceptual for E6 part (b) or for E7's BDs and Deltas. Then:
   `check_s27.py` (own `numpy.polyfit` fit beside `e5.bd`), the section's results under the declaration, CLAIMS rows in
   groups A, F and H, and the paper.
+- **Commits, in order** (each gated: `.venv`, pipefail, `GN_OGC_SRC=F:/ogc_restore/ogc-3dgs`, logs in `F:\pytest_logs\gate_20261108_*`;
+  ancestor check; fast-forward pushes to fork only):
+  1. `ae7b2597` HANDOFF: the tag and the stale summary (Step 0, 0').
+  2. `e149bf6e` **0a:** Section 5.1's OGC paragraph: "the closest analogue to it is OGC's equal-size result, +0.01 dB after
+     fine-tuning with 512 entries at 100% of C3DGS's size, rather than the paired +0.09 dB with 4,096 entries at a larger
+     size; P_FT = 0.0425 dB is larger than that equal-size figure" (`paper/tex/sec5_finetuning.tex:49`). The 100 re-read in
+     arXiv 2609.28997v1 HTML (Table 1: 28.9 MB, 100%; Sec. 4.1: "100 % of theirs over all nine scenes") and added to
+     `paper/QUOTES.md`. The +0.0604 dB sentence (E5's own j = 0 difference as the analogue to OGC's +0.09) kept, on its own line.
+  3. `d84720a8` **0b:** FINDINGS s24 item 4, a dated erratum after the original paragraph (unchanged): `restore()`
+     (`gaussian_model.py:123-140`) also assigns `spatial_lr_scale` (`:136`), called only by `compress.py:135-137` for a non-empty
+     `start_checkpoint` (default "", `arguments/__init__.py:95`); nothing here passes one (grep), so the conclusion stands.
+     Verified against `2a234af55fbe8b90c8829c1436ce80088c4b622b` raw files. `check_s24.py` reads every numeric token, so the new
+     line numbers are listed as code reading, and the erratum and the kept sentence are asserted.
+  4. `0877a6d3` **0c, post hoc:** FINDINGS s25's "Later (2026-11-08, post hoc): the shape of the BD fits" (a fit "bends" when its
+     vertex is strictly inside the BD's shared log10-byte range): **36 of 86 BD values** the paper reports (45 of 172 fits; 16 of 172
+     measured curves fall): E5 P1 1 of 7 (drjohnson), P2 2 of 7; E6 part (b) P_FT 3 of 7, P1 replicated 3 of 7; E6 part (a) 1 of 3
+     each; E7 BD_R 5, BD_G 3, BD_CG 5, BD_K 1, BD_O 5, BD_R seed 1 3, P1 2 of 7; Delta_refit 6 of 7 scenes, Delta_cb 5 of 7. Placed
+     in s25 (not a new section) so section 27 stayed free for Part A. `check_s25.py` recomputes it with its own parabola algebra
+     (matched a `numpy.polyfit` exploration exactly). CLAIMS E19; a Limitations sentence. **No sensitivity reading with a monotone
+     interpolant was run** (the natural follow-up; E2's PCHIP reading is the precedent).
+  5. `cf26643f` **Part A declaration alone** (FINDINGS s27's opening + this entry's previous bullet), **pushed before any perceptual
+     value was computed** (fork `5bf08604..cf26643f`).
+  6. `88c3e9b2` `bench/gn/check_s27.py` + `test_section_27_perceptual_bd_computation` (computation only at that commit); the appendix
+     checker table regenerated (17 checkers; pin 16 -> 17). FINDINGS was stashed during that gate, so the commit holds no s27 result.
+  7. `c72a96e5` FINDINGS s27 results, summary paragraph, Sources entry; CLAIMS A13, F12, H15; the s27 test extended to the text and
+     the three rows; the group H test now keeps H1-H14 on `check_s26.py` and leaves H15 to the s27 test.
+  8. `259cbd2e` paper Section 5.4 (`sec5_4_perceptual.tex`, Table t6, printed as Table 8) and a Limitations sentence ("Every verdict
+     is in PSNR; SSIM and LPIPS enter as secondaries declared before they were computed ..."); appendix: s27 cited.
+  9. This commit: the Part B drafts and this record.
+- **Part A results (secondary, no verdict; FINDINGS s27):** means, PSNR / BD-SSIM / BD-LPIPS (agreeing scenes SSIM, LPIPS):
+  P1 +0.3558 / +0.007073 / -0.008899 (7, 7 of 7); P2 +0.1874 / +0.003605 / -0.005168 (7, 7); P_FT +0.0425 / +0.000707 /
+  -0.002521 (5, 6 of 7: kitchen -0.000049 and playroom -0.000022 in BD-SSIM; drjohnson's LPIPS favours OGC where its PSNR
+  P_FT is -0.0046); Delta_refit -0.0201 / -0.000373 / +0.000612 (5, 4 of 7); Delta_cb +0.0084 / +0.000114 / -0.000533 (7, 6 of 7).
+  **Every mean agrees in sign with PSNR.** 126 BD values: tool and own fit agree below 1e-9; PSNR values equal the registered ones;
+  E5's equal section 20's. Perceptual fits bend less often than PSNR's except BD_CG in BD-SSIM (6 of 7).
+- **Part B, drafts only** (`kaggle/drafts/`; nothing in PREREG, no run code):
+  - `E8_AMENDMENT21_DRAFT.md`: arms R, G (anchor), N (no colour: `_features_dc`, `_features_rest` frozen; geometry and opacity
+    train), C (colour only: `NO_GRAD_K`), K, R2; primaries Δ_geo = BD_N - BD_G and Δ_col = BD_C - BD_G with E7's f unchanged
+    (Holm, superiority, TOST δ = 0.07 dB); outcomes table; secondaries incl. Δ_kept = BD_C - BD_K and perceptual; optional part (c)
+    K = 512 (capacity, OGC's equal-size row) or j = +2, +3 (rate). Open for Dace: anchor, part (c), δ.
+  - `e8_estimate_draft.py` (E7's model by import, E8's rows): 60.3-100.4 h of jobs (68.4 h calibrated by E7's measured/high ratios
+    0.55-0.86); 11 sessions + one wheel-build session: **102.9 session-hours high, 70.9 calibrated, 3.4 / 2.4 weeks at an assumed
+    30 h/week**. Without a restored cu130 wheel (S11 built it in 4,034.8 s) six of the eleven sessions overrun at the high end, so a
+    wheel session comes first. Part (c): +29.1 h high (19.9 calibrated).
+  - `E9_FEASIBILITY.md`: the INRIA-checkpoint scene × experiment table; **never an OGC row: bicycle, garden, stump**; bicycle and
+    garden do not fit a T4 (Am14 g: C3DGS alone 11.80-14.68 GB with CPU images, plus OGC's metric), stump doubtful; n = 3 too few.
+    Recommended: own checkpoints (graphdeco 3DGS at a pinned commit; C3DGS has no `train.py`) on seven DL3DV benchmark scenes chosen
+    by a pre-registered rule: one training session (5-8 h, estimated) + 49-73 GPU-h (arms R, G, CG), about 2-2.7 weeks; T&T
+    intermediate + COLMAP the fallback. DL3DV's terms and T&T's licence not read in full.
+  - `SECOND_HOST_FEASIBILITY.md`: **MesonGS recommended** (its `vq_fe` calls C3DGS-style `vq_features` on `_features_rest`,
+    `scene/gaussian_model.py:1299-1301`, then an optional 8,000-iteration fine-tune, `mesongs.py:767-842`; `--iterations 0` for none;
+    Inria licence; INRIA `.ply` input): about 1-2 weeks of engineering, 40-50 h for seven scenes at the high end plus a ~6 h pilot.
+    Training-free alternative MesonGS++ (MIT; `vq_features` "borrowed from c3dgs", `model.py:926`; no fine-tuning registered,
+    `:1749-1756`): about a week, 5-10 h. LightGaussian (VecTree, no post-VQ fine-tuning in its code), CompGS, EAGLES, NSVQ-GS not
+    drop-ins; GSICO no code; 3DTurboQuant and KISS-GS (ffsplat) have no clustering to replace.
+  - `METHOD_SKETCH.md`: (a) re-assignment under the metric during fine-tuning (indices are the one thing fine-tuning cannot
+    change: `_feature_indices` `requires_grad=False`), C3DGS given the same schedule under its own criterion; pilot on train,
+    treehill, flowers (~2 sessions); (b) a training-free MesonGS++ pipeline with Gram VQ and metric-chosen kept rows (pilot under a
+    session). **(a) first.**
+- **Verified:** pytest 245 before each commit (one gate failed on the check_tex count pin, one on the appendix checker table, one
+  on an "H15" in a whole-line tex comment; each fixed and re-gated); check_tex 474 lines, 269 numbers (28 by rounding), 0 failures;
+  check_s24-check_s27 0 failures; 30 pages, no error, no undefined reference, no overfull line.
+- **The PDF:** `F:\gsplat_paper_draft.pdf` rebuilt at `259cbd2e` (30 pages) and replaced.
+- **Scratch to delete:** none in the repository; the session's scratchpad holds downloaded C3DGS, MesonGS(++) and LightGaussian
+  source files (read only, never in the repository).
+- **Next action: Dace picks the path: E8 / E9 / second host / method.**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
@@ -7004,9 +7076,10 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
   `53dde708`, notes 1-6) ran in eleven sessions (S1-S11, ingested 2026-10-22 to 2026-11-03), was unblinded and is closed:
   Delta_refit -0.0201 and Delta_cb +0.0084 dB, both "equivalent; not superior" (FINDINGS section 26, `3ca275bb`). The paper
   (`paper/tex/`) went through steps 1-4, the licence cleanup, the redaction and the literature review (2026-11-04 to 08); that
-  state is tagged `paper-v1-analysis` (annotated, on `5bf08604`, pushed to fork 2026-11-08). No experiment is running or
-  queued; next: the latest dated entry's "Next action".** `paper/CLAIMS.md` holds 85 rows (groups A-H). `bench/gn/check_s11.py`
-  to `check_s26.py` re-check FINDINGS sections 11-26 and run under pytest; sections 1-10 have no committed checker. The rest of E3's design (other codecs,
+  state is tagged `paper-v1-analysis` (annotated, on `5bf08604`, pushed to fork 2026-11-08). Then the BD-shape note (s25),
+  the perceptual secondaries (s27, declared at `cf26643f`) and Part B's drafts (`kaggle/drafts/`). No experiment is running or
+  queued; next: the latest dated entry's "Next action".** `paper/CLAIMS.md` holds 89 rows (groups A-H). `bench/gn/check_s11.py`
+  to `check_s27.py` re-check FINDINGS sections 11-27 and run under pytest; sections 1-10 have no committed checker. The rest of E3's design (other codecs,
   INRIA checkpoints) is not written yet.
 
 ### Open, not scheduled (from the paper-readiness audit, 2026-10-20)
