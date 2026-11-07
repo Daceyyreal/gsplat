@@ -6283,7 +6283,10 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - **Quoted numbers:** `check_tex` rule 5 checks a `quoted <bibkey>` line against `paper/QUOTES.md`'s Number cells (Nagel et al.
   Table 8, EfficientQAT's abstract, OGC's Table 1); the hard-coded-reference test reads past a citation's optional argument
   (`\citep[Table~8]{...}`); `\code{}` file:line pointers are not read for numbers.
-- **The heads:** the fork head is the commit holding this entry, whose parent is `308deab6`.
+- **The PDF:** `F:\gsplat_paper_draft.pdf` (outside the repository) was built at `3d07de3a` and predates this entry's commits;
+  rebuild it before attaching it (latexmk from `paper/tex/`, `BIBINPUTS` the folder's absolute path).
+- **The heads:** the fork head is the commit holding this entry's first version (`7c99cff6`, parent `308deab6`); the wrap-up
+  commit after it adds only the PDF line above.
 - **Next action: Dace's read of the paper.**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
