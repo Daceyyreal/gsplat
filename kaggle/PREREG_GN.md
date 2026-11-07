@@ -2808,8 +2808,8 @@ and its rows, points, metrics and bars are unchanged except as stated here.
   gave HEAD = `refs/heads/main` = `49ccae72…`, and a fresh clone's HEAD and tree matched the two hashes above. Our
   restored copy has the same commit and tree, and its files are identical to the fresh clone's. Its zip (`.git`
   included) verifies too: HEAD and tree match, `git fsck` passes, and a clone of it is clean with LF files.
-- **Use:** the author confirmed by email (2026-10-09) that the code is available for research purposes. The author
-  also states that the method is patented for commercial use. This study is noncommercial research. Our code derived
+- **Use:** the author confirmed by email (2026-10-09) that the code is available for research purposes.
+  [redacted: private correspondence; see the redaction note of 2026-11-08] This study is noncommercial research. Our code derived
   from theirs carries PolyForm Noncommercial 1.0.0's notice and that statement (`bench/gn/ogc_derived.py`, `459f7318`).
 
 ### d. A new secondary row: `ogc_gram_ours` (report only)
@@ -4579,3 +4579,12 @@ bundle's and no earlier ingest (S2-S8) reads differently.
 
 **Code.** `bench/check_e7_ingest.py` takes, per scene, the earliest bundle (`:217-222` at `8c1d6d16`); it takes the
 latest from the commit after this note, with a test. The checker is outside the code-identity paths.
+
+## Redaction note (2026-11-08)
+
+This note redacts one detail of a third party's private correspondence from Amendment 18 c, whose second sentence
+under "Use" now reads "[redacted: private correspondence; see the redaction note of 2026-11-08]". No rule, design, analysis or result of this
+registration depends on that detail. The research-use permission recorded in the same item and the public PolyForm
+Noncommercial License 1.0.0, under which OGC's code was used, are unchanged. The item's "that statement" refers to
+text that the derived code's headers no longer carry (`3d07de3a`). The original text remains in this file's git
+history.
