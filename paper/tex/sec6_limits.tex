@@ -37,6 +37,7 @@ Its third prediction held on treehill and train because P\_FT was negative there
 Train's P\_FT is not interpreted: its fine-tuned rows moved by up to 0.19 dB between runs, so fine-tuning noise dominates it. % s23 a; G3
 
 \paragraph{Evaluation and reproducibility.}
+Every verdict is in PSNR; SSIM and LPIPS enter as secondaries declared before they were computed, whose means agree with PSNR in sign for every primary but which carry no margin or standard error (Section~\ref{sec:perceptual}). % s27; A13, F12, H15
 Protocol~ii and C3DGS's own evaluation differ by a scene-dependent amount, up to 0.429 dB on kitchen, for reasons the files do not show; the lead before fine-tuning is about the same under both. % s20; E14, A9
 Seeded C3DGS runs are not reproduced on the GPU, so every experiment's numbers come from its own processes and no row is reused across experiments. % s15; E2; F10 (the replication's rows not reused; geometry differs between runs)
 

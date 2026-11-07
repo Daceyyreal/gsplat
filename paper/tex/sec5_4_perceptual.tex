@@ -1,0 +1,30 @@
+\subsection{Perceptual measures (secondary)}
+\label{sec:perceptual}
+
+% Section 5.4: FINDINGS section 27 (declared at cf26643f before any of its values was computed) and its three CLAIMS
+% rows only (groups A, F and H). Secondary, no verdict, no standard error.
+The verdicts above are in PSNR. % s27; A13, F12, H15
+Declared after the primary unblinding and before computing them, a secondary analysis repeats each BD with protocol~ii's SSIM or LPIPS in place of PSNR, over the same three rate points and the same shared byte range; it gives no verdict and computes no standard error. % s27; A13, F12, H15
+A positive BD-SSIM and a negative BD-LPIPS favour OGC (Table~\ref{tab:t6}); P1's and P2's values recompute the exploratory ones of Section~\ref{sec:replication}. % s27; s20; A13, A10
+
+\begin{table}[t]
+\centering
+\small
+\caption{The perceptual secondaries: each primary's mean over the seven gate scenes in PSNR (dB, as registered), BD-SSIM and BD-LPIPS, and the scenes on which each perceptual value agrees in sign with PSNR. For the two E7 primaries each column is a difference of two BDs.}
+\label{tab:t6}
+\begin{tabular}{lrrrcc}
+\hline
+Value & PSNR & BD-SSIM & BD-LPIPS & SSIM agrees & LPIPS agrees \\
+\hline
+P1 & $+0.3558$ & $+0.007073$ & $-0.008899$ & 7 of 7 & 7 of 7 \\ % s27 "Results"; A13
+P2 & $+0.1874$ & $+0.003605$ & $-0.005168$ & 7 of 7 & 7 of 7 \\ % s27 "Results"; A13
+P\_FT & $+0.0425$ & $+0.000707$ & $-0.002521$ & 5 of 7 & 6 of 7 \\ % s27 "Results"; F12
+$\Delta_{\mathrm{refit}}$ & $-0.0201$ & $-0.000373$ & $+0.000612$ & 5 of 7 & 4 of 7 \\ % s27 "Results"; H15
+$\Delta_{\mathrm{cb}}$ & $+0.0084$ & $+0.000114$ & $-0.000533$ & 7 of 7 & 6 of 7 \\ % s27 "Results"; H15
+\hline
+\end{tabular}
+\end{table}
+
+Every mean has the sign of its PSNR value, so the direction of each result does not rest on PSNR alone. % s27; A13, F12, H15
+After fine-tuning, P\_FT agrees in sign on 5 of 7 scenes in BD-SSIM, where kitchen and playroom read slightly below 0, and on 6 of 7 in BD-LPIPS, where drjohnson, below 0 in PSNR, reads in OGC's favour. % s27; F12
+E7's equivalence outcomes are in PSNR at $\delta = 0.07$~dB, and no perceptual margin was set, so its perceptual differences, $-0.000373$ and $+0.000114$ in BD-SSIM, say nothing about equivalence. % s27; H15

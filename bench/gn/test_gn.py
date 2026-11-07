@@ -3752,14 +3752,17 @@ def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     sec52 = open(os.path.join(tex, "sec5_2_e7design.tex"), encoding="utf-8").read()
     assert "TODO{verify}" not in sec52 and sec52.count("% Am20 f (PREREG_GN.md:") >= 4
     sec5 = open(os.path.join(tex, "sec5_finetuning.tex"), encoding="utf-8").read()
-    assert sec5.rstrip().endswith("\\input{sec5_2_e7design}\n\n\\input{sec5_3_e7results}") and (
+    assert sec5.rstrip().endswith("\\input{sec5_2_e7design}\n\n\\input{sec5_3_e7results}\n\n\\input{sec5_4_perceptual}") and (
         "Am20 f (PREREG_GN.md:" not in sec5)
+    # Section 5.4 (the perceptual secondaries, FINDINGS section 27) cites no amendment item either
+    sec54 = open(os.path.join(tex, "sec5_4_perceptual.tex"), encoding="utf-8").read()
+    assert "Am20" not in sec54 and "sec5_4_perceptual.tex" not in ct.DESIGN_FILES
     # Section 5.3 (E7's results) is no design file and cites no amendment item
     sec53 = open(os.path.join(tex, "sec5_3_e7results.tex"), encoding="utf-8").read()
     assert "Am20" not in sec53 and "sec5_3_e7results.tex" not in ct.DESIGN_FILES
     # the real sources: the \input file is read under its own name
     res = ct.run()
-    assert res["fails"] == [] and res["n_numbers"] == 240  # 231 + the equal-size sentence + the BD-shape limit (2026-11-08)
+    assert res["fails"] == [] and res["n_numbers"] == 269  # 231 + the equal-size sentence + the BD-shape limit + Section 5.4 and its limit (2026-11-08)
 
 
 # --------------------------------------------------------------------------------- E3r (Amendment 14)
