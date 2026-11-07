@@ -3386,7 +3386,8 @@ def test_check_tex_accepts_a_rounded_number_only_when_unambiguous(tmp_path, monk
 
 
 def test_paper_tex_references_use_ref():
-    """No prose line of paper/tex names a section, table or figure by a hard-coded number; each goes through \\ref."""
+    """No prose line of paper/tex names a section, table or figure by a hard-coded number; each goes through \\ref.
+    A citation's optional argument (``\\citep[Table~8]{key}``) points into another work and is not read."""
     import glob
     import re
 
@@ -3394,9 +3395,46 @@ def test_paper_tex_references_use_ref():
     hard = re.compile(r"\b(?:Sections?|Sec\.|Tables?|Figures?|Figs?\.|Appendix)[~ ]*[A-Z]?\d")
     for path in glob.glob(os.path.join(tex, "*.tex")):
         for i, line in enumerate(open(path, encoding="utf-8").read().splitlines(), 1):
-            text = re.split(r"(?<!\\)%", line)[0]
+            text = re.sub(r"\\cite[pt]?\[[^\]]*\]", " ", re.split(r"(?<!\\)%", line)[0])
             if "\\TODO" not in text:
                 assert not hard.search(text), f"{os.path.basename(path)}:{i}"
+
+
+def test_paper_tex_quoted_numbers_check_the_quote_ledger(tmp_path, monkeypatch):
+    """check_tex rule 5: a ``quoted <bibkey>`` item lets a line's numbers come from paper/QUOTES.md's Number cells for
+    that key (exactly as printed) and stands in for the CLAIMS row; an unknown key, a key outside references.bib, a
+    number not in the key's cells and a quoted number on a line without the item fail. A ``\\code{...}`` file:line
+    pointer states nothing. The real ledger's keys are all bib entries."""
+    import importlib.util
+    import re
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    tex = os.path.join(repo, "paper", "tex")
+    spec = importlib.util.spec_from_file_location("check_tex", os.path.join(tex, "check_tex.py"))
+    ct = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ct)
+    assert set(ct.quotes()) <= set(re.findall(r"@\w+\{([^,\s]+),", open(ct.BIB, encoding="utf-8").read()))
+    q = tmp_path / "QUOTES.md"
+    q.write_text("| Key | Number | Where | Read |\n|---|---|---|---|\n| k1 | 0.12 | Table 8, 3.5 elsewhere | x |\n"
+                 "| k1 | 18.58 | Table 8 | x |\n| k2 | +0.09 | Table 1 | x |\n", encoding="utf-8")
+    bib = tmp_path / "references.bib"
+    bib.write_text("@misc{k1,\n title={a}}\n@misc{k3,\n title={b}}\n", encoding="utf-8")
+    monkeypatch.setattr(ct, "QUOTES", str(q))
+    monkeypatch.setattr(ct, "BIB", str(bib))
+    d = tmp_path / "tex"
+    d.mkdir()
+
+    def fails(line):
+        (d / "a.tex").write_text(line + "\n", encoding="utf-8")
+        return ct.run(str(d))["fails"]
+
+    assert fails("Accuracy reached 0.12 and 18.58 (quoted). % quoted k1 (Table 8)") == []
+    assert any("0.13 is not in" in x for x in fails("Accuracy 0.13. % quoted k1"))
+    assert any("3.5 is not in" in x for x in fails("A value 3.5. % quoted k1"))  # only the Number cell is a source
+    assert any("no row in paper/QUOTES.md" in x for x in fails("A value 0.12. % quoted k3"))
+    assert any("not a references.bib entry" in x for x in fails("A gain of +0.09. % quoted k2"))
+    assert any("without a CLAIMS row" in x for x in fails("Accuracy 18.58. % k1"))
+    assert fails("See \\code{scene/gaussian\\_model.py:69} and \\code{compress.py:135-137}.") == []
 
 
 def test_paper_tex_h_tokens_are_only_claims_rows():
@@ -3692,7 +3730,7 @@ def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     assert "Am20" not in sec53 and "sec5_3_e7results.tex" not in ct.DESIGN_FILES
     # the real sources: the \input file is read under its own name
     res = ct.run()
-    assert res["fails"] == [] and res["n_numbers"] == 217
+    assert res["fails"] == [] and res["n_numbers"] == 224
 
 
 # --------------------------------------------------------------------------------- E3r (Amendment 14)

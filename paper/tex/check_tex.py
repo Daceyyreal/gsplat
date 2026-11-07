@@ -33,6 +33,12 @@ sections (``s19``, ``s21 secondary 1``) and its ``paper/CLAIMS.md`` rows (``A2``
    heading to the next), and it needs no CLAIMS row. **Every other line is checked as in 1-3, with amendment items
    ignored as sources:** an item never verifies a number on a result line, and a result line whose only citations are
    amendment items fails.
+5. **Quoted numbers.** A number another work reports, which no FINDINGS section or CLAIMS row holds, is cited as its own
+   ``;``-separated item ``quoted <bibkey>`` (optionally with one parenthetical, its place in the source). The key must
+   be a ``references.bib`` entry with rows in ``paper/QUOTES.md``, and the line's numbers may then be those rows'
+   Number cells (exactly as printed), besides the line's other sources; such an item stands in for the CLAIMS row of
+   rule 3. ``\\code{...}`` spans that are a path with line numbers (``scene/gaussian_model.py:69``) state nothing and
+   are not read.
 
 Every ``*.tex`` file in ``paper/tex/`` is read as its own file, so a file brought in by ``\\input`` (Section 5.2's
 ``sec5_2_e7design.tex``) is checked, and each failure names that file and its own line number; the ``\\input`` line
@@ -54,6 +60,8 @@ REPO = os.path.dirname(os.path.dirname(HERE))
 FINDINGS = os.path.join(REPO, "kaggle", "FINDINGS.md")
 CLAIMS = os.path.join(REPO, "paper", "CLAIMS.md")
 PREREG = os.path.join(REPO, "kaggle", "PREREG_GN.md")
+QUOTES = os.path.join(REPO, "paper", "QUOTES.md")
+BIB = os.path.join(HERE, "references.bib")
 
 # structural constants: integers 0-10, the codebook size K, fine-tuning's iterations, OGC's iterations and chunk,
 # the metric's width, the decimals of the criteria, the year, the dataset name "Mip-NeRF 360"
@@ -65,6 +73,7 @@ STRIP = [
     re.compile(r"\\(?:label|ref|eqref|cite[pt]?|input|includegraphics|graphicspath|usepackage|documentclass|"
                r"bibliography|bibliographystyle|setlength)(?:\[[^\]]*\])?\{[^}]*\}(?:\{[^}]*\})?"),
     re.compile(r"\d+(?:\.\d+)?\s*(?:\\linewidth|\\textwidth|\\columnwidth|pt|em|cm|mm|in)\b"),
+    re.compile(r"\\code\{[^{}]*\.py:[\d,\-\s]+\}"),  # a file:line pointer (rule 5) states nothing
 ]
 CLAIM_ID = re.compile(r"\b([A-H]\d{1,2})\b")
 FIG = re.compile(r"\bFig\.\s*\d+")
@@ -101,6 +110,7 @@ DESIGN_AMENDMENTS = {"20"}
 # sec5_finetuning.tex, whose 5.1 holds results); in any other file, sec5_finetuning.tex included, an amendment item
 # is an annotation only and the line is checked as if items were never sources
 DESIGN_FILES = {"sec5_2_e7design.tex"}
+QUOTE_ITEM = re.compile(r"^\s*quoted ([A-Za-z][\w-]*)(?:\s*\([^()]*\))?\s*$")
 AM_ITEM = re.compile(r"^\s*Am(\d{1,2}) (note \d{1,2}|[a-z])(?:\s*\(PREREG_GN\.md:([\d, ]+)\))?\s*$")
 
 
@@ -203,6 +213,22 @@ def cited_items(comment):
     return out
 
 
+def quotes():
+    """``paper/QUOTES.md``'s Number cells by bib key (rule 5); the other columns are never sources."""
+    out = {}
+    if not os.path.exists(QUOTES):
+        return out
+    for m in re.finditer(r"^\| ([A-Za-z][\w-]*) \| ([^|]+?) \|", read(QUOTES), re.M):
+        if m.group(1) != "Key":
+            out.setdefault(m.group(1), set()).update(numbers(m.group(2)))
+    return out
+
+
+def cited_quotes(comment):
+    """The ``quoted <bibkey>`` items of a trailing comment (rule 5), each its own ';'-separated item."""
+    return [m.group(1) for m in (QUOTE_ITEM.match(seg) for seg in comment.split(";")) if m]
+
+
 def counts(text):
     """The "k of n" / "k of the n" / "k/n" phrases of ``text`` as (k, n) pairs."""
     return COUNT.findall(text)
@@ -217,6 +243,8 @@ def run(tex_dir=HERE):
     f_all, sec_text, c_all, rows = sources()
     items = amendment_items()
     all_tokens = tokens(f_all) | tokens(c_all)
+    qs = quotes()
+    bib_keys = set(re.findall(r"@\w+\{([^,\s]+),", read(BIB))) if os.path.exists(BIB) else set()
     fails, n_numbers, n_lines, n_result, n_rounded = [], 0, 0, 0, 0
     for path in sorted(glob.glob(os.path.join(tex_dir, "*.tex"))):
         name = os.path.basename(path)
@@ -228,6 +256,13 @@ def run(tex_dir=HERE):
                 continue  # a placeholder states nothing
             n_lines += 1
             ids, ambiguous = cited_ids(comment)
+            qkeys = cited_quotes(comment)
+            for k in qkeys:
+                if k not in qs:
+                    fails.append(f"{name}:{i}: cites quoted {k}, which has no row in paper/QUOTES.md")
+                if k not in bib_keys:
+                    fails.append(f"{name}:{i}: cites quoted {k}, which is not a references.bib entry")
+            quoted = set().union(*[qs.get(k, set()) for k in qkeys], set())
             for x in ambiguous:
                 fails.append(f"{name}:{i}: '{x}' in the comment is not a citation item; write it as its own "
                              f"';'-separated item, or reword (ambiguous ID)")
@@ -263,11 +298,11 @@ def run(tex_dir=HERE):
                 pool, src = tokens(" ".join(am_text)), " ".join(am_text)
                 where = f"its cited amendment items {am_names}"
             else:  # amendment items are not sources here
-                pool = cited if (secs or ids) else all_tokens
+                pool = (cited if (secs or ids) else (set() if qkeys else all_tokens)) | quoted
                 src = " ".join([sec_text.get(s, "") for s in secs] + [rows.get(c, "") for c in ids]) if (secs or ids) \
                     else f_all + " " + c_all
-                where = "its cited sources " + ", ".join([f"s{s}" for s in secs] + ids) if (secs or ids) else \
-                    "FINDINGS or CLAIMS"
+                where = "its cited sources " + ", ".join([f"s{s}" for s in secs] + ids + [f"quoted {k}" for k in qkeys]) \
+                    if (secs or ids or qkeys) else "FINDINGS or CLAIMS"
             src_counts = set(counts(" ".join(src.split())))
             line_counts = counts(" ".join(text.split()))
             for k, n in line_counts:
@@ -296,7 +331,7 @@ def run(tex_dir=HERE):
                 if not ids and ams and not secs:
                     fails.append(f"{name}:{i}: states a result citing only amendment items ({am_names}); an amendment "
                                  f"item verifies design lines only, a result needs a CLAIMS row: {text.strip()[:70]!r}")
-                elif not ids:
+                elif not ids and not qkeys:
                     fails.append(f"{name}:{i}: states a result without a CLAIMS row in its trailing comment: "
                                  f"{text.strip()[:90]!r}")
     return {"fails": fails, "n_numbers": n_numbers, "n_rounded": n_rounded, "n_lines": n_lines, "n_result_lines": n_result}
