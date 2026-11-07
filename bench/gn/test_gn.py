@@ -3205,6 +3205,20 @@ def test_section_27_perceptual_bd_computation():
     assert F["psnr_match"] and all(F["psnr_match"]) and F["s20_equal"]
     assert all(v is not None for d in F["V"].values() for v in d.values())
     assert len(out["rows"]) == 5 * 8 and check_s27.DECLARATION == "cf26643f"
+    # the text, its summary and Sources entry (added with the results), and CLAIMS A13, F12, H15 restate it
+    res = check_s27.run()
+    assert res["fails"] == [] and res["n_numbers"] >= 50
+    import re
+
+    claims = open(os.path.join(os.path.dirname(os.path.dirname(HERE)), "paper", "CLAIMS.md"), encoding="utf-8").read()
+    txt = open(check_s27.FINDINGS, encoding="utf-8").read()
+    sec = txt[txt.index("## 27. Perceptual BD secondaries"):]
+    for rid in ("A13", "F12", "H15"):
+        (body,) = re.findall(rf"^\| {rid} \|(.*)$", claims, re.M)
+        cells = [x.strip() for x in body.split(" | ")]
+        assert cells[3].startswith("`check_s27.py`") and "declared at `cf26643f`" in cells[1], rid
+        for tok in check_s27.NUM.findall(cells[0] + " " + cells[5]):
+            assert tok in sec or tok.lstrip("+-") in sec, (rid, tok)
 
 
 def test_claims_group_h_restates_section_26():
@@ -3221,7 +3235,9 @@ def test_claims_group_h_restates_section_26():
     txt = open(c.FINDINGS, encoding="utf-8").read()
     sec = txt[txt.index("## 26. E7"):]
     rows = re.findall(r"^\| (H\d+) \|(.*)$", claims, re.M)
-    assert [r[0] for r in rows] == [f"H{i}" for i in range(1, 15)]
+    assert [r[0] for r in rows] == [f"H{i}" for i in range(1, 16)]
+    # H15 restates section 27 (perceptual secondaries, check_s27.py), checked in test_section_27_perceptual_bd_computation
+    rows = [r for r in rows if r[0] != "H15"]
     for rid, body in rows:
         cells = [x.strip() for x in body.split(" | ")]
         assert cells[3].startswith("`check_s26.py`"), rid

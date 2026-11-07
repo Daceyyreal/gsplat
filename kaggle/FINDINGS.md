@@ -184,6 +184,11 @@ no run.**
 - Δ_refit `Δ_bar` -0.020086807 dB, Δ_cb `Δ_bar` 0.008438079 dB (n = 7; `SE` 0.005561656 and 0.011134979); superiority and a TOST at δ = 0.07 dB, each Holm-corrected over the two primaries.
 - **Disclosure:** the hypotheses were formed after E5's and E6's results on these scenes; E7 makes no held-out claim.
 
+**Perceptual BD secondaries (section 27, branch `bench/gn-vq`): secondary, declared after the primary unblinding,
+before computing these (`cf26643f`); no run, no verdict.**
+- BD-SSIM and BD-LPIPS: every mean (P1, P2, P_FT, Delta_refit, Delta_cb) agrees in sign with its PSNR value.
+- Per scene, P_FT agrees on 5 of 7 (BD-SSIM) and 6 of 7 (BD-LPIPS); Delta_refit on 5 of 7 and 4 of 7; Delta_cb on 7 of 7 and 6 of 7.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
@@ -311,6 +316,10 @@ no run.**
   error) from their own bundles, and the quoted lines of `kaggle/PREREG_GN.md`. `bench/gn/check_s26.py` recomputes every
   number in the section from those files, with its own BD fit and tests beside the tool's and the sessions' summaries,
   and checks each against the text. The commit beside each bundle is its ingest; after ingest: `c8ba01f3` re-stored S1, S2, S3, S4, S5, S6, S7 with their line endings as in the zips.
+- Section 27: every number comes from E5's three session bundles (`9a90dabb`, `1710cc8a`, `88b5ebed`), E6 part (b)'s
+  (`87cc6a59`, `94551278`, `13a95aa1`) and E7's eleven (listed in section 26's entry), each scene from the session that
+  ran it; no run. The declaration is `cf26643f`, pushed before any value was computed. `bench/gn/check_s27.py`
+  recomputes every number with `bench/gn/e5.py`'s BD and its own fit, and checks each against the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -5693,7 +5702,7 @@ seed pair spans images. Across E7: 2 Kaggle images.
   - only arm R and the unfine-tuned pair have a seed-1 curve; the geometry quantizers re-fit in every arm;
   - seven scenes, INRIA's checkpoints, K = 4,096, one GPU type (T4).
 
-## 27. Perceptual BD secondaries: BD-SSIM and BD-LPIPS for P1, P2, P_FT and E7's two primaries (secondary, declared after the primary unblinding, before computing these) — declared 2026-11-08; not yet computed
+## 27. Perceptual BD secondaries: BD-SSIM and BD-LPIPS for P1, P2, P_FT and E7's two primaries (secondary, declared after the primary unblinding, before computing these) — every mean agrees in sign with PSNR
 
 **Declaration (2026-11-08), committed and pushed alone, before any value below is computed.** This section is a
 **secondary analysis, declared after the primary unblinding, before computing these.** It gives no new verdict, sets no
@@ -5733,3 +5742,82 @@ the VGG network the harness's runner is configured with).
   recomputes every number with its own `numpy.polyfit` fit (as `check_s21.py` does) besides `bench/gn/e5.py`'s, and
   requires the two to agree; rows in `paper/CLAIMS.md` groups A, F and H; one subsection or table in the paper's
   Section 5, with Limitations no longer saying PSNR only. A result in either direction is reported.
+
+### Results (computed after the declaration was pushed at `cf26643f`; secondary, no verdict)
+
+PSNR is the registered value (E5's P1 and P2, E6's P_FT, E7's per-scene Delta), in dB; BD-SSIM and BD-LPIPS are
+OGC's row minus the other, so a positive BD-SSIM and a negative BD-LPIPS favour OGC, and for the Deltas the same
+orientation applies to the difference of two BDs. "agrees" is the declaration's sign agreement with the PSNR value
+beside it; the mean row's count is the scenes that agree.
+
+| Value | Scene | PSNR (dB) | BD-SSIM | BD-LPIPS |
+|---|---|---|---|---|
+| P1 | bonsai | +0.4841 | +0.007033 (agrees) | -0.008229 (agrees) |
+| P1 | counter | +0.3192 | +0.008834 (agrees) | -0.009623 (agrees) |
+| P1 | kitchen | +0.4111 | +0.008106 (agrees) | -0.008352 (agrees) |
+| P1 | room | +0.3869 | +0.007449 (agrees) | -0.009716 (agrees) |
+| P1 | truck | +0.1486 | +0.006217 (agrees) | -0.007836 (agrees) |
+| P1 | drjohnson | +0.2765 | +0.005035 (agrees) | -0.008262 (agrees) |
+| P1 | playroom | +0.4644 | +0.006839 (agrees) | -0.010273 (agrees) |
+| P1 | mean | +0.3558 | +0.007073 (agrees; 7 of 7 scenes agree) | -0.008899 (agrees; 7 of 7 scenes agree) |
+| P2 | bonsai | +0.3205 | +0.004271 (agrees) | -0.005409 (agrees) |
+| P2 | counter | +0.1655 | +0.004466 (agrees) | -0.005517 (agrees) |
+| P2 | kitchen | +0.2757 | +0.004985 (agrees) | -0.005521 (agrees) |
+| P2 | room | +0.1750 | +0.003451 (agrees) | -0.005136 (agrees) |
+| P2 | truck | +0.1000 | +0.004638 (agrees) | -0.006171 (agrees) |
+| P2 | drjohnson | +0.1281 | +0.001695 (agrees) | -0.004477 (agrees) |
+| P2 | playroom | +0.1471 | +0.001727 (agrees) | -0.003949 (agrees) |
+| P2 | mean | +0.1874 | +0.003605 (agrees; 7 of 7 scenes agree) | -0.005168 (agrees; 7 of 7 scenes agree) |
+| P_FT | bonsai | +0.0622 | +0.000773 (agrees) | -0.003021 (agrees) |
+| P_FT | counter | +0.1058 | +0.002932 (agrees) | -0.004182 (agrees) |
+| P_FT | kitchen | +0.0125 | -0.000049 (differs) | -0.001778 (agrees) |
+| P_FT | room | +0.0560 | +0.001528 (agrees) | -0.002804 (agrees) |
+| P_FT | truck | +0.0173 | +0.000681 (agrees) | -0.002032 (agrees) |
+| P_FT | drjohnson | -0.0046 | -0.000892 (agrees) | -0.000741 (differs) |
+| P_FT | playroom | +0.0483 | -0.000022 (differs) | -0.003086 (agrees) |
+| P_FT | mean | +0.0425 | +0.000707 (agrees; 5 of 7 scenes agree) | -0.002521 (agrees; 6 of 7 scenes agree) |
+| Delta_refit | bonsai | +0.0082 | +0.000599 (agrees) | +0.000842 (differs) |
+| Delta_refit | counter | -0.0310 | -0.000801 (agrees) | +0.000903 (agrees) |
+| Delta_refit | kitchen | -0.1501 | -0.002850 (agrees) | +0.002288 (agrees) |
+| Delta_refit | room | +0.0102 | -0.000131 (differs) | +0.000295 (differs) |
+| Delta_refit | truck | +0.0040 | +0.000215 (agrees) | -0.000600 (agrees) |
+| Delta_refit | drjohnson | +0.0261 | +0.000301 (agrees) | +0.000290 (differs) |
+| Delta_refit | playroom | -0.0080 | +0.000059 (differs) | +0.000267 (agrees) |
+| Delta_refit | mean | -0.0201 | -0.000373 (agrees; 5 of 7 scenes agree) | +0.000612 (agrees; 4 of 7 scenes agree) |
+| Delta_cb | bonsai | +0.0462 | +0.000107 (agrees) | -0.001267 (agrees) |
+| Delta_cb | counter | +0.0259 | +0.000351 (agrees) | -0.000452 (agrees) |
+| Delta_cb | kitchen | +0.0431 | +0.000617 (agrees) | -0.000876 (agrees) |
+| Delta_cb | room | +0.0120 | +0.000042 (agrees) | -0.000455 (agrees) |
+| Delta_cb | truck | -0.0297 | -0.000103 (agrees) | +0.000018 (agrees) |
+| Delta_cb | drjohnson | -0.0355 | -0.000059 (agrees) | +0.000256 (agrees) |
+| Delta_cb | playroom | -0.0029 | -0.000156 (agrees) | -0.000951 (differs) |
+| Delta_cb | mean | +0.0084 | +0.000114 (agrees; 7 of 7 scenes agree) | -0.000533 (agrees; 6 of 7 scenes agree) |
+
+- **Every mean agrees in sign with its PSNR value,** for all five values and both measures.
+- **Per scene:** P1 and P2 agree on 7 of 7 and 7 of 7 scenes in BD-SSIM and on 7 of 7 and
+  7 of 7 in BD-LPIPS, as section 20 found. P_FT agrees on 5 of 7 in BD-SSIM (kitchen and playroom
+  read slightly below 0 where PSNR is above it) and on 6 of 7 in BD-LPIPS (drjohnson, whose P_FT in PSNR is
+  below 0, reads in OGC's favour). Delta_refit agrees on 5 of 7 in BD-SSIM and 4 of 7
+  in BD-LPIPS; Delta_cb on 7 of 7 and 6 of 7.
+- **Bending fits** (section 25's later note, on the perceptual curves; scenes with a bending fit, of 7):
+
+  | BD | BD-SSIM | BD-LPIPS |
+  |---|---|---|
+  | P1 | 1 of 7 | 0 of 7 |
+  | P2 | 1 of 7 | 0 of 7 |
+  | P_FT | 2 of 7 | 0 of 7 |
+  | BD_R | 2 of 7 | 0 of 7 |
+  | BD_G | 2 of 7 | 0 of 7 |
+  | BD_CG | 6 of 7 | 3 of 7 |
+
+- **Checks:** for all 126 BD values, the tool (`e5.bd`) and `check_s27.py`'s own `numpy.polyfit` fit agree below 1e-9; the
+  PSNR values equal the registered P1, P2, P_FT and E7 Deltas; E5's perceptual BDs equal section 20's. No value is
+  missing.
+
+### What section 27 settles, and what it does not
+
+- **Settled (descriptive):** in BD-SSIM and BD-LPIPS, the mean of each of P1, P2, P_FT, Delta_refit and Delta_cb has
+  the sign of its PSNR value, so the paper's direction of effect does not rest on PSNR alone.
+- **Not settled:** no verdict is given and none is re-judged: E7's equivalence outcomes are in PSNR at δ = 0.07 dB,
+  and no perceptual margin was set, so nothing here says whether the perceptual Deltas are equivalent to 0. The
+  per-scene disagreements are small values whose noise was not measured; no standard error is computed.
