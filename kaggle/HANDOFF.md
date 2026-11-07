@@ -3640,14 +3640,13 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   `ensure_clone` dropped git's output, so the bundle shows only "cannot change to '/tmp/ogc_train'". The image had
   changed (Python 3.13.15, torch 2.11.0+cu128, cuDNN 91900, driver 580.178.04 as before); the wheel was rebuilt
   (3,974 s), and C3DGS's build needed Amendment 13 b's `<cstdint>` retry for the first time. On 2026-10-09 the repository
-  was reachable again at the same commit (`git ls-remote` HEAD `49ccae72`; a fresh clone's tree `9feebced`), and the
-  author confirmed by email that the code is available for research purposes and stated that the method is patented
-  for commercial use (paraphrase only; never quote the email).
+  was reachable again at the same commit (`git ls-remote` HEAD `49ccae72`; a fresh clone's tree `9feebced`), and OGC's
+  author confirmed that the code may be used for research (paraphrase only; never quote the email).
 - **Dace's decisions:** Amendment 18 as drafted, with (c) an explicit chain (URL, then the private Kaggle dataset "E5p
   OGC source 49ccae72", then `ogc_derived`, each verified by tree and HEAD, the source logged) and (e) stating that
   `ogc_derived`'s `"plain"` and `"scalar"` are validated at full scale only through the `"gram"` path.
-- **Standing rule (Dace, 2026-10-09): Gram-weighted VQ is not proposed upstream to gsplat** (OGC's method is patented
-  for commercial use). PR #1063 (scalar k-means, `feat/png-weighted-kmeans`) is unaffected.
+- **Standing rule (Dace, 2026-10-09): Gram-weighted VQ is not proposed upstream to gsplat** (OGC's licence is
+  noncommercial). PR #1063 (scalar k-means, `feat/png-weighted-kmeans`) is unaffected.
 - **OGC's code, outside the repository only:** the backup copy `F:\ogc_restore\ogc-3dgs` (restored from its own git
   pack; HEAD and tree verified, files identical to a fresh clone) and its zip `F:\ogc_backups\ogc-3dgs-49ccae72.zip`
   (with `.git`; verified: HEAD, tree, `fsck`, clean). The zip's working files are CRLF without executable bits (this
@@ -3655,7 +3654,7 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   OGC source 49ccae72"** holds that zip: private, never made public, research use only. Nothing of OGC's is ever
   committed, pushed or bundled.
 - **Licence notice (`459f7318`):** every part derived from reading their `vq.py` carries PolyForm Noncommercial 1.0.0's
-  URL, both Required Notice lines and the patent statement: `bench/gn/ogc_derived.py` (moved there: `ogc_init_probs`,
+  URL, both Required Notice lines and a statement since removed (`3d07de3a`): `bench/gn/ogc_derived.py` (moved there: `ogc_init_probs`,
   `ogc_init`, `make_reseed`, `ogc_arith`, `ogc_layout`; since `8b486e3d` also `gram_kmeans_ours`), and in place, comments
   only, `diagnostics.update_centroids`' `ridge_mean` branches and `gn_vq`'s `final_float_assignment` (the frozen GN-VQ
   path unchanged).
@@ -4076,7 +4075,7 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   - the ancestor check, then fast-forward pushes only; never rewrite pushed history;
   - no code changes between the sessions of one experiment unless a bug forces one;
   - never commit, push or bundle OGC's files; OGC's dataset stays private; paraphrase the author's email, never quote it;
-  - no Gram-weighted VQ is proposed upstream (the method is patented for commercial use);
+  - no Gram-weighted VQ is proposed upstream (OGC's licence is noncommercial);
   - Kaggle titles "<ID> <name>", bundles "<ID>_bundle_S#.zip";
   - every number from result files or actual runs, never estimated or filled in.
 
@@ -6205,11 +6204,11 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   - **How the search ran:** every tracked `.py`/`.md`/`.tex`/`.sh` outside `gsplat/`, `tests/`, `examples/`, `docs/`, `third_party/` and
     `profiling/` (524 files), token-normalized lines of 24+ characters against `vq.py`'s, with a ratio of 0.86 or more. The same
     distinctive tokens were grepped in the notebooks and in those folders. A rewrite in other words would not show.
-- **The patent sentence is removed** from `ogc_derived.py`'s header and from the inline notices in `diagnostics.py` and `gn_vq.py`. None of
-  OGC's public sources states it: not README.md (at `49ccae72` and live on GitHub, 2026-11-05: only the licence paragraph), not LICENSE
-  (PolyForm's generic "Patent License" and "Patent Defense" clauses only), not docs/paper.pdf at `49ccae72`, not arXiv 2609.28997v1 (HTML full
-  text: no "patent", no "commercial"). Its only source is the author's email. The removed text stays in the history.
-- **Other mentions of the patent or the email's content, not changed (Dace's to decide):** `kaggle/PREREG_GN.md:2811-2812` (Amendment 18 c);
+- **The correspondence sentence is removed** from `ogc_derived.py`'s header and from the inline notices in `diagnostics.py` and
+  `gn_vq.py`. None of OGC's public sources states it: not README.md (at `49ccae72` and live on GitHub, 2026-11-05: only the licence
+  paragraph), not LICENSE, not docs/paper.pdf at `49ccae72`, not arXiv 2609.28997v1 (HTML full text). Its only source is private
+  correspondence. The removed text stays in the history.
+- **Other mentions of the correspondence beyond the research permission, not changed then (redacted since, see "Redaction"):** `kaggle/PREREG_GN.md:2811-2812` (Amendment 18 c);
   `paper/CLAIMS.md:109` (E12) and :24 (the correspondence column); `kaggle/RELATED_WORK_OGC.md:27-28`; `kaggle/build_gn_e5p_bench.py:56` and
   `kaggle/gn_e5p_bench.ipynb` (generated from it, compared byte for byte by a test); `kaggle/build_gn_e5s_preflight.py:49` and
   `kaggle/gn_e5s_preflight.ipynb`; this file at its Amendment 18 entry, the standing rule on upstream proposals and the "OGC" conventions.
@@ -6314,7 +6313,7 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
   `sec6_limits.tex` (Limitations, from FINDINGS / CLAIMS IDs only).
 - **`d4e82382`:** CLAIMS B5 and Section 4.4 worded alike (Option B: "consistent with codebook use, not regularisation",
   two development scenes).
-- **`7c345e1d`:** no correspondence in the paper: the email / patent sentence removed from Related work; Section 2's
+- **`7c345e1d`:** no correspondence in the paper: the correspondence sentence removed from Related work; Section 2's
   licence sentence rests on the public `LICENSE` of OGC's repository at `49ccae72` (PolyForm Noncommercial License
   1.0.0, read in the local clone, nothing copied) and cites the repository (bib entry `pietroszek2026ogccode`, checked by
   `git ls-remote`). CLAIMS E12 unchanged.
@@ -6876,8 +6875,8 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
 ## Open items
 
 - PR #1063 is open: respond to review only when Dace asks (standing rule: no comments unless asked).
-- **Standing rule (2026-10-09): no Gram-weighted VQ is proposed upstream to gsplat** (OGC's method is patented for
-  commercial use). PR #1063 (scalar k-means) is unaffected.
+- **Standing rule (2026-10-09): no Gram-weighted VQ is proposed upstream to gsplat** (OGC's licence is
+  noncommercial). PR #1063 (scalar k-means) is unaffected.
 - **OGC's code** stays outside the repository: `F:\ogc_restore\ogc-3dgs`, `F:\ogc_backups\ogc-3dgs-49ccae72.zip`, and
   the private Kaggle dataset "E5p OGC source 49ccae72" (never public). Never commit, push or bundle any of its files;
   paraphrase the author's email, never quote it.
