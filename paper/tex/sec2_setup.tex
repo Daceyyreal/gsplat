@@ -34,8 +34,9 @@ Fine-tuning, where a test calls for it, is C3DGS's own 5,000-iteration fine-tuni
 
 The rate knob is C3DGS's colour threshold, $6\times10^{-7}\cdot 3^{j}$ at $j = -1, 0, +1$, with $K$ fixed: on train the threshold spanned 2.49 times in bytes and $K$ only 1.02 times. % Am17 d; s15; E10
 Each point is one process with seed 0, and $j = 0$ also has a second process with seed 1. % Am17 d; Am19 c
-A row's curve is its test PSNR against $\log_{10}$ of its compressed \code{.npz} bytes at the three points, fitted by the parabola through them. % s19 "How the numbers are computed"
-BD-PSNR averages the difference of two parabolas over the range of $\log_{10}$ bytes the two curves share, and is defined whenever the byte ranges overlap. % s19 "How the numbers are computed"
+A row's curve is its test PSNR against $\log_{10}$ of its compressed \code{.npz} bytes at its three rate points. % s19 "How the numbers are computed"
+BD-PSNR \citep{barman2022revisiting,barman2024bjontegaard} is computed here by fitting each curve with the polynomial of degree 2 through its three points, after mapping $\log_{10}$ bytes onto $[-1, 1]$, and averaging the difference of the two fits over the range of $\log_{10}$ bytes the two curves share; it is defined whenever that range is not empty. % s19 "How the numbers are computed"; Am9 a; bench/gn/g2.py:99-115; bench/gn/e5.py:148-176
+No monotonicity is required or enforced: each parabola is integrated as fitted, whether or not it is monotone over the shared range. % bench/gn/g2.py:99-115; bench/gn/e5.py:148-176
 BD-rate fits $\log_{10}$ bytes against PSNR and averages over the shared PSNR range; it is undefined without one and is not interpreted when that range is below 0.1 dB. % s19; s21 secondary 2; F3
 
 \subsection{Evaluation}
@@ -46,6 +47,8 @@ The two protocols disagree by a scene-dependent amount: C3DGS's evaluation reads
 
 \subsection{Pre-registration history}
 
+Pre-registration has been tried in computer vision and machine learning: an ICCV workshop asked whether experiments in computer vision should be pre-registered \citep{iccv2019prereg}, two NeurIPS workshops on pre-registration in machine learning followed \citep{bertinetto2021prereg,albanie2022prereg}, and Hofman et al.\ propose pre-registration for predictive modelling \citep{hofman2023preregistration}.
+In 3D Gaussian Splatting, Budgeted-GS validates its own capacity floor under a pre-registered protocol \citep{wang2026budgeted}; to our knowledge, as of 8 November 2026, this paper is the first pre-registered replication of a published method in 3D Gaussian Splatting or neural rendering.
 Every experiment was pre-registered in a dated amendment committed before its code or data, and no rule was edited after results existed; later changes are new dated amendments or notes. % PREREG_GN.md (every amendment's heading)
 The project began with a Gauss--Newton-weighted VQ (GN-VQ) inside gsplat's PNG codec; its first gate failed on the size rule, and the project continued after that result as a declared deviation. % s9; D1; Am7 b
 A gate of GN-VQ inside C3DGS was registered with a pilot on train, and was withdrawn before any gate-scene data once the pilot showed its primaries were about zero or compared unequal codebooks. % Am15; Am16 a; s16; D5
