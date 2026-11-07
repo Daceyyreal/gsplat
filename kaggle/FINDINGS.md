@@ -4987,6 +4987,12 @@ weight decay) over seven parameter groups (`training_setup`, `gaussian_model.py:
 The learning rates are C3DGS's defaults (`arguments/__init__.py:106-109`). Our fork restores each fine-tuned row from
 the copy, quantizer state included, before C3DGS's `finetune` runs (`kaggle/e4p_hooks.py:458`, `:465`, `:479`).
 
+**Erratum (2026-11-08; code reading at `2a234af5`, not checked):** "`:69` is its only assignment" above overlooks
+`restore` (`gaussian_model.py:123-140`), which also assigns `spatial_lr_scale`, from a training checkpoint's saved
+arguments (`:136`). It is called only by `compress.py:135-137`, for a non-empty `start_checkpoint` (default "",
+`arguments/__init__.py:95`), and no run in this project passes one, so in these runs `:69` is the only assignment that
+executes and the conclusion stands: positions do not train. The sentence above is left as written.
+
 ### 5. The fine-tuning gains (descriptive)
 
 Fine-tuning's gain in protocol ii's PSNR (the fine-tuned row minus its unfine-tuned row, same process) is

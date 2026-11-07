@@ -43,6 +43,9 @@ CODE = {"61", "72", "165", "166", "169", "182", "183", "192", "193", "223", "230
         "769", "775", "796", "799", "802", "807", "51", "53", "69", "103", "106", "109", "81", "77", "130", "140",
         "24", "31", "73", "228", "253", "635", "388", "394", "458", "465", "479",
         "0.0025", "0.05", "0.005", "0.001", "0.00016", "1e-15", "2.11"}
+# item 4's erratum (2026-11-08), code reading at 2a234af5, not checked: restore() :123-140 assigns spatial_lr_scale at
+# :136; compress.py:135-137 calls it for a non-empty start_checkpoint (default "", arguments/__init__.py:95)
+CODE |= {"123", "135", "136", "137", "95"}
 COMMITS = {"87cc6a59", "94551278", "13a95aa1", "9a90dabb", "1710cc8a", "88b5ebed", "2a234af5"}
 
 
@@ -198,6 +201,9 @@ def run():
     check(F["c3_gain_larger"], "C3DGS gains more from fine-tuning than OGC in every process")
     check("code reading, not checked" in text, "the code readings are labelled as not checked")
     check("that it causes the PSNR lead to shrink is untested" in text, "the scoping line is present")
+    check("Erratum (2026-11-08; code reading at `2a234af5`, not checked)" in text and "conclusion stands" in text,
+          "item 4's dated erratum on restore() is present, and the original sentence is kept")
+    check("(`:69` is its only assignment;" in text, "item 4's original sentence is left as written")
     tokens = set(NUM.findall(text))
     allowed = CONSTANTS | CODE | COMMITS
     unmatched = sorted(t for t in tokens if t not in allowed and not any(t in s for s in exp))
