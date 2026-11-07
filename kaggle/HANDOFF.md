@@ -6287,7 +6287,20 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
   rebuild it before attaching it (latexmk from `paper/tex/`, `BIBINPUTS` the folder's absolute path).
 - **The heads:** the fork head is the commit holding this entry's first version (`7c99cff6`, parent `308deab6`); the wrap-up
   commit after it adds only the PDF line above.
-- **Next action: Dace's read of the paper.**
+- **Next action (superseded by "Broadening the paper"): Dace's read of the paper.**
+
+### Broadening the paper toward a top venue (2026-11-08)
+
+Dace's plan: aim at a top venue (CVPR/ICCV/3DV main, or TCSVT/TVCG/CGF), fallback venues later. Step 0 housekeeping,
+Part 0 (follow-ups from the literature review), Part A (perceptual metrics, no reruns), Part B (drafts only, in
+`kaggle/drafts/`, nothing in PREREG).
+
+- **Step 0, the fallback tag:** `paper-v1-analysis`, an annotated tag (object `60278c9f`) on `5bf08604`, message "E5–E7
+  analysis paper, fallback version before E8/E9/method work", pushed to fork 2026-11-08. `git checkout paper-v1-analysis`
+  restores the 29-page E5-E7 paper as it stood after the literature review.
+- **Step 0', HANDOFF's stale summary:** the "Open items" bullet near the end said "next: E7 S2" and "67 rows (groups A-G)",
+  and item 18 of the older open-items list said the same; both now state E7 closed, 85 CLAIMS rows (A-H), `check_s11`-`check_s26`,
+  and point at the latest dated entry's "Next action".
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
@@ -6668,7 +6681,9 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
   16. ~~Amendment 20 note 1, then E7 code, tests, dry run~~ **done (2026-10-20/21):** `2d8056ec`-`17161955` (see
       "Amendment 20 note 1 and E7's build (2026-10-20)");
   17. ~~E7 S1 on Kaggle~~ **done (2026-10-22):** `b592a57e` (see "E7 S1 (2026-10-22)");
-  18. **next: E7 S2 on Kaggle, then S3-S11 in note 1's order.**
+  18. ~~next: E7 S2 on Kaggle, then S3-S11 in note 1's order~~ **done (2026-10-23 to 2026-11-03):** S2-S11 ingested; E7
+      closed (FINDINGS section 26, `3ca275bb`; see "E7 closed (2026-11-03)"); the paper steps and the tag `paper-v1-analysis`
+      followed. **Next:** the latest dated entry's "Next action".
 - ~~**Note 4's S2 session-hours** are printed as 4.32-7.71 h; the code gives 7.70 h.~~ **Corrected (2026-10-12):** the
   erratum `1b532e40`. Dace approved rule (b)'s rewording the same day.
 - **The unexplained npz2ply failure** (one dry run, 2026-10-10, room's rerun `ogc_gram`): not reproduced alone or under
@@ -6975,9 +6990,13 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
   plan A: three sessions; code `48d01a60`-`2e03d98d`) followed. E5 ran in three sessions (`9a90dabb`, `1710cc8a`,
   `88b5ebed`) and passed (FINDINGS sections 19-20). Amendment 19 (`f7716485`, note 1 `0f77b0de`, its erratum
   `8ea6e0c9`, note 2 `b7ad2329`) registers E6; E6 ran in five sessions (`87cc6a59`, `94551278`, `13a95aa1`, `9ce9b36e`,
-  `6ff4877e`): part (b) passed (FINDINGS sections 21-22), part (a) is FINDINGS section 23. **E6 is closed; Amendment 20 (E7) is
-  committed (`53dde708`) with note 1 (`2d8056ec`); E7 is built and its dry run passed (`17161955`); E7 S1 is ingested (`b592a57e`); next: E7 S2.** `paper/CLAIMS.md` holds 67 rows (groups A-G). `bench/gn/check_s11.py` to `check_s23.py` re-check FINDINGS
-  sections 11-23 and run under pytest; sections 1-10 have no committed checker. The rest of E3's design (other codecs,
+  `6ff4877e`): part (b) passed (FINDINGS sections 21-22), part (a) is FINDINGS section 23. **E6 is closed. Amendment 20 (E7,
+  `53dde708`, notes 1-6) ran in eleven sessions (S1-S11, ingested 2026-10-22 to 2026-11-03), was unblinded and is closed:
+  Delta_refit -0.0201 and Delta_cb +0.0084 dB, both "equivalent; not superior" (FINDINGS section 26, `3ca275bb`). The paper
+  (`paper/tex/`) went through steps 1-4, the licence cleanup, the redaction and the literature review (2026-11-04 to 08); that
+  state is tagged `paper-v1-analysis` (annotated, on `5bf08604`, pushed to fork 2026-11-08). No experiment is running or
+  queued; next: the latest dated entry's "Next action".** `paper/CLAIMS.md` holds 85 rows (groups A-H). `bench/gn/check_s11.py`
+  to `check_s26.py` re-check FINDINGS sections 11-26 and run under pytest; sections 1-10 have no committed checker. The rest of E3's design (other codecs,
   INRIA checkpoints) is not written yet.
 
 ### Open, not scheduled (from the paper-readiness audit, 2026-10-20)
