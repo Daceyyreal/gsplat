@@ -45,8 +45,8 @@ source (ok / FAIL, HEAD, tree, reason), then the source E5's chain would use.
 **Written:** `gn5s_ogc_preflight.json` (the preflight's record) and `gn5s_env.json` (Python, platform, `git --version`,
 this branch's commit, the user id and the owner of each attached copy), bundled as `E5s_bundle.zip`, arcname `gn5s/`.
 The bundle step refuses any file that matches one of OGC's files by path or hash (the file list the preflight wrote to
-`/tmp`, never bundled), or that holds a commit's `author` or `committer` line. OGC's code is PolyForm Noncommercial; the
-author states that the method is patented for commercial use and that the code is available for research.
+`/tmp`, never bundled), or that holds a commit's `author` or `committer` line. OGC's code is PolyForm Noncommercial; its
+author confirmed that it may be used for research.
 
 **Kaggle settings:** accelerator **None**, Internet **on**.
 

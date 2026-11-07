@@ -53,8 +53,8 @@ OGC's call: 15 iterations, `lam` 1e-3, their init and reseeding, seed 0, chunk 2
 private dataset **"E5p OGC source 49ccae72"** (`ogc-3dgs-49ccae72.zip`), each verified by HEAD `49ccae72`, tree
 `9feebced` and a clean working copy; if neither verifies, OGC's rows are computed by `bench/gn/ogc_derived.py`
 (Amendment 18 e) and `ogc_gram_ours` is not computed. The source used (`ogc_source`), every attempt and git's output are
-in `gn5p_meta_train.json`. OGC's code is PolyForm Noncommercial; the author states that the method is patented for
-commercial use and that the code is available for research; it stays in `/tmp`, and the bundle step refuses any file
+in `gn5p_meta_train.json`. OGC's code is PolyForm Noncommercial, and its author confirmed that it may be used for
+research; it stays in `/tmp`, and the bundle step refuses any file
 that matches one of its paths or hashes.
 
 | Process | Colour threshold | Images | Fine-tuning (5,000 iterations) |
