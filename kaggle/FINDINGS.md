@@ -5692,3 +5692,44 @@ seed pair spans images. Across E7: 2 Kaggle images.
     the first;
   - only arm R and the unfine-tuned pair have a seed-1 curve; the geometry quantizers re-fit in every arm;
   - seven scenes, INRIA's checkpoints, K = 4,096, one GPU type (T4).
+
+## 27. Perceptual BD secondaries: BD-SSIM and BD-LPIPS for P1, P2, P_FT and E7's two primaries (secondary, declared after the primary unblinding, before computing these) — declared 2026-11-08; not yet computed
+
+**Declaration (2026-11-08), committed and pushed alone, before any value below is computed.** This section is a
+**secondary analysis, declared after the primary unblinding, before computing these.** It gives no new verdict, sets no
+criterion and computes no standard error; every registered verdict (E5, E6 part (b), E7) stands as recorded. No run is
+made: SSIM_ii and LPIPS_ii are already in every E5, E6 and E7 row (protocol ii, the same renders as PSNR_ii; LPIPS with
+the VGG network the harness's runner is configured with).
+
+- **The measures.** BD-SSIM and BD-LPIPS: E5's BD (`bench/gn/e5.py` `bd`, Amendment 9 a's domain-scaled fit, degree 2
+  through the three points) with SSIM_ii or LPIPS_ii in place of PSNR_ii, over the same x (log10 of `npz_bytes`), the
+  same three rate points (j = -1, 0, +1, seed 0, one process per point), the same row pairs and the same shared
+  log10-byte range as the PSNR BD. Each is the first row's fitted mean minus the second's, as BD-PSNR is.
+  **Orientation:** SSIM is higher-is-better, so a positive BD-SSIM favours OGC's row; LPIPS is lower-is-better, so a
+  **negative** BD-LPIPS favours OGC's row.
+- **What is computed, per scene on the seven gate scenes and as the mean over them:**
+  - **P1 and P2 (E5's bundles):** `ogc_gram` against `c3dgs`, and `ogc_gram` against `ogc_scalar`;
+  - **P_FT (E6 part (b)'s bundles):** `ogc_gram_ft` against `c3dgs_ft`;
+  - **E7's Delta_refit and Delta_cb (E7's bundles):** per arm X the perceptual BD of `ogc_gram_ft_X` against
+    `c3dgs_ft_X` (BD_X), then Delta_refit = BD_G - BD_R and Delta_cb = BD_CG - BD_G per scene, as E7's primaries are
+    built from BD-PSNR.
+- **What is reported with them:** for each value, per scene and for the mean, whether it agrees in sign with the PSNR
+  result it stands beside (BD-SSIM's sign against BD-PSNR's; BD-LPIPS's sign against minus BD-PSNR's; for E7, the
+  perceptual Delta against the PSNR Delta, oriented the same way). A value of exactly 0 after rounding to 9 decimals
+  agrees with nothing. The count of scenes that agree is reported; no count is a criterion. Also reported, as in
+  section 25's later note: how many of the perceptual fits bend inside their shared range.
+- **Missing values.** A BD with a missing point or no shared byte range is reported as missing, and the mean is over the
+  scenes that have one, with their number stated (E7's rule of entering it as 0 is for its primaries' verdict, which is
+  not re-judged here).
+- **What is already known, and so is not new here:**
+  - **E5's P1 and P2 in BD-SSIM and BD-LPIPS were already computed** (section 20, "SSIM and LPIPS", exploratory: every
+    scene agreed in sign with PSNR for both pairs). They are recomputed here so the four primaries sit in one table,
+    and they must equal section 20's values.
+  - **E7's paired differences at `j0_p0`** in SSIM_ii and LPIPS_ii per arm are in section 26 (Amendment 20 g.8), but
+    no perceptual BD or Delta has been computed for E7.
+  - **For E6 part (b)** no SSIM or LPIPS value has been read for this project's write-up (sections 21 and 22 report
+    PSNR only).
+- **Where it goes:** this section, filled below this declaration (which stays as written); `bench/gn/check_s27.py`
+  recomputes every number with its own `numpy.polyfit` fit (as `check_s21.py` does) besides `bench/gn/e5.py`'s, and
+  requires the two to agree; rows in `paper/CLAIMS.md` groups A, F and H; one subsection or table in the paper's
+  Section 5, with Limitations no longer saying PSNR only. A result in either direction is reported.

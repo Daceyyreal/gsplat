@@ -6301,6 +6301,16 @@ Part 0 (follow-ups from the literature review), Part A (perceptual metrics, no r
 - **Step 0', HANDOFF's stale summary:** the "Open items" bullet near the end said "next: E7 S2" and "67 rows (groups A-G)",
   and item 18 of the older open-items list said the same; both now state E7 closed, 85 CLAIMS rows (A-H), `check_s11`-`check_s26`,
   and point at the latest dated entry's "Next action".
+- **Part A, the declaration (2026-11-08), committed and pushed alone before any perceptual BD was computed:** FINDINGS
+  section 27 opens with it. A secondary analysis, "declared after the primary unblinding, before computing these":
+  BD-SSIM and BD-LPIPS (E5's BD with SSIM_ii or LPIPS_ii in place of PSNR_ii; same x, rate points, pairs and shared
+  range; positive BD-SSIM and negative BD-LPIPS favour OGC) for P1 and P2 (E5), P_FT (E6 part (b)) and E7's Delta_refit
+  and Delta_cb, per scene and mean, each with its sign agreement against the PSNR result; missing values reported as
+  missing; no verdict, criterion or standard error. **Already known, disclosed in the declaration:** E5's P1 and P2
+  perceptual BDs (section 20, exploratory; to be recomputed and required equal) and E7's `j0_p0` paired SSIM/LPIPS
+  differences per arm (section 26, g.8); nothing perceptual for E6 part (b) or for E7's BDs and Deltas. Then:
+  `check_s27.py` (own `numpy.polyfit` fit beside `e5.bd`), the section's results under the declaration, CLAIMS rows in
+  groups A, F and H, and the paper.
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
