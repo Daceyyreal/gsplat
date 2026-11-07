@@ -5082,6 +5082,42 @@ n = 7 throughout. E6's P1 replicated is a report-only secondary (section 21), it
 - **Not settled:** BD-level noise itself, against a j = 0 point's (`paper/CLAIMS.md` gap 8); and scene-to-scene spread,
   which neither standard error includes.
 
+### Later (2026-11-08, post hoc): the shape of the BD fits
+
+**What this is:** a count, made after every verdict, of how often a BD-PSNR's fit is not monotonic over the byte range
+the BD averages over. Every BD in E5, E6 and E7 fits PSNR as a parabola in log10 bytes through a curve's three points
+(j = -1, 0, +1) and averages the difference of two such fits over their shared log10-byte range; nothing requires or
+enforces monotonicity. A fit **bends** when its vertex lies strictly inside that shared range, and a BD value is
+counted when either of its two fits bends. A measured curve **falls** when its three points do not rise with bytes at
+every step. Each BD below is one the paper reports, from the seed-0 curves unless named. `bench/gn/check_s25.py`
+recomputes every count with its own algebra for the parabola, from the bundles above, E6 part (a)'s (`9ce9b36e`,
+`6ff4877e`) and E7's (`kaggle/gn_e7/S*/gn7/`, section 26's sources).
+
+| Experiment | BD | BD values with a bending fit | Scenes | Fits that bend | Measured curves that fall |
+|---|---|---|---|---|---|
+| E5 | P1 | 1 of 7 | drjohnson | 1 of 14 | 0 of 14 |
+| E5 | P2 | 2 of 7 | room, drjohnson | 3 of 14 | 0 of 14 |
+| E6 part (b) | P_FT | 3 of 7 | counter, room, playroom | 3 of 14 | 2 of 14 |
+| E6 part (b) | P1 replicated | 3 of 7 | room, drjohnson, playroom | 3 of 14 | 1 of 14 |
+| E6 part (a) | P1 | 1 of 3 | treehill | 1 of 6 | 0 of 6 |
+| E6 part (a) | P2 | 1 of 3 | treehill | 1 of 6 | 0 of 6 |
+| E6 part (a) | P_FT | 1 of 3 | train | 2 of 6 | 2 of 6 |
+| E7 | BD_R | 5 of 7 | counter, room, truck, drjohnson, playroom | 6 of 14 | 2 of 14 |
+| E7 | BD_G | 3 of 7 | kitchen, room, playroom | 4 of 14 | 2 of 14 |
+| E7 | BD_CG | 5 of 7 | kitchen, room, truck, drjohnson, playroom | 8 of 14 | 2 of 14 |
+| E7 | BD_K | 1 of 7 | drjohnson | 1 of 14 | 0 of 14 |
+| E7 | BD_O | 5 of 7 | counter, room, truck, drjohnson, playroom | 7 of 14 | 2 of 14 |
+| E7 | BD_R, seed 1 | 3 of 7 | counter, kitchen, drjohnson | 3 of 14 | 2 of 14 |
+| E7 | P1 (before fine-tuning) | 2 of 7 | drjohnson, playroom | 2 of 14 | 1 of 14 |
+
+- **In all:** 36 of 86 BD values have a bending fit (45 of 172 fits); 16 of 172 measured curves fall.
+- **E7's primaries:** Delta_refit (BD_G - BD_R) has a bending fit in at least one of its two BDs on 6 of 7 scenes, and
+  Delta_cb (BD_CG - BD_G) on 5 of 7 scenes.
+- **What it means:** a bending fit still gives a defined BD-PSNR (the mean difference of two fitted curves), and every
+  verdict used the fit as registered; **no verdict changes, and none is re-tested here.** Where a fit bends, the BD
+  partly reflects the parabola's shape between two measured points rather than a monotone rate-distortion curve. A
+  sensitivity reading with a monotone interpolant (as E2's post-hoc PCHIP reading) has not been run.
+
 ## 26. E7: a within-process dissection of why OGC's lead shrinks with fine-tuning (pre-registered) — Δ_refit: equivalent; not superior; Δ_cb: equivalent; not superior
 
 **E7 is the test Amendment 20 pre-registered** (`53dde708`, with notes 1-5, all written before the data they govern).
