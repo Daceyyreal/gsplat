@@ -82,8 +82,8 @@ primaries "equivalent; not superior", neither fragile (FINDINGS section 26, `3ca
 `f7f5c035`; see "E7 closed"); the paper's E7 results are in `sec5_3_e7results.tex` (`b277b38a`, see "Paper step 1"); the abstract
 and introduction are drafted (see "Paper step 2"); `.claude/commands/` holds `/wrapup` and `/catchup` (`934a0366`); paper step 3 is done (see "Paper step 3"), and so are the shrink wording, the appendix, the email and the `e7.py` fixes, with the code-identity
 rule retired (see "Paper step 4"); the email, `ogc_derived.py`'s licence check and `catchup.md` are recorded in "After paper step 4", the licence cleanup
-(NOTICE, headers, the appendix's wording) in "Licence cleanup", and the redaction of the private-correspondence detail in
-"Redaction"; next: Dace's read of the paper.**
+(NOTICE, headers, the appendix's wording) in "Licence cleanup", the redaction of the private-correspondence detail in
+"Redaction", and the literature review in "Literature review"; next: Dace's read of the paper.**
 Before it: FINDINGS section 24 (`083fb93b`, `check_s24.py` `46695420`) and section 25 (`1b063523`,
 `check_s25.py` `3de53fc9`), CLAIMS scoped (`ed39b553`, `9e520001`; 67 rows).
 `paper/figs/`: headline-neutral figure/table scripts (`c537071f`), outputs (`1003bdad`, plus the F1 update: scripts
@@ -6248,6 +6248,42 @@ source chain and the derived fallback), `35d54b6c` (`ogc_gram_ours`), `854672e6`
 - **Checks:** every `check_s11`-`check_s26` exit 0, 0 failures; `check_tex` 215 numbers (28 by rounding), 0 failures; `check_figs` 1482,
   0 failures; 25 pages, no undefined reference, no overfull line; pytest 243 before each commit.
 - **The heads:** the fork head is the commit holding this entry, whose parent is `d2a33039`.
+- **Next action (superseded by "Literature review"): Dace's read of the paper.**
+
+### Literature review integrated (2026-11-08)
+
+- **Commits:** `0df89128` bib and Related work; `ab6d5040` the E7 discussion with `check_tex` rule 5 and `paper/QUOTES.md`;
+  `25e886bf` methodology in Setup; `308deab6` facts and limits. `0df89128`'s message says 27 entries; it added 28 (22 to 50).
+- **Counts:** `check_tex` 448 lines, 106 result lines, 231 numbers (28 by rounding), 0 failures; `check_figs` 1482, 0 failures;
+  29 pages, no undefined citation or reference, no overfull line; pytest 244.
+- **Verification:** every arXiv ID through the arXiv API (titles and authors matched Dace's list); venues through Crossref,
+  PMLR's volume pages, ICLR's proceedings page and CVF's open-access page; each entry's sources are in its comment.
+  - LoftQ's author order differs between arXiv and ICLR's proceedings; the entry uses ICLR's.
+  - **Not verified, not added:** the SPIE paper's volume number (the paper itself is verified by DOI, cited without a
+    volume); the ICCV 2019 workshop's organizers (no readable page named them; cited by title and CVF URL). MHV '22
+    "Revisiting BD-BR" was verified (Barman, Martini and Reznik) and added.
+- **Corrections to the request's framing, as written:**
+  - Van hauwermeiren et al.'s abstract says "importance-weighted quantisation"; "weighted Lloyd-Max" is in its Sec. 3.2.
+  - Instant Colorization solves a visibility-weighted least-squares problem per Gaussian for relighting and segmentation,
+    not compression; described so.
+  - **Novelty:** Budgeted-GS (arXiv 2610.03162, 2026-10-02) uses "a preregistered protocol" for its own method, so the
+    sentence claims only a pre-registered replication of a published method, as of 8 November 2026, and cites it.
+  - **E7 framing:** Nagel et al.'s Table 8 erases a large starting gap (0.12% against 18.58% after PTQ), so the paragraph
+    says erasure is expected "at moderate precision" rather than "when the starting error is small".
+  - **OGC's own equal-rate result:** Table 1's 512-entry rows (size 100%) give +0.32 dB before fine-tuning and +0.01 dB after
+    it; Section 5.1 quotes both.
+- **OGC anchors:** +0.49 dB: abstract, Sec. 4.1, Table 1 row "our matrix A_i in generalised Lloyd" before fine-tuning; +0.09 dB:
+  Sec. 4.1 and the same row after fine-tuning (also Table 6); +0.32 dB: abstract, Sec. 4.1, Table 1 "512-entry codebook" before
+  fine-tuning. All read in arXiv 2609.28997v1 HTML.
+- **Positions:** C3DGS's paper (Sec. 4.2) says fine-tuning optimises position; at `2a234af5` the position learning rate is
+  `position_lr_init * spatial_lr_scale` (`scene/gaussian_model.py:231`, `:268-269`), and `spatial_lr_scale` is 0 (`:69`) unless
+  `restore` runs (`:136`), which only `compress.py:135-137` does, for a non-empty `start_checkpoint` (default "", `arguments/__init__.py:95`);
+  nothing in this repository passes one. FINDINGS section 24 item 4 says `:69` is the only assignment, which overlooks `restore`;
+  not changed (FINDINGS), for Dace.
+- **Quoted numbers:** `check_tex` rule 5 checks a `quoted <bibkey>` line against `paper/QUOTES.md`'s Number cells (Nagel et al.
+  Table 8, EfficientQAT's abstract, OGC's Table 1); the hard-coded-reference test reads past a citation's optional argument
+  (`\citep[Table~8]{...}`); `\code{}` file:line pointers are not read for numbers.
+- **The heads:** the fork head is the commit holding this entry, whose parent is `308deab6`.
 - **Next action: Dace's read of the paper.**
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
