@@ -1,3 +1,12 @@
+# Parts of this file are derived from moholo-founder/ogc-3dgs at commit 49ccae72e75eec9877354ed72074827531f7fd79
+# (``vq.py``), which is licensed under the PolyForm Noncommercial License 1.0.0: <https://polyformproject.org/licenses/noncommercial/1.0.0>.
+# Those parts are distributed under those terms, for noncommercial research only (see NOTICE); the rest of this file
+# is under the repository's licence. Those parts are:
+#   - the ``gram_kmeans`` signature in ``_FAKE_OGC_VQ`` (``vq.py:17``);
+#   - the metric matrices in ``test_e5_ogc_metric_modes_are_their_whole_algorithm`` (``vq.py:26-29``).
+#
+# Required Notice: Copyright (c) 2026 Krzysztof Pietroszek
+# Required Notice: Licensee: Moholo Inc. Commercial licences: founders@moholo.co
 """CPU tests for bench/gn (E0). The CUDA checks run in the notebook's smoke-test cell.
 
     python -m pytest bench/gn/test_gn.py -q

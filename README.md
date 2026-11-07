@@ -144,3 +144,8 @@ We also have a white paper with about the project with benchmarking and mathemat
 ```
 
 We welcome contributions of any kind and are open to feedback, bug-reports, and improvements to help expand the capabilities of this software. Please check [docs/DEV.md](docs/DEV.md) for more info about development.
+
+## License
+
+gsplat is released under the Apache License 2.0 ([LICENSE](LICENSE)). On this branch, a few files and parts under
+`bench/gn/` are derived from other code under the PolyForm Noncommercial License 1.0.0; [NOTICE](NOTICE) lists them.

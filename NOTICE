@@ -1,0 +1,20 @@
+NOTICE
+
+This repository is licensed under the Apache License, Version 2.0 (see LICENSE), except for the files and parts
+listed below.
+
+The listed files and parts are derived from moholo-founder/ogc-3dgs (https://github.com/moholo-founder/ogc-3dgs)
+at commit 49ccae72e75eec9877354ed72074827531f7fd79 and are licensed under the
+PolyForm Noncommercial License 1.0.0, not under Apache-2.0: https://polyformproject.org/licenses/noncommercial/1.0.0
+They are for noncommercial research only.
+
+Files and parts:
+
+- bench/gn/ogc_derived.py: the whole file.
+- bench/gn/diagnostics.py: the "ridge_mean" branches of update_centroids.
+- bench/gn/gn_vq.py: the final_float_assignment step of gn_vq.
+- bench/gn/test_gn.py: the gram_kmeans signature in _FAKE_OGC_VQ and the metric matrices in
+  test_e5_ogc_metric_modes_are_their_whole_algorithm.
+
+Required Notice: Copyright (c) 2026 Krzysztof Pietroszek
+Required Notice: Licensee: Moholo Inc. Commercial licences: founders@moholo.co

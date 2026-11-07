@@ -1,3 +1,11 @@
+# Parts of this file are derived from moholo-founder/ogc-3dgs at commit 49ccae72e75eec9877354ed72074827531f7fd79
+# (``vq.py``), which is licensed under the PolyForm Noncommercial License 1.0.0: <https://polyformproject.org/licenses/noncommercial/1.0.0>.
+# Those parts are distributed under those terms, for noncommercial research only (see NOTICE); the rest of this file
+# is under the repository's licence. Those parts are:
+#   - the "ridge_mean" branches of ``update_centroids`` (``vq.py:63-73``).
+#
+# Required Notice: Copyright (c) 2026 Krzysztof Pietroszek
+# Required Notice: Licensee: Moholo Inc. Commercial licences: founders@moholo.co
 """E0 diagnostics on the GN metric (definitions in kaggle/PREREG_GN.md).
 
 a. per-splat spectrum of M_i; b. Spearman rank correlations; c. predicted vs measured shN error;
@@ -533,8 +541,8 @@ REFINE_VARIANTS = ("ridge", "prox")
 # update_centroids also takes "ridge_mean" (E4q, Amendment 16 b): OGC's regularised update (vq.py:63-73 at 49ccae72)
 # Derived from moholo-founder/ogc-3dgs at 49ccae72 (vq.py:63-73; the "ridge_mean" branches of update_centroids),
 # licensed under PolyForm Noncommercial 1.0.0 <https://polyformproject.org/licenses/noncommercial/1.0.0>;
-# written from the paper (arXiv 2609.28997, App. A) and from reading the released code. The author states that the
-# method is patented for commercial use, so this code is for noncommercial research only. It stays in place so that
+# written from the paper (arXiv 2609.28997, App. A) and from reading the released code; for noncommercial research
+# only (see this file's header and NOTICE). It stays in place so that
 # the frozen method's code path is unchanged; see bench/gn/ogc_derived.py.
 # Required Notice: Copyright (c) 2026 Krzysztof Pietroszek
 # Required Notice: Licensee: Moholo Inc. Commercial licences: founders@moholo.co

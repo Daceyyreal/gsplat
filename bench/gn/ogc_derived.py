@@ -2,8 +2,7 @@
 
 Derived from moholo-founder/ogc-3dgs at commit 49ccae72e75eec9877354ed72074827531f7fd79 (``vq.py``), which is licensed
 under the PolyForm Noncommercial License 1.0.0: <https://polyformproject.org/licenses/noncommercial/1.0.0>. These parts
-are distributed under those terms. The author states that the method is patented for commercial use, so this code is for
-noncommercial research only. The licensor's notices:
+are distributed under those terms, for noncommercial research only (see NOTICE). The licensor's notices:
 
 Required Notice: Copyright (c) 2026 Krzysztof Pietroszek
 Required Notice: Licensee: Moholo Inc. Commercial licences: founders@moholo.co
