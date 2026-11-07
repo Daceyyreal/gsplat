@@ -3194,6 +3194,19 @@ def test_findings_section_26_numbers_recheck_from_the_repo():
     assert check_s26.declaration_commit() == "c95c369f"
 
 
+def test_section_27_perceptual_bd_computation():
+    """check_s27's computation (FINDINGS section 27, declared at cf26643f): the tool's BD and the independent polyfit
+    agree on every perceptual and PSNR value, the PSNR values equal the registered P1, P2, P_FT and E7 Deltas, E5's
+    perceptual BDs equal section 20's, and no value is missing."""
+    import check_s27
+
+    out, F = check_s27.facts()
+    assert len(F["agree_fit"]) == 126 and all(F["agree_fit"])
+    assert F["psnr_match"] and all(F["psnr_match"]) and F["s20_equal"]
+    assert all(v is not None for d in F["V"].values() for v in d.values())
+    assert len(out["rows"]) == 5 * 8 and check_s27.DECLARATION == "cf26643f"
+
+
 def test_claims_group_h_restates_section_26():
     """paper/CLAIMS.md group H (E7): every number in a row's claim and limits is in FINDINGS section 26 (the two the limits
     quote from Amendment 20 f are there or in section 22), each row's check is check_s26.py, the post-hoc rows are labelled
@@ -3618,7 +3631,7 @@ def test_paper_appendix_tables_recompute_every_cell(tmp_path):
     spec.loader.exec_module(at)
     fresh = tmp_path / "fresh"
     prereg, sessions, checkers = at.main(str(fresh))
-    assert (len(sessions), len(checkers)) == (19, 16)
+    assert (len(sessions), len(checkers)) == (19, 17)  # check_s27 added 2026-11-08
     for name in os.listdir(fresh):
         a, b = (fresh / name).read_bytes(), open(os.path.join(out, name), "rb").read()
         assert a.replace(b"\r\n", b"\n") == b.replace(b"\r\n", b"\n"), name
