@@ -17,3 +17,4 @@ the source and when and in which version it was read. A quoted line says in its 
 | pietroszek2026only | 512 | Table 1, the row "our matrix, 512-entry codebook" | 2026-11-08, arXiv 2609.28997v1 HTML |
 | pietroszek2026only | +0.32 | Table 1, before fine-tuning, row "our matrix, 512-entry codebook" (size 101%); also the abstract and Sec. 4.1 | 2026-11-08, arXiv 2609.28997v1 HTML |
 | pietroszek2026only | +0.01 | Table 1, after fine-tuning, row "our matrix, 512-entry codebook" (size 100%); also Sec. 4.1 | 2026-11-08, arXiv 2609.28997v1 HTML |
+| pietroszek2026only | 100 | Table 1, after fine-tuning, row "our matrix, 512-entry codebook": size 28.9 MB, 100% of the reproduced C3DGS's; also Sec. 4.1 ("100 % of theirs over all nine scenes") | 2026-11-08 (re-read for the equal-size sentence), arXiv 2609.28997v1 HTML |
