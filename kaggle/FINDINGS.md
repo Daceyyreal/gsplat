@@ -5832,3 +5832,67 @@ beside it; the mean row's count is the scenes that agree.
 - **Not settled:** no verdict is given and none is re-judged: E7's equivalence outcomes are in PSNR at δ = 0.07 dB,
   and no perceptual margin was set, so nothing here says whether the perceptual Deltas are equivalent to 0. The
   per-scene disagreements are small values whose noise was not measured; no standard error is computed.
+
+## 28. BD robustness: a piecewise-cubic (PCHIP) BD and a rate-matched pointwise reading of every reported BD value (post hoc, report only, declared before computing these) — declared 2026-11-08; not yet computed
+
+**Declaration (2026-11-08), committed and pushed alone, before any value below is computed.** A **post-hoc
+robustness analysis, report only, declared before computing these.** It reads only committed bundles on the CPU; no
+run. **It changes no registered verdict:** E5's, E6 part (b)'s and E7's verdicts stand as recorded under their
+registered BD (Amendment 9 a's domain-scaled polynomial fit of degree min(3, n - 1), which for every curve here, three
+points, is a parabola). Whether a verdict *would* differ under the readings below is reported as a description only.
+
+**The values.** Every BD-PSNR value section 25's later note counts (the 86: E5's P1 and P2; E6 part (b)'s P_FT and P1
+replicated; E6 part (a)'s P1, P2 and P_FT; E7's BD_R, BD_G, BD_CG, BD_K, BD_O, BD_R from the seed-1 curve and E7's
+P1), per scene, plus E7's two primaries per scene (Δ_refit = BD_G - BD_R, Δ_cb = BD_CG - BD_G) and every mean of
+these. BD-rate and the perceptual BDs (section 27) are not included.
+
+**(a) PCHIP BD.** Each curve's PSNR as a function of log10 of its `.npz` bytes, through its three points, by the
+piecewise cubic Hermite interpolating polynomial with Fritsch and Butland's monotone slopes (`scipy.interpolate.
+PchipInterpolator`, the tool); the BD is the difference of the two curves' integrals over their shared log10-byte range
+divided by its width, exactly as the registered BD integrates its fits. PCHIP passes through the points and adds no
+extremum between two of them, so it cannot bend where the data do not. `bench/gn/check_s28.py` also computes it with
+its own implementation of the same slopes and the Hermite integral, and the two must agree below 1e-9; it recomputes the
+registered BD with `bench/gn/e5.py`'s `bd` and must reproduce the registered values.
+
+**(b) The pointwise, interpolation-free reading.** In every process the two rows of a pair share the same colour
+threshold j and seed, so at each of the curve's points ("config") the pair has a byte gap, 100 x (bytes of OGC's row -
+bytes of the other) / bytes of the other, and a ΔPSNR, OGC's row minus the other in protocol ii. **A config is called
+rate-matched when |byte gap| <= τ = 1.0%,** and only then is its ΔPSNR reported as a rate-matched comparison; per
+scene and value the pointwise reading is the mean ΔPSNR over its rate-matched configs, with their number (0 to 3).
+For E7's Δ primaries the pointwise reading at a config is the difference of the two arms' ΔPSNR, used only where both
+arms' pairs are rate-matched there.
+- **Why 1.0%, fixed now:** a byte gap g shifts log10 bytes by log10(1 + g/100), 0.0043 at 1%. Section 15 reports C3DGS's
+  colour threshold spanning 2.49x in `.npz` bytes for protocol ii 20.733-21.205 dB on train, about 1.19 dB per decade of
+  bytes, so a 1% gap is worth about 0.005 dB of PSNR; even at four times that slope it is about 0.02 dB, under a third of
+  E7's margin δ = 0.07 dB and under the j = 0 seed noise of a paired difference (`SD_pool` 0.0121 in E5's P1, section 25).
+  A wider τ would let the rate gap itself carry a visible part of a 0.01-0.05 dB effect; a narrower one would leave
+  almost nothing eligible.
+
+**(c) What is reported, per value and scene and for each mean:** the registered BD, the PCHIP BD, |difference|, whether
+the two have the same sign (r9, an exact 0 agreeing with nothing), the pointwise mean ΔPSNR with its count of
+rate-matched configs and the byte gaps. **And for each registered decision** (E5's P1 and P2 and E6's P_FT, each under
+its three criteria with the registered `SE_noise`; E7's Δ_refit and Δ_cb under Amendment 20 f's Holm-corrected
+superiority and equivalence at δ = 0.07 dB with the registered `SE`, and its robustness reading with `SD_BD` recomputed
+from the PCHIP BD_R curves), the outcome the PCHIP values would give and whether it differs from the registered one.
+The noise terms come from the j = 0 seed pairs and do not depend on the interpolant; they are reused unchanged. No
+standard error is computed for the pointwise reading, and none of it is a test.
+
+**(d) What is already known, and so is not new here:**
+- section 25's later note: 36 of the 86 BD values have a fit that bends inside the shared range (45 of 172 fits; 16 of
+  172 measured curves fall). **Computed before this declaration, on 2026-11-08 (exploratory, not committed):** a
+  recount with the fitted curve's slope changing sign anywhere in the shared range gives the same 36 (for a parabola the
+  two criteria are one), and of the 45 bending fits 32 overshoot monotone points and 13 follow non-monotone points;
+  these are reported in this section as such.
+- section 27's perceptual BDs, and E2's post-hoc PCHIP reading (section 10: 8 of 9 and -5.66%), the precedent.
+- the byte gaps after fine-tuning at j = -1 and j = +1 (section 22 d: OGC's row 3.5% to 7.9% larger at j = +1 and 0.3%
+  to 7.9% smaller at j = -1), so few fine-tuned configs may be rate-matched; before fine-tuning OGC's rows were larger
+  at every point (section 21, secondary 2).
+- No PCHIP BD and no pointwise mean of E5-E7 has been computed before this declaration.
+
+**The choice of PCHIP** follows the codec-testing recommendation to compute BD with piecewise-cubic interpolation
+(Barman et al. 2024, arXiv 2401.04039v1, Sec. VI-C; Sec. IV-B traces the piecewise cubic Hermite interpolating
+polynomial to ITU-T COM16-C.404).
+
+**Where it goes:** this section, below this declaration (which stays as written); `bench/gn/check_s28.py`; CLAIMS rows;
+a generated appendix table (`paper/figs/`); one paragraph in the paper and the Limitations sentence on the fits' shape.
+A result in either direction is reported.

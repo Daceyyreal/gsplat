@@ -6382,7 +6382,20 @@ Part 0 (follow-ups from the literature review), Part A (perceptual metrics, no r
 - **The PDF:** `F:\gsplat_paper_draft.pdf` rebuilt at `259cbd2e` (30 pages) and replaced.
 - **Scratch to delete:** none in the repository; the session's scratchpad holds downloaded C3DGS, MesonGS(++) and LightGaussian
   source files (read only, never in the repository).
-- **Next action: Dace picks the path: E8 / E9 / second host / method.**
+- **Next action (kept by "Readings, BD robustness and drafts"): Dace picks the path: E8 / E9 / second host / method.**
+
+### Readings, BD robustness and drafts (2026-11-08, second session)
+
+Dace's prompt superseding earlier ones where they conflict: Part 1 readings R1-R7 (confirm or refute with evidence), Part 2
+BD robustness (post hoc, report only), Part 3 drafts, Part 4 arXiv package (prepared, not submitted).
+
+- **Part 2's declaration, committed and pushed alone before any value was computed:** FINDINGS section 28 opens with it:
+  a PCHIP BD on the same log10-byte axis and shared range for the 86 BD values of section 25's later note plus E7's two
+  primaries; a pointwise, interpolation-free reading at the configs whose byte gap is within τ = 1.0% (justified from
+  section 15's slope before computing); per value the registered BD, PCHIP BD, |difference|, sign agreement, pointwise
+  mean; and whether any registered decision would differ under PCHIP (E5 P1/P2, E6 P_FT under their criteria; E7's
+  primaries under Holm at δ = 0.07 dB). It changes no registered verdict. Disclosed as already known: section 25's count,
+  the R3a/R3b recount computed earlier this session, section 27, E2's PCHIP precedent, the published byte gaps.
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
