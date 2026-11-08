@@ -6607,6 +6607,18 @@ split before it reaches the fork.
   `F:\arxiv_pkg\gsplat_ogc_v2\INSTRUCTIONS.txt` (5 steps: upload and check the sha256; check the compiled PDF against
   `build_clean/main.pdf`; note any endorsement prompt; fill the metadata; save without submitting).
   `F:\arxiv_pkg\gsplat_ogc_v1` (from `882fa7f1`) is superseded. Next: Part 6 (PATH blank = NONE: skipped), Part 7.
+- **Part 6:** skipped (PATH blank = NONE): no declaration, amendment or code; no notebook run.
+- **Part 7 checkpoint (final):** `F:\gsplat_paper_draft.pdf` rebuilt from `58f5ac1a` (MiKTeX `latexmk`, out of tree: 32
+  pages, 0 errors, 0 undefined, 0 overfull). Checks: check_tex 484 lines, 280 numbers (28 by rounding), 0 failures;
+  check_figs 1482, 0 failures; check_s24-check_s28 0 failures; every gate this session 247 passed, 0 skipped.
+  **Not pushed** (KAGGLE blank, not YES). The fork is at `8abfdecf`; local `bench/gn-vq` is ahead by 15 commits, the
+  oldest first: `8c0ee88f`, `cfb1f701`, `47cd844f`, `1071fb4a`, `9f95d792`, `bc876d08`, `89d7fea8`, `7f5da3f1`,
+  `d19bd885`, `582f3739`, `4933f94b`, `c85d75ce`, `e8badf80`, `58f5ac1a`, and this checkpoint; `fork/bench/gn-vq` is
+  an ancestor, so the push is a fast-forward. The local branch `backup/pre-r11-split` (`d8aac3c3`, the pre-split
+  history) can be deleted once Dace has read the split; it must never be pushed.
+- **Next action: Dace:** (1) KAGGLE status (YES: `git fetch fork`, ancestor check, fast-forward push); (2) the arXiv
+  preview per `F:\arxiv_pkg\gsplat_ogc_v2\INSTRUCTIONS.txt`; (3) PATH: D1 / D2 / D3 / D4 / second host; (4) WHEEL: check
+  E7 S11's output; (5) Docker's reset dialog (not touched).
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
