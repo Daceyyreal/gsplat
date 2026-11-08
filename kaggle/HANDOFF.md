@@ -110,7 +110,7 @@ move into FINDINGS (see "E7 write-up skeleton and check_s26 (2026-10-29; no E7 v
 Part A, perceptual secondaries (declaration `cf26643f`, pushed before computing; `88c3e9b2` check_s27, `c72a96e5` FINDINGS
 section 27 + CLAIMS A13/F12/H15, `259cbd2e` paper Section 5.4): every mean agrees in sign with PSNR; Part B drafts in
 `kaggle/drafts/` (E8, E9, second host, method), nothing in PREREG. 30 pp, check_tex 269 numbers, pytest 245. **Next action:
-Dace picks the path: E8 / E9 / second host / method** (see "Broadening the paper toward a top venue (2026-11-08)"). **Second session (2026-11-08):** readings R1-R7 (R1, R2, R6a-c, R7 confirmed; R3a refuted: the fits are parabolas), process note `da0c0444`, R1 reword `7811ff6d`, BD robustness (declared `39d41733`; FINDINGS s28: no registered decision would differ under PCHIP; paper Section 5.5), Part 3 drafts `603563bc` (E8 as a 2 x 2, SH-only check, pilot, wheel cache), arXiv package prepared outside the repository (not submitted); see "Readings, BD robustness and drafts (2026-11-08, second session)".
+Dace picks the path: E8 / E9 / second host / method** (see "Broadening the paper toward a top venue (2026-11-08)"). **Second session (2026-11-08):** readings R1-R7 (R1, R2, R6a-c, R7 confirmed; R3a refuted: the fits are parabolas), process note `da0c0444`, R1 reword `7811ff6d`, BD robustness (declared `39d41733`; FINDINGS s28: no registered decision would differ under PCHIP; paper Section 5.5), Part 3 drafts `603563bc` (E8 as a 2 x 2, SH-only check, pilot, wheel cache), arXiv package prepared outside the repository (not submitted); see "Readings, BD robustness and drafts (2026-11-08, second session)". **Third and fourth sessions (2026-11-08):** readings R8-R10 and drafts D1-D4 (third, merged from its uncommitted record), the fourth session's Parts 1-7 (recovery, the split of R8's commit, the gate, drafts, arXiv package); see "Fourth session of 2026-11-08" for its checkpoints and next action.
 
 ## Context and rules
 
@@ -6464,6 +6464,87 @@ BD robustness (post hoc, report only), Part 3 drafts, Part 4 arXiv package (prep
   279 numbers (28 by rounding), 0 failures; check_figs 1482, 0 failures; check_s24-check_s28 0 failures; 32 pages. The PDF
   `F:\gsplat_paper_draft.pdf` rebuilt from this state.
 - **Next action: Dace picks the path: E8 / E9 / second host / method** (and whether to post the arXiv package).
+
+### Third session of 2026-11-08: readings R8-R10, drafts D1-D4 (merged from `kaggle/drafts/handoff_third.md`)
+
+That session hit the usage limit before its wrap-up, so it kept its record in `kaggle/drafts/handoff_third.md` (never
+committed); the fourth session merged it here and deleted the file. **The two local commits it names, `8c0ee88f` and
+`ae2d16bb`, were not pushed, and `ae2d16bb` was later split** (see "Fourth session of 2026-11-08", Part 2, for the new
+hashes); the text below keeps the hashes as that session recorded them.
+
+- **Heads at its end:** fork `bench/gn-vq` at `8abfdecf` (the second session's HANDOFF commit); local ahead by two
+  commits, both gated (pytest 247 passed, `GN_OGC_SRC` and `GN_C3DGS_SRC` set): `8c0ee88f` test_gn:
+  `test_c3dgs_color_compress_non_dir_false_loses_the_dc` (R9); `ae2d16bb` R8: Limitations sentences, FINDINGS s28's
+  listing of the 13 non-monotone fits, `check_s28`, CLAIMS E21, check_tex pin 279 -> 280. Not pushed because the KAGGLE
+  STATUS line came blank, not YES ("commit locally, do not push").
+- **Left untracked in `kaggle/drafts/`:** `D1_SH_ONLY_DISSECTION_DECLARATION_DRAFT.md`, `D2_E8_SINGLE_PRIMARY_DRAFT.md`,
+  `D3_METHOD_A_PILOT_DECLARATION_DRAFT.md`, `D4_MEMORY_PROBE_AND_E9_INRIA_DRAFT.md`, `memory_probe.py` (D4's probe),
+  `build_memory_probe.py` (its notebook builder); none gated; the probe notebook `gn_memory_probe.ipynb` not generated
+  (to be built with the commit that holds these files).
+- **R8 (three rate points), confirmed; nothing to fix in (a):**
+  - (a) Every description of E5-E7's BD says degree 2 through three points: PREREG `:2621-2622`, `:3525`, `:4035`;
+    FINDINGS `:4008-4011`, `:4135`, `:4432`, `:4535` and section 28; paper `sec2_setup.tex:38`, `sec3_replication.tex:65`,
+    `sec5_finetuning.tex:48`, `sec6_limits.tex:17`, `:20`, `sec5_5_robustness.tex`. The cubic and four-point wording in
+    PREREG (Amendments 7-9, `:701-711`, `:847`, `:1147`) and FINDINGS (sections 9-12) is E1/E2/E2c's, which had four
+    K points: correct there.
+  - (b) Barman et al. 2024 (arXiv 2401.04039v1, read 2026-11-08): four rate points are customary (Sec. I, II-C; the
+    original tools took exactly four, Sec. IV-B, V-B1; more than four needs a supporting tool, Sec. VI-C); no minimum is
+    stated and three points are not discussed. The paper says "customarily four", not "recommends".
+  - (c) In `ae2d16bb`: Limitations names the three rate points beside that citation, and the 13 fits on non-rising
+    points (playroom, drjohnson, train, room), which feed E6's P_FT on playroom and E7's two primaries on drjohnson and
+    playroom (none in E5). Pushback: "ill-posed under any interpolant" is too strong, since BD-PSNR is defined for any
+    interpolant but depends on it there, and BD-rate is not single-valued. **Dace accepted the pushback (fourth
+    session).** FINDINGS s28 lists the 13 by value and scene (no new value), `check_s28.py` verifies, CLAIMS E21 restates.
+- **R9 (C3DGS `color_compress_non_dir=False`), a latent defect, not "broken":** the repro test (in `8c0ee88f`; skipped
+  without `GN_C3DGS_SRC`) passes: the decoded model has 15 coefficients and its "DC" is the first AC coefficient; the
+  default path keeps kept rows exactly. The branch is unreachable from C3DGS's command line (`store_true` flag,
+  `arguments/__init__.py:30-31`, default True `:81`). The paper does not mention it. C3DGS's source for the test is
+  `F:\c3dgs_src_2a234af5` (outside the repository, commit `2a234af55fbe8b90c8829c1436ce80088c4b622b`).
+- **R10:** natbib + bibtex (`plainnat`, `paper/tex/main.tex`), not biblatex/biber: no `.bbl` version risk.
+- **arXiv package: not done (blocked).** Docker Desktop failed to start; its backend log
+  (`%LOCALAPPDATA%\Docker\log\host\com.docker.backend.exe.log`) shows an error dialog and a "Reset to factory defaults"
+  action at 09:41:52Z, not triggered by that session; the data disk `F:\DockerData\wsl\disk\docker_data.vhdx` (32 GB,
+  last modified Nov 2) was still there afterwards. Docker was not touched again (Dace to look at it). Fallback TinyTeX
+  `v2026.02` (the last TeX Live 2025 build; arXiv's default is TeX Live 2025, per info.arxiv.org) is downloaded to
+  `F:\tinytex_tl2025\TinyTeX-1-v2026.02.zip` (121,758,783 bytes), not unpacked or run (Dace: TINYTEX = NO, fourth
+  session). A comment cleaner (an arxiv_latex_cleaner equivalent: comment-only lines removed, trailing comments cut with
+  the `%` kept, `verbatim` untouched, `references.bib` dropped for `main.bbl`) was tried on a copy
+  (`F:\arxiv_pkg\test_clean`) and worked; the cleaned build, the page-by-page text comparison, the sha256 and the source
+  commit were not done. `F:\arxiv_pkg\gsplat_ogc_v1` was built from `882fa7f1` and is stale: `ae2d16bb` changed
+  `sec6_limits.tex`.
+- **Drafts (key numbers):**
+  - **D1** (AC-only dissection, gate scenes, exploratory, before fine-tuning): rows `c3dgs`, `ogc_gram`, `ogc_gram_ac`
+    (DC weight flat across splats, cross terms 0, AC block kept; same container, so bytes compare); thresholds for a
+    second host: >= 0.10 dB mean and >= 5 of 7 positive (training-free rows), >= 0.25 dB (fine-tuned rows; 0.1195 x 0.25
+    = 0.03 dB, about E7's detection floor); 9.1-12.9 h of jobs, two sessions. Supersedes
+    `SH_ONLY_CHECK_DECLARATION_DRAFT.md`.
+  - **D2** (E8, one primary): H_E8: BD_C - BD_N > 0, one-sided, E7's superiority without Holm; criterion-3 threshold
+    0.0105-0.0211 dB, 80% power at 0.0155-0.0311 dB (E7's `SE` 0.0056-0.0111). Session-hours, high / calibrated, cached
+    wheel: 4 arms 70.2 / 48.0; + O 84.3 / 57.6; + 4th point 82.5 / 56.6; both 100.0 / 68.8. Supersedes
+    `E8_AMENDMENT21_DRAFT.md`.
+  - **D3** (method (a) pilot on the gate scenes, exploratory): go at mean recovery >= 0.025 dB with >= 5 of 7 positive;
+    smallest detectable 0.037 dB on the gate scenes (0.078 dB was the three-development-scene figure; Dace confirmed,
+    fourth session); confirmatory tests only on held-out scenes; 43.0 h of jobs high, 29.4 calibrated. Supersedes
+    `METHOD_A_PILOT_DECLARATION_DRAFT.md`.
+  - **D4** (memory probe for bicycle, garden, stump): logs only peak GPU bytes per step, splat counts, image bytes and
+    size, checkpoint sha1; test cameras, `render_and_eval`, PSNR and LPIPS (including `compress.py`'s own bindings) raise
+    if called; never run. E9-INRIA options: a descriptive three-scene criterion; the hybrid sign test (3 INRIA + 8 DL3DV =
+    n 11, the smallest with 80% power at a 6/7 positive rate).
+- **cu130 wheel: not checked** (no Kaggle CLI; the built-in browser is not signed in to Kaggle). Check the "E7 OGC
+  FT-dissection S11" notebook's Output tab for `wheels/33734f894b0a-95f8de51-torch2.11.0_cu130-sm7.5/gsplat-*.whl`.
+- **Not done there:** HANDOFF (done now), `F:\gsplat_paper_draft.pdf` (predates `ae2d16bb`), memory.
+- **Next action as it stood:** Dace picks D1 / D2 / D3 / D4 / second host / arXiv post, after the Kaggle status, the
+  Docker dialog and the TinyTeX permission. Superseded by the fourth session's prompt (below).
+
+### Fourth session of 2026-11-08: recovery, history split, gate, drafts, arXiv package (checkpoints)
+
+Dace's prompt: STATUS KAGGLE blank (not YES: commit locally, no push), WHEEL blank (not checked; treated as not found),
+PATH blank (= NONE: no declaration lands), TINYTEX = NO; Parts 1-7 in order, a HANDOFF checkpoint committed after each.
+Before the prompt Dace also said: do not push; `ae2d16bb` bundles a FINDINGS note with code and paper text and must be
+split before it reaches the fork.
+
+- **Part 1 checkpoint:** the third session's record is merged above and `kaggle/drafts/handoff_third.md` deleted (it was
+  untracked, so the deletion is not in a commit). Next: Part 2 (R11 split of `ae2d16bb`, R12 gate).
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
