@@ -189,6 +189,11 @@ before computing these (`cf26643f`); no run, no verdict.**
 - BD-SSIM and BD-LPIPS: every mean (P1, P2, P_FT, Delta_refit, Delta_cb) agrees in sign with its PSNR value.
 - Per scene, P_FT agrees on 5 of 7 (BD-SSIM) and 6 of 7 (BD-LPIPS); Delta_refit on 5 of 7 and 4 of 7; Delta_cb on 7 of 7 and 6 of 7.
 
+**BD robustness (section 28, branch `bench/gn-vq`): post hoc, report only, declared before computing these
+(`39d41733`); no run, no verdict changed.**
+- A PCHIP BD in place of the registered parabola: largest |difference| 0.0429 dB over the 86 BD values, median 0.0033 dB; no registered decision would differ (E5 P1 and P2, E6 P_FT, E7's two primaries and their robustness reading).
+- The pointwise, rate-matched reading covers 18 of 258 configs (|byte gap| <= 1.0%); the bending count is the same by the slope criterion.
+
 ## Process notes
 
 - **2026-11-08, recorded after the fact: two commits put a write-up and its checker together.** `d84720a8` (section
@@ -331,6 +336,11 @@ before computing these (`cf26643f`); no run, no verdict.**
   (`87cc6a59`, `94551278`, `13a95aa1`) and E7's eleven (listed in section 26's entry), each scene from the session that
   ran it; no run. The declaration is `cf26643f`, pushed before any value was computed. `bench/gn/check_s27.py`
   recomputes every number with `bench/gn/e5.py`'s BD and its own fit, and checks each against the text.
+- Section 28: every number comes from the bundles section 25's later note reads (E5's, E6 part (b)'s, E6 part (a)'s
+  `9ce9b36e` and `6ff4877e`, and E7's eleven), each scene from the session that ran it; no run. The declaration is
+  `39d41733`, pushed before any value was computed. `bench/gn/check_s28.py` recomputes every number with the tools
+  (`bench/gn/e5.py`'s BD, scipy's PCHIP, `bench/gn/e7.py`'s tests) and with its own implementations, and checks each
+  against the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -5833,7 +5843,7 @@ beside it; the mean row's count is the scenes that agree.
   and no perceptual margin was set, so nothing here says whether the perceptual Deltas are equivalent to 0. The
   per-scene disagreements are small values whose noise was not measured; no standard error is computed.
 
-## 28. BD robustness: a piecewise-cubic (PCHIP) BD and a rate-matched pointwise reading of every reported BD value (post hoc, report only, declared before computing these) — declared 2026-11-08; not yet computed
+## 28. BD robustness: a piecewise-cubic (PCHIP) BD and a rate-matched pointwise reading of every reported BD value (post hoc, report only, declared before computing these) — no registered decision would differ under PCHIP
 
 **Declaration (2026-11-08), committed and pushed alone, before any value below is computed.** A **post-hoc
 robustness analysis, report only, declared before computing these.** It reads only committed bundles on the CPU; no
@@ -5896,3 +5906,78 @@ polynomial to ITU-T COM16-C.404).
 **Where it goes:** this section, below this declaration (which stays as written); `bench/gn/check_s28.py`; CLAIMS rows;
 a generated appendix table (`paper/figs/`); one paragraph in the paper and the Limitations sentence on the fits' shape.
 A result in either direction is reported.
+
+### Results (computed after the declaration was pushed at `39d41733`; post hoc, report only)
+
+"Registered" is the registered fit, which for every curve here is a parabola through its three points (no cubic is
+fitted anywhere in E5-E7); "PCHIP" is as declared. Each row gives the mean over its scenes of both, the largest
+|difference| over the scenes, the scenes where both are non-zero with the same sign, the rate-matched configs (|byte
+gap| <= 1.0%) of the three per scene, and the pointwise reading: the mean over the scenes with a rate-matched config of
+their mean ΔPSNR there, with the registered BD over the same scenes and how many of those scenes have the same sign.
+
+| Experiment | Value | Registered (dB) | PCHIP (dB) | Largest difference | Same sign | Rate-matched configs | Pointwise |
+|---|---|---|---|---|---|---|---|
+| E5 | P1 | +0.3558 | +0.3628 | 0.0120 | 7 of 7 | 0 of 21 | none |
+| E5 | P2 | +0.1874 | +0.1896 | 0.0039 | 7 of 7 | 1 of 21 | +0.1281 (1 scene; registered there +0.2757; same sign 1 of 1) |
+| E6 part (b) | P_FT | +0.0425 | +0.0454 | 0.0125 | 7 of 7 | 4 of 21 | +0.0591 (4 scenes; registered there +0.0447; same sign 4 of 4) |
+| E6 part (b) | P1 replicated | +0.3556 | +0.3623 | 0.0128 | 7 of 7 | 0 of 21 | none |
+| E6 part (a) | P1 | +0.0929 | +0.0984 | 0.0119 | 3 of 3 | 0 of 9 | none |
+| E6 part (a) | P2 | +0.0456 | +0.0463 | 0.0018 | 3 of 3 | 1 of 9 | +0.0283 (1 scene; registered there +0.0649; same sign 1 of 1) |
+| E6 part (a) | P_FT | +0.0005 | -0.0059 | 0.0224 | 3 of 3 | 0 of 9 | none |
+| E7 | BD_R | +0.0467 | +0.0499 | 0.0134 | 6 of 7 | 4 of 21 | +0.0627 (4 scenes; registered there +0.0561; same sign 4 of 4) |
+| E7 | BD_G | +0.0266 | +0.0336 | 0.0429 | 7 of 7 | 0 of 21 | none |
+| E7 | BD_CG | +0.0351 | +0.0444 | 0.0403 | 7 of 7 | 0 of 21 | none |
+| E7 | BD_K | +0.3013 | +0.3074 | 0.0123 | 7 of 7 | 0 of 21 | none |
+| E7 | BD_O | +0.0412 | +0.0446 | 0.0144 | 6 of 7 | 4 of 21 | +0.0610 (4 scenes; registered there +0.0480; same sign 3 of 4) |
+| E7 | BD_R, seed 1 | +0.0420 | +0.0425 | 0.0074 | 7 of 7 | 4 of 21 | +0.0493 (4 scenes; registered there +0.0403; same sign 3 of 4) |
+| E7 | P1 (before fine-tuning) | +0.3540 | +0.3609 | 0.0129 | 7 of 7 | 0 of 21 | none |
+| E7 | Delta_refit | -0.0201 | -0.0162 | 0.0296 | 7 of 7 | 0 of 21 | none |
+| E7 | Delta_cb | +0.0084 | +0.0108 | 0.0129 | 6 of 7 | 0 of 21 | none |
+
+- **Over the 86 BD values:** largest |difference| 0.0429 dB, median 0.0033 dB; the sign differs on 2 of 86: E7's BD_R on drjohnson (-0.0095 registered, +0.0031 PCHIP) and E7's BD_O on kitchen (-0.0127 registered, +0.0017 PCHIP).
+- **E6 part (a)'s P_FT mean** changes sign (+0.0005 registered, -0.0059 PCHIP); that value is descriptive and not interpreted (section 23).
+- **E7's kitchen:** kitchen's Δ_refit is -0.1501 registered and -0.1205 under PCHIP; it is the only scene beyond ±δ = 0.07 dB on either primary under both fits.
+- **Rate-matched configs are rare:** 18 of 258 configs. Before fine-tuning OGC's rows are larger than C3DGS's at every point,
+  so no P1 config is rate-matched; the pointwise reading covers a few fine-tuned configs only, and none where both arms
+  of an E7 primary are rate-matched.
+- **The registered decisions, and what PCHIP would give** (description only; the registered verdicts stand):
+
+  | Decision | Registered | Under PCHIP | Differs |
+  |---|---|---|---|
+  | E5 P1 | passes | passes | no |
+  | E5 P2 | passes | passes | no |
+  | E6 P_FT | passes | passes | no |
+  | E7 Δ_refit | equivalent; not superior; not fragile | equivalent; not superior; not fragile | no |
+  | E7 Δ_cb | equivalent; not superior; not fragile | equivalent; not superior; not fragile | no |
+
+  E7's robustness reading: SD_BD 0.024222 (registered fit) and 0.021781 (PCHIP).
+- **The fits' shape, recounted** (computed before the declaration, as it discloses): bending by section 25's vertex
+  criterion and by a sign change of the fitted slope anywhere in the shared range, and the bending fits on rising points
+  (overshoot) and on non-monotone points:
+
+  | Experiment | Value | Vertex inside | Slope changes sign | Overshoot fits | Fits on non-monotone points |
+  |---|---|---|---|---|---|
+  | E5 | P1 | 1 of 7 | 1 of 7 | 1 | 0 |
+  | E5 | P2 | 2 of 7 | 2 of 7 | 3 | 0 |
+  | E6 part (b) | P_FT | 3 of 7 | 3 of 7 | 2 | 1 |
+  | E6 part (b) | P1 replicated | 3 of 7 | 3 of 7 | 2 | 1 |
+  | E6 part (a) | P1 | 1 of 3 | 1 of 3 | 1 | 0 |
+  | E6 part (a) | P2 | 1 of 3 | 1 of 3 | 1 | 0 |
+  | E6 part (a) | P_FT | 1 of 3 | 1 of 3 | 0 | 2 |
+  | E7 | BD_R | 5 of 7 | 5 of 7 | 4 | 2 |
+  | E7 | BD_G | 3 of 7 | 3 of 7 | 3 | 1 |
+  | E7 | BD_CG | 5 of 7 | 5 of 7 | 6 | 2 |
+  | E7 | BD_K | 1 of 7 | 1 of 7 | 1 | 0 |
+  | E7 | BD_O | 5 of 7 | 5 of 7 | 5 | 2 |
+  | E7 | BD_R, seed 1 | 3 of 7 | 3 of 7 | 2 | 1 |
+  | E7 | P1 (before fine-tuning) | 2 of 7 | 2 of 7 | 1 | 1 |
+
+  In all 36 and 36 of 86; 32 overshoot fits and 13 on non-monotone points. For a parabola the slope is linear, so the two criteria are the same test.
+
+### What section 28 settles, and what it does not
+
+- **Settled (descriptive):** with PCHIP in place of the registered parabola every registered decision would be the same,
+  and no mean changes sign except E6 part (a)'s P_FT, which is not interpreted. The bending count does not depend on the
+  criterion. **This changes no registered verdict.**
+- **Not settled:** the pointwise reading is not a substitute for an equal-rate comparison, because so few configs are
+  rate-matched; no standard error is computed for it or for the PCHIP values, and nothing here is a test.

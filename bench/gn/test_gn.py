@@ -3242,6 +3242,20 @@ def test_section_28_bd_robustness_computation():
         x, y = c._sorted_xy(p)
         assert abs(c._hermite_integral(x, y, c._slopes(x, y), lo, hi) - PchipInterpolator(x, y).integrate(lo, hi)) < 1e-12
         assert abs(c.own_pchip_mean(p, q) - c.pchip_tool(p, q)) < 1e-12
+    # the text, its summary and Sources entry, and CLAIMS E20 and E21 restate it
+    res = c.run()
+    assert res["fails"] == [] and res["n_numbers"] >= 40
+    import re
+
+    claims = open(os.path.join(os.path.dirname(os.path.dirname(HERE)), "paper", "CLAIMS.md"), encoding="utf-8").read()
+    txt = open(c.FINDINGS, encoding="utf-8").read()
+    sec = txt[txt.index("## 28. BD robustness"):]
+    for rid in ("E20", "E21"):
+        (body,) = re.findall(rf"^\| {rid} \|(.*)$", claims, re.M)
+        cells = [x.strip() for x in body.split(" | ")]
+        assert len(cells) == 7 and cells[3].startswith("`check_s28.py`"), rid
+        for tok in c.NUM.findall(cells[0] + " " + cells[5]):
+            assert tok in sec or tok.lstrip("+-") in sec, (rid, tok)
 
 
 def test_claims_group_h_restates_section_26():
