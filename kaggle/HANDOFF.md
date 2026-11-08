@@ -6576,6 +6576,22 @@ split before it reaches the fork.
   `WHEEL_CACHE_CU130.md` from `882fa7f1` to `d19bd885` (key unchanged: `33734f894b0a-95f8de51`). WHEEL was blank, so
   S11's output is recorded as not checked and Step 1 (reuse S11's wheel) stays first; the build notebook stays the
   fallback. Both pins are local only until a push. Next: Part 4 (R13-R15, drafts only).
+- **Part 4 checkpoint (R13-R15, `c85d75ce`, drafts only):**
+  - **R13, with pushback:** D1 never used C3DGS's `False` branch (its draft said so); all three rows keep the default
+    container and `ogc_gram_ac` changes the metric only, so "decoded DC is the true DC" cannot hold for D1's rows (their
+    DC is quantized with the codeword). Two contracts instead: D1's hook refuses `color_compress_non_dir=False` and
+    decodes 16 coefficients, kept splats exact; any AC-only container must decode the true per-splat DC plus 15 AC
+    coefficients. `kaggle/drafts/d1_regression_tests_draft.py` (3 tests; run by hand against `F:\c3dgs_src_2a234af5`: 3
+    passed; C3DGS's unfixed branch fails contract 2, a reference fork decode passes). Fork files: none of C3DGS's for D1's
+    rows; an AC-only container would need `scene/gaussian_model.py` and `compression/vq.py`.
+  - **R14:** D1's 0.25 dB fine-tuned threshold is labelled a planning assumption (AC part assumed to shrink like the full
+    lead); it might not: 0.1195 is a ratio of means (per scene -0.017 to +0.331, s22 b), and E7 found neither the grid
+    re-fit nor codebook training explains the shrink (H1, H2).
+  - **R15:** D4 section 4 (`kaggle/drafts/e9_power_draft.py`): paired mean criterion, 80% power, one-sided 0.05: P1 3
+    scenes (gate effect), 4 (gate + development), 5 (development); P_FT 7 (gate: 3 INRIA + 4 DL3DV), 5 (E7's BD_R), 13
+    (pooled: 3 + 10), none at the development scenes' 0.0005 dB; the sign test needs 11 for P_FT. Flag: INRIA's scenes are
+    outdoor like flowers and treehill, where P_FT was +0.034 and -0.026 dB, so a gate-sized design is optimistic.
+  - Next: Part 5 (the cleaned arXiv package, prepare only).
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
