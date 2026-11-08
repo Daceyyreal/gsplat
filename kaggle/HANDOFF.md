@@ -6619,6 +6619,9 @@ split before it reaches the fork.
 - **Next action: Dace:** (1) KAGGLE status (YES: `git fetch fork`, ancestor check, fast-forward push); (2) the arXiv
   preview per `F:\arxiv_pkg\gsplat_ogc_v2\INSTRUCTIONS.txt`; (3) PATH: D1 / D2 / D3 / D4 / second host; (4) WHEEL: check
   E7 S11's output; (5) Docker's reset dialog (not touched).
+- **Pushed (after the final checkpoint):** Dace answered "None running, push"; `git fetch fork`, ancestor check, fast-forward
+  push `8abfdecf..cae2d7d6`; `git ls-remote fork bench/gn-vq` = `cae2d7d6`. The pins `d19bd885` (memory probe, wheel
+  notebook) are now on the fork. `backup/pre-r11-split` stays local. The rest of the next action stands: (2)-(5) above.
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
