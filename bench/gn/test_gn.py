@@ -3664,6 +3664,37 @@ def _appendix_failures(out):
             bad.append(f"{tag}: title {r['title']!r}")
         if ("yes" if re.search(rf"\bs{r['section']}\b", papers) else "no") != r["cited_by_paper"]:
             bad.append(f"{tag}: cited_by_paper {r['cited_by_paper']}")
+    # ------------------------------------------------------------------- BD robustness (section 28)
+    # a different route from the generator's tool values: check_s28's own parabola and own PCHIP, the gaps from the rows
+    import check_s28 as c28
+
+    rows = table("app_bd_robust")
+    S, _, _ = c28.spec()
+    by = {(e, n): (Rs, a, b, seed) for e, n, Rs, sc, a, b, seed in S}
+    want = {}
+    for (e, n), (Rs, a, b, seed) in by.items():
+        for s in Rs:
+            if not (pa := c28.points(Rs[s], a, seed)) or not (pb := c28.points(Rs[s], b, seed)):
+                continue
+            m = {j: d for j, (g, d) in c28.pointwise(pa, pb).items() if abs(g) <= c28.TAU}
+            want[(e, n, s)] = (c28.reg_own(pa, pb), c28.own_pchip_mean(pa, pb), m)
+    for k, x, y in c28.DELTAS:
+        for s in c28.SCENES:
+            gx, gy = want[("E7", f"BD_{x}", s)], want[("E7", f"BD_{y}", s)]
+            both = {j: gx[2][j] - gy[2][j] for j in gx[2] if j in gy[2]}
+            want[("E7", k, s)] = (gx[0] - gy[0], gx[1] - gy[1], both)
+    keys = [(r["experiment"], r["value"], r["scene"]) for r in rows]
+    if len(rows) != 100 or len(set(keys)) != 100 or not set(keys) <= set(want):
+        bad.append("app_bd_robust: not the 86 BD values and the 14 primary values")
+    for r in rows:
+        k = (r["experiment"], r["value"], r["scene"])
+        if k not in want:
+            continue
+        reg, pch, m = want[k]
+        cells = (f"{reg:+.4f}", f"{pch:+.4f}", f"{abs(reg - pch):.4f}", str(len(m)),
+                 f"{sum(m.values()) / len(m):+.4f}" if m else "")
+        if (r["registered"], r["pchip"], r["abs_diff"], r["rate_matched"], r["pointwise"]) != cells:
+            bad.append(f"app_bd_robust {k}: {r} != {cells}")
     return bad
 
 
@@ -3701,7 +3732,8 @@ def test_paper_appendix_tables_recompute_every_cell(tmp_path):
     # planted errors: one cell in each table is caught
     for name, old, new in (("app_prereg", "53dde708", "2d8056ec"), ("app_prereg", "2026-11-02", "2026-11-03"),
                            ("app_sessions", "b592a57e", "d0d6df8a"), ("app_sessions", "seed 0 half", "seed 1 half"),
-                           ("app_checkers", "check_s26.py,26", "check_s26.py,25")):
+                           ("app_checkers", "check_s26.py,26", "check_s26.py,25"),
+                           ("app_bd_robust", "bonsai,+0.4841,+0.4883", "bonsai,+0.4841,+0.4884")):
         planted = tmp_path / f"planted_{name}_{new}"
         shutil.copytree(fresh, planted)
         path = planted / f"{name}.csv"

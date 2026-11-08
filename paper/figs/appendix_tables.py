@@ -1,4 +1,4 @@
-"""The appendix's three tables, generated so that no cell is typed by hand:
+"""The appendix's four tables, generated so that no cell is typed by hand:
 
     .venv/Scripts/python.exe paper/figs/appendix_tables.py
 
@@ -9,6 +9,9 @@
   bundles carry earlier scenes, which it did not run), the seeds or the half, the commit that first added the bundle, and
   the Kaggle image (its ``gn5_env_S#.json``).
 - ``app_checkers``: each ``bench/gn/check_s##.py``, its FINDINGS section's title, and whether the paper cites that section.
+- ``app_bd_robust``: FINDINGS section 28 per scene: every BD value section 25's later note counts and E7's two primaries,
+  registered (the parabola) and PCHIP, their absolute difference, the rate-matched configs and the pointwise mean ΔPSNR
+  (``bench/gn/check_s28.py``'s ``per_scene_rows``, the tools' values).
 
 Each table is written as ``.csv`` (the cells) and ``.tex`` (a ``longtable``, \\input by ``paper/tex/appendix.tex``).
 ``bench/gn/test_gn.py`` recomputes every cell by a different route and compares a fresh run with the committed outputs.
@@ -136,6 +139,9 @@ def checker_rows():
     return rows
 
 
+DELTA_TEX = {"Delta_refit": r"$\Delta_{\mathrm{refit}}$", "Delta_cb": r"$\Delta_{\mathrm{cb}}$"}
+
+
 def esc(s):
     return "".join(SPECIALS.get(c, c) for c in s)
 
@@ -193,6 +199,19 @@ def main(out=OUT):
         r"Each section checker and the FINDINGS section whose numbers it re-checks. ``Cited'' says whether this paper's "
         r"body cites that section. Generated from \code{bench/gn/} and \code{kaggle/FINDINGS.md}.",
         "tab:app-checkers"))
+    sys.path.insert(0, os.path.join(REPO, "bench", "gn"))
+    import check_s28
+
+    bd = check_s28.per_scene_rows()
+    write(out, "app_bd_robust", bd, longtable(
+        (0.8, 1.35, 0.75, 0.65, 0.6, 0.55, 0.55, 0.65), ("Experiment", "Value", "Scene", "Registered", "PCHIP", "Difference",
+                                                        "Rate-matched", "Pointwise"),
+        [(esc(r["experiment"]), DELTA_TEX.get(r["value"], esc(r["value"])), r["scene"], r["registered"], r["pchip"], r["abs_diff"],
+          r["rate_matched"], r["pointwise"] or "--") for r in bd],
+        r"BD robustness per scene (FINDINGS section 28, post hoc, declared before it was computed): each BD value (dB, "
+        r"OGC's row against the other) with the registered fit (a parabola through the three points) and with PCHIP, their "
+        r"absolute difference, the configs of three whose byte gap is within 1.0\%, and the mean $\Delta$PSNR there. "
+        r"Generated from \code{bench/gn/check\_s28.py}.", "tab:app-bd-robust"))
     return prereg, sessions, checkers
 
 
