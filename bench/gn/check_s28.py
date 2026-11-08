@@ -207,6 +207,9 @@ def spec():
     return out, (R, R5, R7), carried
 
 
+NONMONO = []  # (experiment, value, scene) of each bending fit on measured points that do not rise with bytes
+
+
 def deriv_bends(p, lo, hi):
     x = [math.log10(v[0]) for v in p.values()]
     y = [v[1] for v in p.values()]
@@ -218,6 +221,7 @@ def deriv_bends(p, lo, hi):
 def facts():
     S, (R, R5, R7), carried = spec()
     F = {"carried": carried, "agree_reg": [], "agree_pchip": [], "reg_match": [], "recount_same": []}
+    NONMONO.clear()
     V = {}  # (exp, name) -> {scene: dict}
     shape = {}
     for exp, name, Rs, scenes, a, b, seed in S:
@@ -244,6 +248,7 @@ def facts():
                         over += 1
                     else:
                         nonmono += 1
+                        NONMONO.append((exp, name, s))
         V[(exp, name)] = per
         shape[(exp, name)] = (old, new, over, nonmono, len(scenes))
     # E7's primaries, per scene
@@ -370,6 +375,11 @@ def strings(V, shape, D):
     out["shape_rows"] = shp
     tot = [sum(shape[k][i] for k in ORDER_V[:-2]) for i in range(4)]
     out["shape_tot"] = f"{tot[0]} and {tot[1]} of 86; {tot[2]} overshoot fits and {tot[3]} on non-monotone points"
+    by = {}
+    for e, n, sc in NONMONO:
+        by.setdefault((e, n), []).append(sc)
+    out["nonmono_list"] = "; ".join(f"{e}'s {n}: {', '.join(f'{sc}' + (' (both curves)' if l.count(sc) == 2 else '') for sc in dict.fromkeys(l))}"
+                                    for (e, n), l in by.items())
     return out
 
 
@@ -430,6 +440,14 @@ def run():
     check(F["reg_match"] and all(F["reg_match"]), "the registered P1, P2, P_FT and E7 Deltas are reproduced")
     check(F["recount_same"] and all(F["recount_same"]), "the slope-sign recount equals section 25's bending count")
     check(all(r[1] == r[2] for r in F["decisions"]["rows"]), "no registered decision would differ under PCHIP")
+    nm = {}
+    for e, n, sc in NONMONO:
+        nm.setdefault((e, n), set()).add(sc)
+    g = lambda k: nm.get(("E7", k), set())
+    check(len(NONMONO) == 13 and not nm.get(("E5", "P1")) and not nm.get(("E5", "P2"))
+          and nm.get(("E6 part (b)", "P_FT")) == {"playroom"}
+          and g("BD_R") | g("BD_G") == {"drjohnson", "playroom"} and g("BD_CG") | g("BD_G") == {"drjohnson", "playroom"}
+          and g("BD_R, seed 1") == {"drjohnson"}, "what the 13 fits on non-monotone points feed, as the text lists it")
     mean_flips = [k for k in ORDER_V if not summary(F["V"][k])["mean_same"]]
     check(mean_flips == [("E6 part (a)", "P_FT")], "only E6 part (a)'s P_FT mean changes sign")
     check(all(summary(F["V"][k])["nm"] == 0 for k in ORDER_V if k[1] in ("P1", "P1 replicated", "P1 (before fine-tuning)",
