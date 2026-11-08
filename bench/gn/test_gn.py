@@ -3287,6 +3287,22 @@ def test_c3dgs_color_compress_non_dir_false_loses_the_dc(monkeypatch):
     assert not torch.allclose(ac_only[kept][:, 0], feats[kept][:, 0])  # the DC is gone
 
 
+def test_section_29_scene_heterogeneity():
+    """check_s29 (FINDINGS section 29, report only): every committed meta copy of a scene agrees, the sets are labelled as
+    E5 and E6 part (a) label them, the P values are section 28's, every development P1 is below every gate P1, the
+    selecting amendments predate the first OGC row on each development scene, and every number in the text is
+    recomputed."""
+    import check_s29 as c
+
+    F = c.facts()
+    assert all(F["agree"]) and F["sets_ok"] and len(F["rows"]) == 10
+    g, d = F["means"]["gate"], F["means"]["development"]
+    assert round(g[0][0], 4) == 0.3558 and round(g[2][0], 4) == 0.0425 and round(d[0][0], 4) == 0.0929
+    assert round(d[2][0], 4) == 0.0005 and max(F["vals"][s][0][0] for s in c.DEV) < min(F["vals"][s][0][0] for s in c.GATE)
+    res = c.run()
+    assert res["fails"] == [] and res["n_numbers"] >= 20
+
+
 def test_section_28_bd_robustness_computation():
     """check_s28 (FINDINGS section 28, declared at 39d41733): on all 86 BD values the registered BD's tool and own parabola
     agree, scipy's PCHIP and the own PCHIP agree, the registered values are reproduced, the slope-sign recount equals the
@@ -3781,7 +3797,7 @@ def test_paper_appendix_tables_recompute_every_cell(tmp_path):
     spec.loader.exec_module(at)
     fresh = tmp_path / "fresh"
     prereg, sessions, checkers = at.main(str(fresh))
-    assert (len(sessions), len(checkers)) == (19, 18)  # check_s27 and check_s28 added 2026-11-08
+    assert (len(sessions), len(checkers)) == (19, 19)  # check_s27 and check_s28 added 2026-11-08, check_s29 2026-11-09
     for name in os.listdir(fresh):
         a, b = (fresh / name).read_bytes(), open(os.path.join(out, name), "rb").read()
         assert a.replace(b"\r\n", b"\n") == b.replace(b"\r\n", b"\n"), name
