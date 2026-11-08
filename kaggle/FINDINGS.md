@@ -194,6 +194,10 @@ before computing these (`cf26643f`); no run, no verdict.**
 - A PCHIP BD in place of the registered parabola: largest |difference| 0.0429 dB over the 86 BD values, median 0.0033 dB; no registered decision would differ (E5 P1 and P2, E6 P_FT, E7's two primaries and their robustness reading).
 - The pointwise, rate-matched reading covers 18 of 258 configs (|byte gap| <= 1.0%); the bending count is the same by the slope criterion.
 
+**Scene heterogeneity (section 29, branch `bench/gn-vq`): report only, no new run, no new BD value.**
+- P1 0.3558 dB on the gate scenes against 0.0929 dB on the development scenes, P_FT 0.0425 dB against 0.0005 dB (registered fits); every development scene's P1 is below every gate scene's.
+- The split was fixed by Amendments 7-15 before any OGC-against-C3DGS value on these scenes; it is not a random draw.
+
 ## Process notes
 
 - **2026-11-08, recorded after the fact: two commits put a write-up and its checker together.** `d84720a8` (section
@@ -341,6 +345,9 @@ before computing these (`cf26643f`); no run, no verdict.**
   `39d41733`, pushed before any value was computed. `bench/gn/check_s28.py` recomputes every number with the tools
   (`bench/gn/e5.py`'s BD, scipy's PCHIP, `bench/gn/e7.py`'s tests) and with its own implementations, and checks each
   against the text.
+- Section 29: every number comes from the committed meta files of E5 (`9a90dabb`, `1710cc8a`, `88b5ebed`) and E6
+  part (a) (`9ce9b36e`, `6ff4877e`) and from section 28's computation (`bench/gn/check_s28.py`); amendment and section
+  dates from git. `bench/gn/check_s29.py` recomputes every number and checks it against the text.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -5987,3 +5994,65 @@ their mean ΔPSNR there, with the registered BD over the same scenes and how man
   criterion. **This changes no registered verdict.**
 - **Not settled:** the pointwise reading is not a substitute for an equal-rate comparison, because so few configs are
   rate-matched; no standard error is computed for it or for the PCHIP values, and nothing here is a test.
+
+## 29. Scene heterogeneity: the gate and development scenes side by side (report only, no new run, no new BD value; tabulated on 2026-11-09 after every verdict, undeclared) — the development scenes' P1 and P_FT are far below the gate scenes'
+
+**Report only.** This section puts the ten scenes with an OGC row side by side. It reuses section 28's registered and
+PCHIP BD values (E5 and E6 part (b) on the seven gate scenes, E6 part (a) on the three development scenes) and reads each
+scene's dataset, data factor, view counts and splat count from the committed meta files. The means per set were computed
+on 2026-11-09, before this note and without a declaration. Nothing here is a test, and it changes no registered verdict.
+Indoor or outdoor is the datasets' own description, not a committed row, and nothing is inferred from it.
+
+### The table
+
+P1 and P2 from E5 (gate) or E6 part (a) (development); P_FT from E6 part (b) (gate) or E6 part (a) (development). Each
+cell is registered parabola / PCHIP, in dB, over the seed-0 curves. Splats are the INRIA checkpoint's.
+
+| Scene | Set | Dataset, data factor | Indoor / outdoor | Training / test views | Splats | P1 | P2 | P_FT |
+|---|---|---|---|---|---|---|---|---|
+| bonsai | gate | Mip-NeRF 360, 2 | indoor | 255 / 37 | 1,244,819 | +0.4841 / +0.4883 | +0.3205 / +0.3221 | +0.0622 / +0.0656 |
+| counter | gate | Mip-NeRF 360, 2 | indoor | 210 / 30 | 1,222,956 | +0.3192 / +0.3224 | +0.1655 / +0.1674 | +0.1058 / +0.1038 |
+| kitchen | gate | Mip-NeRF 360, 2 | indoor | 244 / 35 | 1,852,335 | +0.4111 / +0.4231 | +0.2757 / +0.2796 | +0.0125 / +0.0250 |
+| room | gate | Mip-NeRF 360, 2 | indoor | 272 / 39 | 1,593,376 | +0.3869 / +0.3921 | +0.1750 / +0.1761 | +0.0560 / +0.0566 |
+| truck | gate | Tanks and Temples, 1 | outdoor | 219 / 32 | 2,541,226 | +0.1486 / +0.1523 | +0.1000 / +0.1016 | +0.0173 / +0.0182 |
+| drjohnson | gate | Deep Blending, 1 | indoor | 230 / 33 | 3,405,153 | +0.2765 / +0.2885 | +0.1281 / +0.1312 | -0.0046 / -0.0027 |
+| playroom | gate | Deep Blending, 1 | indoor | 196 / 29 | 2,546,116 | +0.4644 / +0.4732 | +0.1471 / +0.1488 | +0.0483 / +0.0512 |
+| flowers | development | Mip-NeRF 360, 4 | outdoor | 151 / 22 | 3,636,448 | +0.1239 / +0.1277 | +0.0692 / +0.0710 | +0.0341 / +0.0368 |
+| treehill | development | Mip-NeRF 360, 4 | outdoor | 123 / 18 | 3,783,761 | +0.0251 / +0.0369 | +0.0025 / +0.0024 | -0.0262 / -0.0254 |
+| train | development | Tanks and Temples, 1 | outdoor | 263 / 38 | 1,026,508 | +0.1297 / +0.1306 | +0.0649 / +0.0654 | -0.0066 / -0.0290 |
+
+| Set | P1 | P2 | P_FT |
+|---|---|---|---|
+| mean, gate | +0.3558 / +0.3628 | +0.1874 / +0.1896 | +0.0425 / +0.0454 |
+| mean, development | +0.0929 / +0.0984 | +0.0456 / +0.0463 | +0.0005 / -0.0059 |
+
+- In the registered fits: P1 0.3558 dB on the gate scenes against 0.0929 dB on the development scenes, P_FT 0.0425 dB against 0.0005 dB.
+- Every development scene's P1 is below every gate scene's. Every development scene is outdoor, and every gate scene but
+  truck is indoor; the two sets also differ in data factor, view counts and splat counts. With three development scenes
+  nothing separates these properties, and no cause is claimed.
+
+### How the two sets were chosen (PREREG; first commits and dates from git)
+
+- **The development scenes were set by GN-VQ's experiments on this project's own gsplat checkpoints,** before OGC was
+  part of the project. Amendment 7 (`3e074edd`, 2026-09-21): "garden and bicycle are development scenes". Amendment 9 (`1ae0c05b`, 2026-09-22): "treehill, flowers and train
+  are development scenes", the three scenes where GN-VQ's test gain over `lloyd_trace` divided by its train gain was
+  lowest (-1.06, 0.32 and 0.47, against 0.52-0.90 on the other scenes; Amendment 9 b). Amendment 10 (`e580b731`, 2026-09-25): "treehill, flowers
+  and stump are development scenes".
+- **The gate scenes are the rest.** Amendment 11 (`14145093`, 2026-09-26) names "Bonsai, counter, kitchen, room and truck, all five gate scenes",
+  the only pinned scenes no tuning decision had used; Amendment 12 (`aa67e21e`, 2026-09-27) keeps "Deep Blending (drjohnson, playroom) and the five
+  scenes no tuning decision has used" untouched; Amendment 15 (`573142ac`, 2026-10-01) fixes "INRIA's official 30k checkpoints of bonsai, counter,
+  kitchen, room, truck, drjohnson and playroom" as the gate, which E5 kept (Amendment 17).
+- **The split was fixed before any OGC-against-C3DGS value on these scenes.** The first section with an OGC row on each
+  development scene: train: section 16 (`75c53e09`, 2026-10-02); treehill: section 17 (`290ca395`, 2026-10-06); flowers: section 23 (`0049d81f`, 2026-10-20). On the gate scenes the first is E5's (section 19, after
+  Amendment 17). Each is later than Amendment 15.
+- **The split is not a random draw.** The development scenes are where a different VQ under a training-view metric,
+  GN-VQ, transferred worst from training to test views (Amendment 9 b; Amendment 10 b for stump), and the gate scenes are
+  the remainder. This section does not test whether that selection bears on OGC's lead.
+
+### What section 29 settles, and what it does not
+
+- **Settled (descriptive):** the development scenes' P1 and P_FT are much smaller than the gate scenes', under both fits,
+  and the split predates every OGC-against-C3DGS value on these scenes.
+- **Not settled:** why. The sets differ in several properties at once, the development set has three scenes, the
+  development values are descriptive (E6 part (a) has no criterion), no standard error is computed here, and nothing here
+  is a test.
