@@ -110,7 +110,7 @@ move into FINDINGS (see "E7 write-up skeleton and check_s26 (2026-10-29; no E7 v
 Part A, perceptual secondaries (declaration `cf26643f`, pushed before computing; `88c3e9b2` check_s27, `c72a96e5` FINDINGS
 section 27 + CLAIMS A13/F12/H15, `259cbd2e` paper Section 5.4): every mean agrees in sign with PSNR; Part B drafts in
 `kaggle/drafts/` (E8, E9, second host, method), nothing in PREREG. 30 pp, check_tex 269 numbers, pytest 245. **Next action:
-Dace picks the path: E8 / E9 / second host / method** (see "Broadening the paper toward a top venue (2026-11-08)").
+Dace picks the path: E8 / E9 / second host / method** (see "Broadening the paper toward a top venue (2026-11-08)"). **Second session (2026-11-08):** readings R1-R7 (R1, R2, R6a-c, R7 confirmed; R3a refuted: the fits are parabolas), process note `da0c0444`, R1 reword `7811ff6d`, BD robustness (declared `39d41733`; FINDINGS s28: no registered decision would differ under PCHIP; paper Section 5.5), Part 3 drafts `603563bc` (E8 as a 2 x 2, SH-only check, pilot, wheel cache), arXiv package prepared outside the repository (not submitted); see "Readings, BD robustness and drafts (2026-11-08, second session)".
 
 ## Context and rules
 
@@ -6396,6 +6396,74 @@ BD robustness (post hoc, report only), Part 3 drafts, Part 4 arXiv package (prep
   mean; and whether any registered decision would differ under PCHIP (E5 P1/P2, E6 P_FT under their criteria; E7's
   primaries under Holm at δ = 0.07 dB). It changes no registered verdict. Disclosed as already known: section 25's count,
   the R3a/R3b recount computed earlier this session, section 27, E2's PCHIP precedent, the published byte gaps.
+- **Part 1, the readings (evidence in each line):**
+  - **R1 confirmed:** "larger than" compared a BD-PSNR at equal rate (seven scenes, protocol ii, with an SE) with OGC's one
+    paired point (nine scenes, its own evaluation, 27.02 against 27.01, two decimals, no spread). Reworded to "same sign and
+    same order, hundredths of a dB, but not directly comparable" (`7811ff6d`, `paper/tex/sec5_finetuning.tex:49-50`);
+    QUOTES and check_tex needed no change (269 numbers).
+  - **R2 confirmed:** `d84720a8` and `0877a6d3` each committed a write-up with its checker, against `6bd340a0`/`251c305c` and
+    `1b063523`/`3de53fc9`; s25's note was computed with no prior declaration. Process note in FINDINGS ("## Process
+    notes", before "## Sources"), committed and pushed alone (`da0c0444`). No history rewritten.
+  - **R3a refuted:** every BD fit here is a parabola (three points; degree min(3, n - 1) = 2; no cubic anywhere), whose
+    slope changes sign inside the range exactly when its vertex does, and `check_s25.bends` tests the vertex for maxima and
+    minima alike. A numeric slope-sign recount gives the same 36 of 86, value by value (s28, CLAIMS E21).
+  - **R3b:** of the 45 bending fits, 32 overshoot rising points and 13 follow non-monotone points (all curves 3 points).
+  - **R6a confirmed:** MesonGS VQs `_features_rest` only (`scene/gaussian_model.py:1299-1301`); the DC goes with opacity and
+    Euler angles into RAHT (`:716`, `:835`); fine-tuning 8,000 iterations in its script (`scripts/mesongs_block.sh:2`;
+    argument default 30,000) against C3DGS's 5,000 (`arguments/__init__.py:72` at `2a234af5`).
+  - **R6b confirmed, and the first draft was wrong:** MesonGS++'s driver has an optional fine-tuning loop after the VQ
+    (`splatwizard/scripts/train_multi_prune.py:62-120`, called at `:275-276`), off in the released invocations
+    (`--iterations 1`, `:10`; `scripts/compress_single_scene.sh:114`; no step when iterations <= 1, `:93`, `:104`); it
+    trains DC, opacity, scaling, rotation and the SH codebook (`model.py:490-502`), positions frozen (`:729`). The paper's
+    "piecewise" fine-tuning (Sec. I, III-G, VI) is after pruning and after coordinate quantization; the released driver has
+    one loop per rate. Draft corrected.
+  - **R6c:** stated in the second-host draft: the metric would act on the 15 x 15 AC block only; a null there would not mean
+    C3DGS's result fails to replicate, nor speak to DC.
+  - **R7 confirmed, with a better estimate:** train, treehill and flowers are not gate scenes. Measured E6 part (a) process
+    peaks (not a model): flowers 7.00 GB allocated / 8.02 reserved, treehill 6.74 / 8.25, train 4.92 / 5.38. **This also
+    overturned the E9 draft:** its "14.93 GB" was E6 note 1's *prediction* (`PREREG_GN.md:3734-3735`), not a measurement; a
+    fit to the nine GPU-start scenes (peak = 2.00 + 1.12 x image GB + 0.70 x M splats; residual <= 0.14 GB allocated) puts
+    bicycle at about 9.0 / 10.9 GB with images on the GPU, garden 8.8 / 10.7, stump 7.2 / 8.6: probably fit a T4, an
+    extrapolation to 1.6 x the largest model measured. Corrected in the E9 draft.
+  - **Further finding:** C3DGS's `color_compress_non_dir=False` path VQs 15 AC coefficients (`compression/vq.py:164-169`)
+    but `set_color_indexed` still splits `features[:, :1]` as DC (`:193`, `gaussian_model.py:796-799`); it looks
+    inconsistent at `2a234af5`. The SH-only check needs fork code instead (draft).
+- **Part 2, commits in order:** `39d41733` declaration alone (pushed, with `7811ff6d`); `019ceaf2` `check_s28.py` + computation
+  test (FINDINGS stashed during its gate; appendix checker pin 17 -> 18); `49a77faa` FINDINGS s28 results, summary, Sources,
+  CLAIMS E20, E21; `c45f2008` the generated appendix table `app_bd_robust` (100 rows) with an independent recompute and a
+  planted error; `882fa7f1` paper Section 5.5 (`sec5_5_robustness.tex`), Limitations (slope-sign wording, PCHIP sentence),
+  the appendix table (columns narrowed: no overfull line), check_tex pin 269 -> 279. **Results (post hoc, report only):**
+  PCHIP vs the registered parabola over 86 BD values: largest |difference| 0.0429 dB (E7 BD_G kitchen), median 0.0033 dB; sign
+  differs on 2 of 86 (E7 BD_R drjohnson -0.0095 -> +0.0031, BD_O kitchen -0.0127 -> +0.0017); **no registered decision would
+  differ** (E5 P1, P2 and E6 P_FT pass; E7 Δ_refit and Δ_cb "equivalent; not superior; not fragile"; SD_BD 0.024222 vs
+  0.021781 under PCHIP); E6 part (a)'s P_FT mean +0.0005 -> -0.0059 (not interpreted); kitchen's Δ_refit -0.1501 -> -0.1205,
+  still the only scene beyond δ; rate-matched configs 18 of 258 (none for P1 or an E7 primary). The PCHIP choice cites
+  Barman et al. 2024 (arXiv 2401.04039v1, Sec. VI-C; Sec. IV-B traces PCHIP to COM16-C.404); no QUOTES row, since QUOTES
+  holds quoted numbers only (check_tex rule 5) and none is quoted.
+- **Part 3 (`603563bc`, drafts only):** E8 as a 2 x 2 (Z, C, N, G; main effects M_col, M_geo; interaction report-only;
+  M_col + M_geo = BD_Z - BD_G; power from E7's contrasts, `SE` 0.0056-0.0111, superiority above 0.016-0.032 dB): 4-arm
+  71.5 / 49.2 session-hours (high / calibrated), 5-arm (+ opacity-only O) 85.5 / 58.9, first draft 102.9 / 70.9; the
+  SH-only check declaration draft (gate scenes exploratory, 9.1-12.9 h, thresholds 0.10 dB training-free and 0.25 dB
+  fine-tuned); method (a)'s pilot declaration draft (go at mean >= 0.057 dB and 3 of 3; smallest detectable 0.078 dB;
+  **flag:** the development scenes' recoverable lead is only 0.092 dB, so gate scenes labelled exploratory are proposed
+  instead); the cu130 wheel cache (`kaggle/drafts/WHEEL_CACHE_CU130.md`: first check E7 S11's output for
+  `wheels/33734f894b0a-95f8de51-torch2.11.0_cu130-sm7.5/`, the key still matches; else the notebook
+  `kaggle/drafts/gn_wheel_cache_cu130.ipynb`, pinned to `882fa7f1`, importable at `603563bc`); the second-host and E9 drafts
+  corrected (above).
+- **Part 4, arXiv package (prepared only, not submitted):** `F:\arxiv_pkg\gsplat_ogc_v1\` (outside the repository):
+  `arxiv_src.tar.gz` (185,634 bytes; 34 files: 15 `.tex`, `main.bbl`, `references.bib`, 7 figure PDFs and 11 generated
+  tables under `figs/`), `manifest.json` (every file with its sha256 and the checks), `main_preview.pdf`. Built from the
+  paper at `882fa7f1` (unchanged since) by a script in the session's scratchpad: `../figs/out/` rewritten to `figs/`,
+  compiled in the package folder (MiKTeX latexmk: 32 pages, no error, no undefined reference, no overfull line, every font
+  embedded), build files removed. Checks: the only email is the author's own; no OGC file or code; no "patent",
+  "correspondence", "private" or "redact" in any packaged text; the PolyForm licence note present; no `../` path.
+  **Not verified:** arXiv's own TeX Live run (only MiKTeX here; every package is standard TeX Live). The sources keep their
+  `%` citation comments (internal FINDINGS/CLAIMS pointers, nothing sensitive); strip them if preferred. **Proposed tag**
+  (not created): `paper-arxiv-v1` on the commit the posted version is built from.
+- **Checks at the end:** pytest 246 before each commit (`F:\pytest_logs\gate_20261108_14*`, `_15*`); check_tex 482 lines,
+  279 numbers (28 by rounding), 0 failures; check_figs 1482, 0 failures; check_s24-check_s28 0 failures; 32 pages. The PDF
+  `F:\gsplat_paper_draft.pdf` rebuilt from this state.
+- **Next action: Dace picks the path: E8 / E9 / second host / method** (and whether to post the arXiv package).
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
@@ -7091,8 +7159,8 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
   (`paper/tex/`) went through steps 1-4, the licence cleanup, the redaction and the literature review (2026-11-04 to 08); that
   state is tagged `paper-v1-analysis` (annotated, on `5bf08604`, pushed to fork 2026-11-08). Then the BD-shape note (s25),
   the perceptual secondaries (s27, declared at `cf26643f`) and Part B's drafts (`kaggle/drafts/`). No experiment is running or
-  queued; next: the latest dated entry's "Next action".** `paper/CLAIMS.md` holds 89 rows (groups A-H). `bench/gn/check_s11.py`
-  to `check_s27.py` re-check FINDINGS sections 11-27 and run under pytest; sections 1-10 have no committed checker. The rest of E3's design (other codecs,
+  queued; next: the latest dated entry's "Next action".** `paper/CLAIMS.md` holds 91 rows (groups A-H). `bench/gn/check_s11.py`
+  to `check_s28.py` re-check FINDINGS sections 11-28 and run under pytest; sections 1-10 have no committed checker. The rest of E3's design (other codecs,
   INRIA checkpoints) is not written yet.
 
 ### Open, not scheduled (from the paper-readiness audit, 2026-10-20)
