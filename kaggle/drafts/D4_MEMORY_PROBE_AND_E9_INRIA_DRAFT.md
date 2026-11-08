@@ -57,3 +57,35 @@ and of 3/4 (computed with `scipy.stats.binom`):
 For P1 (positive on 7 of 7 gate scenes) any of these is well powered; for P_FT, **3 INRIA + 8 DL3DV (n = 11) is the
 smallest design with 80% power at 6/7**, and E5's three criteria (mean, count, `SE`) can sit beside the sign test as in
 E5-E7. Training eight DL3DV checkpoints is about one more session than E9's seven (`E9_FEASIBILITY.md`).
+
+## 4. A mean-based criterion beside the sign test (R15, added 2026-11-08, fourth session)
+
+Scenes needed at 80% power, one-sided 0.05, for a **paired mean criterion**: each scene's BD value is already a paired,
+within-scene difference (both rows on the same scene and processes), and the test is a one-sample t-test of the
+per-scene values against 0, with the effect and the **across-scene SD** taken from the measured per-scene values
+(`kaggle/drafts/e9_power_draft.py`, from `bench/gn/check_s28.py`'s values; the search starts at n = 3, so "3" means 3 or
+fewer). Beside it, E5's criterion 3 (`P_bar` > 2 x `SE_noise`, `SE_noise` = `SD_pool` / sqrt(2n), E5's `SD_pool` for P1,
+E6 part (b)'s for P_FT), with the scene mean's spread from the same across-scene SD.
+
+| Criterion | Target | Effect and SD assumed (source) | Scenes needed | Mix |
+|---|---|---|---|---|
+| sign test (section 3) | P1 | every scene positive (7 of 7 gate, 3 of 3 development) | 5 (5 of 5 positive: p 0.031) | 3 INRIA + 2 DL3DV |
+| sign test (section 3) | P_FT | positive rate 6/7 (E6 part (b)) | 11 | 3 INRIA + 8 DL3DV |
+| paired t, mean | P1 | 0.3558, SD 0.1175 (E5, gate 7) | 3 (power 0.93 at 3) | 3 INRIA alone |
+| paired t, mean | P1 | 0.2770, SD 0.1616 (gate 7 + development 3) | 4 | 3 INRIA + 1 DL3DV |
+| paired t, mean | P1 | 0.0929, SD 0.0588 (development 3: flowers, treehill, train) | 5 | 3 INRIA + 2 DL3DV |
+| paired t, mean | P_FT | 0.0425, SD 0.0373 (E6 part (b), gate 7) | 7 (power 0.84) | 3 INRIA + 4 DL3DV |
+| paired t, mean | P_FT | 0.0467, SD 0.0309 (E7's BD_R, seed 0, gate 7) | 5 | 3 INRIA + 2 DL3DV |
+| paired t, mean | P_FT | 0.0299, SD 0.0394 (gate 7 + development 3) | 13 | 3 INRIA + 10 DL3DV |
+| paired t, mean | P_FT | 0.0005, SD 0.0308 (development 3) | none (no effect to detect) | - |
+| E5's criterion 3 (seed `SE`) | P1 | 0.3558, SD 0.1175 | 3 | 3 INRIA alone |
+| E5's criterion 3 (seed `SE`) | P_FT | 0.0425, SD 0.0373 / gate + development 0.0299, 0.0394 | 4 / 8 | 3 + 1 / 3 + 5 DL3DV |
+
+- **The mean criterion needs fewer scenes than the sign test for P_FT at the gate's effect (7 against 11),** because
+  the sign test discards each value's size.
+- **The planning effect is the open question, not the test.** INRIA's three scenes are Mip-NeRF 360 outdoor scenes,
+  like flowers and treehill, where P1 was 0.124 and 0.025 dB and P_FT +0.034 and -0.026 dB (E6 part (a)); the
+  development scenes' P_FT mean is 0.0005 dB. On the gate's effect P_FT needs 7 scenes, on the pooled ten 13, and on
+  the development scenes alone no n suffices. A design sized on the gate scenes alone is optimistic for outdoor scenes.
+- **E5's criterion 3 is not a test across scenes:** its `SE_noise` is seed noise; it is shown because E5-E7 used it, not
+  as the basis for a held-out claim.
