@@ -5973,6 +5973,12 @@ their mean ΔPSNR there, with the registered BD over the same scenes and how man
   | E7 | P1 (before fine-tuning) | 2 of 7 | 2 of 7 | 1 | 1 |
 
   In all 36 and 36 of 86; 32 overshoot fits and 13 on non-monotone points. For a parabola the slope is linear, so the two criteria are the same test.
+- **Added later on 2026-11-08 (a listing of the same computation, no new value):** the 13 fits on measured points that
+  do not rise with bytes, by value and scene: E6 part (b)'s P_FT: playroom; E6 part (b)'s P1 replicated: playroom; E6 part (a)'s P_FT: train (both curves); E7's BD_R: drjohnson, playroom; E7's BD_G: playroom; E7's BD_CG: drjohnson, playroom; E7's BD_O: room, drjohnson; E7's BD_R, seed 1: drjohnson; E7's P1 (before fine-tuning): playroom.
+  They feed E6's P_FT on playroom, E7's Δ_refit (through BD_R and BD_G) and Δ_cb (through BD_G and BD_CG) on drjohnson
+  and playroom, and E7's robustness reading (BD_R's seed-1 curve on drjohnson); E5's P1 and P2 have none. Where the
+  measured PSNR does not rise with bytes, BD-rate (bytes as a function of PSNR) is not single-valued, and BD-PSNR depends
+  on the interpolant: the registered and PCHIP values above can differ most there.
 
 ### What section 28 settles, and what it does not
 
