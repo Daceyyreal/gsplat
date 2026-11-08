@@ -204,13 +204,13 @@ def main(out=OUT):
 
     bd = check_s28.per_scene_rows()
     write(out, "app_bd_robust", bd, longtable(
-        (0.8, 1.35, 0.75, 0.65, 0.6, 0.55, 0.55, 0.65), ("Experiment", "Value", "Scene", "Registered", "PCHIP", "Difference",
-                                                        "Rate-matched", "Pointwise"),
+        (0.78, 1.1, 0.7, 0.72, 0.55, 0.5, 0.58, 0.62), ("Experiment", "Value", "Scene", "Registered", "PCHIP", "Diff.",
+                                                        "Matched", "Pointwise"),
         [(esc(r["experiment"]), DELTA_TEX.get(r["value"], esc(r["value"])), r["scene"], r["registered"], r["pchip"], r["abs_diff"],
           r["rate_matched"], r["pointwise"] or "--") for r in bd],
         r"BD robustness per scene (FINDINGS section 28, post hoc, declared before it was computed): each BD value (dB, "
         r"OGC's row against the other) with the registered fit (a parabola through the three points) and with PCHIP, their "
-        r"absolute difference, the configs of three whose byte gap is within 1.0\%, and the mean $\Delta$PSNR there. "
+        r"absolute difference (Diff.), the configs of three whose byte gap is within 1.0\% (Matched), and the mean $\Delta$PSNR there. "
         r"Generated from \code{bench/gn/check\_s28.py}.", "tab:app-bd-robust"))
     return prereg, sessions, checkers
 

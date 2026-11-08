@@ -1,0 +1,8 @@
+\subsection{Robustness of the BD fit (post hoc)}
+\label{sec:bd-robust}
+
+% Section 5.5: FINDINGS section 28 (declared at 39d41733 before any of its values was computed) and CLAIMS E20, E21.
+% Post hoc, report only; no registered verdict changes.
+Declared before it was computed, a post-hoc reading replaces each curve's parabola with a piecewise cubic Hermite interpolant (PCHIP), the interpolation codec testing recommends for BD \citep[Sec.~VI-C]{barman2024bjontegaard}, on the same log-byte axis and the same shared range; PCHIP passes through the three points and cannot overshoot them. % s28; E20, E21
+Over the 86 BD values the largest absolute difference is 0.0429~dB and the median 0.0033~dB, the sign differs on 2 of 86, and no registered decision would differ: E5's P1 and P2 and E6's P\_FT still meet their criteria, and E7's two primaries keep their outcomes, with kitchen still the only scene beyond $\pm\delta$ (Table~\ref{tab:app-bd-robust}). % s28; E20
+An interpolation-free reading, the paired difference at configs whose two files differ by at most 1.0\% in bytes, covers only 18 of 258 configs, so it cannot stand in for the comparison at equal rate. % s28; E20
