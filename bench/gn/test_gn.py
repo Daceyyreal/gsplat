@@ -3221,6 +3221,29 @@ def test_section_27_perceptual_bd_computation():
             assert tok in sec or tok.lstrip("+-") in sec, (rid, tok)
 
 
+def test_section_28_bd_robustness_computation():
+    """check_s28 (FINDINGS section 28, declared at 39d41733): on all 86 BD values the registered BD's tool and own parabola
+    agree, scipy's PCHIP and the own PCHIP agree, the registered values are reproduced, the slope-sign recount equals the
+    vertex count, and no registered decision would differ under PCHIP; the own PCHIP also matches scipy on hand curves."""
+    import check_s28 as c
+
+    out, F = c.facts()
+    assert len(F["agree_reg"]) == 86 and all(F["agree_reg"]) and all(F["agree_pchip"])
+    assert F["reg_match"] and all(F["reg_match"]) and all(F["recount_same"])
+    assert [r[1] == r[2] for r in F["decisions"]["rows"]] == [True] * 5
+    assert c.DECLARATION == "39d41733" and c.TAU == 1.0
+    # hand curves: rising, falling at one end, and a peak in the middle (scipy's end and interior rules)
+    from scipy.interpolate import PchipInterpolator
+
+    for ys in ((20.0, 20.4, 20.6), (20.0, 20.5, 20.4), (20.3, 20.0, 20.6), (21.0, 20.2, 20.1)):
+        p = {j: (b, y) for j, b, y in zip((-1, 0, 1), (1.0e7, 1.4e7, 2.3e7), ys)}
+        q = {j: (b, y) for j, b, y in zip((-1, 0, 1), (1.1e7, 1.5e7, 2.0e7), (20.1, 20.3, 20.5))}
+        lo, hi = c.shared(p, q)
+        x, y = c._sorted_xy(p)
+        assert abs(c._hermite_integral(x, y, c._slopes(x, y), lo, hi) - PchipInterpolator(x, y).integrate(lo, hi)) < 1e-12
+        assert abs(c.own_pchip_mean(p, q) - c.pchip_tool(p, q)) < 1e-12
+
+
 def test_claims_group_h_restates_section_26():
     """paper/CLAIMS.md group H (E7): every number in a row's claim and limits is in FINDINGS section 26 (the two the limits
     quote from Amendment 20 f are there or in section 22), each row's check is check_s26.py, the post-hoc rows are labelled
@@ -3647,7 +3670,7 @@ def test_paper_appendix_tables_recompute_every_cell(tmp_path):
     spec.loader.exec_module(at)
     fresh = tmp_path / "fresh"
     prereg, sessions, checkers = at.main(str(fresh))
-    assert (len(sessions), len(checkers)) == (19, 17)  # check_s27 added 2026-11-08
+    assert (len(sessions), len(checkers)) == (19, 18)  # check_s27 and check_s28 added 2026-11-08
     for name in os.listdir(fresh):
         a, b = (fresh / name).read_bytes(), open(os.path.join(out, name), "rb").read()
         assert a.replace(b"\r\n", b"\n") == b.replace(b"\r\n", b"\n"), name

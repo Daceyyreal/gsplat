@@ -16,3 +16,4 @@ bench/gn/check_s24.py,24,Fine-tuning and the int8 colour grids,yes
 bench/gn/check_s25.py,25,The SE convention in E5's and E6's criterion 3,yes
 bench/gn/check_s26.py,26,E7: a within-process dissection of why OGC's lead shrinks with fine-tuning,yes
 bench/gn/check_s27.py,27,"Perceptual BD secondaries: BD-SSIM and BD-LPIPS for P1, P2, P_FT and E7's two primaries",yes
+bench/gn/check_s28.py,28,BD robustness: a piecewise-cubic (PCHIP) BD and a rate-matched pointwise reading of every reported BD value,no
