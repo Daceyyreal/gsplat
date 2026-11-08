@@ -6545,6 +6545,31 @@ split before it reaches the fork.
 
 - **Part 1 checkpoint:** the third session's record is merged above and `kaggle/drafts/handoff_third.md` deleted (it was
   untracked, so the deletion is not in a commit). Next: Part 2 (R11 split of `ae2d16bb`, R12 gate).
+- **Part 2 checkpoint (R11, R12):**
+  - **R11, bundled: yes for `ae2d16bb`, no for `8c0ee88f`.** `8c0ee88f` holds one test only (`bench/gn/test_gn.py`, +66
+    lines, no note), so it is kept with its hash. `ae2d16bb` held the FINDINGS s28 listing (a note) with
+    `check_s28.py`, the CLAIMS E21 text, `sec6_limits.tex` and the check_tex pin. Rebuilt locally (backup branch
+    `backup/pre-r11-split` at `d8aac3c3`, local only; `git reset --hard 8c0ee88f`, each file taken byte for byte from
+    `ae2d16bb` with `git checkout ae2d16bb -- <file>`), each commit gated (247 passed, 0 skipped):
+    `cfb1f701` FINDINGS s28 listing, alone; `47cd844f` `check_s28.py`; `1071fb4a` CLAIMS E21; `9f95d792`
+    `sec6_limits.tex` + the test pin 279 -> 280; then `bc876d08`, the Part 1 HANDOFF commit (`d8aac3c3`) replayed.
+    **Trees verified:** `9f95d792^{tree}` = `ae2d16bb^{tree}` = `884358cc`; `bc876d08^{tree}` = `d8aac3c3^{tree}` =
+    `705dd39c`; `git diff` empty both times. `ae2d16bb` and `d8aac3c3` are no longer on the branch.
+  - **R12:** `kaggle/gate.sh <label>` (`89d7fea8`; LF pinned in `.gitattributes`) sets `GN_OGC_SRC` and `GN_C3DGS_SRC`,
+    prints both checkouts' HEADs, runs `pytest bench/gn/test_gn.py -q -rs --junitxml`, keeps the log and the XML in
+    `F:\pytest_logs`, and ends the log with the test count, the skip count and each skipped test's name and reason.
+    **Skip history of the R9 test:** it exists from `8c0ee88f`; it ran in every gate since (`gate_20261108_154714_r9_repro`
+    and `_155603_r8_limits`: 247 passed, no skip in the summary, 246 + this test; this session's seven gates: 247, 0
+    skipped, by name). It was never skipped. Of all 266 earlier gate logs, two show skips, both before the R9 test
+    existed: `gate_20261011_212258_coldstart_note4` (4 skipped) and `gate_20261023_145837_paper_tex_sections` (1
+    skipped); those logs were written without `-rs`, so the skipped names are not recorded. **C3DGS's checkout:**
+    `F:\c3dgs_src_2a234af5` HEAD `2a234af55fbe8b90c8829c1436ce80088c4b622b`, working tree clean, `git fsck` clean, and
+    `git ls-remote` of its origin (`github.com/KeKsBoTer/c3dgs`) gives `refs/heads/master` and `HEAD` =
+    `2a234af55fbe...`, so it is upstream's current master. OGC's checkout `F:\ogc_restore\ogc-3dgs` HEAD `49ccae72`.
+  - **Noticed, not changed:** `pytest.ini`'s `env =` block is ignored (pytest-env is not installed: "Unknown config
+    option: env" in every log); the `.venv` uses the system site-packages (`include-system-site-packages = true`), so
+    pytest itself comes from the user's Python 3.13 site-packages.
+  - Next: Part 3 (commit the drafts; the wheel pin).
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
@@ -7074,6 +7099,9 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
 - **pytest gate: exit code with pipefail; never pipe the summary through tail without it.** Commit only on pytest's own
   exit code 0 (`set -o pipefail` whenever its output goes through a pipe), and keep each gate run's full output in a
   log outside the repository, so a failure's traceback survives.
+- **The gate script (from 2026-11-08):** `kaggle/gate.sh <label>` from Git Bash runs it with `GN_OGC_SRC` and
+  `GN_C3DGS_SRC` set and ends the log with the skip count and every skipped test by name; a skip of an OGC or C3DGS
+  test means its source was not found.
 - **Setup:** MipNeRF360, `examples/benchmarks/compression/mcmc.sh` settings (MCMC, cap 1M, data factor 4
   outdoor / 2 indoor, LPIPS VGG for eval). Data lives under `/tmp`, output in `/kaggle/working`.
   `MAX_JOBS=2` (higher values OOM the build).
