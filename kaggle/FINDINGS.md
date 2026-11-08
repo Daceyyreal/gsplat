@@ -189,6 +189,17 @@ before computing these (`cf26643f`); no run, no verdict.**
 - BD-SSIM and BD-LPIPS: every mean (P1, P2, P_FT, Delta_refit, Delta_cb) agrees in sign with its PSNR value.
 - Per scene, P_FT agrees on 5 of 7 (BD-SSIM) and 6 of 7 (BD-LPIPS); Delta_refit on 5 of 7 and 4 of 7; Delta_cb on 7 of 7 and 6 of 7.
 
+## Process notes
+
+- **2026-11-08, recorded after the fact: two commits put a write-up and its checker together.** `d84720a8` (section
+  24 item 4's erratum with `check_s24.py`'s update) and `0877a6d3` (section 25's later note on the BD fits' shape, with
+  `check_s25.py`, CLAIMS E19, `test_gn.py`'s pin and the Limitations sentence) each committed the text with its code.
+  This project's practice keeps them apart (section 21: `6bd340a0`, then `check_s21.py` in `251c305c`; section 25:
+  `1b063523`, then `check_s25.py` in `3de53fc9`), and section 25's later note was computed with no declaration before
+  it, which is why it is labelled post hoc. No history is rewritten and no number changes: each checker recomputes its
+  section's text with no failure. From section 27 on, each post-hoc analysis is declared, committed alone and pushed
+  before it is computed.
+
 ## Sources
 
 - Sections 1 and 2: every number comes from `kaggle/run2/tilequant/` (one Kaggle session on 2x T4, gsplat
