@@ -6592,6 +6592,21 @@ split before it reaches the fork.
     (pooled: 3 + 10), none at the development scenes' 0.0005 dB; the sign test needs 11 for P_FT. Flag: INRIA's scenes are
     outdoor like flowers and treehill, where P_FT was +0.034 and -0.026 dB, so a gate-sized design is optimistic.
   - Next: Part 5 (the cleaned arXiv package, prepare only).
+- **Part 5 checkpoint (arXiv package, prepared only; not submitted, no tag):** `F:\arxiv_pkg\gsplat_ogc_v2\` (outside
+  the repository), built from **`e8badf80`** (its `paper/` equals `9f95d792`'s, the R8 Limitations included) by the
+  second session's `make_arxiv.py`, then the comment cleaner on a copy (`src` -> `src_clean`). Both compiled with MiKTeX
+  `pdflatex` x3 from the `.bbl` (`build_unclean`, `build_clean`; also `latexmk`'s `main_preview.pdf`): 32 pages each, 0
+  errors, 0 undefined, 0 overfull; **page-by-page text identical** (pdftotext, 32 of 32, both against the uncleaned
+  pdflatex build and against `main_preview.pdf`). **Removed:** the file `references.bib` (arXiv uses `main.bbl`), and
+  47 comment lines / 12,391 bytes of comments over 25 `.tex` files (per file in `manifest_clean.json`); no comment text
+  left. **Tarball:** `arxiv_src_clean.tar.gz`, 33 files, 172,961 bytes, **sha256
+  `bb56ffec629b4200026b239ffadccf056698493bbe5feb2e90a306486216f80f`** (the uncleaned `arxiv_src.tar.gz`, 34 files:
+  `bdaf1457...04d4`). Checks on the cleaned text: one e-mail address (the author's own), none of the redacted terms, no
+  OGC file, no `../`, the PolyForm note present; FINDINGS/PREREG/CLAIMS still appear 13 times in visible appendix text
+  (the reproducibility pointers), not in comments. The final TeX Live check is Dace's arXiv preview, per
+  `F:\arxiv_pkg\gsplat_ogc_v2\INSTRUCTIONS.txt` (5 steps: upload and check the sha256; check the compiled PDF against
+  `build_clean/main.pdf`; note any endorsement prompt; fill the metadata; save without submitting).
+  `F:\arxiv_pkg\gsplat_ogc_v1` (from `882fa7f1`) is superseded. Next: Part 6 (PATH blank = NONE: skipped), Part 7.
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
