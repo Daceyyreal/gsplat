@@ -3,3 +3,5 @@
 kaggle/gn_*/** -text
 # the Kaggle notebooks: LF on every checkout, as kaggle/build_gn_*.py writes them (test_gn compares them byte for byte)
 kaggle/*.ipynb text eol=lf
+# the local gate script: LF on every checkout (Git Bash runs it)
+kaggle/gate.sh text eol=lf
