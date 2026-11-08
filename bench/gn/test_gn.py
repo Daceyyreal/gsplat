@@ -3221,6 +3221,72 @@ def test_section_27_perceptual_bd_computation():
             assert tok in sec or tok.lstrip("+-") in sec, (rid, tok)
 
 
+def _c3dgs_modules(monkeypatch, src):
+    """C3DGS's ``compression/vq.py`` and ``scene/gaussian_model.py`` from a checkout at ``src``, loaded on the CPU: its
+    CUDA-only extensions (``torch_scatter``, ``weighted_distance._C``) are stubbed, and the ``scene``, ``utils`` and
+    ``compression`` packages are entered without running their ``__init__`` (which load datasets and renderers)."""
+    import importlib
+    import types
+
+    for name in ("torch_scatter", "weighted_distance", "weighted_distance._C", "simple_knn", "simple_knn._C"):
+        stub = types.ModuleType(name)
+        stub.scatter = stub.weightedDistance = stub.distCUDA2 = lambda *a, **k: None
+        monkeypatch.setitem(sys.modules, name, stub)
+    for pkg in ("scene", "utils", "compression"):
+        mod = types.ModuleType(pkg)
+        mod.__path__ = [os.path.join(src, pkg)]
+        monkeypatch.setitem(sys.modules, pkg, mod)
+    for sub in ("utils.general_utils", "utils.system_utils", "utils.splats", "utils.sh_utils", "scene.gaussian_model",
+                "compression.vq"):
+        monkeypatch.delitem(sys.modules, sub, raising=False)
+    gm = importlib.import_module("scene.gaussian_model")
+    vq = importlib.import_module("compression.vq")
+    return gm, vq
+
+
+def test_c3dgs_color_compress_non_dir_false_loses_the_dc(monkeypatch):
+    """Repro of a C3DGS behaviour at 2a234af5 (needs a checkout in GN_C3DGS_SRC; skipped without it): with
+    ``color_compress_non_dir=False``, ``compress_color`` clusters the 15 AC coefficients only (``compression/vq.py:164-169``)
+    and passes them to ``set_color_indexed``, which still takes ``features[:, :1]`` as the DC (``scene/gaussian_model.py:796-
+    799``), so the decoded model has 15 coefficients, the DC replaced by the first AC coefficient. With the default
+    (``True``) a kept splat decodes exactly. The clustering itself (``vq_features``) is stubbed: the behaviour is in the code
+    around it, which runs unchanged. This test passes when the behaviour reproduces."""
+    import types
+
+    src = os.environ.get("GN_C3DGS_SRC")
+    if not src or not os.path.isfile(os.path.join(src, "compression", "vq.py")):
+        pytest.skip("needs C3DGS's source at 2a234af5 in GN_C3DGS_SRC")
+    import torch
+
+    gm, vq = _c3dgs_modules(monkeypatch, src)
+    torch.manual_seed(0)
+    n, k = 64, 8
+    feats = torch.randn(n, 16, 3)
+    importance = torch.rand(n)
+
+    def stub_vq(features, importance, codebook_size, *a, **kw):  # the first k rows as codebook, round-robin indices
+        return features[:codebook_size].clone(), torch.arange(len(features)) % codebook_size
+
+    monkeypatch.setattr(vq, "vq_features", stub_vq)
+
+    def decoded(non_dir):
+        g = types.SimpleNamespace(_feature_indices=None, color_index_mode=None,
+                                  features_dc_qa=lambda x: x, features_rest_qa=lambda x: x)
+        g.get_features = feats  # what compress_color reads
+        g.set_color_indexed = lambda f, i: gm.GaussianModel.set_color_indexed(g, f, i)
+        settings = vq.CompressionSettings(codebook_size=k, importance_prune=None, importance_include=0.5, steps=1,
+                                          decay=0.8, batch_size=16)
+        vq.compress_color(g, importance, settings, non_dir)
+        return gm.GaussianModel.get_features.fget(g), importance > 0.5
+
+    full, kept = decoded(True)
+    assert full.shape == (n, 16, 3) and torch.equal(full[kept], feats[kept])  # the default path keeps kept rows exactly
+    ac_only, kept = decoded(False)
+    assert ac_only.shape == (n, 15, 3)  # one coefficient short
+    assert torch.equal(ac_only[kept][:, 0], feats[kept][:, 1])  # the decoded "DC" is the first AC coefficient
+    assert not torch.allclose(ac_only[kept][:, 0], feats[kept][:, 0])  # the DC is gone
+
+
 def test_section_28_bd_robustness_computation():
     """check_s28 (FINDINGS section 28, declared at 39d41733): on all 86 BD values the registered BD's tool and own parabola
     agree, scipy's PCHIP and the own PCHIP agree, the registered values are reproduced, the slope-sign recount equals the
