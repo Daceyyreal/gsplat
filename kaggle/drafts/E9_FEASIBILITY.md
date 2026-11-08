@@ -26,22 +26,34 @@ of the same images.
 checkpoints (runs 1-5, E0-E2b), and all three are among the nine scenes OGC's own paper reports in its C3DGS host, so a
 confirmation there would be held out for this project's OGC rows but not unseen (the same disclosure as Amendment 15 d).
 
-## 2. Can bicycle and garden run on a T4?
+## 2. Can bicycle and garden run on a T4? (corrected 2026-11-08, second session)
 
-**No, not with the host as it is, and stump is doubtful.**
-- **Amendment 14 g** (from the code, checked against E3q on train to 89.4%): C3DGS alone on bicycle needs 14.16-17.05 GB
-  with the images on the GPU and **11.80-14.68 GB with them on the CPU**, before the CUDA context and fragmentation; the
-  T4 has 15.64 GB, and "no method-neutral mitigation brings C3DGS itself under about 14 GB on bicycle". E3p's bicycle job
-  already reserved 15.18 GB with 11.51 GB allocated (a lighter pipeline).
-- **OGC's row adds to that:** its 16 x 16 metric per colour-quantized splat (544 bytes packed, Am14 g) is up to 3.34 GB
-  on bicycle; E4p's fork peaked at 9.43 GB on train (1.03 M splats) with OGC's chunk.
-- **Measured on smaller scenes:** E6's flowers and treehill (3.6-3.8 M splats) read 14.93 GB of 15.64 GB at the start,
-  and note 1's gap check would have read 16.43 and 16.49 GB (a stated risk that held).
-- garden is 95% of bicycle's splats and stump 81%; scaled from Am14 g, stump's C3DGS alone would be about 9.6-11.9 GB
-  with the images on the CPU, before OGC's metric (about 2.7 GB) and E7's arm copies. **Feasible only with a memory
-  change to the host**, which would be a new deviation on held-out scenes.
-- **And n = 3 is too few** for E5's or E7's criteria (the count criterion would need 3 of 3; t with 3 degrees of
-  freedom: 3.18 at 0.975 against 2.36 at n = 7).
+**Probably yes, which reverses this draft's first version; it needs a memory pilot before any registration.**
+- **The first version was wrong on its evidence.** It quoted "flowers and treehill read 14.93 GB of 15.64" as measured;
+  that is E6 note 1's *prediction* (the upper end with OGC's colour step, x 1.14, `kaggle/PREREG_GN.md:3734-3735`). The
+  measured process peaks in E6 part (a) were **7.00 GB allocated / 8.02 GB reserved on flowers and 6.74 / 8.25 on
+  treehill** (`kaggle/gn_e6/S4/gn6/`, `S5/gn6/` metas): the code-based models (Note 1's, and Amendment 14 g's for bicycle,
+  11.80-17.05 GB for C3DGS alone) were conservative by about a factor of two.
+- **A fit to every measured GPU-start scene** (E6 part (a) and (b), the fork's process peak, nine scenes):
+  peak allocated = 2.00 + 1.12 x (GB of training images held on the GPU as float32) + 0.70 x (million splats);
+  reserved = 1.80 + 1.40 x images + 0.94 x splats; the largest residual is 0.14 GB allocated and 0.54 GB reserved. The
+  images dominate, which is why the indoor scenes at data factor 2 (bonsai, counter, kitchen, room: 4.7-6.0 GB of
+  images) peak highest, at 8.2-9.8 GB, not the large outdoor models.
+- **Extrapolated** (images at data factor 4: bicycle 194 views of 1237 x 822, garden 185 of 1297 x 840, stump 125 of
+  1245 x 825):
+
+  | Scene | Splats | Images on the GPU: allocated / reserved | Images on the CPU: allocated / reserved |
+  |---|---|---|---|
+  | stump | 4,961,797 | 7.2 / 8.6 GB | 5.5 / 6.5 GB |
+  | garden | 5,834,784 | 8.8 / 10.7 GB | 6.1 / 7.3 GB |
+  | bicycle | 6,131,954 | 9.0 / 10.9 GB | 6.3 / 7.6 GB |
+
+  All under the T4's 15.64 GB, but **this extrapolates 1.6 x beyond the largest model measured** (treehill, 3.78 M
+  splats), and E7's arms did not raise the peak (room 9.76 GB in E6 part (b) and in E7). E3p's bicycle job reserved 15.18
+  GB, but that was the gsplat harness's protocol i, not the fork.
+- **And n = 3 is still too few** for E5's or E7's criteria (the count criterion would need 3 of 3; t with 3 degrees of
+  freedom: 3.18 at 0.975 against 2.36 at n = 7). So bicycle, garden and stump can add three held-out INRIA scenes to a
+  confirmation, not make one alone.
 
 ## 3. The alternative: our own 3DGS checkpoints on new public scenes
 
@@ -75,9 +87,10 @@ confirmation there would be held out for this project's OGC rows but not unseen 
 **Own checkpoints on seven DL3DV benchmark scenes, chosen by a pre-registered rule, confirming P1, P_FT, Δ_refit and
 Δ_cb with E5's, E6's and E7's rules unchanged:** about one training session (5-8 h) plus 49-73 GPU-hours of
 confirmation, **about 2-2.7 weeks of quota** at 30 h a week, after a wheel session. It gives n = 7 genuinely unseen scenes and
-avoids both the T4 memory wall and a COLMAP step. If DL3DV's terms do not allow it, Tanks and Temples' intermediate set
-with COLMAP is the fallback (plus the COLMAP cost, to measure on one scene first). The INRIA-held-out route (bicycle,
-garden, stump) is not recommended: at most one scene fits, after a host change.
+avoids a COLMAP step. If DL3DV's terms do not allow it, Tanks and Temples' intermediate set with COLMAP is the
+fallback (plus the COLMAP cost, to measure on one scene first). **Corrected:** bicycle, garden and stump probably fit
+a T4 (section 2), so they can be added as three held-out INRIA scenes (n = 10 with seven new ones), after a one-session
+memory pilot on bicycle; on their own they are too few.
 
 ## Sources read 2026-11-08
 

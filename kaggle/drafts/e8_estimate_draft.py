@@ -102,3 +102,56 @@ if __name__ == "__main__":
           f"{tot_hi / 3600 + wheel:.1f} session-hours high, {tot_cal / 3600 + wheel:.1f} calibrated; "
           f"at {WEEKLY_QUOTA_H:.0f} h a week: {(tot_hi / 3600 + wheel) / WEEKLY_QUOTA_H:.1f} / "
           f"{(tot_cal / 3600 + wheel) / WEEKLY_QUOTA_H:.1f} weeks")
+
+# ------------------------------------------------------------------ the 2x2 redesign (2026-11-08, second session)
+# Arms per full process, beyond E6's base process (unfine-tuned pair + one fine-tuned pair): the base pair becomes G
+# (anchor), so the 4-arm design (Z = the unfine-tuned rows, C, N, G) adds C and N (4 rows) and no replicate; the 5-arm
+# design adds O (opacity only, 2 more rows); the first draft (R, G, N, C, K, R2) added 8 rows and the replicate pair.
+# j-1_p1 / j+1_p1 run the anchor's pair (G, or R in the first draft): the same cost as E6's base process.
+VARIANTS = {"4-arm (Z, C, N, G)": (4, False), "5-arm (Z, C, N, O, G)": (6, False),
+            "6-arm first draft (R, G, N, C, K, R2)": (8, True)}
+
+
+def half_v(scene, h, end, U, extra, replicate):
+    pre, e6p = e6e.scene_parts(scene, end, U)
+    ft = e6e.extra_ft_row_s(scene, end, U)
+    procs = []
+    for p in es.PROCESSES:
+        s = e6p[e7e.E6_INDEX[(p["j"], p["seed"])]]
+        if p["full"]:
+            s += extra * ft + (e7e.REPLICATE_FT_ROWS * ft if (replicate and p["replicate"]) else 0.0)
+        procs.append(s)
+    return (pre + sum(procs[i] for i, _ in es.half_processes(scene, (h,)))) * e7e.cpu_x(scene)
+
+
+def variant(name, U, budget=KAGGLE_S - SETUP_RESTORED - SPARE_S):
+    """Jobs (high, calibrated), the sessions (seed-0 halves one each; seed-1 halves first-fit decreasing into the
+    budget), session-hours with a 420 s setup each plus one wheel session, and weeks at WEEKLY_QUOTA_H."""
+    extra, rep = VARIANTS[name]
+    halves = [(half_v(s, h, 1, U, extra, rep), s, h) for s in e7e.GATE for h in (0, 1)]
+    hi = sum(x for x, _, _ in halves)
+    cal = sum(x * ratio(s, h, U) for x, s, h in halves)
+    bins = []
+    for x in sorted((x for x, _, h in halves if h == 1), reverse=True):
+        for b in bins:
+            if sum(b) + x <= budget:
+                b.append(x)
+                break
+        else:
+            bins.append([x])
+    n = sum(1 for _, _, h in halves if h == 0) + len(bins)
+    wheel = SETUP_WHEEL_BUILD / 3600
+    sh = (hi + n * SETUP_RESTORED) / 3600 + wheel, (cal + n * SETUP_RESTORED) / 3600 + wheel
+    return {"jobs_h": (hi / 3600, cal / 3600), "sessions": n, "session_h": sh,
+            "weeks": (sh[0] / WEEKLY_QUOTA_H, sh[1] / WEEKLY_QUOTA_H),
+            "largest_half_s": max(x for x, _, _ in halves)}
+
+
+if __name__ == "__main__":
+    U = e7e.units()
+    print()
+    for name in VARIANTS:
+        v = variant(name, U)
+        print(f"{name}: jobs {v['jobs_h'][0]:.1f} h high / {v['jobs_h'][1]:.1f} h calibrated; {v['sessions']} sessions + wheel; "
+              f"{v['session_h'][0]:.1f} / {v['session_h'][1]:.1f} session-hours; {v['weeks'][0]:.1f} / {v['weeks'][1]:.1f} weeks; "
+              f"largest half {v['largest_half_s']:,.0f} s")

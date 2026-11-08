@@ -82,3 +82,14 @@ becomes a method paper with a mechanism (E7) behind it. It reuses E7's fork, hoo
 about two sessions on development scenes. (b) is lower-risk (the gain before fine-tuning is known), but it is largely
 "OGC in another codec", which is the second-host result (MesonGS with `--iterations 0`) and so comes with that work
 anyway. Run (b)'s pilot as part of the second-host pilot, not as a method of its own.
+
+## Later (2026-11-08, second session)
+
+- **(a)'s pilot is drafted as a declaration:** `kaggle/drafts/METHOD_A_PILOT_DECLARATION_DRAFT.md` (go rule from E7's
+  noise, smallest detectable recovery 0.078 dB on three scenes, the C3DGS fairness arm, licences, code identity).
+- **The development scenes (Dace's R7):** train, treehill and flowers are not gate scenes (`kaggle/e5_scenes.py`). Their
+  measured process peaks in E6 part (a) were 4.92-7.00 GB allocated and 5.38-8.25 GB reserved, so (a)'s extra state
+  (target colours, and the metric if kept on the GPU) fits a T4. But their lead to recover is small (P1 - P_FT mean
+  0.092 dB), so a three-scene pilot can only detect a near-complete recovery: see the declaration draft's flag.
+- **(b)'s object:** in MesonGS and MesonGS++ the metric would act on the AC block only (`SECOND_HOST_FEASIBILITY.md`,
+  R6c); `SH_ONLY_CHECK_DECLARATION_DRAFT.md` measures that lead inside C3DGS first.
