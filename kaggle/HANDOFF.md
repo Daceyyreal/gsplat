@@ -6570,6 +6570,12 @@ split before it reaches the fork.
     option: env" in every log); the `.venv` uses the system site-packages (`include-system-site-packages = true`), so
     pytest itself comes from the user's Python 3.13 site-packages.
   - Next: Part 3 (commit the drafts; the wheel pin).
+- **Part 3 checkpoint (drafts):** `d19bd885` commits D1-D4, `memory_probe.py` and `build_memory_probe.py` (as the third
+  session left them; scanned for e-mail addresses and the redacted terms: none); `582f3739` adds
+  `kaggle/drafts/gn_memory_probe.ipynb` (pinned to `d19bd885`) and re-pins `gn_wheel_cache_cu130.ipynb` and
+  `WHEEL_CACHE_CU130.md` from `882fa7f1` to `d19bd885` (key unchanged: `33734f894b0a-95f8de51`). WHEEL was blank, so
+  S11's output is recorded as not checked and Step 1 (reuse S11's wheel) stays first; the build notebook stays the
+  fallback. Both pins are local only until a push. Next: Part 4 (R13-R15, drafts only).
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
