@@ -71,7 +71,7 @@ E6 part (b)'s for P_FT), with the scene mean's spread from the same across-scene
 |---|---|---|---|---|
 | sign test (section 3) | P1 | every scene positive (7 of 7 gate, 3 of 3 development) | 5 (5 of 5 positive: p 0.031) | 3 INRIA + 2 DL3DV |
 | sign test (section 3) | P_FT | positive rate 6/7 (E6 part (b)) | 11 | 3 INRIA + 8 DL3DV |
-| paired t, mean | P1 | 0.3558, SD 0.1175 (E5, gate 7) | 3 (power 0.93 at 3) | 3 INRIA alone |
+| paired t, mean | P1 | 0.3558, SD 0.1175 (E5, gate 7) | 3 (power 0.93 at 3), **fragile** | 3 INRIA alone |
 | paired t, mean | P1 | 0.2770, SD 0.1616 (gate 7 + development 3) | 4 | 3 INRIA + 1 DL3DV |
 | paired t, mean | P1 | 0.0929, SD 0.0588 (development 3: flowers, treehill, train) | 5 | 3 INRIA + 2 DL3DV |
 | paired t, mean | P_FT | 0.0425, SD 0.0373 (E6 part (b), gate 7) | 7 (power 0.84) | 3 INRIA + 4 DL3DV |
@@ -89,3 +89,26 @@ E6 part (b)'s for P_FT), with the scene mean's spread from the same across-scene
   the development scenes alone no n suffices. A design sized on the gate scenes alone is optimistic for outdoor scenes.
 - **E5's criterion 3 is not a test across scenes:** its `SE_noise` is seed noise; it is shown because E5-E7 used it, not
   as the basis for a held-out claim.
+- **The 3-scene paired-t row is fragile:** its power treats the gate scenes' SD (0.1175 dB, from seven scenes) as known,
+  and with n = 3 the test has 2 degrees of freedom, so a held-out SD only somewhat larger, or a smaller effect, drops
+  the power fast (at the pooled ten scenes' mean and SD, n = 3 gives 0.61). It is not a design to fund on its own.
+
+## 5. The recommended E9 design (R19, added 2026-11-09)
+
+- **Primary: P1, one-sided paired t-test of the per-scene BD values against 0 at 0.05, sized on the pooled gate and
+  development scenes** (mean 0.2770 dB, SD 0.1616 dB, n = 10; FINDINGS section 29 gives the per-scene values): **4
+  scenes for 80% power (0.82), 3 INRIA + 1 DL3DV.** E5's count and criterion 3 can sit beside it as in E5.
+- **P_FT: estimation only, a mean with a 95% confidence interval and no test,** unless 13 scenes are funded (3 INRIA +
+  10 DL3DV, 80% power at the pooled mean 0.0299 dB and SD 0.0394 dB). With the pooled SD the interval's half-width is
+  about 0.063 dB at 4 scenes, 0.036 at 7, 0.027 at 11 and 0.024 at 13, so at 4 scenes it cannot tell the gate's
+  0.0425 dB from 0.
+- **Expected held-out range (an expectation, not a prediction to test):** P1 between the development scenes' 0.0929 dB
+  and the gate scenes' 0.3558 dB, and P_FT between 0.0005 dB and 0.0425 dB (FINDINGS section 29). **INRIA's three
+  held-out scenes, bicycle, garden and stump, are outdoor Mip-NeRF 360 scenes**, like flowers and treehill, so the lower
+  end is as plausible as the upper. They are held out for OGC rows but not unseen: garden and bicycle are development
+  scenes for GN-VQ (Amendment 7) and stump since Amendment 10, and E3p and E3r used bicycle's INRIA checkpoint
+  (`kaggle/drafts/E9_FEASIBILITY.md` section 1).
+- **How the 4-scene design fails:** if held-out P1 is near the development scenes' mean while the spread is the pooled
+  SD (0.0929 dB, 0.1616 dB), 4 scenes give 0.23 power and 21 are needed; with the development scenes' own SD (0.0588 dB)
+  5 are needed. Funding 5-7 scenes (3 INRIA + 2-4 DL3DV) covers the development-like case at the development SD
+  (0.89 at 5, 0.98 at 7) and keeps the pooled case above 0.93.
