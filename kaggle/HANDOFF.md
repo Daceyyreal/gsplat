@@ -6656,6 +6656,18 @@ was intact (`git fsck` clean, staged files complete) and the gate was re-run.
     INRIA + 1 DL3DV), P_FT estimation-only unless 13 scenes; the 4-scene design fails at a development-like effect
     (0.23 power; 5-7 scenes recommended to cover it).
   - Part 2 skipped (PATH = NONE). Next: Part 3 (paper PDF, arXiv v3, final checkpoint).
+- **Part 3 checkpoint (final):** the paper changed under R16, so **arXiv v3** was built (prepared only; not submitted,
+  no tag): `F:\arxiv_pkg\gsplat_ogc_v3\`, from **`ccc4a956`** (its `paper/` equals `d2c1abd2`'s). Cleaned and uncleaned
+  builds 32 pages each, 0 errors, 0 undefined, 0 overfull; **text identical on all 32 pages** (also against latexmk's
+  preview). Removed: `references.bib` and 47 comment lines (12,419 bytes). `arxiv_src_clean.tar.gz`: 33 files, 173,260
+  bytes, **sha256 `fea1bc6f79fbf60e076c36139c5591f4597ff778a995267e61e3cbfe1e2f1f9f`**; checks as v2 (one e-mail, the
+  author's; no redacted term; no OGC file; no `../`; PolyForm note present); `INSTRUCTIONS.txt` names the new sha256. v2
+  is superseded. `F:\gsplat_paper_draft.pdf` rebuilt (32 pages). check_tex 286 numbers, 0 failures; check_figs 1482, 0
+  failures; check_s28 and check_s29 0 failures; every gate 248 passed, 0 skipped. **Not pushed** (KAGGLE blank): local is
+  ahead of the fork (`74da602b`) by `a70ef037`, `158e1d36`, `f7dff29f`, `d2c1abd2`, `c40a291e`, `ccc4a956` and this
+  checkpoint, a fast-forward.
+- **Next action: Dace:** (1) KAGGLE status, to push; (2) the arXiv preview of v3 per its `INSTRUCTIONS.txt`; (3) PATH:
+  D4 and/or D1 (D1's R18 revision is in); (4) WHEEL: check E7 S11's output; (5) Docker's reset dialog (not touched).
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
