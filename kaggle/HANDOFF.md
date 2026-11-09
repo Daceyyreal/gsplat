@@ -6668,6 +6668,8 @@ was intact (`git fsck` clean, staged files complete) and the gate was re-run.
   checkpoint, a fast-forward.
 - **Next action: Dace:** (1) KAGGLE status, to push; (2) the arXiv preview of v3 per its `INSTRUCTIONS.txt`; (3) PATH:
   D4 and/or D1 (D1's R18 revision is in); (4) WHEEL: check E7 S11's output; (5) Docker's reset dialog (not touched).
+- **Pushed (after the final checkpoint):** Dace answered "None running, push"; fetch, ancestor check, fast-forward push
+  `74da602b..315035dd`; `git ls-remote fork bench/gn-vq` = `315035dd`. Next action (2)-(5) above unchanged.
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
