@@ -6622,6 +6622,40 @@ split before it reaches the fork.
 - **Pushed (after the final checkpoint):** Dace answered "None running, push"; `git fetch fork`, ancestor check, fast-forward
   push `8abfdecf..cae2d7d6`; `git ls-remote fork bench/gn-vq` = `cae2d7d6`. The pins `d19bd885` (memory probe, wheel
   notebook) are now on the fork. `backup/pre-r11-split` stays local. The rest of the next action stands: (2)-(5) above.
+- **After the push (2026-11-09):** the split verified once more (`git diff ae2d16bb 9f95d792` empty; the old Part 1 commit
+  equal to `bc876d08`; no commit bundles a FINDINGS or PREREG note with code), and the local branch
+  `backup/pre-r11-split` (`d8aac3c3`, never pushed) deleted on Dace's instruction.
+
+### Fifth session (2026-11-09): R16-R19 (checkpoints)
+
+Dace's prompt: KAGGLE blank (not YES: commit locally, no push), PATH blank (= NONE: no declaration lands). Acks: R12
+refuted (the R9 test never skipped); R13 pushback accepted. A power cut interrupted the R18/R19 gate; the repository
+was intact (`git fsck` clean, staged files complete) and the gate was re-run.
+
+- **Part 1 checkpoint (readings):**
+  - **R16, partly confirmed.** (a) FINDINGS section 29 (`a70ef037`, note alone) tables the ten scenes with an OGC row
+    (dataset, data factor, indoor/outdoor as the datasets describe them, training/test views, splats, P1, P2, P_FT under
+    the registered fit and PCHIP); `check_s29.py` (`158e1d36`) recomputes it; CLAIMS E22 (`f7dff29f`). Means: P1 0.3558
+    (gate) against 0.0929 dB (development), P2 0.1874 against 0.0456, P_FT 0.0425 against 0.0005; every development P1
+    below every gate P1. (b) The split: Amendments 7 (`3e074edd`, 2026-09-21), 9 (`1ae0c05b`, 09-22), 10 (`e580b731`,
+    09-25), 11 (`14145093`, 09-26), 12 (`aa67e21e`, 09-27), 15 (`573142ac`, 10-01); the first OGC row on train is
+    section 16 (`75c53e09`, 10-02), treehill section 17 (10-06), flowers section 23 (10-20), the gate E5: **fixed before
+    any OGC-against-C3DGS value**, but **not a random draw**: Amendment 9 made treehill, flowers and train development
+    scenes where GN-VQ's test gain transferred worst. (c) **Refuted in part:** the abstract and introduction already
+    scope P1/P_FT to the gate scenes, and the development results are in the main text (Section 5's paragraph, Table 3,
+    Limitations), not only the appendix. **Confirmed for one sentence:** Related Work's training-free-codecs sentence
+    gave the gate means unscoped. Paper commit `d2c1abd2`: that sentence scoped; one sentence after Q2 in the
+    introduction's Findings with the development means; a Limitations line (the means, the non-random split, no cause).
+    check_tex 286 (pin 280 -> 286); 32 pages.
+  - **R17:** nothing the memory-probe or wheel notebooks import or run changed since `d19bd885` (`kaggle/*.py`,
+    `kaggle/drafts/memory_probe.py` and its builder, `bench/gn/ogc_derived.py`, `gn_metric.py`, `gsplat/` tree
+    `33734f894b0a`, `setup.py` `95f8de51`); `d19bd885` is on the fork. No regeneration.
+  - **R18 and R19** (`c40a291e`, drafts): D1's main arm is a metric dissection in the joint container; an optional
+    AC-only pair carries the second-host thresholds; costs main 7.4-10.9 h, main + pair 11.5-15.5 h (two sessions each;
+    the first draft's 9.1-12.9 h priced one OGC row too many). D4 section 5: P1 primary on the pooled SD (4 scenes: 3
+    INRIA + 1 DL3DV), P_FT estimation-only unless 13 scenes; the 4-scene design fails at a development-like effect
+    (0.23 power; 5-7 scenes recommended to cover it).
+  - Part 2 skipped (PATH = NONE). Next: Part 3 (paper PDF, arXiv v3, final checkpoint).
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
