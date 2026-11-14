@@ -198,6 +198,10 @@ before computing these (`cf26643f`); no run, no verdict.**
 - P1 0.3558 dB on the gate scenes against 0.0929 dB on the development scenes, P_FT 0.0425 dB against 0.0005 dB (registered fits); every development scene's P1 is below every gate scene's.
 - The split was fixed by Amendments 7-15 before any OGC-against-C3DGS value on these scenes; it is not a random draw.
 
+**Scene selection (section 30, branch `bench/gn-vq`): report only, post hoc, no new run, no new value.**
+- Five gate scenes (bonsai, counter, kitchen, room, truck) were kept on GN-VQ's E2 outcomes; no scene was chosen or kept on an OGC outcome; drjohnson and playroom were placed on no outcome.
+- GN-VQ's metric is the AC block of the 16 x 16 metric OGC's VQ ran on in E5-E7, so the selection plausibly favours the gate set; nothing here tests it.
+
 ## Process notes
 
 - **2026-11-08, recorded after the fact: two commits put a write-up and its checker together.** `d84720a8` (section
@@ -348,6 +352,9 @@ before computing these (`cf26643f`); no run, no verdict.**
 - Section 29: every number comes from the committed meta files of E5 (`9a90dabb`, `1710cc8a`, `88b5ebed`) and E6
   part (a) (`9ce9b36e`, `6ff4877e`) and from section 28's computation (`bench/gn/check_s28.py`); amendment and section
   dates from git. `bench/gn/check_s29.py` recomputes every number and checks it against the text.
+- Section 30: every quotation and line number comes from `kaggle/PREREG_GN.md`, section 10's table and
+  `bench/gn/gn_metric.py`; which scenes have GN-VQ rows from the committed bundles' file names (`kaggle/gn_e1/gn1/`,
+  `kaggle/gn_e2/gn2/`, `kaggle/gn_e2b/gn2b/`, `kaggle/gn_e2c/gn2c/`); amendment and section dates from git. No run.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -6056,3 +6063,87 @@ cell is registered parabola / PCHIP, in dB, over the seed-0 curves. Splats are t
 - **Not settled:** why. The sets differ in several properties at once, the development set has three scenes, the
   development values are descriptive (E6 part (a) has no criterion), no standard error is computed here, and nothing here
   is a test.
+
+## 30. Scene selection and its direction (report only, post hoc, no new run, no new value; written on 2026-11-14 after every verdict, undeclared) — five gate scenes were kept on GN-VQ's E2 outcomes, none on an OGC outcome, drjohnson and playroom on no outcome; GN-VQ's metric is the AC block of the metric OGC's VQ ran on
+
+**Report only.** This section reads PREREG, FINDINGS sections 10 and 29 and `bench/gn/gn_metric.py`, and computes
+nothing new. For each of INRIA's thirteen scenes (section 29's ten, and bicycle, garden and stump) it records which
+outcome, if any, put the scene in its set, and how GN-VQ's metric relates to the metric OGC's VQ ran on in E5-E7. The
+direction stated at the end is an argument from these records, not a test, and it changes no verdict.
+
+### The selecting text, as committed
+
+- **Amendment 9 b** (`1ae0c05b`, 2026-09-22; `kaggle/PREREG_GN.md:868-872, 876-881`): "The symptom in E2 is a
+  train-view gain that does not transfer to test views: at K = 65,536, GN-VQ's test PSNR gain over `lloyd_trace` divided
+  by its train PSNR gain is lowest on **treehill (-1.06), flowers (0.32) and train (0.47)**, against 0.52-0.90 on the
+  other eight scenes (FINDINGS section 10, post hoc)." Its scenes: "Treehill, flowers and train, the three lowest ratios
+  above", and "**From this amendment on, treehill, flowers and train are development scenes**".
+- **Amendment 10 b** (`e580b731`, 2026-09-25; `:1015-1020`) moved E2b to "**Treehill, flowers and stump**, the three
+  held-out scenes where the dMSE ratio grows most from train to test", made stump a development scene and kept train one.
+  Amendment 10 a records that at K = 65,536 "room (1.624) ranks above flowers (1.596)" on the quotient form of that measure.
+- **Amendment 11 a** (`14145093`, 2026-09-26; `:1082-1084`): "**Bonsai, counter, kitchen, room and truck, all five gate
+  scenes.** They are the only scenes with a pinned checkpoint that no tuning decision has used: garden and bicycle became
+  development scenes in Amendment 7, treehill, flowers and train in Amendment 9, and stump in Amendment 10."
+- **Amendment 12** (`aa67e21e`, 2026-09-27; `:1233`) kept "Deep Blending (drjohnson, playroom) and the five scenes no tuning
+  decision has used" untouched; **Amendment 15** (`573142ac`, 2026-10-01; `:1893`) fixed the seven gate scenes; **Amendment
+  17** (`b3923bfb`, 2026-10-06; `:2599-2600`) kept them "as written".
+
+### Scene by scene
+
+The ratio is section 10's GN-VQ test/train PSNR gain over `lloyd_trace` at K = 65,536 (E2, seed 0, this project's gsplat
+checkpoints); "none" means the scene has no GN-VQ row in any committed bundle.
+
+| Scene | Set | Section 10's ratio | What placed it |
+|---|---|---|---|
+| bonsai | gate | 0.78 | kept: not among Amendment 9's or Amendment 10's three |
+| counter | gate | 0.72 | kept, as bonsai |
+| kitchen | gate | 0.85 | kept, as bonsai |
+| room | gate | 0.61 | kept, as bonsai; on Amendment 10 a's quotient form it ranked above flowers at K = 65,536 |
+| truck | gate | 0.56 | kept, as bonsai; the lowest ratio of the five |
+| drjohnson | gate | none | no outcome: no GN-VQ row; untouched in Amendment 12; a gate scene from Amendment 15 |
+| playroom | gate | none | no outcome, as drjohnson |
+| flowers | development | 0.32 | chosen on Amendment 9's ratio |
+| treehill | development | -1.06 | chosen on Amendment 9's ratio |
+| train | development | 0.47 | chosen on Amendment 9's ratio; Amendment 10 kept it a development scene |
+| bicycle | development (GN-VQ) | 0.90 | Amendment 7: GN-VQ was designed and tuned on it (no transfer outcome) |
+| garden | development (GN-VQ) | 0.72 | Amendment 7, as bicycle |
+| stump | development (GN-VQ) | 0.52 | chosen on Amendment 10's dMSE measure |
+
+- **Five of the seven gate scenes were kept on GN-VQ outcomes:** bonsai, counter, kitchen, room and truck are in the gate
+  because E2's per-scene transfer measures did not select them. None was chosen for a favourable outcome; each was kept
+  because its outcome was not among the selecting three.
+- **No scene was chosen or kept on an OGC outcome:** the seven were fixed by Amendment 15 (2026-10-01), before the first
+  OGC-against-C3DGS value on any scene (section 16, 2026-10-02; section 29), and Amendment 17 kept them as written.
+- **drjohnson and playroom were placed on no outcome:** no GN-VQ row exists for either, and they entered the gate with
+  Deep Blending in Amendment 15. They are the only two of the thirteen scenes placed on no outcome, and both are already
+  gate scenes; their values are in section 29's table, and no reading is drawn from them here.
+- **bicycle, garden and stump are GN-VQ development scenes** (Amendments 7 and 10), and E3p and E3r used bicycle's INRIA
+  checkpoint (C3DGS, no OGC row). No INRIA scene is both unselected and unused.
+
+### GN-VQ's metric and OGC's
+
+- **GN-VQ's metric** (`bench/gn/gn_metric.py:4-6`): per splat, `M_i = sum_v s_iv * y(d_iv) y(d_iv)^T`, 15 x 15 over SH
+  bands 1-3, with `s_iv = sum_p w_ip^2` from a 16-probe estimate over the training views.
+- **The metric OGC's VQ ran on in E5-E7:** Amendment 17 b (`:2558`) passes `gram_kmeans` "`G` our full-train-view
+  16 x 16 metric of the same splats", which is `gn_metric.py`'s `with_dc=True` form (`:13-15`): "the same render, probes
+  and ``s_iv``, a 16 x 16 metric (136 packed values) whose lower-right 15 x 15 block is the one above, entry for entry".
+  OGC's own Gram is the same sum with exact compositing weights (`kaggle/RELATED_WORK_OGC.md` section 3).
+- **Same family:** one quadratic form per splat, built from the training views' compositing weights and SH basis; GN-VQ's
+  is the AC block of the one E5-E7 gave OGC's VQ. Amendment 17 a (`:2531`) already says so: "What GN-VQ contributes
+  beyond OGC is the metric, which OGC's VQ already uses." The quantizers differ: GN-VQ refines a gsplat PNG-codec codebook
+  of the 15 AC coefficients; OGC's `gram_kmeans` clusters all 16 rows inside C3DGS.
+
+### The direction (an argument, not a test)
+
+- Amendment 9 b selected on a train-view gain that does not transfer to test views, under a metric accumulated over the
+  training views. OGC's VQ uses the same family of metric over the same training views. The development scenes are
+  therefore plausibly scenes where training-view weighting helps least, and the gate scenes are the remainder: the
+  selection plausibly favours the gate set, so the gate means may overstate the effect on other scenes.
+- Section 29's development means are consistent with that and do not test it: the selecting ratios are GN-VQ's, from one
+  seed and one checkpoint per scene, and Amendment 10 a calls the PSNR ratio the wrong measure of generalization.
+
+### What section 30 settles, and what it does not
+
+- **Settled (from the records):** which outcome placed each scene; that no OGC outcome placed any; that drjohnson and
+  playroom were placed on none; that GN-VQ's metric is the AC block of the one OGC's VQ ran on here.
+- **Not settled:** whether the selection moved OGC's lead, and by how much. Nothing here is a test.
