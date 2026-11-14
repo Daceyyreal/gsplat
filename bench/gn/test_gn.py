@@ -3303,6 +3303,20 @@ def test_section_29_scene_heterogeneity():
     assert res["fails"] == [] and res["n_numbers"] >= 20
 
 
+def test_section_30_scene_selection():
+    """check_s30 (FINDINGS section 30, report only): every quotation is in the cited PREREG or gn_metric.py lines, the
+    amendments' first commits and dates are git's, the ratios are section 10's, Amendment 9's three are the lowest ratios
+    and the five kept gate scenes the rest, and drjohnson and playroom have no GN-VQ row in any committed E0-E4q bundle."""
+    import check_s30 as c
+
+    R = c.ratios(open(c.FINDINGS, encoding="utf-8").read().replace("\r\n", "\n"))
+    assert sorted(R, key=lambda s: float(R[s]))[:3] == ["treehill", "flowers", "train"] and R["truck"] == "0.56"
+    scenes, db_csv = c.gnvq_scenes()
+    assert scenes == set(R) and not ({"drjohnson", "playroom"} & scenes) and db_csv == []
+    res = c.run()
+    assert res["fails"] == [] and res["n_checked"] >= 40
+
+
 def test_section_28_bd_robustness_computation():
     """check_s28 (FINDINGS section 28, declared at 39d41733): on all 86 BD values the registered BD's tool and own parabola
     agree, scipy's PCHIP and the own PCHIP agree, the registered values are reproduced, the slope-sign recount equals the
@@ -3797,7 +3811,7 @@ def test_paper_appendix_tables_recompute_every_cell(tmp_path):
     spec.loader.exec_module(at)
     fresh = tmp_path / "fresh"
     prereg, sessions, checkers = at.main(str(fresh))
-    assert (len(sessions), len(checkers)) == (19, 19)  # check_s27 and check_s28 added 2026-11-08, check_s29 2026-11-09
+    assert (len(sessions), len(checkers)) == (19, 20)  # check_s27 and check_s28 added 2026-11-08, check_s29 2026-11-09, check_s30 2026-11-14
     for name in os.listdir(fresh):
         a, b = (fresh / name).read_bytes(), open(os.path.join(out, name), "rb").read()
         assert a.replace(b"\r\n", b"\n") == b.replace(b"\r\n", b"\n"), name
