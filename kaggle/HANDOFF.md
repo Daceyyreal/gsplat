@@ -6671,6 +6671,32 @@ was intact (`git fsck` clean, staged files complete) and the gate was re-run.
 - **Pushed (after the final checkpoint):** Dace answered "None running, push"; fetch, ancestor check, fast-forward push
   `74da602b..315035dd`; `git ls-remote fork bench/gn-vq` = `315035dd`. Next action (2)-(5) above unchanged.
 
+### Sixth session (2026-11-14): R24-R28, Part 1 in progress (checkpoint; usage limit reached)
+
+Dace's prompt: KAGGLE line read as "commit locally, no push" (it says both "= yes" and "YES -> commit locally, no push";
+not pushed, to be confirmed). Readings R24-R28, E9 redesign (Part 2), arXiv v4 (Part 3).
+
+- **Done (committed, each gated, not pushed):** `d1ee56b0` FINDINGS section 30 (R24, the note alone); `7f8ba6aa` its
+  erratum (gn_metric.py line cites :5-6 and :14-16); `dd997723` check_s30 + test + appendix checker table (20 checkers);
+  `f071782e` CLAIMS E23. Gate 249 passed, 0 skipped. Gates now take 9-10 min: run them with run_in_background.
+- **R24 verdict:** confirmed in part. Five gate scenes (bonsai, counter, kitchen, room, truck) were kept on GN-VQ's E2
+  outcomes, none on an OGC outcome; GN-VQ's metric is the AC block of the 16 x 16 metric OGC's VQ ran on (Amendment 17 a
+  already says so). **Refuted:** "the paper has no unselected scene": drjohnson and playroom have no GN-VQ row and were
+  placed on no outcome (both already gate scenes). The Limitations sentence (not yet written) must say that.
+- **R25, verified, not committed:** indoor P1 0.390375 / P_FT 0.046692, outdoor 0.106822 / 0.004659 (PCHIP 0.3979 /
+  0.0499 and 0.1119 / 0.0002); every indoor P1 above every outdoor P1 under both fits. **Labels:** Mip-NeRF 360 Table 5
+  (p. 17) labels its six; Inside-Out (Hedman et al. 2016, Crossref 10.1145/2980179.2982420, not yet in references.bib)
+  gives playroom and Dr Johnson's house as indoor (match by name); **Tanks and Temples labels neither truck nor train**
+  (truck not described at all), Deep Blending names none. Indoor/outdoor is the gate/development split except truck.
+  Drafts outside the repo: `F:	mp_dl24_r25_wip\` (s31.md, quotes_rows.md, ins_findings.py); source PDFs in
+  `F:	mp_dl\{mipnerf360,tnt,db}`.
+- **Next, in order:** QUOTES rows + hedman2016scalable bib entry; FINDINGS s31 alone; check_s31; CLAIMS E24; paper R24
+  Limitations + R25 sentence (sec5_finetuning, beside the development values); R26 a-d (abstract word count before/after,
+  setup scope sentence, sec5_3:44 scoped as sec_related:33, sec5_finetuning:50 "seven gate scenes"); R26 e conclusion
+  draft + venue check; HANDOFF Part 1 checkpoint. Then Part 2 (R27 E9 draft with DL3DV labels/licence; R28 D4 note
+  draft) and Part 3 (mark v3 superseded; v4 build: make_arxiv.py is gone, rebuild the steps; paper draft PDF).
+- Noticed: paper/QUOTES.md holds five pietroszek2026only rows twice (pre-existing duplicate).
+
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
 - **What ran:** `bench/gn/e7.py` (through its own `main`) and `paper/figs/e7_t4_primaries.py`, `e7_t5_secondaries.py`,
