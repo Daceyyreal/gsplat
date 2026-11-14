@@ -6122,10 +6122,10 @@ checkpoints); "none" means the scene has no GN-VQ row in any committed bundle.
 
 ### GN-VQ's metric and OGC's
 
-- **GN-VQ's metric** (`bench/gn/gn_metric.py:4-6`): per splat, `M_i = sum_v s_iv * y(d_iv) y(d_iv)^T`, 15 x 15 over SH
+- **GN-VQ's metric** (`bench/gn/gn_metric.py:5-6`): per splat, `M_i = sum_v s_iv * y(d_iv) y(d_iv)^T`, 15 x 15 over SH
   bands 1-3, with `s_iv = sum_p w_ip^2` from a 16-probe estimate over the training views.
 - **The metric OGC's VQ ran on in E5-E7:** Amendment 17 b (`:2558`) passes `gram_kmeans` "`G` our full-train-view
-  16 x 16 metric of the same splats", which is `gn_metric.py`'s `with_dc=True` form (`:13-15`): "the same render, probes
+  16 x 16 metric of the same splats", which is `gn_metric.py`'s `with_dc=True` form (`:14-16`): "the same render, probes
   and ``s_iv``, a 16 x 16 metric (136 packed values) whose lower-right 15 x 15 block is the one above, entry for entry".
   OGC's own Gram is the same sum with exact compositing weights (`kaggle/RELATED_WORK_OGC.md` section 3).
 - **Same family:** one quadratic form per splat, built from the training views' compositing weights and SH basis; GN-VQ's
