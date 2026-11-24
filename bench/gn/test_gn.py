@@ -3941,7 +3941,7 @@ def test_paper_tex_amendment_items_verify_design_lines_only(tmp_path):
     assert "Am20" not in sec53 and "sec5_3_e7results.tex" not in ct.DESIGN_FILES
     # the real sources: the \input file is read under its own name
     res = ct.run()
-    assert res["fails"] == [] and res["n_numbers"] == 286  # 231 + 2026-11-08: the equal-size sentence, the BD-shape limit, Section 5.4, Section 5.5, the limits; 2026-11-09: the development scenes (R16)
+    assert res["fails"] == [] and res["n_numbers"] == 294  # 231 + 2026-11-08: the equal-size sentence, the BD-shape limit, Section 5.4, Section 5.5, the limits; 2026-11-09: the development scenes (R16); 2026-11-24: the selection and indoor/outdoor sentences (R24, R25)
 
 
 # --------------------------------------------------------------------------------- E3r (Amendment 14)
