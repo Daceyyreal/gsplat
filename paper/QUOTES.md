@@ -3,7 +3,9 @@
 Numbers the paper quotes from other works, which no FINDINGS section or CLAIMS row can hold. `paper/tex/check_tex.py`
 checks a prose number on a line whose trailing comment has a `quoted <bibkey>` item against this table's Number cells
 for that key, exactly as printed; the key must also be a `references.bib` entry. Each row says where the number is in
-the source and when and in which version it was read. A quoted line says in its text that the numbers are quoted.
+the source and when and in which version it was read. A quoted line says in its text that the numbers are quoted. From 2026-11-14 the table also holds per-scene labels (indoor or
+outdoor) that a paper gives a scene; a label row's Number cell holds the label and no number, so it verifies
+no number.
 
 | Key | Number | Where in the source | Read |
 |---|---|---|---|
@@ -18,3 +20,11 @@ the source and when and in which version it was read. A quoted line says in its 
 | pietroszek2026only | +0.32 | Table 1, before fine-tuning, row "our matrix, 512-entry codebook" (size 101%); also the abstract and Sec. 4.1 | 2026-11-08, arXiv 2609.28997v1 HTML |
 | pietroszek2026only | +0.01 | Table 1, after fine-tuning, row "our matrix, 512-entry codebook" (size 100%); also Sec. 4.1 | 2026-11-08, arXiv 2609.28997v1 HTML |
 | pietroszek2026only | 100 | Table 1, after fine-tuning, row "our matrix, 512-entry codebook": size 28.9 MB, 100% of the reproduced C3DGS's; also Sec. 4.1 ("100 % of theirs over all nine scenes") | 2026-11-08 (re-read for the equal-size sentence), arXiv 2609.28997v1 HTML |
+| barron2022mipnerf360 | Indoor: room, counter, kitchen, bonsai | Table 5 (p. 17), the per-scene expansion of Table 1: the column group headed "Indoor" | 2026-11-14, arXiv 2111.12077v3 PDF |
+| barron2022mipnerf360 | Outdoor: bicycle, flowers, garden, stump, treehill | Table 5 (p. 17): the column group headed "Outdoor" | 2026-11-14, arXiv 2111.12077v3 PDF |
+| hedman2016scalable | indoor: PLAYROOM | Sec. 6, "Data Sets" (HAL PDF p. 8): scenes captured in "a variety of indoor environments"; "PLAYROOM: A medium-sized" ... "livingroom cluttered with toys for young children" | 2026-11-14, HAL hal-01369382v1 PDF |
+| hedman2016scalable | indoor: Dr Johnson's house | Fig. 1 caption (HAL PDF p. 2): photos of "'Dr Johnson's house', London. With no wheelchair access to this floor, curators were keen to have their rooms digitized." | 2026-11-14, HAL hal-01369382v1 PDF |
+| hedman2018deep | no per-scene label | Sec. 5.2, "Training data" (HAL PDF p. 9): "4 scenes from Hedman et al. [Hedman et al. 2016]"; "There are 5 indoors scenes", none named | 2026-11-14, HAL hal-01886237 PDF |
+| knapitsch2017tanks | no per-scene label | Sec. 1 (p. 2): the intermediate group has "outside-looking-in camera trajectories"; Sec. 5.1 (p. 8): "Train. The train was imaged on a sunny day."; Truck is not described (training scenes, Sec. 5.3, are not named) | 2026-11-14, author PDF (vladlen.info) |
+| hanson2025speedy | outdoor: train, truck | Sec. 5.1, "Datasets" (arXiv 2412.00578v1 PDF p. 7): "We also include the outdoor train and truck scenes from the Tanks & Temples dataset" | 2026-11-24, arXiv 2412.00578v1 PDF |
+| hanson2025speedy | indoor: drjohnson, playroom | Sec. 5.1, "Datasets" (arXiv 2412.00578v1 PDF p. 7): "the indoor drjohnson and playroom scenes from the Deep Blending dataset" | 2026-11-24, arXiv 2412.00578v1 PDF |
