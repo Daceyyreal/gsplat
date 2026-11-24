@@ -6748,6 +6748,56 @@ gate runs with `TMP=TEMP=F:/pytest_tmp` and commits only on exit 0 (`F:\tmp_dl\r
   blind; (4) free space on C: (pytest's default temp); (5) earlier items still open: WHEEL (E7 S11's output), Docker's
   reset dialog.
 
+### Eighth session (2026-11-25): gated commits, readings R31-R32, R33 built (not run), drafts R34 and R36 (checkpoint)
+
+Dace's STATUS: PUSH_ALLOWED blank (= commit locally only; nothing pushed this session). C: still full (506 MB free).
+
+- **R35, done (`b868b38d`):** `kaggle/gated_commit.py`, committed through itself; **every commit, HANDOFF-only ones
+  included, goes through it** (`.venv/Scripts/python.exe kaggle/gated_commit.py <label> -F <message file>`). It refuses
+  unless only staged changes exist (no unstaged or untracked file), runs `kaggle/gate.sh` with TMP/TEMP and pytest's
+  `--basetemp` on F:, requires exit 0 and a log with no failed/error, a complete skip list and `exit: 0`, checks the tree
+  is unchanged after the gate, and writes `Gate: N passed, M skipped (<log>)` into the message. Its test runs a
+  stand-in gate in a throwaway repository: every failure mode blocks the commit. **A bug found by it in use:** the
+  first R33 drafts gate failed (2 tests, temp paths) because pytest's `--basetemp` lost its separator (pytest splits
+  `PYTEST_ADDOPTS` shell-style, eating the backslash); the script refused the commit (exit 3) as designed. Fixed in
+  `cf09ce8f` (forward slashes; the test checks the path pytest receives); the drafts were stashed meanwhile and committed
+  after (`f8048cd0`).
+- **R31 (read only):** R29's two variables share only the scenes and their view split.
+
+  | | E2 ratio (R29's x) | P1 (R29's y) |
+  |---|---|---|
+  | Experiment, K | E2, GN-VQ against `lloyd_trace`, K = 65,536, seed 0 (FINDINGS s10) | E5 (gate) or E6 part (a) (development): BD-PSNR of `ogc_gram` against `c3dgs` over j = -1, 0, +1, K = 4,096 |
+  | Checkpoints | this project's gsplat MCMC checkpoints (runs 4-5; sha1 pinned in Amendment 7 d) | INRIA's 30k 3DGS checkpoints (Amendment 15 note i's pins) |
+  | Codec | gsplat's `PngCompression`, the shN codebook | C3DGS, the colour VQ |
+  | Views | test-view PSNR gain / train-view PSNR gain | test-view PSNR only |
+  | Test views | gsplat's colmap parser, every 8th image (`examples/datasets/colmap.py:459-461`) | the harness's same parser (`runner.valset`), checked against INRIA's split (`kaggle/gn_e4p_scene.py:316`) |
+  | Images | gsplat's own downscale of the full-resolution images (protocol i) | the dataset's reduced JPEGs, renders quantized to 8 bits (protocol ii) |
+
+  **The same test views (identities), not the same checkpoint files** (different models, trained separately), different
+  codecs and quantizers. So rho = 0.95 is no mechanical identity; what both share by construction is the scene and how
+  well its training views cover its test views, which drives a training-view metric's transfer in either pipeline.
+- **R32:** `kaggle/drafts/LENGTH_CUT_PLAN.md`. A two-column 10pt proxy (built in `F:\tmp_dl\twocol`, not committed) puts
+  the body at about 14 pages; the plan cuts to 9.8 (CGF, + references) or 12.5 + 1.5 references (TVCG), moving 3.6-3.7,
+  4.3-4.5, 5.3-5.5, 6.4-6.5, two tables and two figures and the appendix to a supplement, dropping nothing. Anonymising for
+  TMLR needs: the author block, the repository URL and branch, commit hashes (appendix tables and six in the text), repository
+  paths with the public fork, third-person self-references, empty PDF metadata; listed, not implemented.
+- **R33 (built, not run; declaration not committed):** `kaggle/drafts/r33_cv_ratio.py`, `build_r33_notebook.py`,
+  `R33_DECLARATION_DRAFT.md`, tests; commit **A** = `f8048cd0`. The guard: `install_guards` (`r33_cv_ratio.py:87-95`) drops the
+  test camera infos before `Scene` decodes any image (`drop_test_infos`, `:74-84`) and makes `getTestCameras`,
+  `render_and_eval`, both `psnr` bindings and LPIPS raise; `guard_scene` (`:98-101`) replaces `test_cameras` with
+  `RaisingCameras` (`:62-68`). Cost estimate: 0.5-0.9 h per scene, 5-9 h for the ten, one session (sequential). The
+  notebook `kaggle/drafts/gn_r33_cv_ratio.ipynb` (commit B, `4a69cf5e`) is pinned to `f8048cd0`, **which is not on the fork** (no push this
+  session): push before running it. Not dry-run: no CPU stand-in of C3DGS exists here; the GPU path is untested.
+- **R34:** `kaggle/drafts/R34_OGC_CVFLOOR_DRAFT.md` (OGC with `G + rho tr(G)/16 I`, rho_cv from R33's folds, H34: the floor
+  helps more on low-ratio scenes; positive = mean BD above 2 SE and the Spearman negative; 20-44 h).
+- **R36:** `E9_DL3DV_DRAFT.md` v2: Primary 1 Spearman(R33 ratio, P1) one-sided, Primary 2 P1 > 0, Holm at 0.05; revision
+  `9684e838` pinned; a directory is eligible only with exactly one labelled row in `benchmark-meta.csv`; Spearman power
+  (`e9_spearman_power_draft.py`): 0.325/0.591/0.923 (n = 8), 0.411/0.721/0.976 (10), 0.492/0.814/0.993 (12) at rho_s
+  0.5/0.7/0.9; cost with R33: 35-54 h (8 + 1), 43-66 h (10 + 1), 51-78 h (12 + 1).
+- **Part 5: the paper does not change.** R29 (FINDINGS s32) and any R33 result stay out of the paper until R33 runs.
+- **Next action: Dace:** (1) PUSH_ALLOWED, to push commit A and the notebook before any R33 session; (2) go or no-go on R33's
+  declaration; (3) the earlier items: the arXiv v4 preview, DL3DV access and E9's n, the venue, C: space.
+
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
 - **What ran:** `bench/gn/e7.py` (through its own `main`) and `paper/figs/e7_t4_primaries.py`, `e7_t5_secondaries.py`,
