@@ -3317,6 +3317,19 @@ def test_section_30_scene_selection():
     assert res["fails"] == [] and res["n_checked"] >= 40
 
 
+def test_section_31_indoor_outdoor():
+    """check_s31 (FINDINGS section 31, post hoc, report only): the indoor and outdoor means are section 28's values
+    averaged, every indoor P1 is above every outdoor P1 under both fits, every scene has a QUOTES.md label row agreeing
+    with the split, apart from truck the split is the gate/development split, and every number in the text is recomputed."""
+    import check_s31 as c
+
+    m = c.facts()["means"]
+    assert round(m["indoor"][0][0], 4) == 0.3904 and round(m["indoor"][2][0], 4) == 0.0467
+    assert round(m["outdoor"][0][0], 4) == 0.1068 and round(m["outdoor"][2][0], 4) == 0.0047
+    res = c.run()
+    assert res["fails"] == [] and res["n_numbers"] >= 7
+
+
 def test_section_28_bd_robustness_computation():
     """check_s28 (FINDINGS section 28, declared at 39d41733): on all 86 BD values the registered BD's tool and own parabola
     agree, scipy's PCHIP and the own PCHIP agree, the registered values are reproduced, the slope-sign recount equals the
@@ -3811,7 +3824,7 @@ def test_paper_appendix_tables_recompute_every_cell(tmp_path):
     spec.loader.exec_module(at)
     fresh = tmp_path / "fresh"
     prereg, sessions, checkers = at.main(str(fresh))
-    assert (len(sessions), len(checkers)) == (19, 20)  # check_s27 and check_s28 added 2026-11-08, check_s29 2026-11-09, check_s30 2026-11-14
+    assert (len(sessions), len(checkers)) == (19, 21)  # check_s27 and check_s28 added 2026-11-08, check_s29 2026-11-09, check_s30 2026-11-14, check_s31 2026-11-24
     for name in os.listdir(fresh):
         a, b = (fresh / name).read_bytes(), open(os.path.join(out, name), "rb").read()
         assert a.replace(b"\r\n", b"\n") == b.replace(b"\r\n", b"\n"), name

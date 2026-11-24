@@ -19,3 +19,4 @@ bench/gn/check_s27.py,27,"Perceptual BD secondaries: BD-SSIM and BD-LPIPS for P1
 bench/gn/check_s28.py,28,BD robustness: a piecewise-cubic (PCHIP) BD and a rate-matched pointwise reading of every reported BD value,yes
 bench/gn/check_s29.py,29,Scene heterogeneity: the gate and development scenes side by side,yes
 bench/gn/check_s30.py,30,Scene selection and its direction,no
+bench/gn/check_s31.py,31,Indoor and outdoor scenes,no
