@@ -202,6 +202,10 @@ before computing these (`cf26643f`); no run, no verdict.**
 - Five gate scenes (bonsai, counter, kitchen, room, truck) were kept on GN-VQ's E2 outcomes; no scene was chosen or kept on an OGC outcome; drjohnson and playroom were placed on no outcome.
 - GN-VQ's metric is the AC block of the 16 x 16 metric OGC's VQ ran on in E5-E7, so the selection plausibly favours the gate set; nothing here tests it.
 
+**Indoor and outdoor (section 31, branch `bench/gn-vq`): post hoc, report only, no new run, no new BD value.**
+- Indoor (six scenes) P1 0.3904 dB and P_FT 0.0467 dB against outdoor (four) 0.1068 and 0.0047 dB (registered fits); every indoor P1 is above every outdoor P1 under both fits.
+- Apart from truck the split is the gate/development split, and it is confounded with dataset, data factor and camera; no cause is claimed.
+
 ## Process notes
 
 - **2026-11-08, recorded after the fact: two commits put a write-up and its checker together.** `d84720a8` (section
@@ -355,6 +359,9 @@ before computing these (`cf26643f`); no run, no verdict.**
 - Section 30: every quotation and line number comes from `kaggle/PREREG_GN.md`, section 10's table and
   `bench/gn/gn_metric.py`; which scenes have GN-VQ rows from the committed bundles' file names (`kaggle/gn_e1/gn1/`,
   `kaggle/gn_e2/gn2/`, `kaggle/gn_e2b/gn2b/`, `kaggle/gn_e2c/gn2c/`); amendment and section dates from git. No run.
+- Section 31: every value comes from section 28's computation (`bench/gn/check_s28.py`), as section 29 tabulates it, and
+  every data factor from the meta files section 29 reads; the labels from `paper/QUOTES.md`'s rows (Mip-NeRF 360, Inside-Out,
+  Deep Blending, Tanks and Temples, Speedy-Splat). No run.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -6147,3 +6154,60 @@ checkpoints); "none" means the scene has no GN-VQ row in any committed bundle.
 - **Settled (from the records):** which outcome placed each scene; that no OGC outcome placed any; that drjohnson and
   playroom were placed on none; that GN-VQ's metric is the AC block of the one OGC's VQ ran on here.
 - **Not settled:** whether the selection moved OGC's lead, and by how much. Nothing here is a test.
+
+## 31. Indoor and outdoor scenes (post hoc, report only, no new run, no new BD value; computed on 2026-11-14 from section 29's values after every verdict, undeclared) — every indoor scene's P1 is above every outdoor scene's, in a split confounded with section 30's selection, the datasets, the data factor and the camera
+
+**Post hoc, report only.** The means below were first computed from section 29's table on 2026-11-14, before this note
+and without a declaration; this section recomputes them from section 28's values and adds the labels' sources. Nothing
+here is a test, no standard error is computed, and no cause is claimed.
+
+### The labels and where they come from
+
+Section 29's indoor and outdoor column was this project's description. Here each label is traced to the dataset's own
+paper where that paper gives one, else to one later paper that uses the scene (the rows are in `paper/QUOTES.md`):
+
+| Scene | Label | Source |
+|---|---|---|
+| bonsai, counter, kitchen, room | indoor | Mip-NeRF 360's per-scene Table 5 (arXiv 2111.12077v3, p. 17) groups them under "Indoor" |
+| flowers, treehill | outdoor | the same table groups them under "Outdoor" |
+| playroom | indoor | Scalable Inside-Out IBR (Hedman et al. 2016), from which Deep Blending took 4 of its scenes (Deep Blending, Sec. 5.2): "PLAYROOM: A medium-sized" ... "livingroom", one of "a variety of indoor environments" (Sec. 6) |
+| drjohnson | indoor | the same paper's Fig. 1: photos of "'Dr Johnson's house', London", whose curators "were keen to have their rooms digitized" |
+| train, truck | outdoor | not their dataset's paper: Tanks and Temples labels no scene (it puts Train in the intermediate group, with "outside-looking-in camera trajectories", says "The train was imaged on a sunny day", Sec. 5.1, and does not describe Truck). A later paper does: Speedy-Splat (Hanson et al., CVPR 2025), Sec. 5.1: "We also include the outdoor train and truck scenes from the Tanks & Temples dataset" |
+
+- playroom and drjohnson are matched to the Inside-Out scenes by name. Deep Blending's own paper says only "There are 5
+  indoors scenes" (Sec. 5.2) without naming them; Speedy-Splat's same sentence calls them "the indoor drjohnson and
+  playroom scenes".
+- So eight labels (the six indoor scenes, flowers and treehill) come from a dataset's own paper, and train's and truck's
+  from a later paper that uses the scenes.
+
+### The means (registered parabola / PCHIP, dB, over section 28's values)
+
+| Set | Scenes | P1 | P2 | P_FT |
+|---|---|---|---|---|
+| indoor | bonsai, counter, kitchen, room, drjohnson, playroom | +0.3904 / +0.3979 | +0.2020 / +0.2042 | +0.0467 / +0.0499 |
+| outdoor | truck, flowers, treehill, train | +0.1068 / +0.1119 | +0.0592 / +0.0601 | +0.0047 / +0.0002 |
+
+- **Every indoor scene's P1 is above every outdoor scene's, under both fits:** the lowest indoor P1 is drjohnson's
+  (+0.2765 / +0.2885), the highest outdoor P1 truck's (+0.1486 / +0.1523). The order holds with only the eight labels
+  from a dataset's own paper, since truck and train are both below every indoor scene.
+- **P_FT is not so ordered:** the lowest indoor P_FT is drjohnson's (-0.0046 / -0.0027), the highest outdoor P_FT
+  flowers' (+0.0341 / +0.0368).
+
+### What the split is confounded with
+
+- **Section 30's selection:** all six indoor scenes are gate scenes, and three of the four outdoor scenes (flowers,
+  treehill, train) are development scenes chosen on GN-VQ's transfer. Apart from truck, the indoor/outdoor split is the
+  gate/development split. Inside the gate, truck is the only outdoor scene, and its P1 (+0.1486) is the gate's lowest:
+  one scene.
+- **Dataset:** the indoor scenes are four Mip-NeRF 360 and two Deep Blending scenes; the outdoor scenes two Mip-NeRF 360
+  and two Tanks and Temples scenes.
+- **Data factor:** indoor Mip-NeRF 360 at 2 and Deep Blending at 1; outdoor Mip-NeRF 360 at 4 and Tanks and Temples at 1.
+- **Camera:** Mip-NeRF 360's outdoor and indoor scenes were taken with different cameras (its Appendix D).
+- **Experiment:** the gate scenes' P_FT is E6 part (b)'s, pre-registered; the development scenes' is E6 part (a)'s,
+  descriptive.
+
+### What section 31 settles, and what it does not
+
+- **Settled (descriptive):** the means above, and that every indoor P1 is above every outdoor P1 under both fits.
+- **Not settled:** any cause. With these ten scenes indoor/outdoor cannot be separated from set membership, dataset,
+  data factor or camera; the comparison is post hoc, has no standard error, and is not a test.
