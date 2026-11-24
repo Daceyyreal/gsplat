@@ -3330,6 +3330,51 @@ def test_section_31_indoor_outdoor():
     assert res["fails"] == [] and res["n_numbers"] >= 7
 
 
+def test_section_32_transfer_against_lead():
+    """check_s32 (FINDINGS section 32, declared at 98d1aba8 before computing): the ratio is section 10's gains' quotient,
+    the exact Spearman p is an enumeration over all n! orderings (checked here against a hand case), and every row of
+    the section's two tables is recomputed."""
+    import check_s32 as c
+
+    rho, p, hits, tot, ties = c.spearman_exact([1, 2, 3, 4], [1, 2, 3, 4])
+    assert rho == 1.0 and tot == 24 and hits == 2 and abs(p - 2 / 24) < 1e-12 and not ties  # rho = +1 or -1
+    F = c.facts()
+    n, rho, p, hits, tot, ties = F["res"][(None, "P1", "reg")]
+    assert (n, tot, hits, ties) == (8, 40320, 46, False) and round(rho, 4) == 0.9524
+    res = c.run()
+    assert res["fails"] == [] and res["n_numbers"] == 14
+
+
+def test_make_arxiv_cleaner_and_checks():
+    """paper/make_arxiv.py's pure parts: the comment cleaner keeps \\%, verbatim and line joins, drops comment-only lines,
+    leaves no comment text; the content checks find e-mails, sensitive terms, OGC code and ../ paths; and the packaged file
+    list at HEAD has no .py, CLAIMS, FINDINGS or PREREG file."""
+    import importlib.util
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    spec = importlib.util.spec_from_file_location("make_arxiv", os.path.join(repo, "paper", "make_arxiv.py"))
+    ma = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ma)
+    src = ("% a comment-only line\n"
+           "A sentence. % s19; A2\n"
+           "Fifty \\% of it. % s21\n"
+           "   % indented comment\n"
+           "\\begin{verbatim}\n"
+           "keep % this\n"
+           "\\end{verbatim}\n"
+           "Joined%\n"
+           "line.")
+    out = ma.clean_tex(src)
+    assert out.split("\n") == ["A sentence. %", "Fifty \\% of it. %", "\\begin{verbatim}", "keep % this",
+                               "\\end{verbatim}", "Joined%", "line."]
+    assert ma.comment_text_left(out) == 0 and ma.comment_text_left(src) > 0
+    ok = ma.check_text({"main.tex": "x \\texttt{taifurrahman0606@gmail.com} PolyForm Noncommercial"})
+    assert ok["emails_ok"] and ok["licence_note"] and not ok["sensitive_hits"] and not ok["ogc_code_files"]
+    bad = ma.check_text({"a.tex": "mail me@example.org, private correspondence, see ../x", "b.py": "def gram_kmeans(): pass"})
+    assert not bad["emails_ok"] and bad["parent_paths"] == 1 and bad["ogc_code_files"] == ["b.py"]
+    assert {w for _, w in bad["sensitive_hits"]} >= {"private", "correspondence"}
+
+
 def test_section_28_bd_robustness_computation():
     """check_s28 (FINDINGS section 28, declared at 39d41733): on all 86 BD values the registered BD's tool and own parabola
     agree, scipy's PCHIP and the own PCHIP agree, the registered values are reproduced, the slope-sign recount equals the
@@ -3824,7 +3869,7 @@ def test_paper_appendix_tables_recompute_every_cell(tmp_path):
     spec.loader.exec_module(at)
     fresh = tmp_path / "fresh"
     prereg, sessions, checkers = at.main(str(fresh))
-    assert (len(sessions), len(checkers)) == (19, 21)  # check_s27 and check_s28 added 2026-11-08, check_s29 2026-11-09, check_s30 2026-11-14, check_s31 2026-11-24
+    assert (len(sessions), len(checkers)) == (19, 22)  # check_s27 and check_s28 added 2026-11-08, check_s29 2026-11-09, check_s30 2026-11-14, check_s31 and check_s32 2026-11-24
     for name in os.listdir(fresh):
         a, b = (fresh / name).read_bytes(), open(os.path.join(out, name), "rb").read()
         assert a.replace(b"\r\n", b"\n") == b.replace(b"\r\n", b"\n"), name

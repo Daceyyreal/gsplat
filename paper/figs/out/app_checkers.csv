@@ -20,3 +20,4 @@ bench/gn/check_s28.py,28,BD robustness: a piecewise-cubic (PCHIP) BD and a rate-
 bench/gn/check_s29.py,29,Scene heterogeneity: the gate and development scenes side by side,yes
 bench/gn/check_s30.py,30,Scene selection and its direction,yes
 bench/gn/check_s31.py,31,Indoor and outdoor scenes,yes
+bench/gn/check_s32.py,32,"GN-VQ's train-to-test transfer against OGC's lead, per scene",no
