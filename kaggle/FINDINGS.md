@@ -6211,3 +6211,41 @@ paper where that paper gives one, else to one later paper that uses the scene (t
 - **Settled (descriptive):** the means above, and that every indoor P1 is above every outdoor P1 under both fits.
 - **Not settled:** any cause. With these ten scenes indoor/outdoor cannot be separated from set membership, dataset,
   data factor or camera; the comparison is post hoc, has no standard error, and is not a test.
+
+## 32. GN-VQ's train-to-test transfer against OGC's lead, per scene (post hoc, report only, existing data only, declared before computing these) — declared 2026-11-24; no value below is computed yet
+
+**Declaration (2026-11-24), committed and pushed alone, before any value below is computed.** A **post hoc
+correlation, report only.** It reads only committed files on the CPU; no run, no new BD value, no verdict changed.
+
+**What has already been seen (disclosure).** This is not a blind analysis. Every input is already committed and has been
+read: section 10's table holds all eleven GN-VQ ratios, section 30's table repeats them (2026-11-14), and section 29's
+table holds every P1, P2 and P_FT. Before this declaration Dace's reviewer had seen four of the ratios (treehill -1.06,
+flowers 0.32, train 0.47, truck 0.56) and section 29's P1 table. The declaration fixes only the computation, not the
+choice of question, which was made after those values were seen.
+
+**The scenes.** Every scene with both an E2 GN-VQ ratio (section 10) and an OGC P1 (section 29): bonsai, counter,
+kitchen, room, truck, flowers, treehill and train, n = 8. drjohnson and playroom have no ratio, and bicycle, garden and
+stump no OGC row.
+
+**The variables.**
+- **ratio:** section 10's test PSNR gain divided by its train PSNR gain (GN-VQ over `lloyd_trace`, K = 65,536, seed 0,
+  this project's gsplat checkpoints), computed from the table's 4-decimal gains, not its rounded ratio column.
+- **P1, P2 and P_FT:** section 29's values under the registered fit (section 28's), with PCHIP beside them; P1 and P2 are
+  E5's on the gate scenes and E6 part (a)'s on the development scenes, P_FT E6 part (b)'s and E6 part (a)'s.
+
+**What is computed.**
+1. A table: per scene, the ratio, P1, P2 and P_FT (registered / PCHIP).
+2. **Spearman's rank correlation** of the ratio with each of P1, P2 and P_FT, with n stated and an **exact two-sided
+   p-value** over all n! orderings (no ties are expected; if any occur, mid-ranks, and the permutation p counts
+   |rho| >= the observed |rho| with a 1e-12 tolerance). Under the registered fit; the PCHIP values' rho and p reported
+   beside, as a description only.
+3. **The same with treehill removed** (n = 7), because its ratio (-1.06) is far from the rest.
+
+**How it is read.** Six correlations, no correction for multiplicity, no criterion and no verdict: a rho and its exact p
+are reported as numbers. The ratio and the P values come from different quantizers, hosts and checkpoints (GN-VQ in
+gsplat's PNG codec on this project's checkpoints; OGC in C3DGS on INRIA's); the development scenes' P values are E6 part
+(a)'s, descriptive; and section 30 records that the ratio picked the development scenes, so the ratio and the gate
+membership are not independent. No cause is claimed in either direction.
+
+**Checker:** `bench/gn/check_s32.py` recomputes every value from section 10's table and `bench/gn/check_s29.py`'s facts,
+the exact p by enumeration, and checks each number against the text.
