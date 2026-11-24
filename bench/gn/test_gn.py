@@ -3400,6 +3400,7 @@ def test_gated_commit_blocks_a_failing_gate(tmp_path):
         "label = sys.argv[-1]\n"
         "log = os.path.join(os.environ['FAKE_LOGDIR'], f'gate_x_{label}.log')\n"
         "open(log, 'w').write(os.environ['FAKE_LOG'])\n"
+        "open(os.path.join(os.environ['FAKE_LOGDIR'], 'addopts.txt'), 'w').write(os.environ.get('PYTEST_ADDOPTS', ''))\n"
         "print('log: ' + log.replace(os.sep, '/'))\n"
         "sys.exit(int(os.environ['FAKE_RC']))\n")
     clean = "x\n10 passed, 1 warning in 1.0s\n----\ntests: 10; skipped: 0\nexit: 0\n"
@@ -3424,6 +3425,13 @@ def test_gated_commit_blocks_a_failing_gate(tmp_path):
     assert run(0, clean.replace("exit: 0\n", "")) == (4, "1")  # no exit line
     assert run(0, clean) == (0, "2")
     assert "Gate: 10 passed, 0 skipped (gate_x_t.log)" in g("log", "-1", "--format=%B")
+    # the basetemp pytest gets, after its shell-style split: forward slashes and a separator between the root and the
+    # label (a backslash there was once lost, gluing the label onto the root)
+    import shlex
+
+    opts = shlex.split((tmp_path / "addopts.txt").read_text())
+    base = next(o for o in opts if o.startswith("--basetemp="))[len("--basetemp="):]
+    assert "\\" not in base and base.startswith((tmp_path / "tmp").as_posix() + "/t_")
 
 
 def test_section_28_bd_robustness_computation():

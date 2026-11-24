@@ -93,8 +93,9 @@ def main(argv=None) -> int:
     if why:
         print(f"refused: {why}")
         return 2
-    tmp_root = os.environ.get("GATE_TMP", "F:/pytest_tmp")
-    base = os.path.join(tmp_root, f"{label}_{time.strftime('%Y%m%d_%H%M%S')}")
+    tmp_root = os.environ.get("GATE_TMP", "F:/pytest_tmp").replace("\\", "/").rstrip("/")
+    # forward slashes only: pytest splits PYTEST_ADDOPTS shell-style, and a backslash there is an escape (it was lost once)
+    base = f"{tmp_root}/{label}_{time.strftime('%Y%m%d_%H%M%S')}"
     os.makedirs(tmp_root, exist_ok=True)
     env = dict(os.environ, TMP=tmp_root, TEMP=tmp_root,
                PYTEST_ADDOPTS=(os.environ.get("PYTEST_ADDOPTS", "") + f" --basetemp={base}").strip())
