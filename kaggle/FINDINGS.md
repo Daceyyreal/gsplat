@@ -206,6 +206,10 @@ before computing these (`cf26643f`); no run, no verdict.**
 - Indoor (six scenes) P1 0.3904 dB and P_FT 0.0467 dB against outdoor (four) 0.1068 and 0.0047 dB (registered fits); every indoor P1 is above every outdoor P1 under both fits.
 - Apart from truck the split is the gate/development split, and it is confounded with dataset, data factor and camera; no cause is claimed.
 
+**Transfer against lead (section 32, branch `bench/gn-vq`): post hoc, report only, declared before computing these (`98d1aba8`).**
+- GN-VQ's train-to-test ratio and P1 rank almost alike on the eight scenes with both (Spearman rho +0.9524, exact p 0.0011; without treehill +0.9286, p 0.0067); P_FT does not (rho +0.5238, p 0.1966).
+- The ratio chose the development scenes, so set membership and the ratio move together; nothing here separates them.
+
 ## Process notes
 
 - **2026-11-08, recorded after the fact: two commits put a write-up and its checker together.** `d84720a8` (section
@@ -362,6 +366,9 @@ before computing these (`cf26643f`); no run, no verdict.**
 - Section 31: every value comes from section 28's computation (`bench/gn/check_s28.py`), as section 29 tabulates it, and
   every data factor from the meta files section 29 reads; the labels from `paper/QUOTES.md`'s rows (Mip-NeRF 360, Inside-Out,
   Deep Blending, Tanks and Temples, Speedy-Splat). No run.
+- Section 32: every ratio from section 10's table (its 4-decimal gains), every P value from section 28's computation
+  as section 29 tabulates it; the exact p by enumerating all n! orderings. The declaration is `98d1aba8`, pushed before
+  any value was computed. `bench/gn/check_s32.py` recomputes every number and checks it against the text. No run.
 - Section 12: every number comes from `kaggle/gn_e2c/gn2c/` (one Kaggle session on 2x T4, rows
   timestamped 2026-09-26T17:57 to 21:45, gsplat commit `7617468e` on `bench/gn-vq`, a restored wheel
   reused) and, for E2's comparator rows and E2's own BD values, from `kaggle/gn_e2/gn2/`. Every row
@@ -6212,7 +6219,7 @@ paper where that paper gives one, else to one later paper that uses the scene (t
 - **Not settled:** any cause. With these ten scenes indoor/outdoor cannot be separated from set membership, dataset,
   data factor or camera; the comparison is post hoc, has no standard error, and is not a test.
 
-## 32. GN-VQ's train-to-test transfer against OGC's lead, per scene (post hoc, report only, existing data only, declared before computing these) — declared 2026-11-24; no value below is computed yet
+## 32. GN-VQ's train-to-test transfer against OGC's lead, per scene (post hoc, report only, existing data only, declared before computing these) — declared 2026-11-24; P1 and P2 rank almost as the ratio does (rho +0.95 and +0.93 on eight scenes), P_FT does not, and set membership is not separated
 
 **Declaration (2026-11-24), committed and pushed alone, before any value below is computed.** A **post hoc
 correlation, report only.** It reads only committed files on the CPU; no run, no new BD value, no verdict changed.
@@ -6249,3 +6256,46 @@ membership are not independent. No cause is claimed in either direction.
 
 **Checker:** `bench/gn/check_s32.py` recomputes every value from section 10's table and `bench/gn/check_s29.py`'s facts,
 the exact p by enumeration, and checks each number against the text.
+
+### Results (computed on 2026-11-24, after the declaration `98d1aba8` was pushed)
+
+Per scene: the ratio (section 10's gains, unrounded), and P1, P2 and P_FT (registered / PCHIP, dB):
+
+| Scene | Set | Ratio | P1 | P2 | P_FT |
+|---|---|---|---|---|---|
+| bonsai | gate | +0.7774 | +0.4841 / +0.4883 | +0.3205 / +0.3221 | +0.0622 / +0.0656 |
+| counter | gate | +0.7228 | +0.3192 / +0.3224 | +0.1655 / +0.1674 | +0.1058 / +0.1038 |
+| kitchen | gate | +0.8535 | +0.4111 / +0.4231 | +0.2757 / +0.2796 | +0.0125 / +0.0250 |
+| room | gate | +0.6103 | +0.3869 / +0.3921 | +0.1750 / +0.1761 | +0.0560 / +0.0566 |
+| truck | gate | +0.5575 | +0.1486 / +0.1523 | +0.1000 / +0.1016 | +0.0173 / +0.0182 |
+| flowers | development | +0.3184 | +0.1239 / +0.1277 | +0.0692 / +0.0710 | +0.0341 / +0.0368 |
+| treehill | development | -1.0571 | +0.0251 / +0.0369 | +0.0025 / +0.0024 | -0.0262 / -0.0254 |
+| train | development | +0.4664 | +0.1297 / +0.1306 | +0.0649 / +0.0654 | -0.0066 / -0.0290 |
+
+Spearman's rho of the ratio with each value, exact two-sided p over all n! orderings (no ties):
+
+| Scenes | n | Value | rho (registered) | exact p | rho (PCHIP) | exact p |
+|---|---|---|---|---|---|---|
+| all eight | 8 | P1 | +0.9524 | 0.0011 | +0.9524 | 0.0011 |
+| all eight | 8 | P2 | +0.9286 | 0.0022 | +0.9286 | 0.0022 |
+| all eight | 8 | P_FT | +0.5238 | 0.1966 | +0.5714 | 0.1511 |
+| without treehill | 7 | P1 | +0.9286 | 0.0067 | +0.9286 | 0.0067 |
+| without treehill | 7 | P2 | +0.8929 | 0.0123 | +0.8929 | 0.0123 |
+| without treehill | 7 | P_FT | +0.2857 | 0.5560 | +0.4286 | 0.3536 |
+
+- **P1 and P2 rank almost as the ratio does:** on all eight scenes P1's order differs from the ratio's by two adjacent
+  swaps (counter with room, bonsai with kitchen). Without treehill the correlations stay above +0.89.
+- **P_FT does not:** +0.29 to +0.57, with p from 0.15 to 0.56.
+- **What this cannot separate:** the ratio chose the three development scenes (section 30), so the ratio and set
+  membership move together; the three lowest ratios are the three development scenes, whose P values come from E6 part
+  (a). With these eight scenes a correlation driven by the gate/development difference and one that holds within each set
+  look alike. No within-set correlation was declared, and none is computed here.
+- **Not a test of a hypothesis stated in advance:** the question was chosen after the inputs were seen (the disclosure
+  above), six correlations are reported without correction, and no verdict is drawn.
+
+### What section 32 settles, and what it does not
+
+- **Settled (descriptive):** on these eight scenes GN-VQ's train-to-test transfer ratio and OGC's lead before
+  fine-tuning are ranked almost alike (rho +0.95, exact p 0.0011); after fine-tuning they are not.
+- **Not settled:** whether the ratio predicts P1 on unseen scenes, within either set, or for any cause. That would need a
+  pre-registered test on scenes whose ratio and P1 are both unseen (`kaggle/drafts/E9_DL3DV_DRAFT.md` section 4).
