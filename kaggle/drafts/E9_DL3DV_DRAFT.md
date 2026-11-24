@@ -1,6 +1,8 @@
-# DRAFT E9 (R27, 2026-11-24) — a held-out test of P1 on DL3DV benchmark scenes drawn by a pre-registered rule
+# DRAFT E9 v2 (R27 2026-11-24, R36 2026-11-25) — a held-out test on DL3DV benchmark scenes drawn by a pre-registered rule: does a training-views-only ratio predict OGC's lead, and does the lead hold
 
-**Status: draft for Dace. Not in PREREG; nothing run; no data fetched.** Supersedes `D4_MEMORY_PROBE_AND_E9_INRIA_DRAFT.md`
+**Status: draft for Dace. Not in PREREG; nothing run; no data fetched.** v2 (R36): the primary is now R33's
+training-views-only ratio against P1 (Spearman), with P1 > 0 as a co-primary under Holm; the revision is pinned and
+the 141-vs-140 rule fixed; R33's cost is added per scene. Supersedes `D4_MEMORY_PROBE_AND_E9_INRIA_DRAFT.md`
 sections 2-5 and `E9_FEASIBILITY.md` section 4 as the E9 design (both stay as records). Power from
 `kaggle/drafts/e9_dl3dv_power_draft.py`; every effect and SD it uses comes from **selected scenes** (FINDINGS sections 30-31):
 the gate scenes were kept on GN-VQ outcomes and the development scenes chosen on them, so they are planning numbers, not
@@ -9,9 +11,14 @@ estimates for DL3DV.
 ## 1. Scenes: a seeded, stratified draw from DL3DV's benchmark list, fixed before any training
 
 - **The list:** the scene directories of the Hugging Face dataset `DL3DV/DL3DV-Benchmark` at a pinned revision. Read on
-  2026-11-24 through the public API (no access request): revision `9684e8382278c5e18173c1e72bd246daf2874539` (last modified
-  2025-09-12) lists **141** 64-hex scene directories (the paper and README say 140; the extra one is to be explained before
-  registration) and a top-level `benchmark-meta.csv` (25,573 bytes).
+  2026-11-24 through the public API (no access request): **pinned revision `9684e8382278c5e18173c1e72bd246daf2874539`**
+  (last modified 2025-09-12) lists **141** 64-hex scene directories (the paper and README say 140) and a top-level
+  `benchmark-meta.csv` (25,573 bytes). The draw reads the list and the labels at this revision only.
+- **141 against 140, resolved by rule:** a directory is eligible only if its hash has exactly one row in
+  `benchmark-meta.csv` at the pinned revision with an indoor or outdoor label; a directory without a label row, or with
+  more than one, is excluded and listed in the registration with the reason. If all 141 have one labelled row, all 141 are
+  eligible and the registration says the paper's 140 is out of date. This is decided before the seed is known (the seed
+  comes from the registration commit, below), so the rule cannot be tuned to the draw.
 - **The labels:** DL3DV labels every benchmark scene. The paper (arXiv 2312.16256v2, p. 5): DL3DV-140 "are categorized as
   indoor (bounded) scenes vs. outdoor (unbounded) scenes", and the environment annotation "distinguishes between indoor and
   outdoor settings"; the README: "All videos are annotated by scene environment (indoor vs. outdoor)". **Where the
@@ -29,12 +36,24 @@ estimates for DL3DV.
   the registration and nobody can choose it); replace a drawn scene only by the registered fit rule (T4 memory, section 5)
   and then by the next draw in the same stratum.
 - **Nothing on a drawn scene is read before the registration** except its label, frame count and image size.
+- **Order on each drawn scene:** train its checkpoint; run R33 (`kaggle/drafts/r33_cv_ratio.py`, training views only)
+  and commit its bundle; only then run any OGC or C3DGS row on its test views. So the ratio exists, committed, before
+  any value it is meant to predict.
 
 ## 2. Hypotheses
 
-- **Primary: P1 > 0** (E5's P1, OGC's Gram VQ against C3DGS's own at equal rate before fine-tuning), one-sided paired t
-  over the n drawn scenes at 0.05 (each scene's BD is already a within-scene paired difference); E5's count and criterion 3
-  beside it, as in E5.
+- **Primary 1: Spearman's rho between R33's training-views-only ratio and P1 across the drawn scenes, one-sided
+  (rho > 0),** exact permutation p (n! orderings, enumerated up to n = 10; for n = 12, 12! = 4.8e8 orderings, by
+  2,000,000 seeded random orderings, stated as Monte Carlo). R29 (FINDINGS section 32) is the reason to ask: E2's ratio
+  ranked almost as P1 on eight selected scenes, post hoc, with set membership not separated; the drawn scenes are unseen.
+- **Primary 2 (co-primary): P1 > 0** (E5's P1), one-sided paired t over the n drawn scenes; E5's count and criterion 3
+  beside it.
+- **Multiplicity: Holm over the two primaries at family level 0.05** (the smaller p against 0.025, then the other
+  against 0.05). **Recommended over making P1 > 0 a secondary:** P1 > 0 held on 10 of 10 scenes so far, so its p is
+  expected to be the smaller one, in which case Holm tests the Spearman correlation at the full 0.05 and the co-primary
+  costs it almost nothing; and keeping P1 > 0 primary makes the replication on unseen scenes a confirmatory claim rather
+  than a description. If P1 > 0 is not the smaller p, the Spearman test is run at 0.025: the price is in the table
+  below.
 - **Declared secondary: indoor P1 > outdoor P1**, one-sided at 0.05, by **Welch's t** (recommended) with the exact
   rank-sum reported beside it. Welch because the strata are small and their SDs differ (indoor 0.0809, outdoor 0.0555 on
   the ten scenes), and because the exact rank-sum is coarse here: at 3+3 its smallest p is exactly 0.0500 (only "every
@@ -47,7 +66,32 @@ estimates for DL3DV.
   E9 recipe, its P1 compared descriptively with its INRIA-checkpoint value (+0.3192 dB, section 29). It says whether our
   checkpoints change P1 by more than E5's seed noise; it is not pooled and not a test.
 
-## 3. Power (`e9_dl3dv_power_draft.py`; registered-fit values)
+## 3. Power (`e9_dl3dv_power_draft.py`, `e9_spearman_power_draft.py`; registered-fit values)
+
+Primary 1, Spearman rho > 0, one-sided at 0.05 (`e9_spearman_power_draft.py`, seeded `default_rng(20261125)`): each
+scene's (ratio, P1) bivariate normal with Pearson r = 2 sin(pi rho_s / 6), the normal model's link to Spearman's rho_s;
+the exact permutation critical value (n = 8: rho >= 0.6429, level 0.0481; n = 10: 0.5636, 0.0481, both enumerated;
+n = 12: 0.5035, 0.0498, from 2,000,000 random orderings); 50,000 simulated samples per cell:
+
+| n | rho_s = 0.5 | rho_s = 0.7 | rho_s = 0.9 |
+|---|---|---|---|
+| 8 | 0.325 | 0.591 | 0.923 |
+| 10 | 0.411 | 0.721 | 0.976 |
+| 12 | 0.492 | 0.814 | 0.993 |
+
+- **Read:** R29's +0.95 was on selected scenes with set membership mixed in; a planning value of 0.7 needs n = 12 for
+  about 0.8, and 0.5 is under-powered at every n here. If the Spearman p is the smaller of the two, Holm tests it at
+  0.025, where the critical values rise and these powers fall.
+
+Primary 2, P1 > 0, one-sided paired t, at 0.05 and at Holm's first step (0.025):
+
+| n | (a) 0.0929 / SD 0.0588 | (a') 0.0929 / SD 0.1616 | (b) 0.1068 / SD 0.0555 |
+|---|---|---|---|
+| 8 | 0.991 / 0.967 | 0.430 / 0.290 | 0.999 / 0.996 |
+| 10 | 0.998 / 0.993 | 0.514 / 0.369 | 1.000 / 1.000 |
+| 12 | 1.000 / 0.999 | 0.588 / 0.443 | 1.000 / 1.000 |
+
+The tables below are v1's (n = 6, 8, 10), kept for the secondary and the mixture case.
 
 Primary, P1 > 0, one-sided paired t at 0.05:
 
@@ -77,7 +121,7 @@ halfway to the outdoor one):
 P_FT, 95% CI half-width at the ten scenes' SD (0.0394 dB): **+-0.041 dB at n = 6, +-0.033 at 8, +-0.028 at 10**, so even
 n = 10 cannot tell the gate's 0.0425 dB from 0.
 
-## 4. The GN-VQ ratio, or a training-view version, as a pre-registered predictor of per-scene P1
+## 4. The GN-VQ ratio, or a training-view version, as a pre-registered predictor of per-scene P1 (v2: R33's version is now Primary 1)
 
 **What R29 found (FINDINGS section 32, post hoc, declared at `98d1aba8` before computing):** on the eight scenes with
 both, GN-VQ's E2 test/train gain ratio and P1 rank almost alike (Spearman +0.9524, exact p 0.0011; +0.9286, p 0.0067
@@ -120,11 +164,16 @@ the primary and never to choose scenes:
   at 960 x 540 (1.24-2.49 GB as float32 on the GPU) and 1-4 M splats, **4.1-7.6 GB allocated, 4.5-9.0 GB reserved**,
   under the T4's 15.64 GB. Both the view count and the splat count are assumptions until the draw.
 
-| n (+ bridge) | Scenes trained | Training, session-h (2 at a time) | Confirmation, session-h | Total, session-h | Sessions (<= 12 h) | Weeks at 30 h |
-|---|---|---|---|---|---|---|
-| 6 + 1 | 7 | 3.5-7 | 20.3-28.7 | 24-36 | 3-4 | 0.8-1.2 |
-| 8 + 1 | 9 | 4.5-9 | 26.1-36.9 | 31-46 | 4-5 | 1.0-1.5 |
-| 10 + 1 | 11 | 5.5-11 | 31.9-45.1 | 37-56 | 4-5 | 1.2-1.9 |
+| n (+ bridge) | Scenes trained | Training, session-h (2 at a time) | R33, session-h (0.5-0.9 h per scene) | Confirmation, session-h | Total, session-h | Sessions (<= 12 h) | Weeks at 30 h |
+|---|---|---|---|---|---|---|---|
+| 8 + 1 | 9 | 4.5-9 | 4.5-8.1 | 26.1-36.9 | 35-54 | 5-6 | 1.2-1.8 |
+| 10 + 1 | 11 | 5.5-11 | 5.5-9.9 | 31.9-45.1 | 43-66 | 5-6 | 1.4-2.2 |
+| 12 + 1 | 13 | 6.5-13 | 6.5-11.7 | 37.7-53.3 | 51-78 | 6-8 | 1.7-2.6 |
+
+- **R33 per new scene** (`R33_DECLARATION_DRAFT.md`'s estimate: four folds of C3DGS's sensitivity and VQ, the GN pass, OGC's
+  VQ and the training-view renders, plus loading): 0.5-0.9 session-hours, run in its own session before any test-view row,
+  its bundle committed first. v1's n = 6 row is dropped: at n = 6 the exact Spearman test's critical rho is 0.8286 (level
+  0.0292, coarse) and its power is 0.165, 0.323 and 0.678 at rho_s = 0.5, 0.7 and 0.9 (same simulation).
 
 Plus one wheel session if the cached cu130 wheel does not match the image, and bicycle, garden and stump's processes
 (3 x 2.9-4.1 h) if the INRIA secondary is run.
@@ -161,9 +210,10 @@ What this means for E9 (my reading, for Dace to confirm):
 - **Kaggle:** a private dataset holding DL3DV frames is sharing with Kaggle as a host, not with a person; whether that is
   "sharing the data" under terms 4 is not settled by the text. Ask DL3DV, or fetch from Hugging Face inside each session.
 
-## 7. What Dace decides
+## 7. What Dace decides (v2)
 
 1. Request access to `DL3DV/DL3DV-Benchmark` (which accepts the terms), so that `benchmark-meta.csv`'s labels can be read
    and the 141-vs-140 count explained; or choose the no-rendering labelling rule.
-2. n (6, 8 or 10) and whether the INRIA secondary runs.
+2. Whether the INRIA secondary runs (n: item 4).
 3. Whether to ask DL3DV about private Kaggle datasets and checkpoints.
+4. (v2) Whether R33 runs first on the ten scenes with OGC rows (its own declaration draft), and n = 8, 10 or 12.

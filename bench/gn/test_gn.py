@@ -3434,6 +3434,73 @@ def test_gated_commit_blocks_a_failing_gate(tmp_path):
     assert "\\" not in base and base.startswith((tmp_path / "tmp").as_posix() + "/t_")
 
 
+def _r33():
+    import importlib.util
+
+    p = os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle", "drafts", "r33_cv_ratio.py")
+    spec = importlib.util.spec_from_file_location("r33_cv_ratio", p)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m, open(p, encoding="utf-8").read()
+
+
+def test_r33_folds_ratio_psnr_and_camera_view():
+    """R33's pure parts (kaggle/drafts/r33_cv_ratio.py, a draft, not run): the seeded k = 4 folds are balanced,
+    deterministic and change with the seed; the ratio leaves out folds whose in-fold gain is not positive and reports
+    the ratio of means beside the mean of ratios; PSNR quantizes the render to 8 bits; a C3DGS-style camera becomes
+    compute_gn's view (camtoworld the inverse of the transposed world-view matrix, K from the field of view)."""
+    import math
+
+    m, _ = _r33()
+    f = m.folds(203, 4, 0)
+    assert f == m.folds(203, 4, 0) and f != m.folds(203, 4, 1)
+    assert sorted({f.count(i) for i in range(4)}) == [50, 51]
+    r = m.ratio([(0.2, 0.1), (0.1, 0.1), (-0.05, 0.02), (0.1, 0.0)])
+    assert r["per_fold"] == [0.5, 1.0, None, 0.0] and r["undefined_folds"] == [2]
+    assert abs(r["mean_of_ratios"] - 0.5) < 1e-12 and abs(r["ratio_of_means"] - (0.055 / 0.0875)) < 1e-12
+    assert m.ratio([(-0.1, 0.1), (0.0, 0.2)])["mean_of_ratios"] is None
+    q = round(0.501 * 255) / 255
+    assert m.psnr8(torch.full((3, 4, 4), 0.501), torch.full((3, 4, 4), q)) > 100  # equal up to float32
+    assert abs(m.psnr8(torch.full((3, 2, 2), 0.6), torch.full((3, 2, 2), 0.5)) - (-10 * math.log10((round(0.6 * 255) / 255 - 0.5) ** 2))) < 1e-3
+    c2w = torch.eye(4)
+    c2w[:3, 3] = torch.tensor([1.0, 2.0, 3.0])
+    cam = type("Cam", (), {"world_view_transform": torch.linalg.inv(c2w).transpose(0, 1), "image_width": 200,
+                           "image_height": 100, "FoVx": 2 * math.atan(1.0), "FoVy": 2 * math.atan(0.5)})()
+    v = m.camera_view(cam)
+    assert torch.allclose(v["camtoworld"], c2w, atol=1e-6) and (v["width"], v["height"]) == (200, 100)
+    assert abs(float(v["K"][0, 0]) - 100.0) < 1e-4 and abs(float(v["K"][1, 1]) - 100.0) < 1e-4
+
+
+def test_r33_guards_raise_on_any_test_view_access():
+    """R33's guards: after install_guards, Scene.getTestCameras, C3DGS's render_and_eval, both psnr bindings and the LPIPS
+    entry point raise; the scene readers return no test camera info (counted); guard_scene's test cameras raise on every access; and the script names test cameras only inside
+    its guards (no other getTestCameras, test_cameras or render_and_eval in its source)."""
+    import re
+    import types
+
+    m, src = _r33()
+    c3, iu, lp = types.SimpleNamespace(), types.SimpleNamespace(), types.SimpleNamespace()
+    import collections
+
+    Scene = type("Scene", (), {"getTestCameras": lambda self: ["view"]})
+    Info = collections.namedtuple("Info", "train_cameras test_cameras")
+    callbacks = {"Colmap": lambda *a, **k: Info(["t1", "t2"], ["v1", "v2", "v3"])}
+    m.install_guards(c3, types.SimpleNamespace(Scene=Scene, sceneLoadTypeCallbacks=callbacks), iu, lp)
+    info = callbacks["Colmap"]("src", "images", True)
+    assert info.test_cameras == [] and info.train_cameras == ["t1", "t2"] and m.DROPPED[-1] == 3
+    for call in (lambda: Scene().getTestCameras(), lambda: c3.render_and_eval(), lambda: iu.psnr(1, 1),
+                 lambda: c3.psnr(1, 1), lambda: c3.lpips(1, 1), lambda: lp.lpips(1, 1)):
+        with pytest.raises(m.Forbidden):
+            call()
+    sc = m.guard_scene(types.SimpleNamespace(test_cameras={1.0: ["view"]}))
+    for call in (lambda: sc.test_cameras[1.0], lambda: list(sc.test_cameras), lambda: len(sc.test_cameras),
+                 lambda: sc.test_cameras.get(1.0), lambda: 1.0 in sc.test_cameras):
+        with pytest.raises(m.Forbidden):
+            call()
+    body = src[src.index("def main():"):]
+    assert not re.search(r"getTestCameras|test_cameras|render_and_eval", body)
+
+
 def test_section_28_bd_robustness_computation():
     """check_s28 (FINDINGS section 28, declared at 39d41733): on all 86 BD values the registered BD's tool and own parabola
     agree, scipy's PCHIP and the own PCHIP agree, the registered values are reproduced, the slope-sign recount equals the
