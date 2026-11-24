@@ -3375,6 +3375,57 @@ def test_make_arxiv_cleaner_and_checks():
     assert {w for _, w in bad["sensitive_hits"]} >= {"private", "correspondence"}
 
 
+def test_gated_commit_blocks_a_failing_gate(tmp_path):
+    """kaggle/gated_commit.py (R35): a failing gate, a log whose summary has failures or errors, a skip list that does not
+    name every skipped test, and unstaged or untracked changes each block the commit; a clean pass commits the staged
+    files with the gate's log name in the message. The gate is a stand-in script (GATE_CMD), in a throwaway repository."""
+    import shutil
+    import subprocess as sp
+
+    if shutil.which("git") is None:
+        pytest.skip("needs git")
+    script = os.path.join(os.path.dirname(os.path.dirname(HERE)), "kaggle", "gated_commit.py")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    g = lambda *a: sp.run(["git", "-C", str(repo), *a], capture_output=True, text=True, check=True).stdout
+    g("init", "-q")
+    g("config", "user.name", "t")
+    g("config", "user.email", "t@example.org")
+    (repo / "a.txt").write_text("0\n")
+    g("add", "a.txt")
+    g("commit", "-q", "-m", "init")
+    gate = tmp_path / "fake_gate.py"
+    gate.write_text(
+        "import os, sys\n"
+        "label = sys.argv[-1]\n"
+        "log = os.path.join(os.environ['FAKE_LOGDIR'], f'gate_x_{label}.log')\n"
+        "open(log, 'w').write(os.environ['FAKE_LOG'])\n"
+        "print('log: ' + log.replace(os.sep, '/'))\n"
+        "sys.exit(int(os.environ['FAKE_RC']))\n")
+    clean = "x\n10 passed, 1 warning in 1.0s\n----\ntests: 10; skipped: 0\nexit: 0\n"
+
+    def run(rc, log, label="t"):
+        env = dict(os.environ, GATE_CMD=f'"{sys.executable}" "{gate.as_posix()}"', GATE_TMP=(tmp_path / "tmp").as_posix(),
+                   FAKE_LOGDIR=str(tmp_path), FAKE_RC=str(rc), FAKE_LOG=log)
+        env.pop("PYTEST_ADDOPTS", None)
+        r = sp.run([sys.executable, script, label, "-m", "change GATE_LOG"], cwd=repo, env=env, capture_output=True, text=True)
+        return r.returncode, g("rev-list", "--count", "HEAD").strip()
+
+    (repo / "a.txt").write_text("1\n")
+    assert run(0, clean)[0] == 2  # unstaged change
+    g("add", "a.txt")
+    (repo / "b.txt").write_text("new\n")
+    assert run(0, clean)[0] == 2  # untracked file
+    (repo / "b.txt").unlink()
+    assert run(1, clean.replace("exit: 0", "exit: 1")) == (3, "1")  # the gate's exit code
+    assert run(0, clean.replace("10 passed", "1 failed, 9 passed")) == (4, "1")  # failures in the summary
+    assert run(0, clean.replace("10 passed,", "10 passed, 2 errors,")) == (4, "1")  # errors in the summary
+    assert run(0, clean.replace("skipped: 0", "skipped: 1")) == (4, "1")  # a skip not named
+    assert run(0, clean.replace("exit: 0\n", "")) == (4, "1")  # no exit line
+    assert run(0, clean) == (0, "2")
+    assert "Gate: 10 passed, 0 skipped (gate_x_t.log)" in g("log", "-1", "--format=%B")
+
+
 def test_section_28_bd_robustness_computation():
     """check_s28 (FINDINGS section 28, declared at 39d41733): on all 86 BD values the registered BD's tool and own parabola
     agree, scipy's PCHIP and the own PCHIP agree, the registered values are reproduced, the slope-sign recount equals the
