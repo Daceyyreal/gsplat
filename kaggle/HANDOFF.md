@@ -6657,7 +6657,7 @@ was intact (`git fsck` clean, staged files complete) and the gate was re-run.
     (0.23 power; 5-7 scenes recommended to cover it).
   - Part 2 skipped (PATH = NONE). Next: Part 3 (paper PDF, arXiv v3, final checkpoint).
 - **Part 3 checkpoint (final):** the paper changed under R16, so **arXiv v3** was built (prepared only; not submitted,
-  no tag): `F:\arxiv_pkg\gsplat_ogc_v3\`, from **`ccc4a956`** (its `paper/` equals `d2c1abd2`'s). Cleaned and uncleaned
+  no tag; **superseded by v4, seventh session**): `F:\arxiv_pkg\gsplat_ogc_v3\`, from **`ccc4a956`** (its `paper/` equals `d2c1abd2`'s). Cleaned and uncleaned
   builds 32 pages each, 0 errors, 0 undefined, 0 overfull; **text identical on all 32 pages** (also against latexmk's
   preview). Removed: `references.bib` and 47 comment lines (12,419 bytes). `arxiv_src_clean.tar.gz`: 33 files, 173,260
   bytes, **sha256 `fea1bc6f79fbf60e076c36139c5591f4597ff778a995267e61e3cbfe1e2f1f9f`**; checks as v2 (one e-mail, the
@@ -6695,7 +6695,58 @@ not pushed, to be confirmed). Readings R24-R28, E9 redesign (Part 2), arXiv v4 (
   setup scope sentence, sec5_3:44 scoped as sec_related:33, sec5_finetuning:50 "seven gate scenes"); R26 e conclusion
   draft + venue check; HANDOFF Part 1 checkpoint. Then Part 2 (R27 E9 draft with DL3DV labels/licence; R28 D4 note
   draft) and Part 3 (mark v3 superseded; v4 build: make_arxiv.py is gone, rebuild the steps; paper draft PDF).
-- Noticed: paper/QUOTES.md holds five pietroszek2026only rows twice (pre-existing duplicate).
+- Noticed: paper/QUOTES.md holds five pietroszek2026only rows twice (pre-existing duplicate). **Wrong (corrected 2026-11-24, seventh session): no duplicate exists.**
+
+### Seventh session (2026-11-24): R24-R30, make_arxiv.py, arXiv v4, E9 redesign (final checkpoint)
+
+Dace's STATUS: PUSH_ALLOWED yes; SKIP_GATE_FOR_HANDOFF_ONLY_COMMITS blank (= NO: every commit gated). **C: is full**
+(793 MB free): the first R26 gate failed on pytest `tmp_path` setup (9 failed, 30 errors), and that commit had gone in
+before the exit code was read; it was reset (`--soft`, unpushed) and re-committed after a passing rerun. Since then every
+gate runs with `TMP=TEMP=F:/pytest_tmp` and commits only on exit 0 (`F:\tmp_dl\r24_r25_wip\gc.sh`).
+
+- **Commits, in order (all gated, 249-252 passed, 0 skipped):** `5957a362` QUOTES label rows + bib (hedman2016scalable,
+  hanson2025speedy); `b758472d` FINDINGS s31 alone (R25); `11e9297e` check_s31 + CLAIMS E24; `d386e230` paper R24/R25;
+  `9b7a41db` paper R26 a-d (**Parts 1-2; pushed** `eeb88cfb..9b7a41db`); `98d1aba8` FINDINGS s32 declaration alone
+  (**pushed alone** before computing); `b9fba742` s32 results note alone; `f3885087` check_s32 + `paper/make_arxiv.py`
+  (recreated) + tests; `770b2a0b` the drafts (E9_DL3DV_DRAFT, its power script, D4 probe note draft, conclusion draft); this
+  entry.
+- **R24, done:** the Limitations sentence and the post hoc hint (drjohnson 0.2765 / -0.0046, playroom 0.4644 / 0.0483 dB).
+- **R25, done:** truck and train's "outdoor" sourced to Speedy-Splat (Hanson et al., CVPR 2025, Sec. 5.1), since Tanks
+  and Temples labels no scene; s31 + check_s31 + E24; the paper sentence names the gate/development overlap and the
+  confounds; no cause.
+- **R26 a-d, done:** abstract 211 -> 234 words (source and rendered); setup scope sentence; sec5_3:44 and
+  sec5_finetuning:50 scoped. check_tex 286 -> 296 numbers; check_figs 1482.
+- **R29 (FINDINGS s32), done:** Spearman of GN-VQ's E2 ratio with P1 +0.9524 (exact p 0.0011, n = 8), P2 +0.9286
+  (0.0022), P_FT +0.5238 (0.1966); without treehill +0.9286 (0.0067), +0.8929 (0.0123), +0.2857 (0.5560). The ratio chose
+  the development scenes, so set membership is not separated.
+- **R30 (read only, no commit):** the floor `M_i + rho tr(M_i)/15 I` is Amendment 9 b (`PREREG_GN.md:862, 872`), E2b's
+  criteria Amendment 10, frozen as `gn_vq_cvfloor` in Amendment 11 b (`:1096`); code `bench/gn/e2b.py:90-` (and
+  `metric_store.py` at INRIA scale). Run with GN-VQ only: E2b (treehill, flowers, stump; garden control; FINDINGS s11:
+  fidelity met, PSNR not), E2c (the five gate scenes on own checkpoints; s12: G2c passed), E4p (train; s16: the floor
+  +0.0007 dB, `gnvq_cv - gnvq_rho0`), E4q (train, treehill; s17). **Never with OGC's VQ:** E4q's ladder row
+  `lad_ridge_mean` removes the floor and takes OGC's ridge (`PREREG_GN.md:2333`), and every OGC row (E4q, E5-E7) gets the
+  unfloored G (`kaggle/e5_hooks.py:78`); OGC's only regulariser is the ridge toward the cluster mean in the codeword
+  update, `lam` 1e-3 (`e5_hooks.py:83`; `bench/gn/ogc_derived.py:148, 189`), which acts in the update, not on the
+  per-splat matrices used for assignment. The floor was a September plan (Amendments 9-11), carried into October's E4p/E4q.
+- **Part 4:** QUOTES.md never held duplicates: it is 20 lines, and the sixth session's `head -40` and `tail -5` printed
+  the same five rows twice; the checkpoint `298963ec`'s "Noticed" item was wrong and nothing was removed. **make_arxiv.py**
+  was never committed (no git history; it lived in the 2026-11-08 second session's scratchpad, which was cleared); it is
+  recreated as `paper/make_arxiv.py` (`f3885087`) with a test; a trial at `b758472d` reproduced v3's cleaned sources file
+  for file apart from the new checker row.
+- **arXiv v3 is superseded.** **v4** (prepared only; not submitted, no tag): `F:\arxiv_pkg\gsplat_ogc_v4\`, from
+  **`9b7a41db`** (Parts 1-2), by `paper/make_arxiv.py`: 33 files, 32 pages clean and uncleaned, 0 errors / undefined /
+  overfull, **text identical on 32 of 32 pages**, 47 comment lines / 12,595 bytes removed, `arxiv_src_clean.tar.gz` 174,136
+  bytes, **sha256 `bc093ed1bd2537ab8d0c05162d4ef90793b63a615414aa7995db9f33b59d76bb`**; one e-mail (the author's), no
+  redaction term, no OGC code, no `../`, PolyForm note present; `INSTRUCTIONS.txt` names the sha256 and the commit.
+- **Paper draft:** `F:\gsplat_paper_draft.pdf` rebuilt from `f3885087`: **33 pages** (the appendix checker table's
+  section 32 row added a page after v4's commit), 0 undefined, 0 overfull.
+- **Part 6:** `kaggle/drafts/E9_DL3DV_DRAFT.md`. DL3DV states per-scene indoor/outdoor labels (paper p. 5, README);
+  the benchmark repo (revision `9684e838`, 141 scene directories against 140 stated) holds `benchmark-meta.csv`, gated:
+  reading it means requesting access, which accepts DL3DV's terms (Dace's step).
+- **Next action: Dace:** (1) the arXiv v4 preview per its `INSTRUCTIONS.txt`; (2) whether to request DL3DV access (labels,
+  141 vs 140) and E9's n; (3) the venue: the draft is 32-33 pages against CGF's 10 and TVCG's 14, and TMLR is double
+  blind; (4) free space on C: (pytest's default temp); (5) earlier items still open: WHEEL (E7 S11's output), Docker's
+  reset dialog.
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
