@@ -6905,9 +6905,22 @@ Nadeau-Bengio SE with MAD; the dB-shrink point; the fixed block; option B raised
     so it restores; if Kaggle's torch has moved, the wheel builds (about 73 min) and both sessions must share the new key
     (Amendment 21 j).
 - **Pushed:** `c697bcd6..5617bd10` (code and notebooks; the pin is on the fork).
+- **Checkpoint after Part 2:** `34bfb87a`.
+- **Part 3 (`87f0a41a`): E9 v4, design B (drafts only).** Every drawn scene trained twice: the block model (i % 16 == 4
+  held out; v_s only) and the standard-protocol model (P1, P_FT), same recipe and seed; v_s committed before any
+  test-view row. Two models add independent training noise to the (v_s, P1) pair: rho attenuated toward 0 (conservative
+  for false positives, a power loss not in the table; E5's seed noise `SD_pool` 0.0121 dB is a lower bound for
+  retraining noise; up to 0.03 dB keeps P1's reliability 0.80-0.97 against between-scene SDs 0.06-0.16). Counter's
+  same-model check: standard model (P1 vs INRIA's +0.3192) and block model (v_s and P1); one scene cannot estimate the
+  attenuation. rho_s 0.7 stays the planning value; the powers are upper bounds. Cost (`e9_v3_cost_draft.py`): n = 8:
+  18 models, 40-63 session-h, 5-7 sessions; 10: 22, 48-76, 5-8; 12: 26, 56-89, 7-9.
+- **Push:** after this checkpoint's commit, fast-forward from `5617bd10` if the ancestor check passes; the fork head is
+  the record. No push while an R33 session runs.
+- **R34:** still held until R33's usefulness check (Amendment 21 e) and its correlation.
 - **Next action (Dace):** run S1 (`gn_r33_s1_counter.ipynb`, title "R33 training-view ratio S1", GPU T4 x2, Internet on,
   the wheel dataset attached); check the log against `kaggle/drafts/R33_SMOKE_CHECKLIST.md`; create "R33 S1 bundle"; then
-  S2. No push while a session runs.
+  S2. No push while a session runs. Then: E9's open items (DL3DV access, the block fraction, n), arXiv v4, venue, C:
+  space.
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
