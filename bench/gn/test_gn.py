@@ -3594,7 +3594,7 @@ def test_r33_session_notebooks_order_and_wheel_key(tmp_path, monkeypatch):
         committed = os.path.join(repo, "kaggle", "drafts", name)
         if os.path.exists(committed):
             text = open(committed, encoding="utf-8").read()
-            (pin,) = re.findall(r'PIN, REPO, C3DGS, WORK = "([0-9a-f]+)"', text)
+            (pin,) = re.findall(r'PIN, REPO, C3DGS, WORK = "([0-9a-f]+)"', json.loads(text)["cells"][1]["source"])
             b.build(pin)
             assert open(tmp_path / name, encoding="utf-8").read() == text, name
 

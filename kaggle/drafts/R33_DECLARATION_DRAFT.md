@@ -1,12 +1,10 @@
 # DRAFT v2 (R33 2026-11-25; R37a-e 2026-11-25, ninth session) — declaration: a training-views-only transfer ratio against OGC's lead, on the ten scenes with an OGC row (exploratory)
 
-**Status: draft for Dace's go (R33_GO blank on 2026-11-25). Not in PREREG, not committed as a declaration, nothing
-run; R37b and R37e are not yet in the code.** On go, this text is committed alone as the next PREREG amendment
-(numbers are assigned only at commit into PREREG; 21 is the next free one),
-pushed alone, and only then is the code changed (R37b's Gram stability, R37e's `SCENES` parameter and order), the
-notebook regenerated, pinned and pushed, and the run started. Code: `kaggle/drafts/r33_cv_ratio.py`; notebook:
-`kaggle/drafts/gn_r33_cv_ratio.ipynb` (built by `build_r33_notebook.py`, pinned to the commit that holds the code).
-v1 of this draft: `f8048cd0`.
+**Status: superseded. Registered as Amendment 21 in `kaggle/PREREG_GN.md` (`c697bcd6`, 2026-11-25, committed and
+pushed alone), whose text adds the dB point in g and fixes the implementation (d: M_total and the recomputed fold;
+j: two session notebooks).** Code `1d7ec069`; notebooks `kaggle/drafts/gn_r33_s1_counter.ipynb` and
+`gn_r33_s2_nine.ipynb`, pinned to `1d7ec069`. This file is the draft record (v1 `f8048cd0`, v2 `4a3fc325`); the
+amendment governs.
 
 ## Disclosure
 
