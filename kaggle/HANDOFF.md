@@ -6360,7 +6360,7 @@ Part 0 (follow-ups from the literature review), Part A (perceptual metrics, no r
   **Every mean agrees in sign with PSNR.** 126 BD values: tool and own fit agree below 1e-9; PSNR values equal the registered ones;
   E5's equal section 20's. Perceptual fits bend less often than PSNR's except BD_CG in BD-SSIM (6 of 7).
 - **Part B, drafts only** (`kaggle/drafts/`; nothing in PREREG, no run code):
-  - `E8_AMENDMENT21_DRAFT.md`: arms R, G (anchor), N (no colour: `_features_dc`, `_features_rest` frozen; geometry and opacity
+  - `E8_DRAFT.md` (then named `E8_AMENDMENT21_DRAFT.md`): arms R, G (anchor), N (no colour: `_features_dc`, `_features_rest` frozen; geometry and opacity
     train), C (colour only: `NO_GRAD_K`), K, R2; primaries Δ_geo = BD_N - BD_G and Δ_col = BD_C - BD_G with E7's f unchanged
     (Holm, superiority, TOST δ = 0.07 dB); outcomes table; secondaries incl. Δ_kept = BD_C - BD_K and perceptual; optional part (c)
     K = 512 (capacity, OGC's equal-size row) or j = +2, +3 (rate). Open for Dace: anchor, part (c), δ.
@@ -6528,7 +6528,7 @@ hashes); the text below keeps the hashes as that session recorded them.
   - **D2** (E8, one primary): H_E8: BD_C - BD_N > 0, one-sided, E7's superiority without Holm; criterion-3 threshold
     0.0105-0.0211 dB, 80% power at 0.0155-0.0311 dB (E7's `SE` 0.0056-0.0111). Session-hours, high / calibrated, cached
     wheel: 4 arms 70.2 / 48.0; + O 84.3 / 57.6; + 4th point 82.5 / 56.6; both 100.0 / 68.8. Supersedes
-    `E8_AMENDMENT21_DRAFT.md`.
+    `E8_DRAFT.md` (then named `E8_AMENDMENT21_DRAFT.md`).
   - **D3** (method (a) pilot on the gate scenes, exploratory): go at mean recovery >= 0.025 dB with >= 5 of 7 positive;
     smallest detectable 0.037 dB on the gate scenes (0.078 dB was the three-development-scene figure; Dace confirmed,
     fourth session); confirmatory tests only on held-out scenes; 43.0 h of jobs high, 29.4 calibrated. Supersedes
@@ -6838,7 +6838,8 @@ experiment; the import list is in the declaration draft).
     split; header only; widths and heights come from COLMAP (`:78-79`).
   - R37e: `SCENES` parameter; session 1 counter alone (mechanics check list), session 2 the nine; same pin; counter
     counts; a code change after the smoke re-runs counter under the new pin.
-  - Amendment number on go: **21**, which collides with the unregistered `E8_AMENDMENT21_DRAFT.md`'s name.
+  - Amendment number on go: **21**, which collided with the unregistered `E8_AMENDMENT21_DRAFT.md`'s name (renamed
+    `E8_DRAFT.md` in the tenth session).
 - **On R33_GO = YES (not given):** commit the draft's text alone as Amendment 21 (or the next free number), push it alone,
   then implement R37b (per-fold M_g, D_f, D_probe) and R37e (`SCENES`, counter first) in `r33_cv_ratio.py` and
   `build_r33_notebook.py` (today: `SCENES` is a fixed tuple, order largest first, `build_r33_notebook.py:19, :82`) with
@@ -7396,6 +7397,10 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
   <label> -F <message file>`), HANDOFF-only commits included. It runs the gate with its temp files on F: (C: is full),
   refuses on any unstaged or untracked file (stash unrelated work first) and on any failed, errored or unlisted-skip log,
   and writes the gate line into the message.
+- **Amendment numbers (from 2026-11-25, Dace's rule): assigned only at commit into `kaggle/PREREG_GN.md`, never in a
+  draft's file name or title.** A draft names its experiment (`E8_DRAFT.md`, `R33_DECLARATION_DRAFT.md`); the number is
+  the next free one when the text is committed into PREREG. (`E8_AMENDMENT21_DRAFT.md` was renamed `E8_DRAFT.md`
+  under this rule, and D2's title lost its number.)
 - **pytest gate: exit code with pipefail; never pipe the summary through tail without it.** Commit only on pytest's own
   exit code 0 (`set -o pipefail` whenever its output goes through a pipe), and keep each gate run's full output in a
   log outside the repository, so a failure's traceback survives.

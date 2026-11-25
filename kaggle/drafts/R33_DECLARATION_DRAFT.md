@@ -2,7 +2,7 @@
 
 **Status: draft for Dace's go (R33_GO blank on 2026-11-25). Not in PREREG, not committed as a declaration, nothing
 run; R37b and R37e are not yet in the code.** On go, this text is committed alone as the next PREREG amendment
-(**21**, unless E8's draft takes that number first: `E8_AMENDMENT21_DRAFT.md` is named for it but is unregistered),
+(numbers are assigned only at commit into PREREG; 21 is the next free one),
 pushed alone, and only then is the code changed (R37b's Gram stability, R37e's `SCENES` parameter and order), the
 notebook regenerated, pinned and pushed, and the run started. Code: `kaggle/drafts/r33_cv_ratio.py`; notebook:
 `kaggle/drafts/gn_r33_cv_ratio.ipynb` (built by `build_r33_notebook.py`, pinned to the commit that holds the code).

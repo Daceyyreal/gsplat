@@ -1,7 +1,7 @@
-# DRAFT D2 — Amendment 21 (E8): one directional primary in a 2 x 2 within-process design
+# DRAFT D2 — E8 (amendment number assigned only at commit into PREREG): one directional primary in a 2 x 2 within-process design
 
 **Status: ready to commit on Dace's go, as a PREREG amendment committed and pushed alone before any E8 code. Not in
-PREREG now; nothing run.** Supersedes `kaggle/drafts/E8_AMENDMENT21_DRAFT.md` (two primaries), on Dace's redesign.
+PREREG now; nothing run.** Supersedes `kaggle/drafts/E8_DRAFT.md` (then named `E8_AMENDMENT21_DRAFT.md`; two primaries), on Dace's redesign.
 Runtime from `kaggle/drafts/e8_estimate_draft.py`; numbers quoted are FINDINGS section 26's or CLAIMS group H's.
 
 ## a. What E8 tests, and what it does not

@@ -1,4 +1,4 @@
-"""DRAFT, not part of any amendment: E8's runtime and quota estimate (kaggle/drafts/E8_AMENDMENT21_DRAFT.md).
+"""DRAFT, not part of any amendment: E8's runtime and quota estimate (kaggle/drafts/E8_DRAFT.md).
 
     .venv/Scripts/python.exe kaggle/drafts/e8_estimate_draft.py
 

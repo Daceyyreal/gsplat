@@ -1,4 +1,4 @@
-# DRAFT — Amendment 21 (E8): a 2 x 2 factorial on what fine-tuning's shrink of OGC's lead comes from
+# DRAFT — E8 (amendment number assigned only at commit into PREREG; file renamed from `E8_AMENDMENT21_DRAFT.md` on 2026-11-25): a 2 x 2 factorial on what fine-tuning's shrink of OGC's lead comes from
 
 **Status: draft for Dace, 2026-11-08 (second session). Not in `kaggle/PREREG_GN.md`, not registered, no code.**
 Supersedes this file's first version (`96ade074`: arms R, G, N, C, K, R2), on Dace's redesign. Every number quoted from
