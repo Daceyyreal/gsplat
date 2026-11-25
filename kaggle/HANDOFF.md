@@ -110,7 +110,12 @@ move into FINDINGS (see "E7 write-up skeleton and check_s26 (2026-10-29; no E7 v
 Part A, perceptual secondaries (declaration `cf26643f`, pushed before computing; `88c3e9b2` check_s27, `c72a96e5` FINDINGS
 section 27 + CLAIMS A13/F12/H15, `259cbd2e` paper Section 5.4): every mean agrees in sign with PSNR; Part B drafts in
 `kaggle/drafts/` (E8, E9, second host, method), nothing in PREREG. 30 pp, check_tex 269 numbers, pytest 245. **Next action:
-Dace picks the path: E8 / E9 / second host / method** (see "Broadening the paper toward a top venue (2026-11-08)"). **Second session (2026-11-08):** readings R1-R7 (R1, R2, R6a-c, R7 confirmed; R3a refuted: the fits are parabolas), process note `da0c0444`, R1 reword `7811ff6d`, BD robustness (declared `39d41733`; FINDINGS s28: no registered decision would differ under PCHIP; paper Section 5.5), Part 3 drafts `603563bc` (E8 as a 2 x 2, SH-only check, pilot, wheel cache), arXiv package prepared outside the repository (not submitted); see "Readings, BD robustness and drafts (2026-11-08, second session)". **Third and fourth sessions (2026-11-08):** readings R8-R10 and drafts D1-D4 (third, merged from its uncommitted record), the fourth session's Parts 1-7 (recovery, the split of R8's commit, the gate, drafts, arXiv package); see "Fourth session of 2026-11-08" for its checkpoints and next action.
+Dace picks the path: E8 / E9 / second host / method** (see "Broadening the paper toward a top venue (2026-11-08)"). **Second session (2026-11-08):** readings R1-R7 (R1, R2, R6a-c, R7 confirmed; R3a refuted: the fits are parabolas), process note `da0c0444`, R1 reword `7811ff6d`, BD robustness (declared `39d41733`; FINDINGS s28: no registered decision would differ under PCHIP; paper Section 5.5), Part 3 drafts `603563bc` (E8 as a 2 x 2, SH-only check, pilot, wheel cache), arXiv package prepared outside the repository (not submitted); see "Readings, BD robustness and drafts (2026-11-08, second session)". **Third and fourth sessions (2026-11-08):** readings R8-R10 and drafts D1-D4 (third, merged from its uncommitted record), the fourth session's Parts 1-7 (recovery, the split of R8's commit, the gate, drafts, arXiv package); see "Fourth session of 2026-11-08" for its checkpoints and next action. **Fifth to eighth sessions (2026-11-09 to
+2026-11-25):** FINDINGS s29-s32 (scene heterogeneity; scene selection, R24; indoor/outdoor, R25; GN-VQ's transfer
+ratio against OGC's lead, R29, declared before computing), CLAIMS E22-E24, the paper's scope sentences (R16, R24-R26),
+`paper/make_arxiv.py` and arXiv v4 (`bc093ed1...76bb`, from `9b7a41db`, not submitted), `kaggle/gated_commit.py` (every
+commit goes through it), R33's training-views-only ratio built in `kaggle/drafts/` (not run; declaration a draft), the
+E9 DL3DV redesign v2; 33 pp, check_tex 296 numbers, pytest 255. **Next action: see "Eighth session (2026-11-25)".**
 
 ## Context and rules
 
@@ -6795,6 +6800,11 @@ Dace's STATUS: PUSH_ALLOWED blank (= commit locally only; nothing pushed this se
   (`e9_spearman_power_draft.py`): 0.325/0.591/0.923 (n = 8), 0.411/0.721/0.976 (10), 0.492/0.814/0.993 (12) at rho_s
   0.5/0.7/0.9; cost with R33: 35-54 h (8 + 1), 43-66 h (10 + 1), 51-78 h (12 + 1).
 - **Part 5: the paper does not change.** R29 (FINDINGS s32) and any R33 result stay out of the paper until R33 runs.
+- **Wrap-up (2026-11-25):** Dace said no push. When this wrap-up was committed, local HEAD was the commit that adds
+  this bullet (the child of the checkpoint `bb3a0fa6`, committed in the ninth session's Part 0), and the fork stayed at
+  `1214e318` (`b868b38d`..that commit unpushed); later entries record the push. Scratch outside the repository: `F:\tmp_dl\` (wip8, r24_r25_wip, r33test_1-4,
+  twocol, pdfbuild, papercopy, papercopy2, matest, ma_trial, the downloaded PDFs under mipnerf360/tnt/db/speedy/dl3dv/venues)
+  and `F:\pytest_tmp\` (gate temp), all disposable; `F:\arxiv_pkg\gsplat_ogc_v1`-`v3` are superseded by v4.
 - **Next action: Dace:** (1) PUSH_ALLOWED, to push commit A and the notebook before any R33 session; (2) go or no-go on R33's
   declaration; (3) the earlier items: the arXiv v4 preview, DL3DV access and E9's n, the venue, C: space.
 
@@ -7323,6 +7333,10 @@ Every commit gated (`.venv`, pipefail, kept log, `GN_OGC_SRC`), fast-forward pus
 
 ## Conventions and gotchas
 
+- **Commits (from 2026-11-25): only through `kaggle/gated_commit.py`** (`.venv/Scripts/python.exe kaggle/gated_commit.py
+  <label> -F <message file>`), HANDOFF-only commits included. It runs the gate with its temp files on F: (C: is full),
+  refuses on any unstaged or untracked file (stash unrelated work first) and on any failed, errored or unlisted-skip log,
+  and writes the gate line into the message.
 - **pytest gate: exit code with pipefail; never pipe the summary through tail without it.** Commit only on pytest's own
   exit code 0 (`set -o pipefail` whenever its output goes through a pipe), and keep each gate run's full output in a
   log outside the repository, so a failure's traceback survives.
