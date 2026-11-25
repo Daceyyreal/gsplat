@@ -115,7 +115,9 @@ Dace picks the path: E8 / E9 / second host / method** (see "Broadening the paper
 ratio against OGC's lead, R29, declared before computing), CLAIMS E22-E24, the paper's scope sentences (R16, R24-R26),
 `paper/make_arxiv.py` and arXiv v4 (`bc093ed1...76bb`, from `9b7a41db`, not submitted), `kaggle/gated_commit.py` (every
 commit goes through it), R33's training-views-only ratio built in `kaggle/drafts/` (not run; declaration a draft), the
-E9 DL3DV redesign v2; 33 pp, check_tex 296 numbers, pytest 255. **Next action: see "Eighth session (2026-11-25)".**
+E9 DL3DV redesign v2; 33 pp, check_tex 296 numbers, pytest 255. **Ninth session (2026-11-25):** pushed through the
+eighth session's wrap-up, R33's declaration draft v2 (R37a-e), E9 v3 (R38); **next action: see "Ninth session
+(2026-11-25)".**
 
 ## Context and rules
 
@@ -6807,6 +6809,42 @@ Dace's STATUS: PUSH_ALLOWED blank (= commit locally only; nothing pushed this se
   and `F:\pytest_tmp\` (gate temp), all disposable; `F:\arxiv_pkg\gsplat_ogc_v1`-`v3` are superseded by v4.
 - **Next action: Dace:** (1) PUSH_ALLOWED, to push commit A and the notebook before any R33 session; (2) go or no-go on R33's
   declaration; (3) the earlier items: the arXiv v4 preview, DL3DV access and E9's n, the venue, C: space.
+
+### Ninth session (2026-11-25): push, R33 declaration draft v2 (R37a-e), E9 v3 (R38) (checkpoint after Part 2)
+
+Dace's STATUS: PUSH_ALLOWED yes (no Kaggle session running); R33_GO blank (= drafts only: no declaration committed to
+PREREG, no R33 code change, no notebook regenerated, nothing run). **Code-identity rule: back for R33's sessions** (a new
+experiment; the import list is in the declaration draft).
+
+- **Part 0 (`511c7f95`):** the eighth session's staged wrap-up committed alone through `gated_commit.py`; its "local HEAD"
+  sentence reworded to name the commit that adds it (the child of `bb3a0fa6`). Gate 255 passed, 0 skipped.
+- **Part 1, pushed:** fetch; `1214e318` (fork) is an ancestor of `511c7f95`; fast-forward `1214e318..511c7f95` (six
+  commits: `b868b38d`, `cf09ce8f`, `f8048cd0`, `4a69cf5e`, `bb3a0fa6`, `511c7f95`). The R33 notebook's pin `f8048cd0` is
+  now on the fork (it will be superseded by a new pin when R37b/R37e are implemented).
+- **Part 2 (`4a3fc325`): `kaggle/drafts/R33_DECLARATION_DRAFT.md` v2, draft only.**
+  - R37a: per-scene r_f, r_s, SE_naive and the corrected SE_s = sd(r_f) x sqrt(1/k + n_out/n_in) (Nadeau-Bengio; the
+    folds share two thirds of their in-fold views, so the naive SE is low). **Uninformative if fewer than 8 scenes have a
+    ratio, or 1.4826 x MAD(r_s) < 2 x median SE_s** (reliability < 0.75); applied first; if uninformative no correlation
+    of r_s is computed. Same rule for D_s separately.
+  - R37b: D_f = sum_i ||Mbar_in,i - Mbar_out,i||_F / sum_i ||Mbar_in,i||_F over the fold's colour-quantized splats,
+    Mbar = M / n_views (M is a sum over views, `gn_metric.py:298`: **Dace's unnormalized form would read about 0.67
+    everywhere**); full symmetric Frobenius from the packed 136; D_s = mean over folds. Implementation declared: one GN
+    pass per fold (probe seed g), M_in(f) = sum of the other folds (one full pass per scene instead of four 75% passes).
+    Noise floor beside: D_probe (fold 0, probe seed 100), n_train, Spearman(D_s, n_train). Secondary, one-sided negative.
+  - R37c: confirmed with evidence (INRIA `eval=True`, `E3_SCOUTING.md:49`; test = every 8th sorted image,
+    `dataset_readers.py:148-150`, gsplat `colmap.py:459-461`); added: the dB arithmetic attenuates a ratio but cannot flip
+    its sign, so treehill's E2 -1.06 is a metric effect on model-unseen views; what a flat R33 would and would not mean.
+  - R37d: confirmed: `readColmapCameras` `Image.open`s every image (`dataset_readers.py:99`, C3DGS `2a234af`) before the
+    split; header only; widths and heights come from COLMAP (`:78-79`).
+  - R37e: `SCENES` parameter; session 1 counter alone (mechanics check list), session 2 the nine; same pin; counter
+    counts; a code change after the smoke re-runs counter under the new pin.
+  - Amendment number on go: **21**, which collides with the unregistered `E8_AMENDMENT21_DRAFT.md`'s name.
+- **On R33_GO = YES (not given):** commit the draft's text alone as Amendment 21 (or the next free number), push it alone,
+  then implement R37b (per-fold M_g, D_f, D_probe) and R37e (`SCENES`, counter first) in `r33_cv_ratio.py` and
+  `build_r33_notebook.py` (today: `SCENES` is a fixed tuple, order largest first, `build_r33_notebook.py:19, :82`) with
+  tests, regenerate and pin the notebook, push; the wheel key is computed in the session from the pin's tree
+  (`build_r33_notebook.py:42`), so HANDOFF records the pin and the key's inputs, and the key itself from the run's log.
+- **Next action:** Part 3 (E9 v3, drafts), Part 4 (R34 held), final checkpoint.
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
