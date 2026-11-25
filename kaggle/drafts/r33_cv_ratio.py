@@ -1,9 +1,10 @@
-"""DRAFT (R33), not run: a training-views-only transfer ratio for OGC's Gram VQ against C3DGS's own, per scene.
+"""R33 (Amendment 21, kaggle/PREREG_GN.md), not run: a training-views-only transfer ratio for OGC's Gram VQ against
+C3DGS's own, per scene, with Gram stability as its secondary.
 
     python r33_cv_ratio.py --scene bonsai --c3dgs /tmp/c3dgs --model /tmp/model/bonsai --source /tmp/data/bonsai \
         --out /kaggle/working/r33 [--repo /tmp/gsplat] [--k 4] [--seed 0]
 
-**Definition (kaggle/drafts/R33_DECLARATION_DRAFT.md).** The scene's training views (INRIA's split: C3DGS's ``Scene``
+**Definition (Amendment 21 d-f).** The scene's training views (INRIA's split: C3DGS's ``Scene``
 with ``--eval``, the cameras sorted by image name) are split into ``k`` = 4 folds by a seeded permutation
 (``numpy.random.default_rng(seed).permutation``, view at permuted position ``p`` in fold ``p % k``). For each fold f:
 
@@ -11,8 +12,10 @@ with ``--eval``, the cameras sorted by image name) are split into ``k`` = 4 fold
 2. C3DGS's sensitivity pass on the in-fold views only, then C3DGS's colour and geometry VQ at E5's middle rate point
    (j = 0, C3DGS's default colour threshold, K = 4,096), with E3r's recording hooks (``kaggle/e3r_hooks.py``), which
    save the colour VQ's input ``x``, the colour-quantized ids, C3DGS's codebook and labels and its int8 quantizer state;
-3. the 16 x 16 GN metric (``bench/gn/gn_metric.compute_gn(..., with_dc=True)``, this project's 16-probe estimate, probe
-   seed 0) over the in-fold views only, on the uncompressed model;
+3. the 16 x 16 GN metric (``bench/gn/gn_metric.compute_gn(..., with_dc=True)``, this project's 16-probe estimate) over
+   the in-fold views only, on the uncompressed model: ``M_total`` (the sum of every fold's metric, fold g's views with
+   probe seed g) is accumulated once per scene, fold f's metric ``M_f`` is recomputed with the same seed, and the
+   in-fold metric is ``M_total - M_f`` (rows with no in-fold visible view are exactly 0); held-out ``M_out = M_f``;
 4. OGC's Gram VQ by this project's derived code (``bench/gn/ogc_derived.gram_kmeans_ours``: OGC's arithmetic, metric
    "gram", K = 4,096, 15 iterations, lam 1e-3, chunk 25,000, seed 0) on the same ``x`` with that metric;
 5. both codebooks through C3DGS's int8 table quantizer (``bench/gn/e3r.C3DGSQuantizer``), substituted into the
@@ -24,6 +27,10 @@ with ``--eval``, the cameras sorted by image name) are split into ``k`` = 4 fold
 7. ``gain_in(f)`` and ``gain_out(f)``: the mean over the in-fold and held-out views of PSNR(ogc_gram) - PSNR(c3dgs).
 
 The scene's ratio is ``mean_f gain_out(f) / gain_in(f)``; the ratio of the fold means is reported beside it.
+**Gram stability** (Amendment 21 f): ``D_f`` = sum over the fold's colour-quantized splats of
+``||M_in/n_in - M_out/n_out||_F`` over the sum of ``||M_in/n_in||_F`` (``gram_stability``); ``D_probe`` the same
+between fold 0's metric and a second pass over fold 0's views with probe seed 100. ``usefulness`` is Amendment 21 e's
+rule, applied by the checker before any correlation.
 
 **It reads no test view and computes no test-view metric,** and asserts so (``install_guards``): the scene readers drop
 the test camera infos before any image is decoded (``drop_test_infos``), ``Scene.getTestCameras``
@@ -46,6 +53,8 @@ K_CODEBOOK = 4096
 LAM = 1e-3
 CHUNK = 25_000
 ITERS = 15
+PROBE_SEED_D = 100  # D_probe's second pass (Amendment 21 f)
+MIN_SCENES = 8  # Amendment 21 e (1)
 
 
 class Forbidden(RuntimeError):
@@ -133,6 +142,69 @@ def ratio(gains):
             "undefined_folds": [i for i, r in enumerate(per) if r is None]}
 
 
+def frob_packed(P):
+    """Frobenius norm per row of packed symmetric matrices (``[n, d (d + 1) / 2]``, upper triangle row-major, as
+    ``gn_metric.pack_outer``): diagonal entries once, off-diagonal entries twice."""
+    import torch
+
+    w = P.shape[1]
+    d = (math.isqrt(8 * w + 1) - 1) // 2
+    assert d * (d + 1) // 2 == w, w
+    i, j = torch.triu_indices(d, d)
+    wt = torch.where(i == j, 1.0, 2.0).to(P.device, torch.float64)
+    return ((P.double() ** 2) * wt).sum(dim=1).sqrt()
+
+
+def gram_stability(M_in, M_out, n_in: int, n_out: int, chunk: int = 500_000) -> float:
+    """Amendment 21 f: sum_i ||M_in,i / n_in - M_out,i / n_out||_F / sum_i ||M_in,i / n_in||_F over the rows given
+    (the fold's colour-quantized splats), the metrics being sums over n_in and n_out views."""
+    num = den = 0.0
+    for a in range(0, M_in.shape[0], chunk):
+        mi = M_in[a:a + chunk].double() / n_in
+        num += float(frob_packed(mi - M_out[a:a + chunk].double() / n_out).sum())
+        den += float(frob_packed(mi).sum())
+    return num / den if den > 0 else float("nan")
+
+
+def fold_se(values, n_out_over_in: float = 1.0 / 3.0):
+    """Amendment 21 e: the naive and the corrected (Nadeau-Bengio) SE of the mean of the finite fold values;
+    None with fewer than two."""
+    v = [x for x in values if x is not None and math.isfinite(x)]
+    if len(v) < 2:
+        return {"k": len(v), "sd": None, "se_naive": None, "se": None}
+    m = sum(v) / len(v)
+    sd = math.sqrt(sum((x - m) ** 2 for x in v) / (len(v) - 1))
+    return {"k": len(v), "sd": sd, "se_naive": sd / math.sqrt(len(v)),
+            "se": sd * math.sqrt(1.0 / len(v) + n_out_over_in)}
+
+
+def usefulness(values, ses, min_scenes: int = MIN_SCENES, factor: float = 2.0):
+    """Amendment 21 e's rule: ``values`` per scene (the scene's r_s or D_s, None if it has none), ``ses`` per scene (the
+    corrected SE, None if it has none). Uninformative if fewer than ``min_scenes`` scenes have a value, or if
+    1.4826 x MAD of the values < ``factor`` x the median SE. Returns the inputs of the decision and the outcome."""
+    import statistics
+
+    vals = [v for v in values.values() if v is not None and math.isfinite(v)]
+    se = [x for x in ses.values() if x is not None and math.isfinite(x)]
+    out = {"n_with_value": len(vals), "min_scenes": min_scenes, "factor": factor, "s_between": None, "sd": None,
+           "median_se": statistics.median(se) if se else None, "n_with_se": len(se)}
+    if len(vals) >= 2:
+        med = statistics.median(vals)
+        out["s_between"] = 1.4826 * statistics.median([abs(v - med) for v in vals])
+        out["sd"] = statistics.stdev(vals)
+    if len(vals) < min_scenes:
+        out.update(informative=False, reason=f"{len(vals)} scenes with a value, fewer than {min_scenes}")
+    elif out["median_se"] is None:
+        out.update(informative=False, reason="no scene has a standard error")
+    elif out["s_between"] < factor * out["median_se"]:
+        out.update(informative=False,
+                   reason=f"S_between {out['s_between']:.4g} < {factor} x median SE {out['median_se']:.4g}")
+    else:
+        out.update(informative=True,
+                   reason=f"S_between {out['s_between']:.4g} >= {factor} x median SE {out['median_se']:.4g}")
+    return out
+
+
 def camera_view(cam):
     """A C3DGS camera as ``gn_metric.compute_gn``'s view dict (camtoworld, K, width, height)."""
     import torch
@@ -144,6 +216,16 @@ def camera_view(cam):
     fy = H / (2.0 * math.tan(float(cam.FoVy) / 2.0))
     K = torch.tensor([[fx, 0.0, W / 2.0], [0.0, fy, H / 2.0], [0.0, 0.0, 1.0]])
     return {"camtoworld": c2w.cpu(), "K": K, "width": W, "height": H}
+
+
+def host_rss_gb() -> float:
+    """Peak resident host memory of this process (Linux ``ru_maxrss`` is in KiB); -1 where unavailable."""
+    try:
+        import resource
+
+        return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 2**20
+    except Exception:
+        return -1.0
 
 
 def sha1(path):
@@ -180,6 +262,8 @@ def main():
     import utils.image_utils as iu
 
     install_guards(c3, c3scene, iu, lpipsPyTorch)
+    print(f"{a.scene}: guards installed (scene readers, the test-camera accessor, the evaluation routine, psnr x2, "
+          "lpips x2)", flush=True)
     import compression.vq as cvq
     import e3r
     import e3r_hooks
@@ -205,6 +289,8 @@ def main():
     fold_of = folds(len(cams), a.k, a.seed)
     rec.update(n_test_dropped=DROPPED[-1], n_train=len(cams), fold_sizes=[fold_of.count(i) for i in range(a.k)],
                fold_of={c.image_name: f for c, f in zip(cams, fold_of)})
+    print(f"{a.scene}: n_train {len(cams)}, test infos dropped {DROPPED[-1]}, fold sizes {rec['fold_sizes']}",
+          flush=True)
     settings = gm.RenderSettings(packed=False, rasterize_mode="classic", camera_model="pinhole", with_ut=False,
                                  with_eval3d=False, near_plane=0.01, far_plane=1e10, sh_degree=3)  # E5's runner
     bg = torch.zeros(3, device="cuda")
@@ -219,6 +305,27 @@ def main():
     assert colour.codebook_size == K_CODEBOOK, colour.codebook_size
     ply = os.path.join(a.model, "point_cloud", "iteration_30000", "point_cloud.ply")
     uncompressed = ei.read_inria_ply(ply)[0]  # gsplat's splat dict, in the ply's order (the harness's loader, as E5)
+
+    def gn_fold(views, seed):
+        """The GN metric summed over ``views`` (host memory) and each splat's visible-view count."""
+        with torch.enable_grad():
+            gn = gm.compute_gn({k: v.cuda() for k, v in uncompressed.items()}, [camera_view(c) for c in views],
+                               settings, seed=seed, log=None, with_dc=True)
+        out = gn["M_packed"].cpu(), gn["n_vis"].cpu()
+        del gn
+        torch.cuda.empty_cache()
+        return out
+
+    t_gn = time.time()
+    M_total, vis_total, trace_first = None, None, []
+    for g_ in range(a.k):  # M_total = sum of the folds' metrics, fold g's views with probe seed g (Amendment 21 d)
+        Mg, vg = gn_fold([c for c, i in zip(cams, fold_of) if i == g_], g_)
+        trace_first.append(float(Mg.double().sum()))  # a checksum: the sum of every packed entry
+        M_total = Mg.double() if M_total is None else M_total.add_(Mg.double())
+        vis_total = vg.long() if vis_total is None else vis_total + vg.long()
+        del Mg, vg
+    rec["gn_total_seconds"] = time.time() - t_gn
+    print(f"{a.scene}: GN total over {a.k} folds in {rec['gn_total_seconds']:.0f} s", flush=True)
 
     for f in range(a.k):
         t0 = time.time()
@@ -245,11 +352,21 @@ def main():
                 setattr(cvq, name, fn)
         pr = torch.load(record, map_location="cpu", weights_only=False)
         ids = pr["vq_ids"].long()
-        with torch.enable_grad():
-            gn = gm.compute_gn({k: v.cuda() for k, v in uncompressed.items()}, [camera_view(c) for c in in_cams],
-                               settings, seed=0, log=None, with_dc=True)
-        M_rows = gn["M_packed"].cpu().index_select(0, ids)
-        del gn
+        Mf, vf = gn_fold(out_cams, f)  # fold f recomputed with its seed: M_out(f); M_in(f) = M_total - M_f
+        trace_f = float(Mf.double().sum())
+        out_rows = Mf.index_select(0, ids)
+        in_rows = M_total.index_select(0, ids) - out_rows.double()
+        in_rows[((vis_total - vf.long()).index_select(0, ids) == 0)] = 0.0  # no in-fold view sees it: exactly 0
+        del Mf, vf
+        D_f = gram_stability(in_rows, out_rows, len(in_cams), len(out_cams))
+        D_probe = None
+        if f == 0:  # the probe-noise reference: fold 0's views again, probe seed 100 (Amendment 21 f)
+            Mp, _ = gn_fold(out_cams, PROBE_SEED_D)
+            D_probe = gram_stability(out_rows, Mp.index_select(0, ids), len(out_cams), len(out_cams))
+            rec["D_probe"] = D_probe
+            del Mp, _
+        M_rows = in_rows.float()
+        del in_rows, out_rows
         x = pr["x"].float()
         C, L, info = ogc_derived.gram_kmeans_ours(x, M_rows, K_CODEBOOK, LAM, "cuda", chunk=CHUNK, metric="gram")
         q = e3r.C3DGSQuantizer.from_state(pr["qa"])
@@ -272,19 +389,37 @@ def main():
                              for c in in_cams + out_cams}
         gi = sum(psnr["ogc_gram"][c.image_name] - psnr["c3dgs"][c.image_name] for c in in_cams) / len(in_cams)
         go = sum(psnr["ogc_gram"][c.image_name] - psnr["c3dgs"][c.image_name] for c in out_cams) / len(out_cams)
+        r_f = (go / gi) if gi > 0 else None
+        peak = {"cuda_max_allocated_gb": torch.cuda.max_memory_allocated() / 2**30,
+                "cuda_max_reserved_gb": torch.cuda.max_memory_reserved() / 2**30, "host_max_rss_gb": host_rss_gb()}
         rec["folds"].append({"fold": f, "n_in": len(in_cams), "n_out": len(out_cams), "gain_in": gi, "gain_out": go,
-                             "n_colour_quantized": int(ids.numel()), "ogc": info, "psnr": psnr,
+                             "r_f": r_f, "D_f": D_f, "D_probe": D_probe,
+                             "gn_checksum_rel_diff": abs(trace_f - trace_first[f]) / max(abs(trace_first[f]), 1e-30),
+                             "n_colour_quantized": int(ids.numel()), "ogc": info, "psnr": psnr, "peak": peak,
                              "seconds": time.time() - t0})
         json.dump(rec, open(os.path.join(out_dir, f"r33_{a.scene}.json"), "w"), indent=1, default=str)
         os.remove(record)
         del g, g_eval, M_rows, x, C, L
         torch.cuda.empty_cache()
-        print(f"{a.scene} fold {f}: gain_in {gi:+.4f}, gain_out {go:+.4f} ({time.time() - t0:.0f} s)", flush=True)
+        print(f"{a.scene} fold {f}: gain_in {gi:+.4f}, gain_out {go:+.4f}, r_f {r_f}, D_f {D_f:.6g}"
+              + (f", D_probe {D_probe:.6g}" if D_probe is not None else "")
+              + f", n_cq {int(ids.numel())}, ogc iters {info.get('iters')}, GN checksum rel diff "
+              + f"{rec['folds'][-1]['gn_checksum_rel_diff']:.2e}, peak cuda {peak['cuda_max_allocated_gb']:.2f}/"
+              + f"{peak['cuda_max_reserved_gb']:.2f} GB, host {peak['host_max_rss_gb']:.2f} GB "
+              + f"({time.time() - t0:.0f} s)",
+              flush=True)
     rec["ratio"] = ratio([(r["gain_in"], r["gain_out"]) for r in rec["folds"]])
+    rec["ratio_se"] = fold_se([r["r_f"] for r in rec["folds"]])
+    rec["D_s"] = sum(r["D_f"] for r in rec["folds"]) / len(rec["folds"])
+    rec["D_se"] = fold_se([r["D_f"] for r in rec["folds"]])
     rec["chunked_linalg_calls"] = dict(linalg.n_calls)
     rec["finished"] = time.strftime("%Y-%m-%dT%H:%M:%S")
     json.dump(rec, open(os.path.join(out_dir, f"r33_{a.scene}.json"), "w"), indent=1, default=str)
-    print(json.dumps({"scene": a.scene, "ratio": rec["ratio"]}, indent=1))
+    rec["seconds_total"] = sum(r["seconds"] for r in rec["folds"]) + rec["gn_total_seconds"]
+    json.dump(rec, open(os.path.join(out_dir, f"r33_{a.scene}.json"), "w"), indent=1, default=str)
+    print(json.dumps({"scene": a.scene, "ratio": rec["ratio"], "ratio_se": rec["ratio_se"], "D_s": rec["D_s"],
+                      "D_probe": rec.get("D_probe"), "seconds_total": rec["seconds_total"]}, indent=1))
+    print(f"{a.scene}: finished", flush=True)
 
 
 if __name__ == "__main__":

@@ -3501,6 +3501,104 @@ def test_r33_guards_raise_on_any_test_view_access():
     assert not re.search(r"getTestCameras|test_cameras|render_and_eval", body)
 
 
+
+def test_r33_gram_stability_se_and_usefulness():
+    """Amendment 21 e-f's pure parts (kaggle/drafts/r33_cv_ratio.py): frob_packed is the full symmetric Frobenius norm
+    from the packed upper triangle; gram_stability divides each metric by its view count (an in-fold sum of three views
+    of the same per-view metric against one held-out view reads 0, where the unnormalized form would read 2/3), weights
+    splats by their in-fold norm, counts a splat the held-out views never see with relative difference 1, and does not
+    depend on the chunk; fold_se gives the naive and the Nadeau-Bengio corrected SE over the finite folds; usefulness
+    applies the rule (fewer than 8 scenes, or 1.4826 x MAD < 2 x median SE, is uninformative) and is robust to one
+    outlying scene."""
+    import math
+
+    m, src = _r33()
+    g = torch.Generator().manual_seed(0)
+    A = torch.randn(5, 16, 16, generator=g, dtype=torch.float64)
+    S = A + A.transpose(1, 2)
+    i, j = torch.triu_indices(16, 16)
+    P = S[:, i, j]
+    assert P.shape == (5, 136)
+    assert torch.allclose(m.frob_packed(P), torch.linalg.norm(S, dim=(1, 2)), atol=1e-10)
+    X = (S @ S.transpose(1, 2))[:, i, j]  # per-view metrics (PSD)
+    assert abs(m.gram_stability(3 * X, X, 3, 1)) < 1e-12  # the same per-view metric: stable
+    unnorm = float((m.frob_packed(3 * X - X)).sum() / m.frob_packed(3 * X).sum())
+    assert abs(unnorm - 2 / 3) < 1e-12  # what the unnormalized form would read
+    out = X.clone()
+    out[4] = 0.0  # splat 4 is never seen by the held-out views
+    f = m.frob_packed(X)
+    expect = float(f[4] / f.sum())
+    assert abs(m.gram_stability(2 * X, out, 2, 1) - expect) < 1e-12
+    assert abs(m.gram_stability(2 * X, out, 2, 1, chunk=2) - expect) < 1e-12
+    assert math.isnan(m.gram_stability(torch.zeros(3, 136), torch.zeros(3, 136), 3, 1))
+    se = m.fold_se([1.0, 2.0, None, 4.0, 3.0])
+    sd = math.sqrt(sum((x - 2.5) ** 2 for x in (1, 2, 3, 4)) / 3)
+    assert se["k"] == 4 and abs(se["sd"] - sd) < 1e-12 and abs(se["se_naive"] - sd / 2) < 1e-12
+    assert abs(se["se"] - sd * math.sqrt(1 / 4 + 1 / 3)) < 1e-12 and abs(se["se"] / se["se_naive"] - 1.5275) < 1e-4
+    assert m.fold_se([1.0, None, float("nan")])["se"] is None
+    sc = [f"s{k}" for k in range(10)]
+    spread = dict(zip(sc, [0.1 * k for k in range(10)]))  # MAD 0.25 -> S_between 0.3707
+    u = m.usefulness(spread, dict.fromkeys(sc, 0.1))
+    assert u["informative"] and abs(u["s_between"] - 1.4826 * 0.25) < 1e-12 and u["median_se"] == 0.1
+    assert not m.usefulness(spread, dict.fromkeys(sc, 0.2))["informative"]  # 0.3707 < 0.4
+    flat = dict(zip(sc, [1.0 + 0.01 * k for k in range(9)] + [-1.06]))  # one outlier: the SD is large, the MAD is not
+    u = m.usefulness(flat, dict.fromkeys(sc, 0.05))
+    assert not u["informative"] and u["sd"] > 2 * 0.05 and u["s_between"] < 2 * 0.05
+    few = dict(spread, s0=None, s1=None, s2=None)
+    u = m.usefulness(few, dict.fromkeys(sc, 0.01))
+    assert not u["informative"] and u["n_with_value"] == 7 and "fewer than 8" in u["reason"]
+    assert m.MIN_SCENES == 8 and m.PROBE_SEED_D == 100
+    body = src[src.index("def main():"):]
+    for tok in ("gn_fold(out_cams, f)", "gram_stability(in_rows, out_rows", "gn_fold(out_cams, PROBE_SEED_D)",
+                "M_total.index_select(0, ids) - out_rows", "(vis_total - vf.long())", '"D_f": D_f', "fold_se("):
+        assert tok in body, tok
+
+
+def test_r33_session_notebooks_order_and_wheel_key(tmp_path, monkeypatch):
+    """Amendment 21 j-k: the builder writes two notebooks at one pin, session 1 counter alone and session 2 the other
+    nine largest first (e6_scenes.N_SPLATS), together the ten scenes; both run the scene list in the order given; the
+    wheel key's GPU part is 'major.minor' as the E5-E7 keys (a T4 gives 'sm7.5'); every committed R33 notebook equals the
+    builder's output at the pin it carries."""
+    import ast
+    import importlib.util
+    import json
+    import re
+
+    import e6_scenes
+
+    repo = os.path.dirname(os.path.dirname(HERE))
+    p = os.path.join(repo, "kaggle", "drafts", "build_r33_notebook.py")
+    spec = importlib.util.spec_from_file_location("build_r33_notebook", p)
+    b = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(b)
+    s1, s2 = b.SESSIONS["s1"][2], b.SESSIONS["s2"][2]
+    assert s1 == ["counter"]
+    assert s2 == sorted(s2, key=lambda s: -e6_scenes.N_SPLATS[s]) and "counter" not in s2
+    assert sorted(s1 + s2) == sorted(["bonsai", "counter", "kitchen", "room", "truck", "drjohnson", "playroom",
+                                      "flowers", "treehill", "train"])
+    monkeypatch.setattr(b, "HERE", str(tmp_path))
+    b.build("0123abcd")
+    for sess, (name, _, scenes) in b.SESSIONS.items():
+        nb = json.load(open(tmp_path / name, encoding="utf-8"))
+        setup, run = nb["cells"][1]["source"], nb["cells"][2]["source"]
+        ast.parse(setup)
+        ast.parse(run)
+        assert 'PIN, REPO, C3DGS, WORK = "0123abcd"' in setup and f'"session": "{sess}"' in setup
+        assert f"SCENES = {scenes!r}" in run and "N_SPLATS" not in run and f"r33_{sess}_bundle" in run
+        assert 'cap = ".".join(map(str, torch.cuda.get_device_capability(0)))' in setup
+        assert '-sm{cap}"' in setup and 'TORCH_CUDA_ARCH_LIST"] = cap' in setup
+    cap = ".".join(map(str, (7, 5)))
+    assert re.fullmatch(r"[0-9a-f]{12}-[0-9a-f]{8}-torch2\.11\.0_cu130-sm7\.5",
+                        f"{'33734f894b0a'}-{'95f8de51'}-torch{'2.11.0+cu130'.replace('+', '_')}-sm{cap}")
+    for name, _, _ in b.SESSIONS.values():
+        committed = os.path.join(repo, "kaggle", "drafts", name)
+        if os.path.exists(committed):
+            text = open(committed, encoding="utf-8").read()
+            (pin,) = re.findall(r'PIN, REPO, C3DGS, WORK = "([0-9a-f]+)"', text)
+            b.build(pin)
+            assert open(tmp_path / name, encoding="utf-8").read() == text, name
+
+
 def test_section_28_bd_robustness_computation():
     """check_s28 (FINDINGS section 28, declared at 39d41733): on all 86 BD values the registered BD's tool and own parabola
     agree, scipy's PCHIP and the own PCHIP agree, the registered values are reproduced, the slope-sign recount equals the
