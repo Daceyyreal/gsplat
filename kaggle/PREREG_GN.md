@@ -4588,3 +4588,192 @@ registration depends on that detail. The research-use permission recorded in the
 Noncommercial License 1.0.0, under which OGC's code was used, are unchanged. The item's "that statement" refers to
 text that the derived code's headers no longer carry (`3d07de3a`). The original text remains in this file's git
 history.
+
+## Amendment 21 (2026-11-25, after FINDINGS sections 29-32 and before any R33 code change or data): R33, a training-views-only transfer ratio against OGC's lead on the ten scenes with an OGC row (exploratory)
+
+FINDINGS section 32 (R29; declared at `98d1aba8` before computing, results `b9fba742`, `check_s32.py` `f3885087`) found
+that GN-VQ's E2 test/train gain ratio ranks almost as P1 on the eight scenes with both (Spearman +0.9524, exact p
+0.0011), with set membership not separated. This amendment registers **R33**, an exploratory measurement on the ten
+scenes that have an OGC row: whether a ratio that reads no test view behaves like E2's. Its draft history is
+`kaggle/drafts/R33_DECLARATION_DRAFT.md` (v1 `f8048cd0`, v2 `4a3fc325`); this text supersedes it. The items: why (a),
+the disclosure (b), the scenes (c), the ratio (d), the usefulness rule (e), the secondary (f), what R33 can and cannot
+see (g), what is computed (h), the guard (i), run order and the smoke (j), code identity (k), cost (l), and how R33
+stands with the earlier amendments (m). Every earlier amendment, note, verdict and FINDINGS section is unchanged.
+This amendment's own dated notes are titled "Amendment 21 note 1" and so on.
+
+### a. Why R33
+
+- R29's ratio needs a test view (E2's ratio is test-view gain over train-view gain), so it cannot be used as a
+  predictor on new scenes before their test views are read. R33 replaces the test views by training views held out
+  of the metric (not of the model; g), so it can be computed on any scene before its evaluation.
+- It is the first look on INRIA's scenes. E9's predictor (draft, `kaggle/drafts/E9_DL3DV_DRAFT.md`) is a different,
+  model-unseen ratio; R33 does not decide E9.
+
+### b. Disclosure (written before any R33 data)
+
+- **Not blind, and exploratory.** The ten scenes' P1, P2 and P_FT are committed (FINDINGS section 29) and have been
+  read; R29 (section 32) was computed and read before this question was posed. Nothing here can confirm a predictor.
+- **Selected scenes:** the gate scenes were kept and the development scenes chosen on GN-VQ's transfer outcomes
+  (section 30); set membership cannot be separated from any correlation here.
+- **C3DGS's reader opens every image, test images included, before the split.** `readColmapCameras`
+  (`scene/dataset_readers.py:99` at C3DGS `2a234af`) calls `PIL.Image.open` on each image and keeps the handle in its
+  `CameraInfo`; `readColmapSceneInfo` splits train and test only afterwards (`:148-150`, every 8th image by sorted name
+  is a test view). `Image.open` reads the file's header (format, mode, size), not its pixels, which are decoded only
+  when `Scene` builds a camera (`loadCam`); R33's wrapper drops the test infos between the two (i), so no test image's
+  pixels are decoded, and no value derived from a test image's header is used (a camera's width and height come from
+  COLMAP's intrinsics, `:78-79`). The test files are opened; their content is not read.
+
+### c. Scenes
+
+bonsai, counter, kitchen, room, truck, drjohnson, playroom, flowers, treehill, train: every scene with an OGC row
+(sections 29-32), INRIA's 30k checkpoints (Amendment 15 note i's pins), the datasets as E5-E6 fetched them, the images
+at `cfg_args`' resolution (protocol ii), each scene's start device as E6 (`e6_scenes.START_DEVICE`).
+
+### d. The ratio (the only primary quantity)
+
+- **Views:** the scene's training views only (INRIA's split: C3DGS's `Scene` with `--eval`, sorted by image name).
+  **Folds:** k = 4, `numpy.random.default_rng(0).permutation`, the view at permuted position p in fold p % 4.
+- **The GN metric, one full pass per scene:** for each fold g, the 16 x 16 GN metric (`gn_metric.compute_gn`,
+  `with_dc`, 16 probes, probe seed g) summed over fold g's views only, `M_g` (`[n, 136]`, packed). `M` is a sum over
+  views (`gn_metric.py:298`), so the in-fold metric of fold f is `M_in(f) = sum_{g != f} M_g` and the held-out metric
+  `M_out(f) = M_f`. **Implementation:** `M_total = sum_g M_g` is accumulated first (one [n, 136] array kept in host
+  memory instead of four); in fold f's loop, `M_f` is recomputed on fold f's views with the same probe seed, and
+  `M_in(f) = M_total - M_f`. The recomputation equals the first up to the GPU's floating-point summation order; the
+  relative difference of their checksums (the sum of every packed entry) is recorded per fold. Rows of splats that no
+  in-fold view sees (from the exact visible-view counts) are set to exactly 0 in `M_in(f)`.
+- **Per fold f:** in-fold = the other three folds, held-out = fold f. C3DGS's sensitivity pass on the in-fold views
+  only; C3DGS's colour and geometry VQ at E5's middle rate point (j = 0, C3DGS's default colour threshold, K = 4,096),
+  seed 0, with E3r's recording hooks; OGC's Gram VQ by this project's derived code (`ogc_derived.gram_kmeans_ours`,
+  metric "gram", 15 iterations, lam 1e-3, chunk 25,000) on the same quantizer input with `M_in(f)`'s rows for the
+  colour-quantized splats; both codebooks through C3DGS's int8 table quantizer, substituted into the uncompressed
+  model's colours for the colour-quantized splats (geometry and the other splats' colours unchanged, as E3r's and E4q's
+  training-view scoring); each row rendered by C3DGS's rasterizer on every in-fold and held-out view, quantized to 8
+  bits, PSNR against the view's image as `Scene` loads it.
+- **gain_in(f), gain_out(f):** the mean over the in-fold and the held-out views of PSNR(ogc_gram) - PSNR(c3dgs).
+- **The scene's ratio:** r_s = the mean over folds of r_f = gain_out(f) / gain_in(f), over the folds with
+  gain_in(f) > 0 (k_s of them); a fold with gain_in(f) <= 0 has no r_f (a legitimate outcome, reported, not a fault);
+  a scene with k_s = 0 has no ratio. The ratio of the fold means is reported beside it.
+- **Why j = 0 and colour only:** E5's middle rate point is the one rate point every E5-E7 process shares. Scoring with
+  the colours substituted isolates the colour VQ, which is what OGC's metric changes; it differs from P1, a BD over
+  three rate points of C3DGS's whole pipeline on test views.
+
+### e. The usefulness rule, applied before any correlation is computed
+
+- **Per scene:** r_f, k_s, r_s, and two standard errors of r_s: SE_naive = sd(r_f) / sqrt(k_s); **SE_s = sd(r_f) x
+  sqrt(1/k_s + n_out/n_in)** (n_out/n_in = 1/3; Nadeau and Bengio's correction for estimates whose training sets
+  overlap: the folds share two thirds of their in-fold views and the model, so the naive SE is low; no unbiased
+  estimator of k-fold variance exists, Bengio and Grandvalet 2004, so the correction is a stated heuristic). sd uses
+  k_s - 1. A scene with k_s < 2 has no SE and is left out of the median below.
+- **R33 is uninformative if** (1) fewer than **8** of the ten scenes have a ratio, or (2) **S_between < 2 x the
+  median over scenes of SE_s**, with S_between = 1.4826 x MAD of the scenes' r_s (the sample SD reported beside, not
+  used).
+- **Why:** the observed between-scene variance is about tau^2 + SE^2 for a true spread tau; S_between < 2 SE means
+  tau^2 < 3 SE^2, a reliability below 0.75, at which a true rank correlation is attenuated by more than sqrt(0.75) =
+  0.87 before n <= 10's coarse exact test. MAD, because one scene far from the rest (E2's treehill was -1.06) would
+  alone inflate the SD. The median SE, because each SE has at most 3 degrees of freedom.
+- **Order:** the checker computes and prints the rule's inputs and outcome first. **If R33 is uninformative, no
+  correlation of r_s is computed** (the FINDINGS section says "uninformative" with the rule's numbers; the bundle stays
+  committed). The same rule, with D_f in place of r_f (and k_s the folds with a finite D_f), decides independently
+  whether the secondary (f) is read.
+- The rule is code before data: `usefulness` in `kaggle/drafts/r33_cv_ratio.py`, with a test, in the commit that
+  follows this amendment.
+
+### f. Secondary: Gram stability (no VQ, no rendering; from the same GN pass)
+
+- **Per fold f,** with per-view means M-bar_in,i = M_in(f)_i / n_in and M-bar_out,i = M_out(f)_i / n_out (n = the
+  number of views in the set), and Q_f the colour-quantized splats of fold f:
+
+      D_f = sum_{i in Q_f} || M-bar_in,i - M-bar_out,i ||_F  /  sum_{i in Q_f} || M-bar_in,i ||_F
+
+  ||A||_F over the full symmetric 16 x 16 matrix (from the packed 136: diagonal terms once, off-diagonal terms twice).
+  **D_s** = the mean of D_f over the four folds; its SEs as e.
+- **Why this form:** without the per-view division the held-out fold's third of the views would make every splat read
+  about 0.67, measuring the view count. The ratio of sums is the ||M-bar_in||_F-weighted mean of the per-splat relative
+  differences, so splats the in-fold views barely see (tiny norm, unbounded relative difference) weigh least, as they
+  pull least on OGC's codebook; a splat seen in-fold and never held-out has M-bar_out = 0 and counts with relative
+  difference 1. Frobenius, because an affine-invariant distance needs full-rank matrices, which a splat seen from few
+  directions does not have (each view adds a rank-1 term).
+- **Noise floor, reported beside:** D_probe, the same statistic between fold 0's metric (probe seed 0) and a second
+  pass over fold 0's views with probe seed 100, over Q_0 (one extra 25% pass per scene); n_train per scene; and
+  Spearman(D_s, n_train) across scenes. A D_s that tracks n_train is not read as Gram stability.
+- **Read:** Spearman(D_s, P1), one-sided negative (a less stable metric, a smaller lead), exact p; Spearman(D_s, r_s)
+  descriptive. Secondary only; no multiplicity claim.
+
+### g. What R33 can and cannot see
+
+R33's held-out views are held out from the metric (C3DGS's sensitivity, the GN metric and both VQs), **not from the
+model**: INRIA's checkpoints were trained on every training view and no test view (`eval=True` in all 13 models'
+`cfg_args`, `kaggle/E3_SCOUTING.md:49`), so on a held-out training view the model fits as well as on an in-fold one.
+The test views behind P1 and E2's ratio are every 8th image by sorted name (`dataset_readers.py:148-150`; gsplat's
+parser does the same, `examples/datasets/colmap.py:459-461`), interleaved with the training views and **unseen by the
+model and by the metric**. So E2's ratio mixes two things R33 separates: whether the metric transfers to views it was
+not computed on, at training-level model fit (R33 measures this), and how the model does on views it never saw (R33
+cannot see this).
+
+**A ratio below 1 can come from the model's error alone; a negative ratio cannot.** The same reduction in quantization
+error is fewer dB where the model's own error on the view is larger: gain = 10 log10((m + q_c3dgs) / (m + q_ogc)) falls
+toward 0 as m grows but keeps its sign. So larger model error on test views shrinks a test/train ratio toward 0 without
+any change in the metric's transfer, while E2's treehill ratio (-1.06) needs the metric to point the wrong way on
+model-unseen views: a metric effect, though perhaps one that arises only where the model generalizes poorly.
+
+**A flat R33** (uninformative by e, or informative with r_s near 1 everywhere and no rank relation with P1) would mean
+that at training-level model fit OGC's Gram metric transfers about equally well across these scenes' views, so whatever
+makes E2's ratio and P1 co-vary is not metric transfer at fixed fit; what is left is the model's fit to unseen views
+(with the dB arithmetic above) and set membership (section 30). It would **not** mean that R29's correlation is an
+artefact, that a model-unseen validation ratio would be flat, that the scenes' P1 differences are unpredictable, or
+that the metric transfers to test views. **A non-flat R33 that ranks as P1** would say metric transfer at fixed fit
+co-varies with OGC's lead on these selected scenes; set membership still cannot be separated from it.
+
+### h. What is computed (after the bundles are committed)
+
+0. e's rule, first, for r_s and, separately, for D_s.
+1. Per scene: the four folds' gains, r_f, r_s, the ratio of means, SE_naive and SE_s; D_f, D_s, D_probe, n_train.
+2. If r_s is informative: Spearman's rho of r_s with P1, P2 and P_FT (section 29's registered values) over the scenes
+   with a ratio (n <= 10), exact two-sided p over all n! orderings; PCHIP's values beside. Descriptive: Spearman's rho
+   of r_s with E2's ratio on the eight scenes with both (section 32's).
+3. If D_s is informative: f's read.
+4. Report only: no criterion, no verdict, no correction for multiplicity. A FINDINGS section with its checker.
+
+### i. The guard (no test view)
+
+Before any scene is loaded, `r33_cv_ratio.install_guards` wraps C3DGS's scene readers (`drop_test_infos`) so the test
+camera infos are dropped, and counted, before `Scene` decodes any image, and makes `Scene.getTestCameras`, C3DGS's
+`render_and_eval`, both `psnr` bindings and the LPIPS entry point raise `Forbidden`; `guard_scene` replaces the loaded
+`Scene`'s `test_cameras` with a mapping that raises on any access. A guard that fires stops the job with a `Forbidden`
+traceback; there is no silent firing. Tested by `test_r33_guards_raise_on_any_test_view_access`.
+
+### j. Run order and the smoke
+
+- **Session 1 ("R33 S1"):** counter alone. Dace checks its log for mechanics only, against
+  `kaggle/drafts/R33_SMOKE_CHECKLIST.md`. **Session 2 ("R33 S2"):** the other nine, largest first (treehill, flowers,
+  drjohnson, playroom, truck, kitchen, room, bonsai, train). Both run the same pinned commit (k). One notebook per
+  session, both built from the same builder at the same pin; the scene list is the only difference.
+- **Counter counts.** Its results are R33's counter results; its per-fold gains appear in its log, so they will have
+  been seen before session 2, which is allowed only because the code cannot change between the sessions.
+- **What forces counter to re-run:** any change between the sessions to a file in k's list or to the pin, and any
+  change of the Kaggle environment that changes the wheel key (torch version or GPU) or C3DGS's build. Then counter
+  re-runs in session 2 with the nine, the session-2 counter is the one that counts, and session 1's values are reported
+  beside it, labelled. A notebook-only change that leaves the pin and the environment unchanged (a fetch retry, an
+  attached dataset) does not, and is recorded. No value from an attempt that did not finish is read.
+
+### k. Code identity
+
+Every R33 session runs one pinned commit; no file the job imports (`kaggle/drafts/r33_cv_ratio.py`,
+`kaggle/e3r_hooks.py`, `kaggle/e3q_c3dgs_run.py`, `kaggle/e3q_c3dgs.py`, `kaggle/e3p_inria.py`, `kaggle/e5_data.py`,
+`kaggle/e6_scenes.py`, `bench/gn/gn_metric.py`, `bench/gn/ogc_derived.py`, `bench/gn/e3r.py`, `gsplat/`) changes
+between its sessions, except as j allows (and then counter re-runs). The pin, the wheel key's inputs (the `gsplat`
+tree and `setup.py` blob at the pin) and the expected GPU are recorded in HANDOFF before session 1; the wheel key itself
+is read from each session's `setup.json`.
+
+### l. Cost (estimate; nothing measured for this job)
+
+Per fold: C3DGS sensitivity on 75% of the training views 1-2 min (E5's processes), C3DGS's colour and geometry VQ 2-4
+min (128-139 s per process, D1 draft), OGC's Gram VQ 25-110 s (E4q), renders of 2 rows on all training views 0.5-2
+min; per scene: the GN passes (two full passes with the recomputation, plus D_probe's 25%) 30-90 s, scene load and data
+5-15 min. **About 0.5-0.9 h per scene; 5-9 h for the ten,** in two sessions, each with setup (C3DGS build about 10-15
+min; the gsplat wheel restored, or about 73 min to build); sequential (E5 ran its scenes one at a time for host RAM).
+
+### m. How R33 stands with the earlier amendments
+
+R33 runs no test view and computes no BD value; it changes no registered quantity, verdict or criterion. Its results go
+into a new FINDINGS section with a checker; whether they enter the paper is decided after that section exists.
