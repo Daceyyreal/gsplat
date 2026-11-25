@@ -116,7 +116,8 @@ ratio against OGC's lead, R29, declared before computing), CLAIMS E22-E24, the p
 `paper/make_arxiv.py` and arXiv v4 (`bc093ed1...76bb`, from `9b7a41db`, not submitted), `kaggle/gated_commit.py` (every
 commit goes through it), R33's training-views-only ratio built in `kaggle/drafts/` (not run; declaration a draft), the
 E9 DL3DV redesign v2; 33 pp, check_tex 296 numbers, pytest 255. **Ninth session (2026-11-25):** pushed through the
-eighth session's wrap-up, R33's declaration draft v2 (R37a-e), E9 v3 (R38); **next action: see "Ninth session
+eighth session's wrap-up, R33's declaration draft v2 (R37a-e), E9 v3 (R38). **Tenth session (2026-11-25):** Amendment 21 (R33)
+registered, coded and its notebooks pinned (`1d7ec069`), E9 v4 (design B); **next action: see "Tenth session
 (2026-11-25)".**
 
 ## Context and rules
@@ -6867,6 +6868,46 @@ experiment; the import list is in the declaration draft).
 - **Next action: Dace:** (1) R33_GO on the v2 declaration draft (then Amendment 21 or the next free number, alone,
   pushed alone; then R37b/R37e code, notebook, pin); (2) E9 v3's block (i % 16 == 4) and design vs option B; (3) the
   earlier items: the arXiv v4 preview, DL3DV access and E9's n, the venue, C: space (still full).
+
+### Tenth session (2026-11-25): amendment numbering, Amendment 21 (R33) registered and built, E9 v4 (design B) (checkpoint after Part 2)
+
+Dace's STATUS: PUSH_ALLOWED yes (no Kaggle session running); R33_GO yes; E9_DESIGN B. **Code-identity rule applies to
+R33's sessions** (Amendment 21 k). Dace accepted the ninth session's five corrections (per-view normalisation;
+Nadeau-Bengio SE with MAD; the dB-shrink point; the fixed block; option B raised).
+
+- **Part 1 (`eb275a73`, pushed `97e25416..eb275a73`):** the numbering rule under Conventions (numbers only at commit into
+  PREREG, never in draft names); `E8_AMENDMENT21_DRAFT.md` renamed `E8_DRAFT.md`; D2's title lost "Amendment 21";
+  references updated (historical HANDOFF lines keep the old name in parentheses).
+- **Amendment 21 (`c697bcd6`), committed alone and pushed alone (`eb275a73..c697bcd6`) before any R33 code:** R33,
+  exploratory, not blind (P1/P2/P_FT and R29 read, disclosed). The dB point Dace asked to add was already in v2's R37c;
+  the amendment states it as its own paragraph in g ("A ratio below 1 can come from the model's error alone; a negative
+  ratio cannot"). Items a-m; e's rule and f's D_f as in the ninth session; d fixes the GN implementation (M_total once per
+  scene as fold sums in host float64, fold f recomputed with its seed, M_in(f) = M_total - M_f, rows with no in-fold
+  visible view exactly 0, checksum difference recorded); j: S1 counter alone, S2 the nine largest first, and what forces
+  counter to re-run (any change to the pin or k's files, or an environment change of the wheel key or C3DGS's build).
+- **Code (`1d7ec069`, the pin):** `r33_cv_ratio.py` (gn_fold, M_total, recomputed M_f, D_f, D_probe; frob_packed,
+  gram_stability, fold_se, usefulness; smoke log lines), `build_r33_notebook.py` (two session notebooks; run order as
+  listed). **Bug found and fixed:** the builder keyed the wheel `-sm75` (`"".join`), the E5-E7 notebooks `-sm7.5`
+  (`".".join`), so R33 would never have restored the cached cu130 wheel and would have spent about 73 min building it;
+  now `".".join`, tested. Tests: `test_r33_gram_stability_se_and_usefulness`,
+  `test_r33_session_notebooks_order_and_wheel_key`.
+- **Notebooks (`5617bd10`):** `kaggle/drafts/gn_r33_s1_counter.ipynb`, `gn_r33_s2_nine.ipynb`, pinned to `1d7ec069`;
+  the test checks both equal the builder's output at that pin. `R33_SMOKE_CHECKLIST.md` added; the declaration draft
+  marked superseded.
+- **Recorded for the R33 sessions:**
+  - pin `1d7ec069` (`1d7ec069d393721fb1929c5b8ffa9eef0a048ad0`), on the fork;
+  - wheel-key inputs at the pin: gsplat tree `33734f894b0a` (`33734f894b0ae35d94d212a293adff814041bb90`), setup.py blob
+    `95f8de51` (`95f8de51f1f430e1d114b14688979142856fe710`), so the key's prefix `33734f894b0a-95f8de51` equals the cached
+    cu130 wheel's;
+  - expected torch `2.11.0+cu130` (E7 S11's image, 2026-11-03; not re-checked: no Kaggle access here), expected GPU Tesla
+    T4 x2 (`sm7.5`); expected key `33734f894b0a-95f8de51-torch2.11.0_cu130-sm7.5`. **The actual key is read from each
+    session's `setup.json`;** attach the dataset holding that wheel (the "E7 OGC FT-dissection S11" output's `wheels/`)
+    so it restores; if Kaggle's torch has moved, the wheel builds (about 73 min) and both sessions must share the new key
+    (Amendment 21 j).
+- **Pushed:** `c697bcd6..5617bd10` (code and notebooks; the pin is on the fork).
+- **Next action (Dace):** run S1 (`gn_r33_s1_counter.ipynb`, title "R33 training-view ratio S1", GPU T4 x2, Internet on,
+  the wheel dataset attached); check the log against `kaggle/drafts/R33_SMOKE_CHECKLIST.md`; create "R33 S1 bundle"; then
+  S2. No push while a session runs.
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
