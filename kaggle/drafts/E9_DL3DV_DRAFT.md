@@ -1,6 +1,9 @@
-# DRAFT E9 v3 (R27 2026-11-24, R36 2026-11-25, R38 2026-11-25) — a held-out test on DL3DV benchmark scenes drawn by a pre-registered rule: does a model-unseen validation ratio predict OGC's lead, and does the lead hold
+# DRAFT E9 v4 (R27 2026-11-24, R36 2026-11-25, R38 2026-11-25; design B 2026-11-25) — a held-out test on DL3DV benchmark scenes drawn by a pre-registered rule: does a model-unseen validation ratio predict OGC's lead, and does the lead hold
 
-**Status: draft for Dace. Not in PREREG; nothing run; no data fetched.** v3 (R38): **the predictor is now a validation
+**Status: draft for Dace. Not in PREREG; nothing run; no data fetched.** **v4 (Dace's E9_DESIGN = B): every drawn
+scene is trained twice,** a block model (the validation block held out of training; it gives the validation ratio v_s
+only) and a standard-protocol model (every training view; it gives P1 and P_FT); counter is a same-model check (P1 on
+both of its models, v_s on its block model); the cost is recomputed (section 5). v3 (R38): **the predictor is now a validation
 ratio from E9's own training** (section 1a): a fixed, interleaved block of training views (no seed: it mirrors the test split's rule) is held out of model
 training, and the transfer ratio is measured on it, model-unseen and metric-unseen, before any test-view row; R33 stays
 the first look on INRIA's ten scenes and is not run on DL3DV; the bridge scene is trained with and without the block;
@@ -39,9 +42,11 @@ estimates for DL3DV.
   the registration and nobody can choose it); replace a drawn scene only by the registered fit rule (T4 memory, section 5)
   and then by the next draw in the same stratum.
 - **Nothing on a drawn scene is read before the registration** except its label, frame count and image size.
-- **Order on each drawn scene (v3):** train its checkpoint on the training views minus the validation block (section
-  1a); compute the validation ratio and commit its bundle; only then run any OGC or C3DGS row on its test views. So the
-  ratio exists, committed, before any value it is meant to predict.
+- **Order on each drawn scene (v4, design B):** train two checkpoints, the **block model** on the training views minus
+  the validation block (section 1a) and the **standard model** on every training view (INRIA's `--eval` protocol, as
+  E5-E7's checkpoints), with the same recipe and seed; compute the validation ratio on the block model and commit its
+  bundle; only then run any OGC or C3DGS row, on the standard model's test views. So the ratio exists, committed, before
+  any value it is meant to predict, and P1 is measured on standard-protocol models.
 
 ## 1a. The validation block and the validation ratio (v3, R38)
 
@@ -62,7 +67,7 @@ estimates for DL3DV.
 - **Implementation (to build):** a wrapper on INRIA's `gaussian-splatting` reader that moves the block's camera infos
   out of `train_cameras` before training (as R33's `drop_test_infos` does for test infos), recorded in the run's
   `cfg_args`-side metadata; the test split is untouched.
-- **The validation ratio (the E9 predictor):** on E9's model, R33's computation with one fixed split in place of the
+- **The validation ratio (the E9 predictor):** on the scene's block model (v4), R33's computation with one fixed split in place of the
   folds: in-set = every training view the model trained on, held-out = the validation block. C3DGS's sensitivity, the
   GN metric and both colour VQs (C3DGS's and OGC's Gram, j = 0, K = 4,096, seed 0) on the in-set views; both codebooks
   through C3DGS's int8 quantizer, colours substituted; PSNR on every in-set and validation view;
@@ -74,11 +79,20 @@ estimates for DL3DV.
   views are the noisier term); E9's analysis applies R37a's rule (uninformative if 1.4826 x MAD of the v_s < 2 x their
   median SE, or if fewer than n - 2 scenes have a ratio) before Primary 1 is computed, and if v_s is uninformative,
   Primary 1 is reported as not tested and Holm's family is Primary 2 alone.
-- **Bridge (v3):** counter, trained with the E9 recipe **twice**: with the validation block (its v_s computed, and its
-  P1) and without it (P1 only). Reported: the P1 shift (with block minus without), against E5's seed noise, and each
-  P1 against counter's INRIA-checkpoint value (+0.3192 dB, section 29). Descriptive, not pooled, not a test. A shift
-  larger than the seed noise means E9's P1 is measured on models weaker than the standard protocol's, which the
-  registration must then state beside Primary 2.
+- **Two models per scene (v4): what it costs in rho.** v_s comes from the block model and P1 from the standard model,
+  two separately trained models of the same scene. Whatever in v_s or P1 is particular to one training run (not to the
+  scene) is independent between them, so it adds noise to the pair and **attenuates the observed rho toward 0**
+  relative to a same-model pair: conservative for the false-positive rate (independent noise cannot create a rank
+  relation), but a loss of power the section 3 table does not include. Its size is not known: E5's j = 0 seed noise in
+  P1 (`SD_pool` 0.0121 dB, section 25) is VQ seeds on one checkpoint, a lower bound for retraining noise. As a planning
+  bound, retraining noise up to 0.03 dB in P1 against a between-scene SD of 0.06-0.16 dB (section 29's development and
+  ten-scene SDs) keeps P1's reliability at 0.80-0.97, an attenuation of at most sqrt(0.80) = 0.89 from P1's side.
+- **Counter, the same-model check (v4):** counter (the smallest gate scene) trained with the E9 recipe **twice**: the
+  standard model (P1, compared with counter's INRIA-checkpoint value +0.3192 dB, section 29, the bridge to E5-E7) and
+  the block model (v_s and P1). Reported: P1(block) - P1(standard), against E5's seed noise, and v_s beside P1 on the same
+  model. Descriptive, not pooled, not a test. **What it can and cannot show:** one scene's P1 difference mixes the
+  block's effect and retraining noise, so it cannot estimate the attenuation in rho across scenes; it shows only
+  whether holding the block out moves P1 by much more than seed noise on one scene.
 
 ## 2. Hypotheses
 
@@ -104,10 +118,10 @@ estimates for DL3DV.
 - **P_FT: estimation only,** a mean with a 95% CI (t, n - 1 df), no test.
 - **INRIA's bicycle, garden and stump: secondary, descriptive,** flagged as GN-VQ development scenes (Amendments 7, 10;
   FINDINGS section 30), not pooled with the draw.
-- **The bridging control (v3: two models, section 1a):** one gate scene (counter, the smallest INRIA model, 1,222,956
-  splats) trained by us with the E9 recipe with and without the validation block; the P1 shift between the two, and each
-  P1 against its INRIA-checkpoint value (+0.3192 dB, section 29). It says whether our checkpoints, and the block, change
-  P1 by more than E5's seed noise; it is not pooled and not a test.
+- **The bridging control and same-model check (v4, section 1a):** one gate scene (counter, the smallest INRIA model,
+  1,222,956 splats) trained by us with the E9 recipe twice, standard and block models; the standard model's P1 against
+  its INRIA-checkpoint value (+0.3192 dB, section 29), and P1(block) - P1(standard). It says whether our checkpoints, and
+  the block, change P1 by more than E5's seed noise; it is not pooled and not a test.
 
 ## 3. Power (`e9_dl3dv_power_draft.py`, `e9_spearman_power_draft.py`; registered-fit values)
 
@@ -127,7 +141,9 @@ n = 12: 0.5035, 0.0498, from 2,000,000 random orderings); 50,000 simulated sampl
   ten scenes, whatever it is, will be optimistic as a planning value for v_s: the scenes are selected (section 30) and
   were chosen after R29 (not blind), and R33 measures a different quantity (metric transfer at training-level fit; v_s
   adds the model's fit to unseen views). It can lower the planning value (if R33 is flat or uninformative) but should
-  not raise it. If the Spearman p is the smaller of the two, Holm tests it at
+  not raise it. **v4:** under design B the observed rho is further attenuated by the two models' independent
+  training noise (section 1a), so 0.7 is a planning value for the same-model relation and the powers below are upper
+  bounds. If the Spearman p is the smaller of the two, Holm tests it at
   0.025, where the critical values rise and these powers fall.
 
 Primary 2, P1 > 0, one-sided paired t, at 0.05 and at Holm's first step (0.025):
@@ -214,27 +230,31 @@ the primary and never to choose scenes:
   at 960 x 540 (1.24-2.49 GB as float32 on the GPU) and 1-4 M splats, **4.1-7.6 GB allocated, 4.5-9.0 GB reserved**,
   under the T4's 15.64 GB. Both the view count and the splat count are assumptions until the draw.
 
-**v3 (R38), `kaggle/drafts/e9_v3_cost_draft.py`:** n drawn scenes plus the bridge's two counter models; the
-validation ratio on the n + 1 models with a block (one R33 fold with every training view in-set, plus scene load:
-0.2-0.4 session-h); the confirmation on all n + 2 models (the bridge's second model at full cost, an upper bound: its
-P1 alone would take about half); sessions = ceil(training / 12) + ceil(ratio / 12) + ceil(confirmation / 12), each step
-type in its own sessions because the ratios are committed before any test-view row.
+**v4 (design B), `kaggle/drafts/e9_v3_cost_draft.py`:** every drawn scene trained twice (block and standard models),
+counter twice (the same-model check); the validation ratio on the n + 1 block models (one R33 fold with every training
+view in-set, plus scene load: 0.2-0.4 session-h); the confirmation on the n standard models and both of counter's (the
+counter block model's at full cost, an upper bound: its P1 alone would take about half); sessions = ceil(training / 12)
++ ceil(ratio / 12) + ceil(confirmation / 12), each step type in its own sessions because the ratios are committed
+before any test-view row.
+
+| n | Models trained | Training, session-h (2 at a time) | Validation ratio, session-h | Confirmation, session-h | Total, session-h | Sessions (<= 12 h) | Weeks at 30 h |
+|---|---|---|---|---|---|---|---|
+| 8 | 18 | 9.0-18.0 | 1.8-3.6 | 29.0-41.0 | 40-63 | 5-7 | 1.3-2.1 |
+| 10 | 22 | 11.0-22.0 | 2.2-4.4 | 34.8-49.2 | 48-76 | 5-8 | 1.6-2.5 |
+| 12 | 26 | 13.0-26.0 | 2.6-5.2 | 40.6-57.4 | 56-89 | 7-9 | 1.9-3.0 |
+
+- **Against v3 (design A):** the second model per drawn scene adds 0.5-1 session-h of training per scene (4-8 h at
+  n = 8) and nothing else; the totals rise by 4-8 h (n = 8) to 6-12 h (n = 12). **R33 on INRIA's ten scenes** (5-9 h,
+  two sessions, Amendment 21) is not in these totals. Training the block models on 13/16 of the images is slightly
+  faster, not counted.
+
+v3's table (design A: one block model per drawn scene; superseded):
 
 | n (+ bridge models) | Models trained | Training, session-h (2 at a time) | Validation ratio, session-h | Confirmation, session-h | Total, session-h | Sessions (<= 12 h) | Weeks at 30 h |
 |---|---|---|---|---|---|---|---|
 | 8 + 2 | 10 | 5.0-10.0 | 1.8-3.6 | 29.0-41.0 | 36-55 | 5-6 | 1.2-1.8 |
 | 10 + 2 | 12 | 6.0-12.0 | 2.2-4.4 | 34.8-49.2 | 43-66 | 5-7 | 1.4-2.2 |
 | 12 + 2 | 14 | 7.0-14.0 | 2.6-5.2 | 40.6-57.4 | 50-77 | 6-8 | 1.7-2.6 |
-
-- **Against v2:** the bridge's second model adds a training and a confirmation (3.4-5.1 h); dropping R33 on the drawn
-  scenes saves 0.3-0.5 h per scene; the totals are within an hour or two of v2's. Training on 13/16 of the images is
-  slightly faster, not counted. **R33 on INRIA's ten scenes** (5-9 h, two sessions, its own declaration) is not in
-  these totals.
-- **Option B, not the design (listed for Dace):** train every drawn scene twice, with the block (for v_s) and without
-  (for P1), so P1 is measured on standard-protocol models and no P1 shift needs reporting; the bridge is then counter once,
-  without the block, against INRIA's checkpoint. n = 8 + 1: 17 models, 36-57 h, 5-7 sessions; 10 + 1: 21, 44-70 h, 5-7;
-  12 + 1: 25, 53-83 h, 7-9. Its cost: v_s and P1 come from different models of the same scene (as E2's ratio and P1 do,
-  R31).
 
 v2's table (R33 per drawn scene; superseded):
 
@@ -291,5 +311,5 @@ What this means for E9 (my reading, for Dace to confirm):
 2. Whether the INRIA secondary runs (n: item 4).
 3. Whether to ask DL3DV about private Kaggle datasets and checkpoints.
 4. (v2) Whether R33 runs first on the ten scenes with OGC rows (its own declaration draft), and n = 8, 10 or 12.
-5. (v3) The validation block as drafted (i % 16 == 4, floor i % 8 == 4 below 12 views) or another fraction; the design
-   (block in every E9 model, bridge trained twice) or option B (each drawn scene trained twice).
+5. (v3) The validation block as drafted (i % 16 == 4, floor i % 8 == 4 below 12 views) or another fraction.
+   **Decided (v4): design B** (each drawn scene trained twice; counter's same-model check).
