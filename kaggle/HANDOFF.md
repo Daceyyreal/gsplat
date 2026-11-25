@@ -6844,7 +6844,28 @@ experiment; the import list is in the declaration draft).
   `build_r33_notebook.py` (today: `SCENES` is a fixed tuple, order largest first, `build_r33_notebook.py:19, :82`) with
   tests, regenerate and pin the notebook, push; the wheel key is computed in the session from the pin's tree
   (`build_r33_notebook.py:42`), so HANDOFF records the pin and the key's inputs, and the key itself from the run's log.
-- **Next action:** Part 3 (E9 v3, drafts), Part 4 (R34 held), final checkpoint.
+- **Checkpoint after Part 2:** `95359a90`.
+- **Part 3 (`609b4e3e`): `kaggle/drafts/E9_DL3DV_DRAFT.md` v3 (R38) and `e9_v3_cost_draft.py`, drafts only.**
+  - The predictor is a **validation ratio from E9's own training** (new section 1a): validation block **i % 16 == 4**
+    over the sorted images (test stays i % 8 == 0): 1/16 of the images, 1/14 of the training views, each block view
+    halfway between two test views with both neighbouring frames in training, as each test view has; floor i % 8 == 4
+    when i % 16 == 4 gives fewer than 12 views (under 181 images). Fixed, not seeded (Dace asked for "seeded": the
+    interleaving mirrors the test rule, so there is nothing to seed; a seeded variant would break the adjacency match).
+  - v_s = gain_val / gain_in (OGC's Gram VQ over C3DGS's, j = 0, colours substituted, on E9's model with the metric on
+    the trained views); the MSE-domain ratio and Gram stability beside; delta-method SE; R37a's usefulness rule before
+    Primary 1 (if uninformative, Primary 1 is not tested and Holm's family is Primary 2 alone).
+  - R33 stays the INRIA first look, not run on DL3DV. Bridge: counter trained with and without the block (P1 shift;
+    each P1 against INRIA's +0.3192). rho_s = 0.7 stays the sizing case; R33's rho is optimistic as a planning value.
+  - Cost (session-h): n = 8 + 2 bridge models 36-55 (5-6 sessions); 10 + 2: 43-66 (5-7); 12 + 2: 50-77 (6-8). Option B
+    (each drawn scene trained twice, P1 on standard-protocol models): 36-57, 44-70, 53-83.
+- **Part 4: R34 held.** No work on `R34_OGC_CVFLOOR_DRAFT.md`; **R34 waits for R33's usefulness check (R37a) and its
+  correlation**; if R33 is uninformative, R34's H34 (the floor helps more on low-ratio scenes) has no usable ratio and
+  is re-thought, not run.
+- **Push:** after this checkpoint's commit, fast-forward `511c7f95..` (that commit) if the ancestor check passes; the
+  fork head is the record.
+- **Next action: Dace:** (1) R33_GO on the v2 declaration draft (then Amendment 21 or the next free number, alone,
+  pushed alone; then R37b/R37e code, notebook, pin); (2) E9 v3's block (i % 16 == 4) and design vs option B; (3) the
+  earlier items: the arXiv v4 preview, DL3DV access and E9's n, the venue, C: space (still full).
 
 ### E7 blind dry run on the real bundles (2026-10-26; no code change, no commit of outputs)
 
